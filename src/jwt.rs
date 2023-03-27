@@ -1,4 +1,4 @@
-use identity_core::crypto::{GetSignature, GetSignatureMut, Proof, SetSignature};
+use identity_core::crypto::Proof;
 use jsonwebtoken::{Algorithm, Header};
 use serde::Serialize;
 
@@ -20,46 +20,21 @@ impl JsonWebToken {
             signature: None,
         }
     }
-}
 
-impl GetSignature for JsonWebToken {
-    fn signature(&self) -> Option<&Proof> {
-        self.signature.as_ref()
+    pub fn kid(mut self, kid: String) -> Self {
+        self.header.kid = Some(kid);
+        self
+    }
+
+    // Getter method for header field.
+    pub fn header(&self) -> &Header {
+        &self.header
     }
 }
 
-impl GetSignatureMut for JsonWebToken {
-    fn signature_mut(&mut self) -> Option<&mut Proof> {
-        self.signature.as_mut()
-    }
-}
-
-impl SetSignature for JsonWebToken {
-    fn set_signature(&mut self, signature: Proof) {
-        self.signature = Some(signature);
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub struct TempWrapper {
-    pub message: String,
-    pub signature: Option<Proof>,
-}
-
-impl GetSignature for TempWrapper {
-    fn signature(&self) -> Option<&Proof> {
-        self.signature.as_ref()
-    }
-}
-
-impl GetSignatureMut for TempWrapper {
-    fn signature_mut(&mut self) -> Option<&mut Proof> {
-        self.signature.as_mut()
-    }
-}
-
-impl SetSignature for TempWrapper {
-    fn set_signature(&mut self, signature: Proof) {
-        self.signature = Some(signature);
-    }
+// Builder struct for JsonWebToken.
+pub struct JsonWebTokenBuilder {
+    header: Header,
+    payload: IdToken,
+    signature: Option<Proof>,
 }

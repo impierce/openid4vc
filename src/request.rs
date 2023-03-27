@@ -14,6 +14,7 @@ pub struct SiopRequest {
     redirect_uri: Option<String>,
     #[getset(get = "pub")]
     nonce: String,
+    #[getset(get = "pub")]
     subject_syntax_types_supported: Vec<String>,
 }
 

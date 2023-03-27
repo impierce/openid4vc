@@ -1,8 +1,8 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct SiopResponse {
-    id_token: String,
+    pub id_token: String,
 }
 
 impl SiopResponse {
