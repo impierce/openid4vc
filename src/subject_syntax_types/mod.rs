@@ -5,7 +5,7 @@ use did_methods::DidMethod;
 
 pub trait Subject {
     fn did(&self) -> String;
-    fn key_identifier(&self) -> String;
+    fn key_identifier(&self) -> Option<String>;
     fn sign(&self, message: &String) -> Result<Vec<u8>>;
 }
 
