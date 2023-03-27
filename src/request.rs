@@ -1,6 +1,7 @@
 use getset::Getters;
 use serde::Deserialize;
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug, Getters)]
 pub struct SiopRequest {
     response_type: String,

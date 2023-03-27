@@ -10,7 +10,6 @@ identity_iota = "0.6"
 identity_core = "0.6"
 tokio = { version = "1.26.0", features = ["rt"] }
 serde = { version = "1.0.154", features = ["derive"]}
-serde_qs = "0.12"
 serde_json = "1.0.94"
 anyhow = "1.0.70"
 chrono = "0.4.24"
@@ -18,12 +17,8 @@ getset = "0.1.2"
 jsonwebtoken = "8.2.0"
 reqwest = "0.11.14"
 base64-url = "2.0.0"
-openidconnect = "2.5.1"
 futures = "0.3.27"
-ed25519-dalek = "1.0.1"
 
 [dev-dependencies]
-axum = "0.6.11"
-tracing-subscriber = "0.3.16"
-tracing = "0.1.37"
-ed25519 = "2.2.0"
+ed25519-dalek = "1.0.1"
+serde_qs = "0.12"

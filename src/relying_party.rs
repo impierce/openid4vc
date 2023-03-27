@@ -1,5 +1,4 @@
-use crate::id_token::IdToken;
-use crate::response::SiopResponse;
+use crate::{IdToken, SiopResponse};
 use anyhow::Result;
 use identity_iota::{client::Resolver, iota_core::IotaDIDUrl};
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
@@ -29,8 +28,7 @@ impl RelyingParty {
         let public_key = method.data().try_decode()?;
 
         let key = DecodingKey::from_ed_der(&public_key.as_slice());
-        let token_data =
-            decode::<IdToken>(id_token.as_str(), &key, &Validation::new(Algorithm::EdDSA))?;
+        let token_data = decode::<IdToken>(id_token.as_str(), &key, &Validation::new(Algorithm::EdDSA))?;
 
         let id_token = token_data.claims;
 
@@ -50,6 +48,7 @@ mod tests {
 
         let rp = RelyingParty::new();
 
-        rp.validate_response(&response).await;
+        let id_token = rp.validate_response(&response).await.unwrap();
+        dbg!(&id_token);
     }
 }

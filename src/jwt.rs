@@ -31,10 +31,3 @@ impl JsonWebToken {
         &self.header
     }
 }
-
-// Builder struct for JsonWebToken.
-pub struct JsonWebTokenBuilder {
-    header: Header,
-    payload: IdToken,
-    signature: Option<Proof>,
-}
