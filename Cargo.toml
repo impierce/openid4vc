@@ -18,7 +18,10 @@ jsonwebtoken = "8.2.0"
 reqwest = "0.11.14"
 base64-url = "2.0.0"
 futures = "0.3.27"
+async-trait = "0.1.68"
 
 [dev-dependencies]
-ed25519-dalek = "1.0.1"
+ed25519-dalek = { version = "1.0.1", features = ["rand"] }
 serde_qs = "0.12"
+wiremock = "0.5.17"
+rand = "0.7.0"

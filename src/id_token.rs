@@ -3,12 +3,12 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IdToken {
-    iss: String,
-    sub: String,
-    aud: String,
-    exp: i64,
-    iat: i64,
-    nonce: String,
+    pub iss: String,
+    pub sub: String,
+    pub aud: String,
+    pub exp: i64,
+    pub iat: i64,
+    pub nonce: String,
 }
 
 impl IdToken {

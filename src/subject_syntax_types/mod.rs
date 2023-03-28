@@ -1,12 +1,14 @@
 pub mod did_methods;
 
 use anyhow::Result;
+use async_trait::async_trait;
 use did_methods::DidMethod;
 
+#[async_trait]
 pub trait Subject {
     fn did(&self) -> String;
     fn key_identifier(&self) -> Option<String>;
-    fn sign(&self, message: &String) -> Result<Vec<u8>>;
+    async fn sign(&self, message: &String) -> Result<Vec<u8>>;
 }
 
 #[derive(PartialEq)]
@@ -23,6 +25,8 @@ impl std::str::FromStr for SubjectSyntaxType {
             Ok(SubjectSyntaxType::JWKThumbprint)
         } else if s.starts_with("did:iota") {
             Ok(SubjectSyntaxType::DID(DidMethod::Iota))
+        } else if s.starts_with("did:mock") {
+            Ok(SubjectSyntaxType::DID(DidMethod::Mock))
         } else {
             Err(())
         }
@@ -35,6 +39,7 @@ impl ToString for SubjectSyntaxType {
         match self {
             SubjectSyntaxType::JWKThumbprint => "urn:ietf:params:oauth:jwk-thumbprint".to_string(),
             SubjectSyntaxType::DID(DidMethod::Iota) => "did:iota".to_string(),
+            SubjectSyntaxType::DID(DidMethod::Mock) => "did:mock".to_string(),
         }
     }
 }

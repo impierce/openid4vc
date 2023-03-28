@@ -13,5 +13,5 @@ pub use relying_party::RelyingParty;
 pub use request::SiopRequest;
 pub use response::SiopResponse;
 
-// #[cfg(test)]
-// pub mod test_utils;
+#[cfg(test)]
+pub mod test_utils;

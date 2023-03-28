@@ -1,54 +1,94 @@
 use crate::{IdToken, SiopResponse};
 use anyhow::Result;
-use identity_iota::{client::Resolver, iota_core::IotaDIDUrl};
+use async_trait::async_trait;
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 
-pub struct RelyingParty {}
+pub struct RelyingParty<V>
+where
+    V: Validator,
+{
+    validator: V,
+}
 
-impl RelyingParty {
-    pub fn new() -> Self {
-        RelyingParty {}
+impl<V> RelyingParty<V>
+where
+    V: Validator,
+{
+    pub fn new(validator: V) -> Self {
+        RelyingParty { validator }
     }
 
     pub async fn validate_response(&self, response: &SiopResponse) -> Result<IdToken> {
         let id_token = response.id_token.clone();
         let header = decode_header(id_token.as_str())?;
-        let kid = header.kid.unwrap().clone();
+        let kid = header.kid.unwrap();
 
-        let did_url = IotaDIDUrl::parse(kid.as_str())?;
-
-        let did = did_url.did();
-        let fragment = did_url.fragment().unwrap();
-
-        let resolver: Resolver = Resolver::new().await?;
-
-        let document = resolver.resolve(did).await?.document;
-        let method = document.resolve_method(fragment, None).unwrap();
-
-        let public_key = method.data().try_decode()?;
+        // TODO: check if the subject syntax type corresponds with the validator type.
+        let public_key = self.validator.public_key(&kid).await?;
 
         let key = DecodingKey::from_ed_der(&public_key.as_slice());
-        let token_data = decode::<IdToken>(id_token.as_str(), &key, &Validation::new(Algorithm::EdDSA))?;
-
-        let id_token = token_data.claims;
+        let id_token = decode::<IdToken>(id_token.as_str(), &key, &Validation::new(Algorithm::EdDSA))?.claims;
 
         Ok(id_token)
     }
 }
 
+#[async_trait]
+pub trait Validator {
+    async fn public_key(&self, kid: &String) -> Result<Vec<u8>>;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        test_utils::{MockSubject, MockValidator},
+        IdToken, Provider, SiopRequest,
+    };
 
     #[tokio::test]
     async fn test_relying_party() {
-        let response = SiopResponse {
-            id_token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJFZERTQSIsImtpZCI6ImRpZDppb3RhOkFxY1M5RVdEQU5LYmJLOENBSENVWjZnd1ZnQ3JwYmdiWHRqZ0t6M0R5dTk0I2F1dGhlbnRpY2F0aW9uLWtleSJ9.eyJpc3MiOiJkaWQ6aW90YTpBcWNTOUVXREFOS2JiSzhDQUhDVVo2Z3dWZ0NycGJnYlh0amdLejNEeXU5NCIsInN1YiI6ImRpZDppb3RhOkFxY1M5RVdEQU5LYmJLOENBSENVWjZnd1ZnQ3JwYmdiWHRqZ0t6M0R5dTk0IiwiYXVkIjoiZGlkOmlvdGE6NFdmWUYzdGU2WDJNbTZhSzZ4SzJoR3JESnBWWUFBTTFOREE2SEZnc3dzdnQiLCJleHAiOjE2Nzk4NTQ4MzUsImlhdCI6MTY3OTg1NDIzNSwibm9uY2UiOiJuLTBTNl9XekEyTWoifQ.a82eOyPPSQKdoMZCxqo9x7yZlQ7FOmlPCm85dNGKNnO3z6R4ewoVBUgmAOpPuc7GmE0M62VI4ZgLCkWlAy2mCw".to_string()
-        };
+        // Get a new SIOP request with response mode `post` for cross-device communication.
+        let request: SiopRequest = serde_qs::from_str(
+            "\
+                response_type=id_token\
+                &response_mode=post\
+                &client_id=did:mock:1\
+                &redirect_uri=http://127.0.0.1:4200/redirect_uri\
+                &scope=openid\
+                &nonce=n-0S6_WzA2Mj\
+                &subject_syntax_types_supported[0]=did%3Amock\
+            ",
+        )
+        .unwrap();
 
-        let rp = RelyingParty::new();
+        let subject = MockSubject::new();
 
-        let id_token = rp.validate_response(&response).await.unwrap();
-        dbg!(&id_token);
+        let mut provider = Provider::new(subject).await.unwrap();
+
+        // Generate a new response.
+        let response = provider.generate_response(request).await.unwrap();
+
+        // Create a new validator.
+        let validator = MockValidator::new();
+
+        // Create a new relying party.
+        let relying_party = RelyingParty::new(validator);
+
+        // Validate the response.
+        let id_token = relying_party.validate_response(&response).await.unwrap();
+
+        let IdToken {
+            iss, sub, aud, nonce, ..
+        } = IdToken::new(
+            "did:mock:123".to_string(),
+            "did:mock:123".to_string(),
+            "did:mock:1".to_string(),
+            "n-0S6_WzA2Mj".to_string(),
+        );
+        assert_eq!(id_token.iss, iss);
+        assert_eq!(id_token.sub, sub);
+        assert_eq!(id_token.aud, aud);
+        assert_eq!(id_token.nonce, nonce);
     }
 }

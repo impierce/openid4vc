@@ -1,14 +1,15 @@
 use anyhow::Result;
+use async_trait::async_trait;
 use identity_iota::{
     account::{Account, IdentitySetup, MethodContent},
     account_storage::KeyLocation,
-    client::SharedPtr,
+    client::{Resolver, SharedPtr},
     did::{MethodRelationship, VerificationMethod},
-    iota_core::IotaDID,
+    iota_core::{IotaDID, IotaDIDUrl},
     prelude::*,
 };
 
-use crate::subject_syntax_types::Subject;
+use crate::{relying_party::Validator, subject_syntax_types::Subject};
 
 use std::sync::Arc;
 
@@ -19,6 +20,7 @@ where
     pub account: Account<C>,
 }
 
+#[async_trait]
 impl Subject for IotaSubject {
     fn did(&self) -> String {
         self.account.did().to_string()
@@ -29,17 +31,17 @@ impl Subject for IotaSubject {
             .and_then(|verification_method| Some(verification_method.id().to_string()))
     }
 
-    fn sign(&self, message: &String) -> Result<Vec<u8>> {
+    async fn sign(&self, message: &String) -> Result<Vec<u8>> {
         // Get the verification method for authentication from the DID document.
         let method = self.authentication_method().unwrap();
 
         let key_location = KeyLocation::from_verification_method(&method).unwrap();
 
-        let proof_value = futures::executor::block_on(self.account.storage().key_sign(
-            &self.account.did(),
-            &key_location,
-            message.as_bytes().to_vec(),
-        ))?;
+        let proof_value = self
+            .account
+            .storage()
+            .key_sign(&self.account.did(), &key_location, message.as_bytes().to_vec())
+            .await?;
 
         Ok(proof_value.as_bytes().to_vec())
     }
@@ -117,13 +119,35 @@ impl IotaSubject {
     }
 }
 
+pub struct IotaValidator;
+
+impl IotaValidator {
+    pub fn new() -> Self {
+        IotaValidator {}
+    }
+}
+
+#[async_trait]
+impl Validator for IotaValidator {
+    async fn public_key(&self, kid: &String) -> Result<Vec<u8>> {
+        let did_url = IotaDIDUrl::parse(kid.as_str())?;
+
+        let did = did_url.did();
+        let fragment = did_url.fragment().unwrap();
+
+        let resolver: Resolver = Resolver::new().await?;
+
+        let document = resolver.resolve(did).await?.document;
+        let method = document.resolve_method(fragment, None).unwrap();
+
+        Ok(method.data().try_decode()?)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        subject_syntax_types::{did_methods::DidMethod, SubjectSyntaxType},
-        Provider, RelyingParty, SiopRequest,
-    };
+    use crate::{Provider, RelyingParty, SiopRequest};
     use identity_iota::{account::MethodContent, did::MethodRelationship};
 
     const AUTHENTICATION_KEY: &'static str = "authentication-key";
@@ -147,8 +171,6 @@ mod tests {
         // Create a new provider.
         let mut provider = Provider::new(subject).await.unwrap();
 
-        provider.add_subject_syntax_type(SubjectSyntaxType::DID(DidMethod::Iota));
-
         // Get a new SIOP request with response mode `post` for cross-device communication.
         let request: SiopRequest = serde_qs::from_str(
             "\
@@ -164,14 +186,14 @@ mod tests {
         .unwrap();
 
         // The provider generates a signed SIOP response from the new SIOP request.
-        let response = provider.generate_response(request).unwrap();
+        let response = provider.generate_response(request).await.unwrap();
         dbg!(&response);
 
         // // Finally, the provider sends the signed response to the designated endpoint via an HTTP POST request.
         // provider.send_response(response).await;
 
         // Let the relying party validate the response.
-        let relying_party = RelyingParty::new();
+        let relying_party = RelyingParty::new(IotaValidator::new());
         let id_token = relying_party.validate_response(&response).await.unwrap();
         dbg!(&id_token);
 
