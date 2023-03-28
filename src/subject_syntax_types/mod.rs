@@ -33,7 +33,6 @@ impl std::str::FromStr for SubjectSyntaxType {
     }
 }
 
-// implement to_string for SubjectSyntaxType
 impl ToString for SubjectSyntaxType {
     fn to_string(&self) -> String {
         match self {

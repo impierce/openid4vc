@@ -1,5 +1,5 @@
 use crate::{IdToken, SiopResponse};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 
@@ -18,17 +18,20 @@ where
         RelyingParty { validator }
     }
 
+    /// Validates a [`SiopResponse`] by decoding the header of the id_token, fetching the public key corresponding to
+    /// the key identifier and finally decoding the id_token using the public key and by validating the signature.
     pub async fn validate_response(&self, response: &SiopResponse) -> Result<IdToken> {
         let id_token = response.id_token.clone();
         let header = decode_header(id_token.as_str())?;
-        let kid = header.kid.unwrap();
+        let id_token = if let Some(kid) = header.kid {
+            // TODO: check if the subject syntax type corresponds with the validator type.
+            let public_key = self.validator.public_key(&kid).await?;
 
-        // TODO: check if the subject syntax type corresponds with the validator type.
-        let public_key = self.validator.public_key(&kid).await?;
-
-        let key = DecodingKey::from_ed_der(&public_key.as_slice());
-        let id_token = decode::<IdToken>(id_token.as_str(), &key, &Validation::new(Algorithm::EdDSA))?.claims;
-
+            let key = DecodingKey::from_ed_der(&public_key.as_slice());
+            decode::<IdToken>(id_token.as_str(), &key, &Validation::new(Algorithm::EdDSA))?.claims
+        } else {
+            return Err(anyhow!("No key identifier found in the header."));
+        };
         Ok(id_token)
     }
 }
@@ -62,12 +65,11 @@ mod tests {
         )
         .unwrap();
 
-        let subject = MockSubject::new();
-
-        let mut provider = Provider::new(subject).await.unwrap();
-
         // Generate a new response.
-        let response = provider.generate_response(request).await.unwrap();
+        let response = Provider::<MockSubject>::default()
+            .generate_response(request)
+            .await
+            .unwrap();
 
         // Create a new validator.
         let validator = MockValidator::new();

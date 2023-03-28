@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use serde::Serialize;
 
 use crate::{
@@ -30,15 +30,12 @@ where
 
     pub fn subject_syntax_types_supported(&self) -> Vec<SubjectSyntaxType> {
         let did = self.subject.did();
-        let did_method = did
-            .match_indices(':')
-            .nth(1)
-            .map(|(index, _)| did.split_at(index))
-            .unwrap()
-            .0;
-        vec![SubjectSyntaxType::from_str(did_method).unwrap()]
+        vec![SubjectSyntaxType::from_str(did.as_str()).unwrap()]
     }
 
+    // TODO: needs refactoring.
+    /// Generates a [`SiopResponse`] in response to a [`SiopRequest`]. The [`SiopResponse`] contains an [`IdToken`],
+    /// which is signed by the [`Subject`] of the [`Provider`].
     pub async fn generate_response(&mut self, request: SiopRequest) -> Result<SiopResponse> {
         if request.subject_syntax_types_supported().iter().any(|sst| {
             self.subject_syntax_types_supported()
@@ -65,11 +62,11 @@ where
 
                     return Ok(SiopResponse::new(id_token));
                 } else {
-                    panic!("There is no redirect_uri parameter!");
+                    return Err(anyhow!("No redirect_uri found in the request."));
                 }
             }
         }
-        todo!();
+        return Err(anyhow!("Subject syntax type not supported."));
     }
 
     pub async fn send_response(&self, response: SiopResponse, redirect_uri: String) {
@@ -113,8 +110,7 @@ mod tests {
         )
         .unwrap();
 
-        // The provider generates a signed SIOP response from the new SIOP request.
-        let response = provider.generate_response(request).await.unwrap();
-        dbg!(&response);
+        // Test whether the provider can generate a response for the request succesfully.
+        assert!(provider.generate_response(request).await.is_ok());
     }
 }

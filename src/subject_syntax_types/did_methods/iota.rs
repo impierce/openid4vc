@@ -147,7 +147,7 @@ impl Validator for IotaValidator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Provider, RelyingParty, SiopRequest};
+    use crate::{IdToken, Provider, RelyingParty, SiopRequest};
     use identity_iota::{account::MethodContent, did::MethodRelationship};
 
     const AUTHENTICATION_KEY: &'static str = "authentication-key";
@@ -187,15 +187,20 @@ mod tests {
 
         // The provider generates a signed SIOP response from the new SIOP request.
         let response = provider.generate_response(request).await.unwrap();
-        dbg!(&response);
-
-        // // Finally, the provider sends the signed response to the designated endpoint via an HTTP POST request.
-        // provider.send_response(response).await;
 
         // Let the relying party validate the response.
         let relying_party = RelyingParty::new(IotaValidator::new());
         let id_token = relying_party.validate_response(&response).await.unwrap();
-        dbg!(&id_token);
+
+        let IdToken { aud, nonce, .. } = IdToken::new(
+            "".to_string(),
+            "".to_string(),
+            "did:iota:4WfYF3te6X2Mm6aK6xK2hGrDJpVYAAM1NDA6HFgswsvt".to_string(),
+            "n-0S6_WzA2Mj".to_string(),
+        );
+        assert_eq!(id_token.iss, id_token.sub);
+        assert_eq!(id_token.aud, aud);
+        assert_eq!(id_token.nonce, nonce);
 
         // Optional: remove the authentication verivication method.
         // provider
