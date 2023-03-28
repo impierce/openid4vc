@@ -21,7 +21,5 @@ futures = "0.3.27"
 async-trait = "0.1.68"
 
 [dev-dependencies]
-ed25519-dalek = { version = "1.0.1", features = ["rand"] }
+ed25519-dalek = "1.0.1"
 serde_qs = "0.12"
-wiremock = "0.5.17"
-rand = "0.7.0"
