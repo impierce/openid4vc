@@ -1,10 +1,10 @@
+pub mod did_methods;
 pub mod id_token;
 pub mod jwt;
 pub mod provider;
 pub mod relying_party;
 pub mod request;
 pub mod response;
-pub mod subject_syntax_types;
 
 pub use id_token::IdToken;
 pub use jwt::JsonWebToken;

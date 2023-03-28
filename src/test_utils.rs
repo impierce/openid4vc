@@ -1,4 +1,4 @@
-use crate::{relying_party::Validator, subject_syntax_types::Subject};
+use crate::{provider::Subject, relying_party::Validator};
 use anyhow::Result;
 use async_trait::async_trait;
 use ed25519_dalek::{Keypair, Signature, Signer};

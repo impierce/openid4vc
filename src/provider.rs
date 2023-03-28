@@ -1,12 +1,8 @@
-use std::str::FromStr;
-
 use anyhow::{anyhow, Result};
+use async_trait::async_trait;
 use serde::Serialize;
 
-use crate::{
-    subject_syntax_types::{Subject, SubjectSyntaxType},
-    IdToken, JsonWebToken, SiopRequest, SiopResponse,
-};
+use crate::{IdToken, JsonWebToken, SiopRequest, SiopResponse};
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
 /// [`SiopRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
@@ -28,19 +24,27 @@ where
         Ok(Provider { subject })
     }
 
-    pub fn subject_syntax_types_supported(&self) -> Vec<SubjectSyntaxType> {
+    pub fn subject_syntax_types_supported(&self) -> Vec<String> {
         let did = self.subject.did();
-        vec![SubjectSyntaxType::from_str(did.as_str()).unwrap()]
+        let did_method = did
+            .match_indices(':')
+            .nth(1)
+            .map(|(index, _)| did.split_at(index))
+            .unwrap()
+            .0
+            .to_string();
+        vec![did_method]
     }
 
     // TODO: needs refactoring.
     /// Generates a [`SiopResponse`] in response to a [`SiopRequest`]. The [`SiopResponse`] contains an [`IdToken`],
     /// which is signed by the [`Subject`] of the [`Provider`].
     pub async fn generate_response(&mut self, request: SiopRequest) -> Result<SiopResponse> {
-        if request.subject_syntax_types_supported().iter().any(|sst| {
-            self.subject_syntax_types_supported()
-                .contains(&SubjectSyntaxType::from_str(sst).unwrap())
-        }) {
+        if request
+            .subject_syntax_types_supported()
+            .iter()
+            .any(|sst| self.subject_syntax_types_supported().contains(sst))
+        {
             if request.is_cross_device_request() {
                 if let Some(_redirect_uri) = request.redirect_uri() {
                     let id_token = IdToken::new(
@@ -81,6 +85,13 @@ where
     T: ?Sized + Serialize,
 {
     Ok(base64_url::encode(serde_json::to_vec(value)?.as_slice()))
+}
+
+#[async_trait]
+pub trait Subject {
+    fn did(&self) -> String;
+    fn key_identifier(&self) -> Option<String>;
+    async fn sign(&self, message: &String) -> Result<Vec<u8>>;
 }
 
 #[cfg(test)]
