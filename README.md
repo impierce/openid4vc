@@ -12,7 +12,7 @@ Currently the Implicit Flow is consists of four major parts:
 
 ## Example
 
-```
+```rust
     use anyhow::Result;
     use async_trait::async_trait;
     use ed25519_dalek::{Keypair, Signature, Signer};
