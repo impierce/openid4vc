@@ -84,11 +84,56 @@ impl Provider {
     }
 }
 
+fn base64_url_encode<T>(value: &T) -> Result<String>
+where
+    T: ?Sized + Serialize,
+{
+    Ok(base64_url::encode(serde_json::to_vec(value)?.as_slice()))
+}
+
+#[async_trait]
+pub trait Subject {
+    fn did(&self) -> String;
+    fn key_identifier(&self) -> Option<String>;
+    async fn sign(&self, message: &String) -> Result<Vec<u8>>;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{test_utils::MockSubject, SubjectSyntaxType, Validator, Validators};
     use std::str::FromStr;
+
+    const ED25519_PRIVATE_KEY: [u8; 64] = [
+        35, 158, 92, 18, 248, 210, 204, 33, 101, 4, 120, 7, 202, 186, 2, 240, 74, 174, 161, 215, 200, 234, 164, 123,
+        239, 225, 243, 78, 189, 217, 211, 97, 35, 158, 92, 18, 248, 210, 204, 33, 101, 4, 120, 7, 202, 186, 2, 240, 74,
+        174, 161, 215, 200, 234, 164, 123, 239, 225, 243, 78, 189, 217, 211, 97,
+    ];
+
+    struct MockSubject;
+
+    impl MockSubject {
+        fn new() -> Self {
+            MockSubject {}
+        }
+    }
+
+    impl Subject for MockSubject {
+        fn did(&self) -> String {
+            "did:mock:123".to_string()
+        }
+
+        fn key_identifier(&self) -> Option<String> {
+            Some("key_identifier".to_string())
+        }
+
+        fn sign(&self, message: &String) -> Result<Vec<u8>> {
+            use ed25519_dalek::{Signature, Signer};
+            let keypair = ed25519_dalek::Keypair::from_bytes(&ED25519_PRIVATE_KEY).unwrap();
+            let signature: Signature = keypair.sign(message.as_bytes());
+            Ok(signature.to_bytes().to_vec())
+        }
+    }
 
     #[tokio::test]
     async fn test_provider() {
