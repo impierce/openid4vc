@@ -1,18 +1,24 @@
+use getset::Getters;
 use identity_core::crypto::Proof;
 use jsonwebtoken::{Algorithm, Header};
 use serde::Serialize;
 
-use crate::id_token::IdToken;
-
-#[derive(Debug, Serialize)]
-pub struct JsonWebToken {
+#[derive(Debug, Serialize, Getters)]
+pub struct JsonWebToken<C>
+where
+    C: Serialize,
+{
+    #[getset(get = "pub")]
     pub header: Header,
-    pub payload: IdToken,
+    pub payload: C,
     pub signature: Option<Proof>,
 }
 
-impl JsonWebToken {
-    pub fn new(payload: IdToken) -> Self {
+impl<C> JsonWebToken<C>
+where
+    C: Serialize,
+{
+    pub fn new(payload: C) -> Self {
         JsonWebToken {
             // TODO: Undo hardcoding and consider not using the jsonwebtoken crate.
             header: Header::new(Algorithm::EdDSA),
@@ -24,10 +30,5 @@ impl JsonWebToken {
     pub fn kid(mut self, kid: String) -> Self {
         self.header.kid = Some(kid);
         self
-    }
-
-    // Getter method for header field.
-    pub fn header(&self) -> &Header {
-        &self.header
     }
 }
