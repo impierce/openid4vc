@@ -1,4 +1,4 @@
-use chrono::{Duration, Utc};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -12,12 +12,12 @@ pub struct IdToken {
 }
 
 impl IdToken {
-    pub fn new(iss: String, sub: String, aud: String, nonce: String) -> Self {
+    pub fn new(iss: String, sub: String, aud: String, nonce: String, exp: i64) -> Self {
         IdToken {
             iss,
             sub,
             aud,
-            exp: (Utc::now() + Duration::minutes(10)).timestamp(),
+            exp,
             iat: Utc::now().timestamp(),
             nonce,
         }

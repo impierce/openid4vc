@@ -48,6 +48,7 @@ mod tests {
         test_utils::{MockSubject, MockValidator},
         IdToken, Provider, SiopRequest,
     };
+    use chrono::{Duration, Utc};
 
     #[tokio::test]
     async fn test_relying_party() {
@@ -87,6 +88,7 @@ mod tests {
             "did:mock:123".to_string(),
             "did:mock:1".to_string(),
             "n-0S6_WzA2Mj".to_string(),
+            (Utc::now() + Duration::minutes(10)).timestamp(),
         );
         assert_eq!(id_token.iss, iss);
         assert_eq!(id_token.sub, sub);

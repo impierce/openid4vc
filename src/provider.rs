@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use chrono::{Duration, Utc};
 use serde::Serialize;
 
 use crate::{IdToken, JsonWebToken, SiopRequest, SiopResponse};
@@ -52,6 +53,7 @@ where
                         self.subject.did(),
                         request.client_id().clone(),
                         request.nonce().clone(),
+                        (Utc::now() + Duration::minutes(10)).timestamp(),
                     );
 
                     let kid = self.subject.key_identifier().unwrap();
