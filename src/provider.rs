@@ -26,21 +26,13 @@ where
     }
 
     pub fn subject_syntax_types_supported(&self) -> Vec<String> {
-        let did = self.subject.did();
-        let did_method = did
-            .match_indices(':')
-            .nth(1)
-            .map(|(index, _)| did.split_at(index))
-            .unwrap()
-            .0
-            .to_string();
-        vec![did_method]
+        vec![format!("did:{}", self.subject.did().method())]
     }
 
     // TODO: needs refactoring.
     /// Generates a [`SiopResponse`] in response to a [`SiopRequest`]. The [`SiopResponse`] contains an [`IdToken`],
     /// which is signed by the [`Subject`] of the [`Provider`].
-    pub async fn generate_response(&mut self, request: SiopRequest) -> Result<SiopResponse> {
+    pub async fn generate_response(&self, request: SiopRequest) -> Result<SiopResponse> {
         if request
             .subject_syntax_types_supported()
             .iter()
@@ -49,8 +41,8 @@ where
             if request.is_cross_device_request() {
                 if let Some(_redirect_uri) = request.redirect_uri() {
                     let id_token = IdToken::new(
-                        self.subject.did(),
-                        self.subject.did(),
+                        self.subject.did().to_string(),
+                        self.subject.did().to_string(),
                         request.client_id().clone(),
                         request.nonce().clone(),
                         (Utc::now() + Duration::minutes(10)).timestamp(),
@@ -91,7 +83,7 @@ where
 
 #[async_trait]
 pub trait Subject {
-    fn did(&self) -> String;
+    fn did(&self) -> did_url::DID;
     fn key_identifier(&self) -> Option<String>;
     async fn sign(&self, message: &String) -> Result<Vec<u8>>;
 }
@@ -104,10 +96,10 @@ mod tests {
     #[tokio::test]
     async fn test_provider() {
         // Create a new subject.
-        let subject = MockSubject::new();
+        let subject = MockSubject::new("did:mock:123".to_string(), "key_identifier".to_string()).unwrap();
 
         // Create a new provider.
-        let mut provider = Provider::new(subject).await.unwrap();
+        let provider = Provider::new(subject).await.unwrap();
 
         // Get a new SIOP request with response mode `post` for cross-device communication.
         let request: SiopRequest = serde_qs::from_str(
@@ -125,5 +117,14 @@ mod tests {
 
         // Test whether the provider can generate a response for the request succesfully.
         assert!(provider.generate_response(request).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_provider_subject_syntax_types_supported() {
+        // Create a new provider.
+        let provider = Provider::<MockSubject>::default();
+
+        // Test whether the provider returns the correct subject syntax types.
+        assert_eq!(provider.subject_syntax_types_supported(), vec!["did:mock".to_string()]);
     }
 }

@@ -1,6 +1,7 @@
 use crate::{provider::Subject, relying_party::Validator};
 use anyhow::Result;
 use async_trait::async_trait;
+use derivative::{self, Derivative};
 use ed25519_dalek::{Keypair, Signature, Signer};
 use lazy_static::lazy_static;
 use rand::rngs::OsRng;
@@ -10,23 +11,31 @@ lazy_static! {
     pub static ref MOCK_KEYPAIR: Keypair = Keypair::generate(&mut OsRng);
 }
 
-#[derive(Default)]
-pub struct MockSubject;
+#[derive(Derivative)]
+#[derivative(Default)]
+pub struct MockSubject {
+    #[derivative(Default(value = "did_url::DID::parse(\"did:mock:123\").unwrap()"))]
+    pub did: did_url::DID,
+    pub key_identifier: String,
+}
 
 impl MockSubject {
-    pub fn new() -> Self {
-        MockSubject {}
+    pub fn new(did: String, key_identifier: String) -> Result<Self> {
+        Ok(MockSubject {
+            did: did_url::DID::parse(did)?,
+            key_identifier,
+        })
     }
 }
 
 #[async_trait]
 impl Subject for MockSubject {
-    fn did(&self) -> String {
-        "did:mock:123".to_string()
+    fn did(&self) -> did_url::DID {
+        self.did.clone()
     }
 
     fn key_identifier(&self) -> Option<String> {
-        Some("key_identifier".to_string())
+        Some(self.key_identifier.clone())
     }
 
     async fn sign(&self, message: &String) -> Result<Vec<u8>> {
