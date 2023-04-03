@@ -58,13 +58,16 @@ where
                     let signature = base64_url::encode(proof_value.as_slice());
                     let id_token = [message, signature].join(".");
 
-                    return Ok(SiopResponse::new(id_token));
+                    Ok(SiopResponse::new(id_token))
                 } else {
-                    return Err(anyhow!("No redirect_uri found in the request."));
+                    Err(anyhow!("No redirect_uri found in the request."))
                 }
+            } else {
+                Err(anyhow!("Response mode not supported."))
             }
+        } else {
+            Err(anyhow!("Subject syntax type not supported."))
         }
-        return Err(anyhow!("Subject syntax type not supported."));
     }
 
     pub async fn send_response(&self, response: SiopResponse, redirect_uri: String) {
@@ -85,7 +88,7 @@ where
 pub trait Subject {
     fn did(&self) -> did_url::DID;
     fn key_identifier(&self) -> Option<String>;
-    async fn sign(&self, message: &String) -> Result<Vec<u8>>;
+    async fn sign<'a>(&self, message: &'a str) -> Result<Vec<u8>>;
 }
 
 #[cfg(test)]

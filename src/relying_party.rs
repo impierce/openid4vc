@@ -27,7 +27,7 @@ where
             // TODO: check if the subject syntax type corresponds with the validator type.
             let public_key = self.validator.public_key(&kid).await?;
 
-            let key = DecodingKey::from_ed_der(&public_key.as_slice());
+            let key = DecodingKey::from_ed_der(public_key.as_slice());
             decode::<IdToken>(id_token.as_str(), &key, &Validation::new(Algorithm::EdDSA))?.claims
         } else {
             return Err(anyhow!("No key identifier found in the header."));
@@ -38,7 +38,7 @@ where
 
 #[async_trait]
 pub trait Validator {
-    async fn public_key(&self, kid: &String) -> Result<Vec<u8>>;
+    async fn public_key<'a>(&self, kid: &'a str) -> Result<Vec<u8>>;
 }
 
 #[cfg(test)]

@@ -38,7 +38,7 @@ impl Subject for MockSubject {
         Some(self.key_identifier.clone())
     }
 
-    async fn sign(&self, message: &String) -> Result<Vec<u8>> {
+    async fn sign<'a>(&self, message: &'a str) -> Result<Vec<u8>> {
         let signature: Signature = MOCK_KEYPAIR.sign(message.as_bytes());
         Ok(signature.to_bytes().to_vec())
     }
@@ -54,7 +54,7 @@ impl MockValidator {
 
 #[async_trait]
 impl Validator for MockValidator {
-    async fn public_key(&self, _kid: &String) -> Result<Vec<u8>> {
+    async fn public_key<'a>(&self, _kid: &'a str) -> Result<Vec<u8>> {
         Ok(MOCK_KEYPAIR.public.to_bytes().to_vec())
     }
 }
