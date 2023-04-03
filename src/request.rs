@@ -26,6 +26,7 @@ pub struct SiopRequest {
     subject_syntax_types_supported: Vec<String>,
 }
 
+// TODO: implement an creational pattern for SiopRequest.
 impl SiopRequest {
     pub fn is_cross_device_request(&self) -> bool {
         self.response_mode == Some("post".to_owned())
