@@ -1,4 +1,3 @@
-pub mod did_methods;
 pub mod id_token;
 pub mod jwt;
 pub mod provider;
