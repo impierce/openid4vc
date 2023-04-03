@@ -1,6 +1,7 @@
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
+/// An SIOPv2 [`IdToken`] as specified in the [SIOPv2 specification](https://openid.net/specs/openid-connect-core-1_0.html#IDToken).
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IdToken {
     pub iss: String,
