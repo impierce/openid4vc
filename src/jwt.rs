@@ -1,5 +1,4 @@
 use getset::Getters;
-use identity_core::crypto::Proof;
 use jsonwebtoken::{Algorithm, Header};
 use serde::Serialize;
 
@@ -11,7 +10,6 @@ where
     #[getset(get = "pub")]
     pub header: Header,
     pub payload: C,
-    pub signature: Option<Proof>,
 }
 
 impl<C> JsonWebToken<C>
@@ -23,7 +21,6 @@ where
             // TODO: Undo hardcoding and consider not using the jsonwebtoken crate.
             header: Header::new(Algorithm::EdDSA),
             payload,
-            signature: None,
         }
     }
 
