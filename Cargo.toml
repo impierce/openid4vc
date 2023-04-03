@@ -26,4 +26,6 @@ async-trait = "0.1.68"
 
 [dev-dependencies]
 ed25519-dalek = "1.0.1"
+rand = "0.7"
 serde_qs = "0.12"
+lazy_static = "1.4.0"

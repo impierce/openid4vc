@@ -2,14 +2,13 @@ use crate::{provider::Subject, relying_party::Validator};
 use anyhow::Result;
 use async_trait::async_trait;
 use ed25519_dalek::{Keypair, Signature, Signer};
+use lazy_static::lazy_static;
+use rand::rngs::OsRng;
 
-// Keypair bytes consisting of both the public and private key.
-// FOR TESTING PURPOSES ONLY. DO NOT USE IN PRODUCTION.
-const ED25519_KEYPAIR_BYTES: [u8; 64] = [
-    184, 51, 220, 84, 185, 50, 38, 241, 159, 104, 71, 65, 69, 200, 189, 33, 0, 143, 8, 118, 121, 226, 54, 174, 25, 25,
-    222, 141, 130, 143, 80, 179, 174, 9, 12, 56, 110, 213, 126, 121, 47, 192, 117, 97, 75, 99, 95, 61, 25, 206, 185,
-    80, 202, 96, 180, 162, 64, 49, 105, 175, 198, 195, 44, 173,
-];
+// Keypair for mocking purposes.
+lazy_static! {
+    pub static ref MOCK_KEYPAIR: Keypair = Keypair::generate(&mut OsRng);
+}
 
 #[derive(Default)]
 pub struct MockSubject;
@@ -31,8 +30,7 @@ impl Subject for MockSubject {
     }
 
     async fn sign(&self, message: &String) -> Result<Vec<u8>> {
-        let keypair = Keypair::from_bytes(&ED25519_KEYPAIR_BYTES).unwrap();
-        let signature: Signature = keypair.sign(message.as_bytes());
+        let signature: Signature = MOCK_KEYPAIR.sign(message.as_bytes());
         Ok(signature.to_bytes().to_vec())
     }
 }
@@ -48,7 +46,6 @@ impl MockValidator {
 #[async_trait]
 impl Validator for MockValidator {
     async fn public_key(&self, _kid: &String) -> Result<Vec<u8>> {
-        let keypair = Keypair::from_bytes(&ED25519_KEYPAIR_BYTES).unwrap();
-        Ok(keypair.public.to_bytes().to_vec())
+        Ok(MOCK_KEYPAIR.public.to_bytes().to_vec())
     }
 }
