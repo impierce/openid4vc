@@ -1,14 +1,14 @@
-# siop
-Self Issued OpenID Provider v2 (SIOPv2) authentication library in rust.
+# siopv2
+Self Issued OpenID Provider v2 (SIOPv2) authentication library in rust conform to the [SIOPv2 specification](https://openid.net/specs/openid-connect-self-issued-v2-1_0.html).
 
 ## Description
 
 Currently the Implicit Flow is consists of four major parts:
 
-    - A Provider that can accept a SiopRequest and generate a SiopResponse by creating an IdToken, adding its key identifier to the header of the id_token, signing the id_token and wrap it into a SiopResponse. It can also send the SiopResponse using the redirect_uri parameter.
-    - A RelyingParty struct which can validate a SiopResponse by validating its IdToken using a key identifier (which is extracted from the id_token) and its public key.
-    - The Subject trait can be implemented on a custom struct representing the signing logic of a DID method. A Provider can ingest an object that implements the Subject trait so that during generation of a SiopResponse the DID method syntax, key identifier and signing method of the specific Subject can be used.
-    - The Validator trait can be implemented on a custom struct representing the validating logic of a DID method. When ingested by a RelyingParty, it can resolve the public key that is needed for validating an IdToken.
+    - A `Provider` that can accept a SiopRequest and generate a `SiopResponse` by creating an `IdToken`, adding its key identifier to the header of the `id_token`, signing the `id_token` and wrap it into a `SiopResponse`. It can also send the `SiopResponse` using the `redirect_uri` parameter.
+    - A `RelyingParty` struct which can validate a `SiopResponse` by validating its `IdToken` using a key identifier (which is extracted from the `id_token`) and its public key.
+    - The `Subject` trait can be implemented on a custom struct representing the signing logic of a DID method. A `Provider` can ingest an object that implements the `Subject` trait so that during generation of a `SiopResponse` the DID method syntax, key identifier and signing method of the specific `Subject` can be used.
+    - The `Validator` trait can be implemented on a custom struct representing the validating logic of a DID method. When ingested by a `RelyingParty`, it can resolve the public key that is needed for validating an `IdToken`.
 
 ## Example
 
