@@ -1,10 +1,17 @@
 use getset::Getters;
 use serde::Deserialize;
 
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum ResponseType {
+    IdToken,
+}
+
+/// [`SiopRequest`] is a request from a [crate::relying_party::RelyingParty] (RP) to a [crate::provider::Provider] (SIOP).
 #[allow(dead_code)]
 #[derive(Deserialize, Debug, Getters)]
 pub struct SiopRequest {
-    response_type: String,
+    response_type: ResponseType,
     response_mode: Option<String>,
     #[getset(get = "pub")]
     client_id: String,
