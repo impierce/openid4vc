@@ -25,24 +25,26 @@ where
         Ok(Provider { subject })
     }
 
-    pub fn subject_syntax_types_supported(&self) -> Vec<String> {
-        vec![format!("did:{}", self.subject.did().method())]
+    pub fn subject_syntax_types_supported(&self) -> Result<Vec<String>> {
+        Ok(vec![format!("did:{}", self.subject.did()?.method())])
     }
 
     // TODO: needs refactoring.
     /// Generates a [`SiopResponse`] in response to a [`SiopRequest`]. The [`SiopResponse`] contains an [`IdToken`],
     /// which is signed by the [`Subject`] of the [`Provider`].
     pub async fn generate_response(&self, request: SiopRequest) -> Result<SiopResponse> {
+        let subject_syntax_types_supported = self.subject_syntax_types_supported()?;
         if request
             .subject_syntax_types_supported()
             .iter()
-            .any(|sst| self.subject_syntax_types_supported().contains(sst))
+            .any(|sst| subject_syntax_types_supported.contains(sst))
         {
             if request.is_cross_device_request() {
                 if let Some(_redirect_uri) = request.redirect_uri() {
+                    let subject_did = self.subject.did()?;
                     let id_token = IdToken::new(
-                        self.subject.did().to_string(),
-                        self.subject.did().to_string(),
+                        subject_did.to_string(),
+                        subject_did.to_string(),
                         request.client_id().clone(),
                         request.nonce().clone(),
                         (Utc::now() + Duration::minutes(10)).timestamp(),
@@ -86,7 +88,7 @@ where
 
 #[async_trait]
 pub trait Subject {
-    fn did(&self) -> did_url::DID;
+    fn did(&self) -> Result<did_url::DID>;
     fn key_identifier(&self) -> Option<String>;
     async fn sign<'a>(&self, message: &'a str) -> Result<Vec<u8>>;
 }
@@ -128,6 +130,9 @@ mod tests {
         let provider = Provider::<MockSubject>::default();
 
         // Test whether the provider returns the correct subject syntax types.
-        assert_eq!(provider.subject_syntax_types_supported(), vec!["did:mock".to_string()]);
+        assert_eq!(
+            provider.subject_syntax_types_supported().unwrap(),
+            vec!["did:mock".to_string()]
+        );
     }
 }

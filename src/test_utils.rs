@@ -30,8 +30,8 @@ impl MockSubject {
 
 #[async_trait]
 impl Subject for MockSubject {
-    fn did(&self) -> did_url::DID {
-        self.did.clone()
+    fn did(&self) -> Result<did_url::DID> {
+        Ok(self.did.clone())
     }
 
     fn key_identifier(&self) -> Option<String> {

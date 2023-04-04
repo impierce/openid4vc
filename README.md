@@ -15,14 +15,15 @@ Currently the Implicit Flow is consists of four major parts:
 ```rust
     use anyhow::Result;
     use async_trait::async_trait;
+    use chrono::{Duration, Utc};
     use ed25519_dalek::{Keypair, Signature, Signer};
-    use siop::{
+    use lazy_static::lazy_static;
+    use rand::rngs::OsRng;
+    use siopv2::{
         provider::{Provider, Subject},
         relying_party::{RelyingParty, Validator},
         IdToken, SiopRequest,
     };
-    use lazy_static::lazy_static;
-    use rand::rngs::OsRng;
 
     lazy_static! {
         pub static ref MOCK_KEYPAIR: Keypair = Keypair::generate(&mut OsRng);
@@ -40,32 +41,27 @@ Currently the Implicit Flow is consists of four major parts:
 
     #[async_trait]
     impl Subject for MySubject {
-        fn did(&self) -> String {
-            "did:my_method:123".to_string()
+        fn did(&self) -> Result<did_url::DID> {
+            Ok(did_url::DID::parse("did:key:123")?)
         }
 
         fn key_identifier(&self) -> Option<String> {
             Some("key_identifier".to_string())
         }
 
-        async fn sign(&self, message: &String) -> Result<Vec<u8>> {
+        async fn sign<'a>(&self, message: &'a str) -> Result<Vec<u8>> {
             let signature: Signature = MOCK_KEYPAIR.sign(message.as_bytes());
             Ok(signature.to_bytes().to_vec())
         }
     }
 
     // A Validator type that can be ingested by a RelyingParty
+    #[derive(Default)]
     pub struct MyValidator;
-
-    impl MyValidator {
-        pub fn new() -> Self {
-            MyValidator {}
-        }
-    }
 
     #[async_trait]
     impl Validator for MyValidator {
-        async fn public_key(&self, _kid: &String) -> Result<Vec<u8>> {
+        async fn public_key<'a>(&self, _kid: &'a str) -> Result<Vec<u8>> {
             Ok(MOCK_KEYPAIR.public.to_bytes().to_vec())
         }
     }
@@ -77,11 +73,11 @@ Currently the Implicit Flow is consists of four major parts:
             "\
                 response_type=id_token\
                 &response_mode=post\
-                &client_id=did:my_method:1\
+                &client_id=did:key:1\
                 &redirect_uri=http://127.0.0.1:4200/redirect_uri\
                 &scope=openid\
                 &nonce=n-0S6_WzA2Mj\
-                &subject_syntax_types_supported[0]=did%3Amy_method\
+                &subject_syntax_types_supported[0]=did%3Akey\
             ",
         )
         .unwrap();
@@ -93,7 +89,7 @@ Currently the Implicit Flow is consists of four major parts:
             .unwrap();
 
         // Create a new validator.
-        let validator = MyValidator::new();
+        let validator = MyValidator::default();
 
         // Create a new relying party.
         let relying_party = RelyingParty::new(validator);
@@ -104,16 +100,16 @@ Currently the Implicit Flow is consists of four major parts:
         let IdToken {
             iss, sub, aud, nonce, ..
         } = IdToken::new(
-            "did:my_method:123".to_string(),
-            "did:my_method:123".to_string(),
-            "did:my_method:1".to_string(),
+            "did:key:123".to_string(),
+            "did:key:123".to_string(),
+            "did:key:1".to_string(),
             "n-0S6_WzA2Mj".to_string(),
+            (Utc::now() + Duration::minutes(10)).timestamp(),
         );
         assert_eq!(id_token.iss, iss);
         assert_eq!(id_token.sub, sub);
         assert_eq!(id_token.aud, aud);
         assert_eq!(id_token.nonce, nonce);
     }
-
 
 ```
