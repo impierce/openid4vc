@@ -1,0 +1,31 @@
+[package]
+name = "siopv2"
+version = "0.1.0"
+edition = "2021"
+homepage = "https://www.impierce.com/"
+keywords = ["siopv2", "OpenID Connect"]
+license = "GPL-3.0"
+repository = "https://github.com/impierce/siopv2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.26.0", features = ["rt", "macros", "rt-multi-thread"] }
+serde = { version = "1.0.154", features = ["derive"]}
+serde_json = "1.0.94"
+anyhow = "1.0.70"
+chrono = "0.4.24"
+getset = "0.1.2"
+jsonwebtoken = "8.2.0"
+reqwest = "0.11.14"
+base64-url = "2.0.0"
+futures = "0.3.27"
+async-trait = "0.1.68"
+did_url = "0.1.0"
+
+[dev-dependencies]
+ed25519-dalek = "1.0.1"
+rand = "0.7"
+serde_qs = "0.12"
+lazy_static = "1.4.0"
+derivative = "2.2.0"
