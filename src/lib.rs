@@ -1,5 +1,6 @@
 pub mod id_token;
 pub mod jwt;
+pub mod key;
 pub mod provider;
 pub mod relying_party;
 pub mod request;
