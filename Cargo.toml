@@ -5,7 +5,7 @@ edition = "2021"
 homepage = "https://www.impierce.com/"
 keywords = ["siopv2", "OpenID Connect"]
 license = "GPL-3.0"
-repository = "https://github.com/Impierce/siopv2"
+repository = "https://github.com/impierce/siopv2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
