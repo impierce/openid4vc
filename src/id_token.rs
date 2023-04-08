@@ -10,6 +10,7 @@ pub struct IdToken {
     pub exp: i64,
     pub iat: i64,
     pub nonce: String,
+    pub state: Option<String>,
 }
 
 impl IdToken {
@@ -21,6 +22,12 @@ impl IdToken {
             exp,
             iat: Utc::now().timestamp(),
             nonce,
+            state: None,
         }
+    }
+
+    pub fn state(mut self, state: Option<String>) -> Self {
+        self.state = state;
+        self
     }
 }

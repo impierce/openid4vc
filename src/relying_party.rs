@@ -20,17 +20,8 @@ where
     /// Validates a [`SiopResponse`] by decoding the header of the id_token, fetching the public key corresponding to
     /// the key identifier and finally decoding the id_token using the public key and by validating the signature.
     pub async fn validate_response(&self, response: &SiopResponse) -> Result<IdToken> {
-        let id_token = response.id_token.clone();
-        let header = decode_header(id_token.as_str())?;
-        let id_token = if let Some(kid) = header.kid {
-            // TODO: check if the subject syntax type corresponds with the validator type.
-            let public_key = self.validator.public_key(&kid).await?;
-
-            let key = DecodingKey::from_ed_der(public_key.as_slice());
-            decode::<IdToken>(id_token.as_str(), &key, &Validation::new(Algorithm::EdDSA))?.claims
-        } else {
-            return Err(anyhow!("No key identifier found in the header."));
-        };
+        let token = response.id_token.clone();
+        let id_token: IdToken = self.validator.decode(token).await?;
         Ok(id_token)
     }
 }
@@ -40,29 +31,30 @@ mod tests {
     use super::*;
     use crate::{
         test_utils::{MockSubject, MockValidator},
-        IdToken, Provider, SiopRequest,
+        IdToken, Provider, RequestUrl,
     };
     use chrono::{Duration, Utc};
+    use std::str::FromStr;
 
     #[tokio::test]
     async fn test_relying_party() {
         // Get a new SIOP request with response mode `post` for cross-device communication.
-        let request: SiopRequest = serde_qs::from_str(
-            "\
-                response_type=id_token\
+        let request = "\
+            siopv2://idtoken?\
+                scope=openid\
+                &response_type=id_token\
+                &client_id=did%3Amock%3A1\
+                &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
                 &response_mode=post\
-                &client_id=did:mock:1\
-                &redirect_uri=http://127.0.0.1:4200/redirect_uri\
-                &scope=openid\
+                &registration=%7B%22subject_syntax_types_supported%22%3A\
+                %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
+                %22id_token_signing_alg_values_supported%22%3A%5B%22ES256%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\
-                &subject_syntax_types_supported[0]=did%3Amock\
-            ",
-        )
-        .unwrap();
+            ";
 
         // Generate a new response.
         let response = Provider::<MockSubject>::default()
-            .generate_response(request)
+            .generate_response(RequestUrl::from_str(request).unwrap())
             .await
             .unwrap();
 
