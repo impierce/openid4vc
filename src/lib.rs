@@ -10,7 +10,7 @@ pub use id_token::IdToken;
 pub use jwt::JsonWebToken;
 pub use provider::Provider;
 pub use relying_party::RelyingParty;
-pub use request::SiopRequest;
+pub use request::{RequestUrl, SiopRequest};
 pub use response::SiopResponse;
 
 #[cfg(test)]
