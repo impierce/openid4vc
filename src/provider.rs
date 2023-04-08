@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use chrono::{Duration, Utc};
 use serde::Serialize;
 
-use crate::{IdToken, JsonWebToken, SiopRequest, SiopResponse, Subject};
+use crate::{relying_party::Validator, IdToken, JsonWebToken, RequestUrl, SiopResponse};
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
 /// [`SiopRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
@@ -40,6 +40,9 @@ where
         };
         let subject_syntax_types_supported = self.subject_syntax_types_supported()?;
         if request
+            .registration()
+            .as_ref()
+            .ok_or(anyhow!("No registration found."))?
             .subject_syntax_types_supported()
             .ok_or(anyhow!("No supported subject syntax types found."))?
             .iter()
@@ -99,7 +102,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::MockSubject;
+    use crate::{key::KeySubject, test_utils::MockSubject};
+    use std::str::FromStr;
 
     #[tokio::test]
     async fn test_provider() {
@@ -126,7 +130,10 @@ mod tests {
         let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
 
         // Test whether the provider can generate a response for the request succesfully.
-        assert!(provider.generate_response(request).await.is_ok());
+        provider
+            .generate_response(RequestUrl::from_str(request).unwrap())
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -139,5 +146,45 @@ mod tests {
             provider.subject_syntax_types_supported().unwrap(),
             vec!["did:mock".to_string()]
         );
+    }
+
+    #[tokio::test]
+    async fn test_sphereon_demo_website() {
+        use serde::Deserialize;
+
+        #[derive(Deserialize, Debug)]
+        #[serde(rename_all = "camelCase")]
+        struct AuthRequestResponse {
+            _correlation_id: String,
+            _definition_id: String,
+            #[serde(rename(deserialize = "authRequestURI"))]
+            auth_request_uri: String,
+            #[serde(rename(deserialize = "authStatusURI"))]
+            _auth_status_uri: String,
+        }
+
+        let client = reqwest::Client::new();
+        let builder = client
+            .get("http://localhost:3002/webapp/definitions/9449e2db-791f-407c-b086-c21cc677d2e0/auth-request-uri");
+        let AuthRequestResponse { auth_request_uri, .. } = builder
+            .send()
+            .await
+            .unwrap()
+            .json::<AuthRequestResponse>()
+            .await
+            .unwrap();
+
+        // --------------------`After QR Code scan`--------------------
+
+        let subject = KeySubject::default();
+
+        let provider = Provider::new(subject).await.unwrap();
+
+        let response = provider
+            .generate_response(RequestUrl::from_str(auth_request_uri.as_str()).unwrap())
+            .await
+            .unwrap();
+
+        provider.send_response(response).await.unwrap();
     }
 }
