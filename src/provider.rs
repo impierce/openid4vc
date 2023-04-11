@@ -43,8 +43,8 @@ where
             let subject_did = self.subject.did()?;
             let id_token = IdToken::new(
                 // Use for Sphereon demo website testing.
-                // "https://self-issued.me/v2".to_string(),
-                subject_did.to_string(),
+                "https://self-issued.me/v2".to_string(),
+                // subject_did.to_string(),
                 subject_did.to_string(),
                 request.client_id().clone(),
                 request.nonce().clone(),
@@ -149,6 +149,7 @@ mod tests {
             _auth_status_uri: String,
         }
 
+        // Instead of actually scanning a QR Code containing the auth request URI, we retrive it by a GET request to the Sphereon demo website.
         let client = reqwest::Client::new();
         let builder = client
             .get("http://localhost:3002/webapp/definitions/9449e2db-791f-407c-b086-c21cc677d2e0/auth-request-uri");
@@ -171,6 +172,7 @@ mod tests {
             .await
             .unwrap();
 
-        provider.send_response(response).await.unwrap();
+        // Check whether the response was succesfully sent.
+        assert!(provider.send_response(response).await.is_ok());
     }
 }
