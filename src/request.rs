@@ -60,6 +60,7 @@ pub struct SiopRequest {
     #[getset(get = "pub")]
     client_id: String,
     scope: String,
+    claims: Option<Map<String, Value>>,
     // MUST be present in cross-device SIOP request
     #[getset(get = "pub")]
     redirect_uri: Option<String>,
@@ -70,6 +71,8 @@ pub struct SiopRequest {
     iss: Option<String>,
     iat: Option<i64>,
     exp: Option<i64>,
+    nbf: Option<i64>,
+    jti: Option<String>,
     #[getset(get = "pub")]
     state: Option<String>,
 }
@@ -138,6 +141,7 @@ mod tests {
                             EiDrihTRe0GMdc3K16kgJB3Xbl9Hb8oqVHjzm6ufHcYDGA"
                     .to_owned(),
                 scope: "openid".to_owned(),
+                claims: None,
                 redirect_uri: Some("https://client.example.org/cb".to_owned()),
                 nonce: "n-0S6_WzA2Mj".to_owned(),
                 registration: Some(Registration {
@@ -147,6 +151,8 @@ mod tests {
                 iss: None,
                 iat: None,
                 exp: None,
+                nbf: None,
+                jti: None,
                 state: None,
             }))
         );
