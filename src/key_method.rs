@@ -76,7 +76,7 @@ impl Validator for KeyValidator {
 }
 
 /// Resolves the public key from the given key identifier.
-async fn resolve_public_key<'a>(kid: &'a str) -> Result<Vec<u8>> {
+async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
     let keypair = resolve(kid).map_err(|_| anyhow!("Failed to resolve the key identifier"))?;
     let authentication_method = keypair
         .get_did_document(Config::default())
