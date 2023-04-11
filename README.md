@@ -20,9 +20,9 @@ use ed25519_dalek::{Keypair, Signature, Signer};
 use lazy_static::lazy_static;
 use rand::rngs::OsRng;
 use siopv2::{
-    Provider, Subject,
-    RelyingParty, Validator,
-    IdToken, SiopRequest,
+    provider::{Provider, Subject},
+    relying_party::{RelyingParty, Validator},
+    IdToken, RequestUrl,
 };
 use std::str::FromStr;
 
