@@ -43,8 +43,8 @@ where
             let subject_did = self.subject.did()?;
             let id_token = IdToken::new(
                 // Use for Sphereon demo website testing.
-                "https://self-issued.me/v2".to_string(),
-                // subject_did.to_string(),
+                // "https://self-issued.me/v2".to_string(),
+                subject_did.to_string(),
                 subject_did.to_string(),
                 request.client_id().clone(),
                 request.nonce().clone(),
