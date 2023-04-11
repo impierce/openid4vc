@@ -24,6 +24,7 @@ use siopv2::{
     RelyingParty, Validator,
     IdToken, SiopRequest,
 };
+use std::str::FromStr;
 
 lazy_static! {
     pub static ref MOCK_KEYPAIR: Keypair = Keypair::generate(&mut OsRng);
@@ -55,6 +56,13 @@ impl Subject for MySubject {
     }
 }
 
+#[async_trait]
+impl Validator for MySubject {
+    async fn public_key<'a>(&self, _kid: &'a str) -> Result<Vec<u8>> {
+        Ok(MOCK_KEYPAIR.public.to_bytes().to_vec())
+    }
+}
+
 // A Validator type that can be ingested by a RelyingParty
 #[derive(Default)]
 pub struct MyValidator;
@@ -69,22 +77,22 @@ impl Validator for MyValidator {
 #[tokio::main]
 async fn main() {
     // Get a new SIOP request with response mode `post` for cross-device communication.
-    let request: SiopRequest = serde_qs::from_str(
-        "\
-            response_type=id_token\
+    let request = "\
+        siopv2://idtoken?\
+            scope=openid\
+            &response_type=id_token\
+            &client_id=did%3Akey%3A1\
+            &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
             &response_mode=post\
-            &client_id=did:key:1\
-            &redirect_uri=http://127.0.0.1:4200/redirect_uri\
-            &scope=openid\
+            &registration=%7B%22subject_syntax_types_supported%22%3A\
+            %5B%22did%3Akey%22%5D%2C%0A%20%20%20%20\
+            %22id_token_signing_alg_values_supported%22%3A%5B%22ES256%22%5D%7D\
             &nonce=n-0S6_WzA2Mj\
-            &subject_syntax_types_supported[0]=did%3Akey\
-        ",
-    )
-    .unwrap();
+        ";
 
     // Generate a new response.
     let response = Provider::<MySubject>::default()
-        .generate_response(request)
+        .generate_response(RequestUrl::from_str(request).unwrap())
         .await
         .unwrap();
 
