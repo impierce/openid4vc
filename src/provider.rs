@@ -35,12 +35,8 @@ where
         let request = request.try_into(&self.subject).await?;
         let subject_syntax_types_supported = self.subject_syntax_types_supported()?;
         if request
-            .registration()
-            .as_ref()
-            .ok_or(anyhow!("No registration found."))?
             .subject_syntax_types_supported()
-            .as_ref()
-            .ok_or(anyhow!("No subject syntax types supported found."))?
+            .ok_or(anyhow!("No supported subject syntax types found."))?
             .iter()
             .any(|sst| subject_syntax_types_supported.contains(sst))
         {
