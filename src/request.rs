@@ -1,5 +1,5 @@
 use crate::{provider::Subject, relying_party::Validator};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use getset::Getters;
 use serde::Deserialize;
 use serde_json::{Map, Value};
@@ -35,9 +35,10 @@ impl FromStr for RequestUrl {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let url = url::Url::parse(s)?;
-        let decoded: Map<String, Value> = url::form_urlencoded::parse(url.query().unwrap().as_bytes())
-            .map(|(k, v)| (k.into(), serde_json::from_str::<Value>(&v).unwrap_or_else(|_| v.into())))
-            .collect();
+        let decoded: Map<String, Value> =
+            url::form_urlencoded::parse(url.query().ok_or(anyhow!("No query found."))?.as_bytes())
+                .map(|(k, v)| (k.into(), serde_json::from_str::<Value>(&v).unwrap_or_else(|_| v.into())))
+                .collect();
         let request: RequestUrl = serde_json::from_value(decoded.into())?;
         Ok(request)
     }
