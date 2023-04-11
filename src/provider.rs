@@ -1,9 +1,8 @@
 use anyhow::{anyhow, Result};
-use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use serde::Serialize;
 
-use crate::{IdToken, JsonWebToken, SiopRequest, SiopResponse};
+use crate::{IdToken, JsonWebToken, SiopRequest, SiopResponse, Subject};
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
 /// [`SiopRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
@@ -84,13 +83,6 @@ where
     T: ?Sized + Serialize,
 {
     Ok(base64_url::encode(serde_json::to_vec(value)?.as_slice()))
-}
-
-#[async_trait]
-pub trait Subject {
-    fn did(&self) -> Result<did_url::DID>;
-    fn key_identifier(&self) -> Option<String>;
-    async fn sign<'a>(&self, message: &'a str) -> Result<Vec<u8>>;
 }
 
 #[cfg(test)]

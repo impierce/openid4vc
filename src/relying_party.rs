@@ -1,6 +1,5 @@
-use crate::{IdToken, SiopResponse};
+use crate::{IdToken, SiopResponse, Validator};
 use anyhow::{anyhow, Result};
-use async_trait::async_trait;
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 
 pub struct RelyingParty<V>
@@ -34,11 +33,6 @@ where
         };
         Ok(id_token)
     }
-}
-
-#[async_trait]
-pub trait Validator {
-    async fn public_key<'a>(&self, kid: &'a str) -> Result<Vec<u8>>;
 }
 
 #[cfg(test)]
