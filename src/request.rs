@@ -79,6 +79,12 @@ impl SiopRequest {
     pub fn is_cross_device_request(&self) -> bool {
         self.response_mode == Some("post".to_owned())
     }
+
+    pub fn subject_syntax_types_supported(&self) -> Option<&Vec<String>> {
+        self.registration
+            .as_ref()
+            .and_then(|r| r.subject_syntax_types_supported().as_ref())
+    }
 }
 
 #[derive(Deserialize, Getters, Debug)]
