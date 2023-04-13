@@ -82,9 +82,8 @@ where
     }
 
     pub async fn send_response(&self, response: SiopResponse) -> Result<()> {
-        let redirect_uri = response.redirect_uri().as_ref().ok_or(anyhow!("No redirect URI."))?;
         let client = reqwest::Client::new();
-        let builder = client.post(redirect_uri).form(&response);
+        let builder = client.post(response.redirect_uri()).form(&response);
         builder.send().await?.text().await?;
         Ok(())
     }
@@ -120,7 +119,7 @@ mod tests {
                 &response_mode=post\
                 &registration=%7B%22subject_syntax_types_supported%22%3A\
                 %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
-                %22id_token_signing_alg_values_supported%22%3A%5B%22ES256%22%5D%7D\
+                %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\
             ";
 

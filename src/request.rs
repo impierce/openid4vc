@@ -1,10 +1,13 @@
-use anyhow::{anyhow, Result};
-use getset::Getters;
-use serde::Deserialize;
-use serde_json::{Map, Value};
+use derive_more::Display;
 use std::str::FromStr;
 
-#[derive(Deserialize, Debug, PartialEq)]
+use crate::{Registration, RequestUrlBuilder};
+use anyhow::{anyhow, Result};
+use getset::Getters;
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
+
+#[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
 #[serde(untagged, deny_unknown_fields)]
 pub enum RequestUrl {
     Request(Box<SiopRequest>),
@@ -17,46 +20,58 @@ impl FromStr for RequestUrl {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let url = url::Url::parse(s)?;
-        let decoded: Map<String, Value> =
-            url::form_urlencoded::parse(url.query().ok_or(anyhow!("No query found."))?.as_bytes())
-                .map(|(k, v)| (k.into(), serde_json::from_str::<Value>(&v).unwrap_or_else(|_| v.into())))
-                .collect();
-        let request: RequestUrl = serde_json::from_value(decoded.into())?;
+        let query = url.query().ok_or(anyhow!("No query found."))?;
+        let request: RequestUrl = serde_urlencoded::from_str(query)?;
         Ok(request)
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+impl std::fmt::Display for RequestUrl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let encoded = serde_urlencoded::to_string(self).unwrap();
+        dbg!(&encoded);
+        write!(f, "siopv2://idtoken?{encoded}")
+    }
+}
+
+impl RequestUrl {
+    pub fn builder() -> RequestUrlBuilder {
+        RequestUrlBuilder::new()
+    }
+}
+
+#[derive(Deserialize, Debug, PartialEq, Clone, Serialize, Default, Display)]
 #[serde(rename_all = "snake_case")]
 pub enum ResponseType {
+    #[default]
+    #[display(fmt = "id_token")]
     IdToken,
 }
 
 /// [`SiopRequest`] is a request from a [crate::relying_party::RelyingParty] (RP) to a [crate::provider::Provider] (SIOP).
 #[allow(dead_code)]
-#[derive(Deserialize, Debug, Getters, PartialEq)]
+#[derive(Debug, Getters, PartialEq, Clone, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SiopRequest {
-    response_type: ResponseType,
-    response_mode: Option<String>,
+    pub(crate) response_type: ResponseType,
+    pub(crate) response_mode: Option<String>,
     #[getset(get = "pub")]
-    client_id: String,
-    scope: String,
-    claims: Option<Map<String, Value>>,
-    // MUST be present in cross-device SIOP request
+    pub(crate) client_id: String,
+    pub(crate) scope: String,
+    pub(crate) claims: Option<Map<String, Value>>,
     #[getset(get = "pub")]
-    redirect_uri: Option<String>,
+    pub(crate) redirect_uri: String,
     #[getset(get = "pub")]
-    nonce: String,
+    pub(crate) nonce: String,
     #[getset(get = "pub")]
-    registration: Option<Registration>,
-    iss: Option<String>,
-    iat: Option<i64>,
-    exp: Option<i64>,
-    nbf: Option<i64>,
-    jti: Option<String>,
+    pub(crate) registration: Option<Registration>,
+    pub(crate) iss: Option<String>,
+    pub(crate) iat: Option<i64>,
+    pub(crate) exp: Option<i64>,
+    pub(crate) nbf: Option<i64>,
+    pub(crate) jti: Option<String>,
     #[getset(get = "pub")]
-    state: Option<String>,
+    pub(crate) state: Option<String>,
 }
 
 // TODO: implement an creational pattern for SiopRequest.
@@ -72,22 +87,38 @@ impl SiopRequest {
     }
 }
 
-#[derive(Deserialize, Getters, Debug, PartialEq)]
-pub struct Registration {
-    #[getset(get = "pub")]
-    subject_syntax_types_supported: Option<Vec<String>>,
-    id_token_signing_alg_values_supported: Option<Vec<String>>,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
+    fn test_registration() {
+        let request_url = RequestUrl::from_str(
+            "\
+            siopv2://idtoken?\
+                scope=openid\
+                &response_type=id_token\
+                &client_id=did%3Aexample%3AEiDrihTRe0GMdc3K16kgJB3Xbl9Hb8oqVHjzm6ufHcYDGA\
+                &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
+                &response_mode=post\
+                &registration=%7B%22subject_syntax_types_supported%22%3A\
+                %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
+                %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
+                &nonce=n-0S6_WzA2Mj\
+            ",
+        )
+        .unwrap();
+
+        assert_eq!(
+            RequestUrl::from_str(&RequestUrl::to_string(&request_url)).unwrap(),
+            request_url
+        );
+    }
+
+    #[test]
     fn test_valid_request_uri() {
         // A form urlencoded string with a `request_uri` parameter should deserialize into the `RequestUrl::RequestUri` variant.
-        let request_url =
-            RequestUrl::from_str("https://example.com?request_uri=https://example.com/request_uri").unwrap();
+        let request_url = RequestUrl::from_str("siopv2://idtoken?request_uri=https://example.com/request_uri").unwrap();
         assert_eq!(
             request_url,
             RequestUrl::RequestUri {
@@ -109,13 +140,13 @@ mod tests {
                 &response_mode=post\
                 &registration=%7B%22subject_syntax_types_supported%22%3A\
                 %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
-                %22id_token_signing_alg_values_supported%22%3A%5B%22ES256%22%5D%7D\
+                %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\
             ",
         )
         .unwrap();
         assert_eq!(
-            request_url,
+            request_url.clone(),
             RequestUrl::Request(Box::new(SiopRequest {
                 response_type: ResponseType::IdToken,
                 response_mode: Some("post".to_owned()),
@@ -124,11 +155,11 @@ mod tests {
                     .to_owned(),
                 scope: "openid".to_owned(),
                 claims: None,
-                redirect_uri: Some("https://client.example.org/cb".to_owned()),
+                redirect_uri: "https://client.example.org/cb".to_owned(),
                 nonce: "n-0S6_WzA2Mj".to_owned(),
                 registration: Some(Registration {
                     subject_syntax_types_supported: Some(vec!["did:mock".to_owned()]),
-                    id_token_signing_alg_values_supported: Some(vec!["ES256".to_owned()]),
+                    id_token_signing_alg_values_supported: Some(vec!["EdDSA".to_owned()]),
                 }),
                 iss: None,
                 iat: None,
@@ -137,6 +168,11 @@ mod tests {
                 jti: None,
                 state: None,
             }))
+        );
+
+        assert_eq!(
+            request_url,
+            RequestUrl::from_str(&RequestUrl::to_string(&request_url)).unwrap()
         );
     }
 
@@ -154,12 +190,11 @@ mod tests {
                 &response_mode=post\
                 &registration=%7B%22subject_syntax_types_supported%22%3A\
                 %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
-                %22id_token_signing_alg_values_supported%22%3A%5B%22ES256%22%5D%7D\
+                %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\
                 &request_uri=https://example.com/request_uri\
             ",
         );
-        dbg!(&request_url);
         assert!(request_url.is_err())
     }
 
@@ -167,7 +202,7 @@ mod tests {
     fn test_invalid_request_uri() {
         // A form urlencoded string with a `request_uri` parameter should deserialize into the `RequestUrl::RequestUri` variant.
         let request_url =
-            RequestUrl::from_str("https://example.com?request_uri=https://example.com/request_uri&scope=openid");
+            RequestUrl::from_str("siopv2://idtoken?request_uri=https://example.com/request_uri&scope=openid");
         assert!(request_url.is_err(),);
     }
 }
