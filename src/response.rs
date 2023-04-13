@@ -7,11 +7,11 @@ pub struct SiopResponse {
     pub id_token: String,
     #[serde(skip_serializing)]
     #[getset(get = "pub")]
-    redirect_uri: Option<String>,
+    redirect_uri: String,
 }
 
 impl SiopResponse {
-    pub fn new(id_token: String, redirect_uri: Option<String>) -> Self {
+    pub fn new(id_token: String, redirect_uri: String) -> Self {
         SiopResponse { redirect_uri, id_token }
     }
 }
