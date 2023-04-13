@@ -1,4 +1,3 @@
-use crate::{provider::Subject, relying_party::Validator};
 use anyhow::{anyhow, Result};
 use getset::Getters;
 use serde::Deserialize;
@@ -11,23 +10,6 @@ pub enum RequestUrl {
     Request(Box<SiopRequest>),
     // TODO: Add client_id parameter.
     RequestUri { request_uri: String },
-}
-
-impl RequestUrl {
-    pub async fn try_into<S>(self, subject: &S) -> Result<SiopRequest>
-    where
-        S: Subject + Validator,
-    {
-        match self {
-            RequestUrl::Request(request) => Ok(*request),
-            RequestUrl::RequestUri { request_uri } => {
-                let client = reqwest::Client::new();
-                let builder = client.get(request_uri);
-                let request_value = builder.send().await?.text().await?;
-                Ok(subject.decode(request_value).await?)
-            }
-        }
-    }
 }
 
 impl FromStr for RequestUrl {

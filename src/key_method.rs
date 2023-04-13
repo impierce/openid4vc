@@ -91,9 +91,8 @@ async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{IdToken, Provider, RelyingParty, RequestUrl};
+    use crate::{IdToken, Provider, RelyingParty};
     use chrono::{Duration, Utc};
-    use std::str::FromStr;
 
     #[tokio::test]
     async fn test_key_subject() {
@@ -104,7 +103,7 @@ mod tests {
         let provider = Provider::new(subject).await.unwrap();
 
         // Get a new SIOP request with response mode `post` for cross-device communication.
-        let request = "\
+        let request_url = "\
             siopv2://idtoken?\
                 scope=openid\
                 &response_type=id_token\
@@ -117,11 +116,10 @@ mod tests {
                 &nonce=n-0S6_WzA2Mj\
             ";
 
-        // The provider generates a signed SIOP response from the new SIOP request.
-        let response = provider
-            .generate_response(RequestUrl::from_str(request).unwrap())
-            .await
-            .unwrap();
+        let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
+
+        // Test whether the provider can generate a response for the request succesfully.
+        let response = provider.generate_response(request).await.unwrap();
 
         // Let the relying party validate the response.
         let relying_party = RelyingParty::new(KeyValidator::new());

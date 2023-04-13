@@ -31,15 +31,14 @@ mod tests {
     use super::*;
     use crate::{
         test_utils::{MockSubject, MockValidator},
-        IdToken, Provider, RequestUrl,
+        IdToken, Provider,
     };
     use chrono::{Duration, Utc};
-    use std::str::FromStr;
 
     #[tokio::test]
     async fn test_relying_party() {
         // Get a new SIOP request with response mode `post` for cross-device communication.
-        let request = "\
+        let request_url = "\
             siopv2://idtoken?\
                 scope=openid\
                 &response_type=id_token\
@@ -52,11 +51,16 @@ mod tests {
                 &nonce=n-0S6_WzA2Mj\
             ";
 
-        // Generate a new response.
-        let response = Provider::<MockSubject>::default()
-            .generate_response(RequestUrl::from_str(request).unwrap())
-            .await
-            .unwrap();
+        // Create a new subject.
+        let subject = MockSubject::new("did:mock:123".to_string(), "key_identifier".to_string()).unwrap();
+
+        // Create a new provider.
+        let provider = Provider::new(subject).await.unwrap();
+
+        let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
+
+        // Test whether the provider can generate a response for the request succesfully.
+        let response = provider.generate_response(request).await.unwrap();
 
         // Create a new validator.
         let validator = MockValidator::new();
