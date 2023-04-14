@@ -1,3 +1,4 @@
+pub mod claim;
 pub mod id_token;
 pub mod jwt;
 pub mod key_method;
@@ -7,9 +8,11 @@ pub mod relying_party;
 pub mod request;
 pub mod request_builder;
 pub mod response;
+pub mod scope;
 pub mod subject;
 pub mod validator;
 
+pub use claim::Claim;
 pub use id_token::IdToken;
 pub use jwt::JsonWebToken;
 pub use provider::Provider;
@@ -18,8 +21,7 @@ pub use relying_party::RelyingParty;
 pub use request::{RequestUrl, SiopRequest};
 pub use request_builder::RequestUrlBuilder;
 pub use response::SiopResponse;
-use serde::{de::DeserializeOwned, Serialize};
-use serde_json::{Map, Value};
+pub use scope::Scope;
 pub use subject::Subject;
 pub use validator::Validator;
 

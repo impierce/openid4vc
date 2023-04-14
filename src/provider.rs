@@ -72,6 +72,25 @@ where
         Ok(SiopResponse::new(request.redirect_uri().clone(), jwt))
     }
 
+    // TODO: needs refactoring.
+    /// Generates a [`SiopResponse`] in response to a [`SiopRequest`]. The [`SiopResponse`] contains an [`IdToken`],
+    /// which is signed by the [`Subject`] of the [`Provider`].
+    pub async fn generate_response(&self, request: SiopRequest) -> Result<SiopResponse> {
+        let subject_did = self.subject.did()?;
+        let id_token = IdToken::new(
+            subject_did.to_string(),
+            subject_did.to_string(),
+            request.client_id().clone(),
+            request.nonce().clone(),
+            (Utc::now() + Duration::minutes(10)).timestamp(),
+        )
+        .state(request.state().clone());
+
+        let jwt = self.subject.encode(id_token).await?;
+
+        Ok(SiopResponse::new(jwt, request.redirect_uri().clone()))
+    }
+
     pub async fn send_response(&self, response: SiopResponse) -> Result<()> {
         let client = reqwest::Client::new();
         let builder = client.post(response.redirect_uri()).form(&response);
