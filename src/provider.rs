@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use chrono::{Duration, Utc};
 use serde::Serialize;
 
-use crate::{relying_party::Validator, IdToken, JsonWebToken, RequestUrl, SiopResponse};
+use crate::{IdToken, JsonWebToken, RequestUrl, SiopRequest, SiopResponse, Subject, Validator};
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
 /// [`SiopRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and

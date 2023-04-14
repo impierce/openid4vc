@@ -1,6 +1,5 @@
 use crate::{IdToken, SiopResponse, Validator};
-use anyhow::{anyhow, Result};
-use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
+use anyhow::Result;
 
 pub struct RelyingParty<V>
 where
