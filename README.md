@@ -20,8 +20,8 @@ use ed25519_dalek::{Keypair, Signature, Signer};
 use lazy_static::lazy_static;
 use rand::rngs::OsRng;
 use siopv2::{
-    provider::{Provider, Subject},
-    relying_party::{RelyingParty, Validator},
+    Provider, Subject,
+    RelyingParty, Validator,
     IdToken, SiopRequest,
 };
 
