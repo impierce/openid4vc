@@ -33,7 +33,6 @@ mod tests {
         IdToken, Provider,
     };
     use chrono::{Duration, Utc};
-    use std::str::FromStr;
 
     #[tokio::test]
     async fn test_relying_party() {

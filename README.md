@@ -19,12 +19,7 @@ use chrono::{Duration, Utc};
 use ed25519_dalek::{Keypair, Signature, Signer};
 use lazy_static::lazy_static;
 use rand::rngs::OsRng;
-use siopv2::{
-    provider::{Provider, Subject},
-    relying_party::{RelyingParty, Validator},
-    IdToken, RequestUrl,
-};
-use std::str::FromStr;
+use siopv2::{IdToken, Provider, RelyingParty, Subject, Validator};
 
 lazy_static! {
     pub static ref MOCK_KEYPAIR: Keypair = Keypair::generate(&mut OsRng);
@@ -77,7 +72,7 @@ impl Validator for MyValidator {
 #[tokio::main]
 async fn main() {
     // Get a new SIOP request with response mode `post` for cross-device communication.
-    let request = "\
+    let request_url = "\
         siopv2://idtoken?\
             scope=openid\
             &response_type=id_token\
@@ -90,11 +85,16 @@ async fn main() {
             &nonce=n-0S6_WzA2Mj\
         ";
 
+    // Create a new subject.
+    let subject = MySubject::default();
+
+    // Create a new provider.
+    let provider = Provider::new(subject).await.unwrap();
+
+    let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
+
     // Generate a new response.
-    let response = Provider::<MySubject>::default()
-        .generate_response(RequestUrl::from_str(request).unwrap())
-        .await
-        .unwrap();
+    let response = provider.generate_response(request).await.unwrap();
 
     // Create a new validator.
     let validator = MyValidator::default();

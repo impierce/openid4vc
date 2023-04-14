@@ -206,10 +206,3 @@ mod tests {
         assert!(request_url.is_err(),);
     }
 }
-
-#[derive(Deserialize, Getters, Debug)]
-pub struct Registration {
-    #[getset(get = "pub")]
-    subject_syntax_types_supported: Option<Vec<String>>,
-    _id_token_signing_alg_values_supported: Option<Vec<String>>,
-}
