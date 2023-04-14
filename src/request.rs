@@ -36,7 +36,7 @@ impl FromStr for RequestUrl {
 // for the `RequestUrl` enum.
 impl std::fmt::Display for RequestUrl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let encoded = serde_urlencoded::to_string(self).unwrap();
+        let encoded = serde_urlencoded::to_string(self).map_err(|_| std::fmt::Error)?;
         write!(f, "siopv2://idtoken?{encoded}")
     }
 }

@@ -56,7 +56,8 @@ impl<'de> Deserialize<'de> for Registration {
     where
         D: Deserializer<'de>,
     {
-        let map = serde_json::from_str::<Map<String, Value>>(&String::deserialize(deserializer)?).unwrap();
+        let map = serde_json::from_str::<Map<String, Value>>(&String::deserialize(deserializer)?)
+            .map_err(serde::de::Error::custom)?;
 
         Ok(Registration {
             subject_syntax_types_supported: deserialize_array_field!(map, "subject_syntax_types_supported"),
