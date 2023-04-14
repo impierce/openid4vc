@@ -40,6 +40,7 @@ use wiremock::{
     matchers::{method, path},
     Mock, MockServer, ResponseTemplate,
 };
+use std::str::FromStr;
 
 lazy_static! {
     pub static ref MOCK_KEYPAIR: Keypair = Keypair::generate(&mut OsRng);
