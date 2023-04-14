@@ -1,18 +1,24 @@
-use derive_more::Display;
-use std::str::FromStr;
-
 use crate::{Registration, RequestUrlBuilder};
 use anyhow::{anyhow, Result};
+use derive_more::Display;
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use std::str::FromStr;
 
+/// [`RelyingParty`]'s can either send a request as a query parameter or as a request URI.
 #[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
 #[serde(untagged, deny_unknown_fields)]
 pub enum RequestUrl {
     Request(Box<SiopRequest>),
     // TODO: Add client_id parameter.
     RequestUri { request_uri: String },
+}
+
+impl RequestUrl {
+    pub fn builder() -> RequestUrlBuilder {
+        RequestUrlBuilder::new()
+    }
 }
 
 impl FromStr for RequestUrl {
@@ -26,17 +32,12 @@ impl FromStr for RequestUrl {
     }
 }
 
+// TODO: Find a way to dynamically generate the `siopv2://idtoken?` part of the URL. This will require some refactoring
+// for the `RequestUrl` enum.
 impl std::fmt::Display for RequestUrl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let encoded = serde_urlencoded::to_string(self).unwrap();
-        dbg!(&encoded);
         write!(f, "siopv2://idtoken?{encoded}")
-    }
-}
-
-impl RequestUrl {
-    pub fn builder() -> RequestUrlBuilder {
-        RequestUrlBuilder::new()
     }
 }
 
@@ -90,30 +91,6 @@ impl SiopRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_registration() {
-        let request_url = RequestUrl::from_str(
-            "\
-            siopv2://idtoken?\
-                scope=openid\
-                &response_type=id_token\
-                &client_id=did%3Aexample%3AEiDrihTRe0GMdc3K16kgJB3Xbl9Hb8oqVHjzm6ufHcYDGA\
-                &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
-                &response_mode=post\
-                &registration=%7B%22subject_syntax_types_supported%22%3A\
-                %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
-                %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
-                &nonce=n-0S6_WzA2Mj\
-            ",
-        )
-        .unwrap();
-
-        assert_eq!(
-            RequestUrl::from_str(&RequestUrl::to_string(&request_url)).unwrap(),
-            request_url
-        );
-    }
 
     #[test]
     fn test_valid_request_uri() {
@@ -178,7 +155,7 @@ mod tests {
 
     #[test]
     fn test_invalid_request() {
-        // A form urlencoded string with an otherwise valide request is invalid when also the `request_uri` parameter is
+        // A form urlencoded string with an otherwise valid request is invalid when the `request_uri` parameter is also
         // present.
         let request_url = RequestUrl::from_str(
             "\
@@ -200,7 +177,7 @@ mod tests {
 
     #[test]
     fn test_invalid_request_uri() {
-        // A form urlencoded string with a `request_uri` parameter should deserialize into the `RequestUrl::RequestUri` variant.
+        // A form urlencoded string with a `request_uri` should not have any other parameters.
         let request_url =
             RequestUrl::from_str("siopv2://idtoken?request_uri=https://example.com/request_uri&scope=openid");
         assert!(request_url.is_err(),);

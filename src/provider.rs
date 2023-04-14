@@ -28,6 +28,10 @@ where
         Ok(vec![format!("did:{}", self.subject.did()?.method())])
     }
 
+    /// TODO: Add more validation rules.
+    /// Takes a [`RequestUrl`] and returns a [`SiopRequest`]. The [`RequestUrl`] can either be a [`SiopRequest`] or a
+    /// request by value. If the [`RequestUrl`] is a request by value, the request is decoded by the [`Subject`] of the [`Provider`].
+    /// If the request is valid, the request is returned.
     pub async fn validate_request(&self, request: RequestUrl) -> Result<SiopRequest> {
         let request = match request {
             RequestUrl::Request(request) => *request,
@@ -123,6 +127,7 @@ mod tests {
                 &nonce=n-0S6_WzA2Mj\
             ";
 
+        // Let the provider validate the request.
         let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
 
         // Test whether the provider can generate a response for the request succesfully.

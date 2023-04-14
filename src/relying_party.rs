@@ -56,6 +56,7 @@ mod tests {
         // Create a new provider.
         let provider = Provider::new(subject).await.unwrap();
 
+        // Let the provider validate the request.
         let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
 
         // Test whether the provider can generate a response for the request succesfully.

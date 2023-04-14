@@ -116,6 +116,7 @@ mod tests {
                 &nonce=n-0S6_WzA2Mj\
             ";
 
+        // Let the provider validate the request.
         let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
 
         // Test whether the provider can generate a response for the request succesfully.

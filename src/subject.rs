@@ -1,6 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 
+/// This [`Subject`] trait is used to sign and verify JWTs.
 #[async_trait]
 pub trait Subject {
     fn did(&self) -> Result<did_url::DID>;
