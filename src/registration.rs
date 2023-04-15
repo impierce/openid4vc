@@ -3,11 +3,30 @@ use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 /// [`Registration`] is a request parameter used by a [`crate::RelyingParty`] to communicate its capabilities to a [`crate::Provider`].
-#[derive(Getters, Debug, PartialEq, Clone)]
+#[derive(Getters, Debug, PartialEq, Clone, Default)]
 pub struct Registration {
     #[getset(get = "pub")]
-    pub subject_syntax_types_supported: Option<Vec<String>>,
-    pub id_token_signing_alg_values_supported: Option<Vec<String>>,
+    subject_syntax_types_supported: Option<Vec<String>>,
+    id_token_signing_alg_values_supported: Option<Vec<String>>,
+}
+
+impl Registration {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_subject_syntax_types_supported(mut self, subject_syntax_types_supported: Vec<String>) -> Self {
+        self.subject_syntax_types_supported = Some(subject_syntax_types_supported);
+        self
+    }
+
+    pub fn with_id_token_signing_alg_values_supported(
+        mut self,
+        id_token_signing_alg_values_supported: Vec<String>,
+    ) -> Self {
+        self.id_token_signing_alg_values_supported = Some(id_token_signing_alg_values_supported);
+        self
+    }
 }
 
 macro_rules! insert_optional_field {

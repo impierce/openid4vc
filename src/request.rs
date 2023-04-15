@@ -4,6 +4,7 @@ use derive_more::Display;
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use std::convert::TryInto;
 use std::str::FromStr;
 
 /// [`RelyingParty`]'s can either send a request as a query parameter or as a request URI.
@@ -18,6 +19,17 @@ pub enum RequestUrl {
 impl RequestUrl {
     pub fn builder() -> RequestUrlBuilder {
         RequestUrlBuilder::new()
+    }
+}
+
+impl TryInto<SiopRequest> for RequestUrl {
+    type Error = anyhow::Error;
+
+    fn try_into(self) -> Result<SiopRequest, Self::Error> {
+        match self {
+            RequestUrl::Request(request) => Ok(*request),
+            RequestUrl::RequestUri { .. } => Err(anyhow!("Request is a request URI.")),
+        }
     }
 }
 
@@ -134,10 +146,11 @@ mod tests {
                 claims: None,
                 redirect_uri: "https://client.example.org/cb".to_owned(),
                 nonce: "n-0S6_WzA2Mj".to_owned(),
-                registration: Some(Registration {
-                    subject_syntax_types_supported: Some(vec!["did:mock".to_owned()]),
-                    id_token_signing_alg_values_supported: Some(vec!["EdDSA".to_owned()]),
-                }),
+                registration: Some(
+                    Registration::default()
+                        .with_subject_syntax_types_supported(vec!["did:mock".to_owned()])
+                        .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_owned()]),
+                ),
                 iss: None,
                 iat: None,
                 exp: None,
