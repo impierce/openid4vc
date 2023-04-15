@@ -1,8 +1,6 @@
+use crate::{IdToken, RequestUrl, SiopRequest, SiopResponse, Subject, Validator};
 use anyhow::{anyhow, Result};
 use chrono::{Duration, Utc};
-use serde::Serialize;
-
-use crate::{IdToken, JsonWebToken, RequestUrl, SiopRequest, SiopResponse, Subject, Validator};
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
 /// [`SiopRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
@@ -42,17 +40,17 @@ where
                 self.subject.decode(request_value).await?
             }
         };
-        let subject_syntax_types_supported = self.subject_syntax_types_supported()?;
-        if request
-            .subject_syntax_types_supported()
-            .ok_or(anyhow!("No supported subject syntax types found."))?
-            .iter()
-            .any(|sst| subject_syntax_types_supported.contains(sst))
-        {
-            Ok(request)
-        } else {
-            Err(anyhow!("Subject syntax type not supported."))
-        }
+        self.subject_syntax_types_supported().and_then(|supported| {
+            request.subject_syntax_types_supported().map_or_else(
+                || Err(anyhow!("No supported subject syntax types found.")),
+                |supported_types| {
+                    supported_types.iter().find(|sst| supported.contains(sst)).map_or_else(
+                        || Err(anyhow!("Subject syntax type not supported.")),
+                        |_| Ok(request.clone()),
+                    )
+                },
+            )
+        })
     }
 
     // TODO: needs refactoring.
@@ -69,20 +67,9 @@ where
         )
         .state(request.state().clone());
 
-        let kid = self
-            .subject
-            .key_identifier()
-            .ok_or(anyhow!("No key identifier found."))?;
+        let jwt = self.subject.encode(id_token).await?;
 
-        let jwt = JsonWebToken::new(id_token).kid(kid);
-
-        let message = [base64_url_encode(&jwt.header)?, base64_url_encode(&jwt.payload)?].join(".");
-
-        let proof_value = self.subject.sign(&message).await?;
-        let signature = base64_url::encode(proof_value.as_slice());
-        let id_token = [message, signature].join(".");
-
-        Ok(SiopResponse::new(id_token, request.redirect_uri().clone()))
+        Ok(SiopResponse::new(jwt, request.redirect_uri().clone()))
     }
 
     pub async fn send_response(&self, response: SiopResponse) -> Result<()> {
@@ -91,13 +78,6 @@ where
         builder.send().await?.text().await?;
         Ok(())
     }
-}
-
-fn base64_url_encode<T>(value: &T) -> Result<String>
-where
-    T: ?Sized + Serialize,
-{
-    Ok(base64_url::encode(serde_json::to_vec(value)?.as_slice()))
 }
 
 #[cfg(test)]
