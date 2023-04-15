@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug, Getters)]
 pub struct SiopResponse {
     pub id_token: String,
-    #[serde(skip_serializing)]
+    #[serde(skip)]
     #[getset(get = "pub")]
     redirect_uri: String,
 }

@@ -123,7 +123,7 @@ mod tests {
         let response = provider.generate_response(request).await.unwrap();
 
         // Let the relying party validate the response.
-        let relying_party = RelyingParty::new(KeyValidator::new());
+        let relying_party = RelyingParty::new(KeySubject::new());
         let id_token = relying_party.validate_response(&response).await.unwrap();
 
         let IdToken { aud, nonce, .. } = IdToken::new(

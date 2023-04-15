@@ -79,6 +79,7 @@ impl RequestUrlBuilder {
 
     builder_fn!(request_uri, String);
     builder_fn!(response_type, ResponseType);
+    builder_fn!(response_mode, String);
     builder_fn!(client_id, String);
     builder_fn!(scope, String);
     builder_fn!(claims, Map<String, Value>);
@@ -141,5 +142,20 @@ mod tests {
             .request_uri("https://example.com/request_uri".to_owned())
             .build();
         assert!(request_url.is_err());
+    }
+
+    #[test]
+    fn test_valid_request_uri_builder() {
+        let request_url = RequestUrl::builder()
+            .request_uri("https://example.com/request_uri".to_owned())
+            .build()
+            .unwrap();
+
+        assert_eq!(
+            request_url,
+            RequestUrl::RequestUri {
+                request_uri: "https://example.com/request_uri".to_owned()
+            }
+        );
     }
 }

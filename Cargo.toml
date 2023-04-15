@@ -32,6 +32,7 @@ rand = "0.7"
 lazy_static = "1.4.0"
 derivative = "2.2.0"
 skeptic = "0.13"
+wiremock = "0.5.18"
 
 [build-dependencies]
 skeptic = "0.13"
