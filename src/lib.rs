@@ -1,4 +1,3 @@
-pub mod claims;
 pub mod id_token;
 pub mod jwt;
 pub mod key_method;
