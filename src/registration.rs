@@ -1,3 +1,4 @@
+use crate::serialize_field;
 use getset::Getters;
 use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -29,44 +30,25 @@ impl Registration {
     }
 }
 
-macro_rules! insert_optional_field {
-    ($map:expr, $field_name:literal, $field_value:expr) => {
-        if let Some(value) = &$field_value {
-            $map.insert(
-                $field_name.to_string(),
-                Value::Array(value.iter().map(|v| Value::String(v.clone())).collect()),
-            );
-        }
-    };
-}
-
 /// Custom serialization for [`Registration`]. This is necessary because `serde_urlencoded` does not support serializing non-primitive types.
 impl Serialize for Registration {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let mut map = Map::new();
-        insert_optional_field!(
-            map,
-            "subject_syntax_types_supported",
+        let map: Map<String, Value> = [
             self.subject_syntax_types_supported
-        );
-        insert_optional_field!(
-            map,
-            "id_token_signing_alg_values_supported",
+                .as_ref()
+                .map(|value| ("subject_syntax_types_supported", value)),
             self.id_token_signing_alg_values_supported
-        );
+                .as_ref()
+                .map(|value| ("id_token_signing_alg_values_supported", value)),
+        ]
+        .iter()
+        .filter_map(serialize_field)
+        .collect();
         serializer.serialize_str(&serde_json::to_string(&map).map_err(serde::ser::Error::custom)?)
     }
-}
-
-macro_rules! deserialize_array_field {
-    ($map:expr, $field:literal) => {
-        $map.get($field)
-            .and_then(Value::as_array)
-            .map(|v| v.iter().filter_map(Value::as_str).map(ToOwned::to_owned).collect())
-    };
 }
 
 /// Custom deserialization for [`Registration`]. This is necessary because `serde_urlencoded` does not support deserializing non-primitive types.
@@ -79,10 +61,13 @@ impl<'de> Deserialize<'de> for Registration {
             .map_err(serde::de::Error::custom)?;
 
         Ok(Registration {
-            subject_syntax_types_supported: deserialize_array_field!(map, "subject_syntax_types_supported"),
-            id_token_signing_alg_values_supported: deserialize_array_field!(
-                map,
-                "id_token_signing_alg_values_supported"
+            subject_syntax_types_supported: crate::deserialize_field::<Vec<String>>(
+                &map,
+                "subject_syntax_types_supported",
+            ),
+            id_token_signing_alg_values_supported: crate::deserialize_field::<Vec<String>>(
+                &map,
+                "id_token_signing_alg_values_supported",
             ),
         })
     }
