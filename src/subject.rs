@@ -37,7 +37,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{test_utils::MockSubject, IdToken, Validator};
+    use crate::{test_utils::MockSubject, IdToken, StandardClaims, Validator};
     use serde_json::json;
 
     #[tokio::test]
@@ -59,6 +59,7 @@ mod tests {
             IdToken {
                 iss: "did:example:123".to_string(),
                 sub: "did:example:123".to_string(),
+                standard_claims: StandardClaims::default(),
                 aud: "did:example:456".to_string(),
                 exp: 9223372036854775807,
                 iat: 1593436422,
