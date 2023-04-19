@@ -7,7 +7,46 @@ use serde_json::{Map, Value};
 use std::convert::TryInto;
 use std::str::FromStr;
 
+/// As specified in the
+/// [SIOPv2 specification](https://openid.net/specs/openid-connect-self-issued-v2-1_0.html#name-self-issued-openid-provider-a)
 /// [`RelyingParty`]'s can either send a request as a query parameter or as a request URI.
+/// # Examples
+///
+/// ```
+/// # use siopv2::RequestUrl;
+/// # use std::str::FromStr;
+///
+/// // An example of a form-urlencoded request with only the `request_uri` parameter will be parsed as a
+/// // `RequestUrl::RequestUri` variant.
+/// let request_url = RequestUrl::from_str("siopv2://idtoken?request_uri=https://example.com/request_uri").unwrap();
+/// assert_eq!(
+///     request_url,
+///     RequestUrl::RequestUri {
+///         request_uri: "https://example.com/request_uri".to_owned()
+///     }
+/// );
+///
+/// // An example of a form-urlencoded request that is parsed as a `RequestUrl::Request` variant.
+/// let request_url = RequestUrl::from_str(
+///     "\
+///         siopv2://idtoken?\
+///             scope=openid\
+///             &response_type=id_token\
+///             &client_id=did%3Aexample%3AEiDrihTRe0GMdc3K16kgJB3Xbl9Hb8oqVHjzm6ufHcYDGA\
+///             &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
+///             &response_mode=post\
+///             &registration=%7B%22subject_syntax_types_supported%22%3A\
+///             %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
+///             %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
+///             &nonce=n-0S6_WzA2Mj\
+///     ",
+/// )
+/// .unwrap();
+/// assert!(match request_url {
+///    RequestUrl::Request(_) => Ok(()),
+///   RequestUrl::RequestUri { .. } => Err(()),
+/// }.is_ok());
+/// ```
 #[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
 #[serde(untagged, deny_unknown_fields)]
 pub enum RequestUrl {
