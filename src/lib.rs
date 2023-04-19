@@ -9,6 +9,7 @@ pub mod request;
 pub mod request_builder;
 pub mod response;
 pub mod scope;
+pub mod storage;
 pub mod subject;
 pub mod validator;
 
@@ -22,22 +23,9 @@ pub use request::{RequestUrl, SiopRequest};
 pub use request_builder::RequestUrlBuilder;
 pub use response::SiopResponse;
 pub use scope::Scope;
-use serde::{de::DeserializeOwned, Serialize};
-use serde_json::{Map, Value};
+pub use storage::{MemoryStorage, Storage};
 pub use subject::Subject;
 pub use validator::Validator;
 
 #[cfg(test)]
 pub mod test_utils;
-
-pub fn serialize_field<T: Serialize>(pair: &Option<(&str, T)>) -> Option<(String, Value)> {
-    pair.as_ref()
-        .and_then(|(name, field)| serde_json::to_value(field).map(|value| (name.to_string(), value)).ok())
-}
-
-pub fn deserialize_field<T: DeserializeOwned>(map: &Map<String, Value>, field_name: &str) -> Option<T> {
-    map.get(field_name).and_then(|value| match value {
-        Value::Object(_) | Value::Array(_) => serde_json::from_value(value.clone()).ok(),
-        _ => None,
-    })
-}

@@ -1,10 +1,8 @@
-use crate::serialize_field;
 use getset::Getters;
-use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
-use serde_json::{Map, Value};
+use serde::{Deserialize, Serialize};
 
 /// [`Registration`] is a request parameter used by a [`crate::RelyingParty`] to communicate its capabilities to a [`crate::Provider`].
-#[derive(Getters, Debug, PartialEq, Clone, Default)]
+#[derive(Getters, Debug, PartialEq, Clone, Default, Deserialize, Serialize)]
 pub struct Registration {
     #[getset(get = "pub")]
     subject_syntax_types_supported: Option<Vec<String>>,
@@ -27,49 +25,6 @@ impl Registration {
     ) -> Self {
         self.id_token_signing_alg_values_supported = Some(id_token_signing_alg_values_supported);
         self
-    }
-}
-
-/// Custom serialization for [`Registration`]. This is necessary because `serde_urlencoded` does not support serializing non-primitive types.
-impl Serialize for Registration {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let map: Map<String, Value> = [
-            self.subject_syntax_types_supported
-                .as_ref()
-                .map(|value| ("subject_syntax_types_supported", value)),
-            self.id_token_signing_alg_values_supported
-                .as_ref()
-                .map(|value| ("id_token_signing_alg_values_supported", value)),
-        ]
-        .iter()
-        .filter_map(serialize_field)
-        .collect();
-        serializer.serialize_str(&serde_json::to_string(&map).map_err(serde::ser::Error::custom)?)
-    }
-}
-
-/// Custom deserialization for [`Registration`]. This is necessary because `serde_urlencoded` does not support deserializing non-primitive types.
-impl<'de> Deserialize<'de> for Registration {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let map = serde_json::from_str::<Map<String, Value>>(&String::deserialize(deserializer)?)
-            .map_err(serde::de::Error::custom)?;
-
-        Ok(Registration {
-            subject_syntax_types_supported: crate::deserialize_field::<Vec<String>>(
-                &map,
-                "subject_syntax_types_supported",
-            ),
-            id_token_signing_alg_values_supported: crate::deserialize_field::<Vec<String>>(
-                &map,
-                "id_token_signing_alg_values_supported",
-            ),
-        })
     }
 }
 
