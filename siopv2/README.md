@@ -145,7 +145,7 @@ async fn main() {
     let subject = MySubject::default();
 
     // Create a new provider.
-    let provider = Provider::new(subject).await.unwrap();
+    let provider = Provider::new(subject, MemoryStorage::default()).await.unwrap();
 
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
     let request_url = RequestUrl::builder()
