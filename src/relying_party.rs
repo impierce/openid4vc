@@ -32,13 +32,48 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{request::ResponseType, test_utils::MockSubject, IdToken, Provider, Registration, RequestUrl};
+    use crate::{
+        claims::{Address, Claim, ClaimRequests, IndividualClaimRequest},
+        request::ResponseType,
+        scope::{Scope, ScopeValue},
+        test_utils::MockSubject,
+        IdToken, MemoryStorage, Provider, Registration, RequestUrl, StandardClaims,
+    };
     use chrono::{Duration, Utc};
+    use lazy_static::lazy_static;
+    use serde_json::{json, Value};
     use wiremock::{
         http::Method,
         matchers::{method, path},
         Mock, MockServer, ResponseTemplate,
     };
+
+    lazy_static! {
+        pub static ref USER_CLAIMS: Value = json!(
+            {
+                "name": "Jane Doe",
+                "given_name": "Jane",
+                "family_name": "Doe",
+                "middle_name": "Middle",
+                "nickname": "JD",
+                "preferred_username": "j.doe",
+                "profile": "https://example.com/janedoe",
+                "picture": "https://example.com/janedoe/me.jpg",
+                "website": "https://example.com",
+                "email": "jane.doe@example.com",
+                "updated_at": 1311280970,
+                "phone_number": "+1 555 555 5555",
+                "address": {
+                    "formatted": "100 Universal City Plaza\nHollywood, CA 91608",
+                    "street_address": "100 Universal City Plaza",
+                    "locality": "Hollywood",
+                    "region": "CA",
+                    "postal_code": "91608",
+                    "country": "US"
+                }
+            }
+        );
+    }
 
     #[tokio::test]
     async fn test_relying_party() {
@@ -56,7 +91,7 @@ mod tests {
         let request: SiopRequest = RequestUrl::builder()
             .response_type(ResponseType::IdToken)
             .client_id("did:mock:1".to_owned())
-            .scope("openid".to_owned())
+            .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
             .redirect_uri(format!("{server_url}/redirect_uri"))
             .response_mode("post".to_owned())
             .registration(
@@ -64,6 +99,19 @@ mod tests {
                     .with_subject_syntax_types_supported(vec!["did:mock".to_owned()])
                     .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_owned()]),
             )
+            .claims(ClaimRequests {
+                id_token: Some(StandardClaims {
+                    name: Some(Claim::default()),
+                    email: Some(Claim::Request(IndividualClaimRequest {
+                        essential: Some(true),
+                        ..Default::default()
+                    })),
+                    address: Some(Claim::default()),
+                    updated_at: Some(Claim::default()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            })
             .exp((Utc::now() + Duration::minutes(10)).timestamp())
             .nonce("n-0S6_WzA2Mj".to_owned())
             .build()
@@ -87,8 +135,11 @@ mod tests {
         // Create a new subject.
         let subject = MockSubject::new("did:mock:123".to_string(), "key_identifier".to_string()).unwrap();
 
+        // Create a new storage for the user's claims.
+        let storage = MemoryStorage::new(serde_json::from_value(USER_CLAIMS.clone()).unwrap());
+
         // Create a new provider.
-        let provider = Provider::new(subject).await.unwrap();
+        let provider = Provider::new(subject, storage).await.unwrap();
 
         // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
         let request_url = RequestUrl::builder()
@@ -100,6 +151,24 @@ mod tests {
         // request. Since in this case the request is a JWT, the provider will fetch the request by sending a GET
         // request to mock server's `request_uri` endpoint.
         let request = provider.validate_request(request_url).await.unwrap();
+
+        // Assert that the received request contains the expected claims.
+        let request_claims = request.id_token_request_claims().unwrap();
+        assert_eq!(
+            request_claims,
+            StandardClaims {
+                name: Some(Claim::default()),
+                email: Some(Claim::Request(IndividualClaimRequest {
+                    essential: Some(true),
+                    ..Default::default()
+                })),
+                address: Some(Claim::default()),
+                updated_at: Some(Claim::default()),
+                phone_number: Some(Claim::default()),
+                phone_number_verified: Some(Claim::default()),
+                ..Default::default()
+            }
+        );
 
         // Assert that the request was successfully received by the mock server at the `request_uri` endpoint.
         let get_request = mock_server.received_requests().await.unwrap()[0].clone();
@@ -136,5 +205,25 @@ mod tests {
         assert_eq!(id_token.sub, sub);
         assert_eq!(id_token.aud, aud);
         assert_eq!(id_token.nonce, nonce);
+        assert_eq!(
+            id_token.standard_claims,
+            StandardClaims {
+                name: Some(Claim::Value("Jane Doe".to_string())),
+                email: Some(Claim::Value("jane.doe@example.com".to_string())),
+                updated_at: Some(Claim::Value(1311280970)),
+                phone_number: Some(Claim::Value("+1 555 555 5555".to_string())),
+                address: Some(Claim::Value(Address {
+                    formatted: Some(Claim::Value(
+                        "100 Universal City Plaza\nHollywood, CA 91608".to_string()
+                    )),
+                    street_address: Some(Claim::Value("100 Universal City Plaza".to_string())),
+                    locality: Some(Claim::Value("Hollywood".to_string())),
+                    region: Some(Claim::Value("CA".to_string())),
+                    postal_code: Some(Claim::Value("91608".to_string())),
+                    country: Some(Claim::Value("US".to_string()))
+                })),
+                ..Default::default()
+            }
+        );
     }
 }
