@@ -36,8 +36,8 @@ mod tests {
         claims::{Address, Claim, ClaimRequests, IndividualClaimRequest},
         request::ResponseType,
         scope::{Scope, ScopeValue},
-        test_utils::MockSubject,
-        IdToken, MemoryStorage, Provider, Registration, RequestUrl, StandardClaims,
+        test_utils::{MemoryStorage, MockSubject, Storage},
+        IdToken, Provider, Registration, RequestUrl, StandardClaims,
     };
     use chrono::{Duration, Utc};
     use lazy_static::lazy_static;
@@ -139,7 +139,7 @@ mod tests {
         let storage = MemoryStorage::new(serde_json::from_value(USER_CLAIMS.clone()).unwrap());
 
         // Create a new provider.
-        let provider = Provider::new(subject, storage).await.unwrap();
+        let provider = Provider::new(subject).await.unwrap();
 
         // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
         let request_url = RequestUrl::builder()
@@ -175,9 +175,12 @@ mod tests {
         assert_eq!(get_request.method, Method::Get);
         assert_eq!(get_request.url.path(), "/request_uri");
 
+        // The user can now provide the claims requested by the relying party.
+        let response_claims = storage.fetch_claims(&request_claims);
+
         // Let the provider generate a response based on the validated request. The response is an `IdToken` which is
         // encoded as a JWT.
-        let response = provider.generate_response(request).await.unwrap();
+        let response = provider.generate_response(request, response_claims).await.unwrap();
 
         // The provider sends it's response to the mock server's `redirect_uri` endpoint.
         provider.send_response(response).await.unwrap();

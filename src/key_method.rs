@@ -91,7 +91,7 @@ async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{IdToken, MemoryStorage, Provider, RelyingParty};
+    use crate::{IdToken, Provider, RelyingParty, StandardClaims};
     use chrono::{Duration, Utc};
 
     #[tokio::test]
@@ -100,7 +100,7 @@ mod tests {
         let subject = KeySubject::new();
 
         // Create a new provider.
-        let provider = Provider::new(subject, MemoryStorage::default()).await.unwrap();
+        let provider = Provider::new(subject).await.unwrap();
 
         // Get a new SIOP request with response mode `post` for cross-device communication.
         let request_url = "\
@@ -120,7 +120,10 @@ mod tests {
         let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
 
         // Test whether the provider can generate a response for the request succesfully.
-        let response = provider.generate_response(request).await.unwrap();
+        let response = provider
+            .generate_response(request, StandardClaims::default())
+            .await
+            .unwrap();
 
         // Let the relying party validate the response.
         let relying_party = RelyingParty::new(KeySubject::new());

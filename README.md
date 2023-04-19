@@ -30,12 +30,10 @@ use chrono::{Duration, Utc};
 use ed25519_dalek::{Keypair, Signature, Signer};
 use lazy_static::lazy_static;
 use rand::rngs::OsRng;
-use serde_json::{json, Value};
 use siopv2::{
     claims::{Claim, ClaimRequests, StandardClaims},
     request::ResponseType,
-    IdToken, MemoryStorage, Provider, Registration, RelyingParty, RequestUrl, Scope, SiopRequest, SiopResponse,
-    Subject, Validator,
+    IdToken, Provider, Registration, RelyingParty, RequestUrl, Scope, SiopRequest, SiopResponse, Subject, Validator,
 };
 use wiremock::{
     http::Method,
@@ -147,7 +145,7 @@ async fn main() {
     let subject = MySubject::default();
 
     // Create a new provider.
-    let provider = Provider::new(subject, MemoryStorage::default()).await.unwrap();
+    let provider = Provider::new(subject).await.unwrap();
 
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
     let request_url = RequestUrl::builder()
@@ -167,7 +165,10 @@ async fn main() {
 
     // Let the provider generate a response based on the validated request. The response is an `IdToken` which is
     // encoded as a JWT.
-    let response = provider.generate_response(request).await.unwrap();
+    let response = provider
+        .generate_response(request, StandardClaims::default())
+        .await
+        .unwrap();
 
     // The provider sends it's response to the mock server's `redirect_uri` endpoint.
     provider.send_response(response).await.unwrap();

@@ -9,7 +9,6 @@ pub mod request;
 pub mod request_builder;
 pub mod response;
 pub mod scope;
-pub mod storage;
 pub mod subject;
 pub mod validator;
 
@@ -23,7 +22,6 @@ pub use request::{RequestUrl, SiopRequest};
 pub use request_builder::RequestUrlBuilder;
 pub use response::SiopResponse;
 pub use scope::Scope;
-pub use storage::{MemoryStorage, Storage};
 pub use subject::Subject;
 pub use validator::Validator;
 

@@ -27,8 +27,7 @@ is_empty = "0.2.0"
 serde_urlencoded = "0.7.1"
 derive_more = "0.99.16"
 merge = "0.1.0"
-
-[dev-dependencies]
+# [dev-dependencies]
 ed25519-dalek = "1.0.1"
 rand = "0.7"
 lazy_static = "1.4.0"

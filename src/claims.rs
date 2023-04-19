@@ -146,7 +146,7 @@ pub struct Address {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{storage::MemoryStorage, Storage};
+    use crate::test_utils::{MemoryStorage, Storage};
     use lazy_static::lazy_static;
     use serde_json::{json, Value};
 
