@@ -74,6 +74,8 @@ impl TryInto<SiopRequest> for RequestUrl {
     }
 }
 
+/// In order to convert a string to a [`RequestUrl`], we need to try to parse each value as a JSON object. This way we
+/// can catch any non-primitive types. If the value is not a JSON object or an Array, we just leave it as a string.
 impl FromStr for RequestUrl {
     type Err = anyhow::Error;
 

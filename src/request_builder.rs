@@ -1,10 +1,10 @@
 use crate::{
+    claims::ClaimRequests,
     request::{RequestUrl, ResponseType, SiopRequest},
-    Registration,
+    Registration, Scope,
 };
 use anyhow::{anyhow, Result};
 use is_empty::IsEmpty;
-use serde_json::{Map, Value};
 
 #[derive(Default, IsEmpty)]
 pub struct RequestUrlBuilder {
@@ -12,8 +12,8 @@ pub struct RequestUrlBuilder {
     response_type: Option<ResponseType>,
     response_mode: Option<String>,
     client_id: Option<String>,
-    scope: Option<String>,
-    claims: Option<Map<String, Value>>,
+    scope: Option<Scope>,
+    claims: Option<ClaimRequests>,
     redirect_uri: Option<String>,
     nonce: Option<String>,
     registration: Option<Registration>,
@@ -81,8 +81,8 @@ impl RequestUrlBuilder {
     builder_fn!(response_type, ResponseType);
     builder_fn!(response_mode, String);
     builder_fn!(client_id, String);
-    builder_fn!(scope, String);
-    builder_fn!(claims, Map<String, Value>);
+    builder_fn!(scope, Scope);
+    builder_fn!(claims, ClaimRequests);
     builder_fn!(redirect_uri, String);
     builder_fn!(nonce, String);
     builder_fn!(registration, Registration);
@@ -103,7 +103,7 @@ mod tests {
         let request_url = RequestUrl::builder()
             .response_type(ResponseType::IdToken)
             .client_id("did:example:123".to_owned())
-            .scope("openid".to_owned())
+            .scope(Scope::openid())
             .redirect_uri("https://example.com".to_owned())
             .nonce("nonce".to_owned())
             .build()
@@ -115,7 +115,7 @@ mod tests {
                 response_type: ResponseType::IdToken,
                 response_mode: None,
                 client_id: "did:example:123".to_owned(),
-                scope: "openid".to_owned(),
+                scope: Scope::openid(),
                 claims: None,
                 redirect_uri: "https://example.com".to_owned(),
                 nonce: "nonce".to_owned(),
@@ -136,7 +136,7 @@ mod tests {
         let request_url = RequestUrl::builder()
             .response_type(ResponseType::IdToken)
             .client_id("did:example:123".to_owned())
-            .scope("openid".to_owned())
+            .scope(Scope::openid())
             .redirect_uri("https://example.com".to_owned())
             .nonce("nonce".to_owned())
             .request_uri("https://example.com/request_uri".to_owned())

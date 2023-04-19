@@ -1,9 +1,24 @@
 use anyhow::{anyhow, Result};
+use derive_more::Deref;
 use serde::{de::Deserializer, Deserialize, Serialize};
 use std::str::FromStr;
 
-#[derive(PartialEq, Debug, Clone, Default)]
+/// Set of scope values as specified in the
+/// [OpenID Connect specification](https://openid.net/specs/openid-connect-core-1_0.html#ScopeClaims).
+#[derive(PartialEq, Debug, Clone, Default, Deref)]
 pub struct Scope(Vec<ScopeValue>);
+
+impl Scope {
+    pub fn openid() -> Self {
+        Scope(vec![ScopeValue::OpenId])
+    }
+}
+
+impl From<Vec<ScopeValue>> for Scope {
+    fn from(values: Vec<ScopeValue>) -> Self {
+        Scope(values)
+    }
+}
 
 impl Serialize for Scope {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -33,7 +48,7 @@ impl<'de> Deserialize<'de> for Scope {
 
 #[derive(Deserialize, Debug, PartialEq, Serialize, Clone)]
 #[serde(rename_all = "lowercase")]
-pub(crate) enum ScopeValue {
+pub enum ScopeValue {
     OpenId,
     Profile,
     Email,
@@ -108,7 +123,7 @@ mod tests {
     fn test_scope_serialization() {
         assert_eq!(
             r#""openid profile email address phone""#,
-            serde_json::to_string(&Scope(vec![
+            serde_json::to_string(&Scope::from(vec![
                 ScopeValue::OpenId,
                 ScopeValue::Profile,
                 ScopeValue::Email,
