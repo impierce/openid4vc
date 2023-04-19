@@ -99,7 +99,7 @@ mod tests {
         let subject = KeySubject::new();
 
         // Create a new provider.
-        let provider = Provider::new(subject, MemoryStorage::default()).await.unwrap();
+        let provider = Provider::new(subject).await.unwrap();
 
         // Get a new SIOP request with response mode `post` for cross-device communication.
         let request_url = "\
