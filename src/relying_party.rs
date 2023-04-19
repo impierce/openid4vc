@@ -152,7 +152,7 @@ mod tests {
         // request to mock server's `request_uri` endpoint.
         let request = provider.validate_request(request_url).await.unwrap();
 
-        // Assert that the received request contains the expected claims.
+        // The provider can now access the claims requested by the relying party.
         let request_claims = request.id_token_request_claims().unwrap();
         assert_eq!(
             request_claims,

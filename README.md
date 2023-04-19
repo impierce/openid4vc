@@ -30,8 +30,11 @@ use chrono::{Duration, Utc};
 use ed25519_dalek::{Keypair, Signature, Signer};
 use lazy_static::lazy_static;
 use rand::rngs::OsRng;
+use serde_json::{json, Value};
 use siopv2::{
-    request::ResponseType, IdToken, Provider, Registration, RelyingParty, RequestUrl, SiopRequest, SiopResponse,
+    claims::{Claim, ClaimRequests, StandardClaims},
+    request::ResponseType,
+    IdToken, MemoryStorage, Provider, Registration, RelyingParty, RequestUrl, Scope, SiopRequest, SiopResponse,
     Subject, Validator,
 };
 use wiremock::{
@@ -105,7 +108,7 @@ async fn main() {
     let request: SiopRequest = RequestUrl::builder()
         .response_type(ResponseType::IdToken)
         .client_id("did:mymethod:relyingparty".to_owned())
-        .scope("openid".to_owned())
+        .scope(Scope::openid())
         .redirect_uri(format!("{server_url}/redirect_uri"))
         .response_mode("post".to_owned())
         .registration(
@@ -113,6 +116,13 @@ async fn main() {
                 .with_subject_syntax_types_supported(vec!["did:mymethod".to_owned()])
                 .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_owned()]),
         )
+        .claims(ClaimRequests {
+            id_token: Some(StandardClaims {
+                name: Some(Claim::default()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        })
         .exp((Utc::now() + Duration::minutes(10)).timestamp())
         .nonce("n-0S6_WzA2Mj".to_owned())
         .build()
@@ -137,7 +147,7 @@ async fn main() {
     let subject = MySubject::default();
 
     // Create a new provider.
-    let provider = Provider::new(subject).await.unwrap();
+    let provider = Provider::new(subject, MemoryStorage::default()).await.unwrap();
 
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
     let request_url = RequestUrl::builder()
