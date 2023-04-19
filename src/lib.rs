@@ -9,6 +9,7 @@ pub mod request;
 pub mod request_builder;
 pub mod response;
 pub mod scope;
+pub mod storage;
 pub mod subject;
 pub mod validator;
 

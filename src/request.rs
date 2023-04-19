@@ -2,6 +2,7 @@ use crate::{claims::ClaimRequests, Registration, RequestUrlBuilder, Scope, Stand
 use anyhow::{anyhow, Result};
 use derive_more::Display;
 use getset::Getters;
+use merge::Merge;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::convert::TryInto;
