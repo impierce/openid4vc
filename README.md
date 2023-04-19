@@ -30,7 +30,6 @@ use chrono::{Duration, Utc};
 use ed25519_dalek::{Keypair, Signature, Signer};
 use lazy_static::lazy_static;
 use rand::rngs::OsRng;
-use serde_json::{json, Value};
 use siopv2::{
     claims::{Claim, ClaimRequests},
     request::ResponseType, StandardClaim,
@@ -146,7 +145,7 @@ async fn main() {
     let subject = MySubject::default();
 
     // Create a new provider.
-    let provider = Provider::new(subject, MemoryStorage::default()).await.unwrap();
+    let provider = Provider::new(subject).await.unwrap();
 
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
     let request_url = RequestUrl::builder()
