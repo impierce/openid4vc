@@ -8,23 +8,20 @@ use chrono::{Duration, Utc};
 /// [`AuthorizationRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
 /// the user who is trying to authenticate.
 #[derive(Default)]
-pub struct Provider<S, T>
+pub struct Provider<S>
 where
     S: Subject + Validator,
-    T: Storage,
 {
     pub subject: S,
-    pub storage: T,
 }
 
-impl<S, T> Provider<S, T>
+impl<S> Provider<S>
 where
     S: Subject + Validator,
-    T: Storage,
 {
     // TODO: Use ProviderBuilder instead.
-    pub async fn new(subject: S, storage: T) -> Result<Self> {
-        Ok(Provider { subject, storage })
+    pub async fn new(subject: S) -> Result<Self> {
+        Ok(Provider { subject })
     }
 
     pub fn subject_syntax_types_supported(&self) -> Result<Vec<String>> {
@@ -85,10 +82,8 @@ where
             .claims(user_claims)
             .build()?;
 
-        // Fetch the user's claims from the storage.
-        if let Some(id_token_request_claims) = request.id_token_request_claims() {
-            id_token.standard_claims = self.storage.fetch_claims(&id_token_request_claims);
-        }
+        // Include the user claims in the id token.
+        id_token.standard_claims = user_claims;
 
         let jwt = self.subject.encode(id_token).await?;
 
@@ -112,7 +107,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::MemoryStorage;
     use crate::test_utils::MockSubject;
 
     #[tokio::test]
@@ -121,7 +115,7 @@ mod tests {
         let subject = MockSubject::new("did:mock:123".to_string(), "key_identifier".to_string()).unwrap();
 
         // Create a new provider.
-        let provider = Provider::new(subject, MemoryStorage::default()).await.unwrap();
+        let provider = Provider::new(subject).await.unwrap();
 
         // Get a new SIOP request with response mode `post` for cross-device communication.
         let request_url = "\
@@ -147,7 +141,7 @@ mod tests {
     #[tokio::test]
     async fn test_provider_subject_syntax_types_supported() {
         // Create a new provider.
-        let provider = Provider::<MockSubject, MemoryStorage>::default();
+        let provider = Provider::<MockSubject>::default();
 
         // Test whether the provider returns the correct subject syntax types.
         assert_eq!(
