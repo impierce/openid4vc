@@ -142,7 +142,7 @@ mod tests {
         let storage = MemoryStorage::new(serde_json::from_value(USER_CLAIMS.clone()).unwrap());
 
         // Create a new provider.
-        let provider = Provider::new(subject).await.unwrap();
+        let provider = Provider::new(subject, storage).await.unwrap();
 
         // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
         let request_url = RequestUrl::builder()
