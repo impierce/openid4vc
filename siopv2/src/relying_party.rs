@@ -115,6 +115,19 @@ mod tests {
                     }
                 }"#,
             )
+            .claims(ClaimRequests {
+                id_token: Some(StandardClaims {
+                    name: Some(Claim::default()),
+                    email: Some(Claim::Request(IndividualClaimRequest {
+                        essential: Some(true),
+                        ..Default::default()
+                    })),
+                    address: Some(Claim::default()),
+                    updated_at: Some(Claim::default()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            })
             .exp((Utc::now() + Duration::minutes(10)).timestamp())
             .nonce("n-0S6_WzA2Mj".to_string())
             .build()
@@ -142,7 +155,7 @@ mod tests {
         let storage = MemoryStorage::new(serde_json::from_value(USER_CLAIMS.clone()).unwrap());
 
         // Create a new provider.
-        let provider = Provider::new(subject).await.unwrap();
+        let provider = Provider::new(subject, storage).await.unwrap();
 
         // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
         let request_url = RequestUrl::builder()
