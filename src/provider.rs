@@ -69,7 +69,7 @@ where
 
         let jwt = self.subject.encode(id_token).await?;
 
-        Ok(SiopResponse::new(jwt, request.redirect_uri().clone()))
+        Ok(SiopResponse::new(request.redirect_uri().clone(), jwt))
     }
 
     pub async fn send_response(&self, response: SiopResponse) -> Result<()> {
