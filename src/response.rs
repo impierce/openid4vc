@@ -8,10 +8,6 @@ pub struct SiopResponse {
     #[getset(get = "pub")]
     redirect_uri: String,
     pub id_token: String,
-    #[serde(skip)]
-    #[getset(get = "pub")]
-    redirect_uri: String,
-    pub id_token: String,
 }
 
 impl SiopResponse {
