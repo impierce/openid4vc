@@ -20,9 +20,13 @@ use ed25519_dalek::{Keypair, Signature, Signer};
 use lazy_static::lazy_static;
 use rand::rngs::OsRng;
 use siopv2::{
-    Provider, Subject,
-    RelyingParty, Validator,
-    IdToken, SiopRequest,
+    request::ResponseType, IdToken, Provider, Registration, RelyingParty, RequestUrl, SiopRequest, SiopResponse,
+    Subject, Validator,
+};
+use wiremock::{
+    http::Method,
+    matchers::{method, path},
+    Mock, MockServer, ResponseTemplate,
 };
 
 lazy_static! {
@@ -42,7 +46,7 @@ impl MySubject {
 #[async_trait]
 impl Subject for MySubject {
     fn did(&self) -> Result<did_url::DID> {
-        Ok(did_url::DID::parse("did:key:123")?)
+        Ok(did_url::DID::parse("did:mymethod:subject")?)
     }
 
     fn key_identifier(&self) -> Option<String> {
@@ -52,6 +56,13 @@ impl Subject for MySubject {
     async fn sign<'a>(&self, message: &'a str) -> Result<Vec<u8>> {
         let signature: Signature = MOCK_KEYPAIR.sign(message.as_bytes());
         Ok(signature.to_bytes().to_vec())
+    }
+}
+
+#[async_trait]
+impl Validator for MySubject {
+    async fn public_key<'a>(&self, _kid: &'a str) -> Result<Vec<u8>> {
+        Ok(MOCK_KEYPAIR.public.to_bytes().to_vec())
     }
 }
 
@@ -68,41 +79,93 @@ impl Validator for MyValidator {
 
 #[tokio::main]
 async fn main() {
-    // Get a new SIOP request with response mode `post` for cross-device communication.
-    let request: SiopRequest = serde_qs::from_str(
-        "\
-            response_type=id_token\
-            &response_mode=post\
-            &client_id=did:key:1\
-            &redirect_uri=http://127.0.0.1:4200/redirect_uri\
-            &scope=openid\
-            &nonce=n-0S6_WzA2Mj\
-            &subject_syntax_types_supported[0]=did%3Akey\
-        ",
-    )
-    .unwrap();
-
-    // Generate a new response.
-    let response = Provider::<MySubject>::default()
-        .generate_response(request)
-        .await
-        .unwrap();
+    // Create a new mock server and retreive it's url.
+    let mock_server = MockServer::start().await;
+    let server_url = mock_server.uri();
 
     // Create a new validator.
-    let validator = MyValidator::default();
+    let validator = MySubject::default();
 
     // Create a new relying party.
     let relying_party = RelyingParty::new(validator);
 
-    // Validate the response.
-    let id_token = relying_party.validate_response(&response).await.unwrap();
+    // Create a new RequestUrl with response mode `post` for cross-device communication.
+    let request: SiopRequest = RequestUrl::builder()
+        .response_type(ResponseType::IdToken)
+        .client_id("did:mymethod:relyingparty".to_owned())
+        .scope("openid".to_owned())
+        .redirect_uri(format!("{server_url}/redirect_uri"))
+        .response_mode("post".to_owned())
+        .registration(
+            Registration::default()
+                .with_subject_syntax_types_supported(vec!["did:mymethod".to_owned()])
+                .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_owned()]),
+        )
+        .exp((Utc::now() + Duration::minutes(10)).timestamp())
+        .nonce("n-0S6_WzA2Mj".to_owned())
+        .build()
+        .and_then(TryInto::try_into)
+        .unwrap();
 
+    // Create a new `request_uri` endpoint on the mock server and load it with the JWT encoded `SiopRequest`.
+    Mock::given(method("GET"))
+        .and(path("/request_uri"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(relying_party.encode(&request).await.unwrap()))
+        .mount(&mock_server)
+        .await;
+
+    // Create a new `redirect_uri` endpoint on the mock server where the `Provider` will send the `SiopResponse`.
+    Mock::given(method("POST"))
+        .and(path("/redirect_uri"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&mock_server)
+        .await;
+
+    // Create a new subject.
+    let subject = MySubject::default();
+
+    // Create a new provider.
+    let provider = Provider::new(subject).await.unwrap();
+
+    // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
+    let request_url = RequestUrl::builder()
+        .request_uri(format!("{server_url}/request_uri"))
+        .build()
+        .unwrap();
+
+    // The Provider obtains the reuquest url either by a deeplink or by scanning a QR code. It then validates the
+    // request. Since in this case the request is a JWT, the provider will fetch the request by sending a GET
+    // request to mock server's `request_uri` endpoint.
+    let request = provider.validate_request(request_url).await.unwrap();
+
+    // Assert that the request was successfully received by the mock server at the `request_uri` endpoint.
+    let get_request = mock_server.received_requests().await.unwrap()[0].clone();
+    assert_eq!(get_request.method, Method::Get);
+    assert_eq!(get_request.url.path(), "/request_uri");
+
+    // Let the provider generate a response based on the validated request. The response is an `IdToken` which is
+    // encoded as a JWT.
+    let response = provider.generate_response(request).await.unwrap();
+
+    // The provider sends it's response to the mock server's `redirect_uri` endpoint.
+    provider.send_response(response).await.unwrap();
+
+    // Assert that the SiopResponse was successfully received by the mock server at the expected endpoint.
+    let post_request = mock_server.received_requests().await.unwrap()[1].clone();
+    assert_eq!(post_request.method, Method::Post);
+    assert_eq!(post_request.url.path(), "/redirect_uri");
+    let response: SiopResponse = serde_urlencoded::from_bytes(post_request.body.as_slice()).unwrap();
+
+    // The `RelyingParty` then validates the response by decoding the header of the id_token, by fetching the public
+    // key corresponding to the key identifier and finally decoding the id_token using the public key and by
+    // validating the signature.
+    let id_token = relying_party.validate_response(&response).await.unwrap();
     let IdToken {
         iss, sub, aud, nonce, ..
     } = IdToken::new(
-        "did:key:123".to_string(),
-        "did:key:123".to_string(),
-        "did:key:1".to_string(),
+        "did:mymethod:subject".to_string(),
+        "did:mymethod:subject".to_string(),
+        "did:mymethod:relyingparty".to_string(),
         "n-0S6_WzA2Mj".to_string(),
         (Utc::now() + Duration::minutes(10)).timestamp(),
     );

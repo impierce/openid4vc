@@ -1,8 +1,6 @@
+use crate::{IdToken, RequestUrl, SiopRequest, SiopResponse, Subject, Validator};
 use anyhow::{anyhow, Result};
 use chrono::{Duration, Utc};
-use serde::Serialize;
-
-use crate::{IdToken, JsonWebToken, SiopRequest, SiopResponse, Subject};
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
 /// [`SiopRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
@@ -10,14 +8,14 @@ use crate::{IdToken, JsonWebToken, SiopRequest, SiopResponse, Subject};
 #[derive(Default)]
 pub struct Provider<S>
 where
-    S: Subject,
+    S: Subject + Validator,
 {
     pub subject: S,
 }
 
 impl<S> Provider<S>
 where
-    S: Subject,
+    S: Subject + Validator,
 {
     // TODO: Use ProviderBuilder instead.
     pub async fn new(subject: S) -> Result<Self> {
@@ -28,61 +26,58 @@ where
         Ok(vec![format!("did:{}", self.subject.did()?.method())])
     }
 
+    /// TODO: Add more validation rules.
+    /// Takes a [`RequestUrl`] and returns a [`SiopRequest`]. The [`RequestUrl`] can either be a [`SiopRequest`] or a
+    /// request by value. If the [`RequestUrl`] is a request by value, the request is decoded by the [`Subject`] of the [`Provider`].
+    /// If the request is valid, the request is returned.
+    pub async fn validate_request(&self, request: RequestUrl) -> Result<SiopRequest> {
+        let request = match request {
+            RequestUrl::Request(request) => *request,
+            RequestUrl::RequestUri { request_uri } => {
+                let client = reqwest::Client::new();
+                let builder = client.get(request_uri);
+                let request_value = builder.send().await?.text().await?;
+                self.subject.decode(request_value).await?
+            }
+        };
+        self.subject_syntax_types_supported().and_then(|supported| {
+            request.subject_syntax_types_supported().map_or_else(
+                || Err(anyhow!("No supported subject syntax types found.")),
+                |supported_types| {
+                    supported_types.iter().find(|sst| supported.contains(sst)).map_or_else(
+                        || Err(anyhow!("Subject syntax type not supported.")),
+                        |_| Ok(request.clone()),
+                    )
+                },
+            )
+        })
+    }
+
     // TODO: needs refactoring.
     /// Generates a [`SiopResponse`] in response to a [`SiopRequest`]. The [`SiopResponse`] contains an [`IdToken`],
     /// which is signed by the [`Subject`] of the [`Provider`].
     pub async fn generate_response(&self, request: SiopRequest) -> Result<SiopResponse> {
-        let subject_syntax_types_supported = self.subject_syntax_types_supported()?;
-        if request
-            .subject_syntax_types_supported()
-            .iter()
-            .any(|sst| subject_syntax_types_supported.contains(sst))
-        {
-            if request.is_cross_device_request() {
-                if let Some(_redirect_uri) = request.redirect_uri() {
-                    let subject_did = self.subject.did()?;
-                    let id_token = IdToken::new(
-                        subject_did.to_string(),
-                        subject_did.to_string(),
-                        request.client_id().clone(),
-                        request.nonce().clone(),
-                        (Utc::now() + Duration::minutes(10)).timestamp(),
-                    );
+        let subject_did = self.subject.did()?;
+        let id_token = IdToken::new(
+            subject_did.to_string(),
+            subject_did.to_string(),
+            request.client_id().clone(),
+            request.nonce().clone(),
+            (Utc::now() + Duration::minutes(10)).timestamp(),
+        )
+        .state(request.state().clone());
 
-                    let kid = self.subject.key_identifier().unwrap();
+        let jwt = self.subject.encode(id_token).await?;
 
-                    let jwt = JsonWebToken::new(id_token).kid(kid);
-
-                    let message = [base64_url_encode(&jwt.header)?, base64_url_encode(&jwt.payload)?].join(".");
-
-                    let proof_value = self.subject.sign(&message).await?;
-                    let signature = base64_url::encode(proof_value.as_slice());
-                    let id_token = [message, signature].join(".");
-
-                    Ok(SiopResponse::new(id_token))
-                } else {
-                    Err(anyhow!("No redirect_uri found in the request."))
-                }
-            } else {
-                Err(anyhow!("Response mode not supported."))
-            }
-        } else {
-            Err(anyhow!("Subject syntax type not supported."))
-        }
+        Ok(SiopResponse::new(request.redirect_uri().clone(), jwt))
     }
 
-    pub async fn send_response(&self, response: SiopResponse, redirect_uri: String) {
+    pub async fn send_response(&self, response: SiopResponse) -> Result<()> {
         let client = reqwest::Client::new();
-        let builder = client.post(redirect_uri).form(&response);
-        builder.send().await.unwrap();
+        let builder = client.post(response.redirect_uri()).form(&response);
+        builder.send().await?.text().await?;
+        Ok(())
     }
-}
-
-fn base64_url_encode<T>(value: &T) -> Result<String>
-where
-    T: ?Sized + Serialize,
-{
-    Ok(base64_url::encode(serde_json::to_vec(value)?.as_slice()))
 }
 
 #[cfg(test)]
@@ -99,18 +94,21 @@ mod tests {
         let provider = Provider::new(subject).await.unwrap();
 
         // Get a new SIOP request with response mode `post` for cross-device communication.
-        let request: SiopRequest = serde_qs::from_str(
-            "\
-                response_type=id_token\
+        let request_url = "\
+            siopv2://idtoken?\
+                scope=openid\
+                &response_type=id_token\
+                &client_id=did%3Aexample%3AEiDrihTRe0GMdc3K16kgJB3Xbl9Hb8oqVHjzm6ufHcYDGA\
+                &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
                 &response_mode=post\
-                &client_id=did:mock:1\
-                &redirect_uri=http://127.0.0.1:4200/redirect_uri\
-                &scope=openid\
+                &registration=%7B%22subject_syntax_types_supported%22%3A\
+                %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
+                %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\
-                &subject_syntax_types_supported[0]=did%3Amock\
-            ",
-        )
-        .unwrap();
+            ";
+
+        // Let the provider validate the request.
+        let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
 
         // Test whether the provider can generate a response for the request succesfully.
         assert!(provider.generate_response(request).await.is_ok());

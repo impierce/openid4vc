@@ -50,6 +50,13 @@ impl Subject for KeySubject {
     }
 }
 
+#[async_trait]
+impl Validator for KeySubject {
+    async fn public_key<'a>(&self, kid: &'a str) -> Result<Vec<u8>> {
+        Ok(resolve_public_key(kid).await?)
+    }
+}
+
 /// This [`KeyValidator`] implements the [`Validator`] trait and can be used as a validator for a [`RelyingParty`]. It uses
 /// the 'key' DID method.
 #[derive(Default)]
@@ -64,22 +71,27 @@ impl KeyValidator {
 #[async_trait]
 impl Validator for KeyValidator {
     async fn public_key<'a>(&self, kid: &'a str) -> Result<Vec<u8>> {
-        let keypair = resolve(kid).map_err(|_| anyhow!("Failed to resolve the key identifier"))?;
-        let authentication_method = keypair
-            .get_did_document(Config::default())
-            .authentication
-            .and_then(|authentication_methods| authentication_methods.get(0).cloned())
-            .ok_or(anyhow!("No public key found"))?;
-        PatchedKeyPair::try_from(authentication_method.as_str())
-            .map(|keypair| keypair.public_key_bytes())
-            .map_err(|_| anyhow!("Failed to construct keypair from the default authentication method"))
+        Ok(resolve_public_key(kid).await?)
     }
+}
+
+/// Resolves the public key from the given key identifier.
+async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
+    let keypair = resolve(kid).map_err(|_| anyhow!("Failed to resolve the key identifier"))?;
+    let authentication_method = keypair
+        .get_did_document(Config::default())
+        .authentication
+        .and_then(|authentication_methods| authentication_methods.get(0).cloned())
+        .ok_or(anyhow!("No public key found"))?;
+    PatchedKeyPair::try_from(authentication_method.as_str())
+        .map(|keypair| keypair.public_key_bytes())
+        .map_err(|_| anyhow!("Failed to construct keypair from the default authentication method"))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{IdToken, Provider, RelyingParty, SiopRequest};
+    use crate::{IdToken, Provider, RelyingParty};
     use chrono::{Duration, Utc};
 
     #[tokio::test]
@@ -91,24 +103,27 @@ mod tests {
         let provider = Provider::new(subject).await.unwrap();
 
         // Get a new SIOP request with response mode `post` for cross-device communication.
-        let request: SiopRequest = serde_qs::from_str(
-            "\
-                response_type=id_token\
-                &response_mode=post\
+        let request_url = "\
+            siopv2://idtoken?\
+                scope=openid\
+                &response_type=id_token\
                 &client_id=did:key:z6MkiTcXZ1JxooACo99YcfkugH6Kifzj7ZupSDCmLEABpjpF\
-                &redirect_uri=http://127.0.0.1:4200/redirect_uri\
-                &scope=openid\
+                &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
+                &response_mode=post\
+                &registration=%7B%22subject_syntax_types_supported%22%3A\
+                %5B%22did%3Akey%22%5D%2C%0A%20%20%20%20\
+                %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\
-                &subject_syntax_types_supported[0]=did%3Akey\
-            ",
-        )
-        .unwrap();
+            ";
 
-        // The provider generates a signed SIOP response from the new SIOP request.
+        // Let the provider validate the request.
+        let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
+
+        // Test whether the provider can generate a response for the request succesfully.
         let response = provider.generate_response(request).await.unwrap();
 
         // Let the relying party validate the response.
-        let relying_party = RelyingParty::new(KeyValidator::new());
+        let relying_party = RelyingParty::new(KeySubject::new());
         let id_token = relying_party.validate_response(&response).await.unwrap();
 
         let IdToken { aud, nonce, .. } = IdToken::new(
