@@ -3,6 +3,7 @@ use chrono::Utc;
 use getset::Setters;
 use serde::{Deserialize, Serialize};
 
+// TODO: make fully feature complete: https://github.com/impierce/siopv2/issues/20
 /// An SIOPv2 [`IdToken`] as specified in the [SIOPv2 specification](https://openid.net/specs/openid-connect-self-issued-v2-1_0.html#name-self-issued-id-token).
 #[derive(Serialize, Deserialize, Debug, PartialEq, Setters)]
 pub struct IdToken {
