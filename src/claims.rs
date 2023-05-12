@@ -12,6 +12,14 @@ pub struct ClaimRequests {
     pub id_token: Option<StandardClaimsRequests>,
 }
 
+impl TryFrom<serde_json::Value> for ClaimRequests {
+    type Error = anyhow::Error;
+
+    fn try_from(value: serde_json::Value) -> Result<Self, Self::Error> {
+        serde_json::from_value(value).map_err(Into::into)
+    }
+}
+
 mod sealed {
     /// [`Claim`] trait that is implemented by both [`ClaimValue`] and [`ClaimRequest`].
     pub trait Claim {
@@ -229,6 +237,7 @@ where
     }
 }
 
+// TODO: Check whether claims from a scope are essential or not.
 impl From<&Scope> for StandardClaimsRequests {
     fn from(value: &Scope) -> Self {
         value

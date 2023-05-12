@@ -1,5 +1,5 @@
 use crate::{
-    claims::ClaimRequests,
+    claims::{ClaimRequests, IndividualClaimRequest},
     request::{RequestUrl, ResponseType, SiopRequest},
     Registration, Scope,
 };
@@ -77,12 +77,21 @@ impl RequestUrlBuilder {
         }
     }
 
+    pub fn claims<T: TryInto<ClaimRequests>>(mut self, value: T) -> Self
+    where
+        <T as TryInto<ClaimRequests>>::Error: std::fmt::Debug,
+    {
+        let value = value.try_into().unwrap();
+        self.claims = Some(value);
+        self
+    }
+
     builder_fn!(request_uri, String);
     builder_fn!(response_type, ResponseType);
     builder_fn!(response_mode, String);
     builder_fn!(client_id, String);
     builder_fn!(scope, Scope);
-    builder_fn!(claims, ClaimRequests);
+    // builder_fn!(claims, ClaimRequests);
     builder_fn!(redirect_uri, String);
     builder_fn!(nonce, String);
     builder_fn!(registration, Registration);

@@ -104,16 +104,16 @@ mod tests {
                     .with_subject_syntax_types_supported(vec!["did:mock".to_string()])
                     .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
             )
-            .claims(ClaimRequests {
-                id_token: Some(StandardClaimsRequests {
-                    name: Some(IndividualClaimRequest::Null),
-                    email: Some(IndividualClaimRequest::object().essential(true)),
-                    address: Some(IndividualClaimRequest::Null),
-                    updated_at: Some(IndividualClaimRequest::Null),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            })
+            .claims(json!({
+                "id_token": {
+                    "name": null,
+                    "email": {
+                        "essential": true
+                    },
+                    "address": null,
+                    "updated_at": null
+                }
+            }))
             .exp((Utc::now() + Duration::minutes(10)).timestamp())
             .nonce("n-0S6_WzA2Mj".to_string())
             .build()
