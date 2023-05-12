@@ -9,27 +9,20 @@ pub struct ClaimRequests {
     pub id_token: Option<StandardClaims<IndividualClaimRequest>>,
 }
 
-/// The Claim trait has multiple associated types: String, Integer, Boolean, and Address. Each associated type specifies
-/// a ValueType, which is a type that the corresponding claim can store.
-/// The Address associated type has a more specific ValueType, which is defined as an Address type parameterized by the
-/// String associated type of the Claim type being defined.
-pub trait Claim: Default + Clone + for<'de> Deserialize<'de> {
+/// [`Claim`] trait that is implemented by both [`ClaimValue`] and [`IndividualClaimRequest`].
+pub trait Claim: Default + Clone + DeserializeOwned {
     type ValueType;
-    type String: Claim<ValueType = String> + Serialize;
-    type Integer: Claim<ValueType = i64> + Serialize;
-    type Boolean: Claim<ValueType = bool> + Serialize;
-    type Address: Claim<ValueType = Address<Self::String>> + Serialize;
+    type ClaimType<S>: Claim<ValueType = S> + Serialize
+    where
+        S: Serialize + Default + Clone + DeserializeOwned;
 }
 
-// Represents an actual claim value that can be send to the [`crate::RelyingParty`] via an [`IdToken`].
 #[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct ClaimValue<T = ()>(pub T);
-impl<T: Default + Clone + for<'de> Deserialize<'de>> Claim for ClaimValue<T> {
+
+impl<T: Serialize + Default + Clone + DeserializeOwned> Claim for ClaimValue<T> {
     type ValueType = T;
-    type String = ClaimValue<String>;
-    type Integer = ClaimValue<i64>;
-    type Boolean = ClaimValue<bool>;
-    type Address = ClaimValue<Address<Self::String>>;
+    type ClaimType<S> = ClaimValue<S> where S: Serialize + Default + Clone + DeserializeOwned;
 }
 
 /// An individual claim request as defined in [OpenID Connect Core 1.0, section 5.5.1](https://openid.net/specs/openid-connect-core-1_0.html#IndividualClaimsRequests).
@@ -62,12 +55,10 @@ impl<T: Default + Clone + for<'de> Deserialize<'de>> Claim for ClaimValue<T> {
 /// ```
 #[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct IndividualClaimRequest<T = ()>(Option<IndividualClaimRequestObject<T>>);
-impl<T: Default + Clone + for<'de> Deserialize<'de>> Claim for IndividualClaimRequest<T> {
+
+impl<T: Serialize + Default + Clone + DeserializeOwned> Claim for IndividualClaimRequest<T> {
     type ValueType = T;
-    type String = IndividualClaimRequest<String>;
-    type Integer = IndividualClaimRequest<i64>;
-    type Boolean = IndividualClaimRequest<bool>;
-    type Address = IndividualClaimRequest<Address<Self::String>>;
+    type ClaimType<S> = IndividualClaimRequest<S> where S: Serialize + Default + Clone + DeserializeOwned;
 }
 
 impl<T> IndividualClaimRequest<T> {
@@ -115,48 +106,45 @@ where
 #[skip_serializing_none]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-pub struct StandardClaims<C>
-where
-    C: Claim,
-{
+pub struct StandardClaims<C: Claim> {
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub name: Option<C::String>,
+    pub name: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub family_name: Option<C::String>,
+    pub family_name: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub given_name: Option<C::String>,
+    pub given_name: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub middle_name: Option<C::String>,
+    pub middle_name: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub nickname: Option<C::String>,
+    pub nickname: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub preferred_username: Option<C::String>,
+    pub preferred_username: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub profile: Option<C::String>,
+    pub profile: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub picture: Option<C::String>,
+    pub picture: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub website: Option<C::String>,
+    pub website: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub gender: Option<C::String>,
+    pub gender: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub birthdate: Option<C::String>,
+    pub birthdate: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub zoneinfo: Option<C::String>,
+    pub zoneinfo: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub locale: Option<C::String>,
+    pub locale: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub updated_at: Option<C::Integer>,
+    pub updated_at: Option<C::ClaimType<i64>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub email: Option<C::String>,
+    pub email: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub email_verified: Option<C::Boolean>,
+    pub email_verified: Option<C::ClaimType<bool>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub address: Option<C::Address>,
+    pub address: Option<C::ClaimType<Address<C>>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub phone_number: Option<C::String>,
+    pub phone_number: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub phone_number_verified: Option<C::Boolean>,
+    pub phone_number_verified: Option<C::ClaimType<bool>>,
 }
 
 /// A helper function to deserialize a claim. If the claim is not present, it will be deserialized as a `None` value.
@@ -213,22 +201,19 @@ where
 #[skip_serializing_none]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-pub struct Address<S>
-where
-    S: Claim<ValueType = String>,
-{
+pub struct Address<C: Claim> {
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub formatted: Option<S>,
+    pub formatted: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub street_address: Option<S>,
+    pub street_address: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub locality: Option<S>,
+    pub locality: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub region: Option<S>,
+    pub region: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub postal_code: Option<S>,
+    pub postal_code: Option<C::ClaimType<String>>,
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub country: Option<S>,
+    pub country: Option<C::ClaimType<String>>,
 }
 
 // TODO: Check whether claims from a scope are essential or not.
