@@ -1,16 +1,19 @@
 use anyhow::{anyhow, Result};
-use derive_more::Deref;
 use serde::{de::Deserializer, Deserialize, Serialize};
-use std::str::FromStr;
+use std::{slice::Iter, str::FromStr};
 
 /// Set of scope values as specified in the
 /// [OpenID Connect specification](https://openid.net/specs/openid-connect-core-1_0.html#ScopeClaims).
-#[derive(PartialEq, Debug, Clone, Default, Deref)]
+#[derive(PartialEq, Debug, Clone, Default)]
 pub struct Scope(Vec<ScopeValue>);
 
 impl Scope {
     pub fn openid() -> Self {
         Scope(vec![ScopeValue::OpenId])
+    }
+
+    pub fn iter(&self) -> Iter<'_, ScopeValue> {
+        self.0.iter()
     }
 }
 
