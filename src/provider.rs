@@ -65,17 +65,19 @@ where
         user_claims: StandardClaims<ClaimValue>,
     ) -> Result<SiopResponse> {
         let subject_did = self.subject.did()?;
-        let mut id_token = IdToken::new(
-            subject_did.to_string(),
-            subject_did.to_string(),
-            request.client_id().clone(),
-            request.nonce().clone(),
-            (Utc::now() + Duration::minutes(10)).timestamp(),
-        )
-        .state(request.state().clone());
-
-        // Include the user claims in the id token.
-        id_token.standard_claims = user_claims;
+        let id_token = {
+            let mut id_token = IdToken::new(
+                subject_did.to_string(),
+                subject_did.to_string(),
+                request.client_id().clone(),
+                request.nonce().clone(),
+                (Utc::now() + Duration::minutes(10)).timestamp(),
+            )
+            .state(request.state().clone());
+            // Include the user claims in the id token.
+            id_token.standard_claims = user_claims;
+            id_token
+        };
 
         let jwt = self.subject.encode(id_token).await?;
 
