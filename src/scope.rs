@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use derive_more::Display;
 use serde::{de::Deserializer, Deserialize, Serialize};
 use std::{slice::Iter, str::FromStr};
 
@@ -49,26 +50,19 @@ impl<'de> Deserialize<'de> for Scope {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq, Serialize, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Serialize, Clone, Display)]
 #[serde(rename_all = "lowercase")]
 pub enum ScopeValue {
+    #[display(fmt = "openid")]
     OpenId,
+    #[display(fmt = "profile")]
     Profile,
+    #[display(fmt = "email")]
     Email,
+    #[display(fmt = "address")]
     Address,
+    #[display(fmt = "phone")]
     Phone,
-}
-
-impl std::fmt::Display for ScopeValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ScopeValue::OpenId => write!(f, "openid"),
-            ScopeValue::Profile => write!(f, "profile"),
-            ScopeValue::Email => write!(f, "email"),
-            ScopeValue::Address => write!(f, "address"),
-            ScopeValue::Phone => write!(f, "phone"),
-        }
-    }
 }
 
 impl std::str::FromStr for ScopeValue {
