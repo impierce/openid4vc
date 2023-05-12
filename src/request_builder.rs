@@ -102,10 +102,10 @@ mod tests {
     fn test_valid_request_builder() {
         let request_url = RequestUrl::builder()
             .response_type(ResponseType::IdToken)
-            .client_id("did:example:123".to_owned())
+            .client_id("did:example:123".to_string())
             .scope(Scope::openid())
-            .redirect_uri("https://example.com".to_owned())
-            .nonce("nonce".to_owned())
+            .redirect_uri("https://example.com".to_string())
+            .nonce("nonce".to_string())
             .build()
             .unwrap();
 
@@ -114,11 +114,11 @@ mod tests {
             RequestUrl::Request(Box::new(SiopRequest {
                 response_type: ResponseType::IdToken,
                 response_mode: None,
-                client_id: "did:example:123".to_owned(),
+                client_id: "did:example:123".to_string(),
                 scope: Scope::openid(),
                 claims: None,
-                redirect_uri: "https://example.com".to_owned(),
-                nonce: "nonce".to_owned(),
+                redirect_uri: "https://example.com".to_string(),
+                nonce: "nonce".to_string(),
                 registration: None,
                 iss: None,
                 iat: None,
@@ -135,11 +135,11 @@ mod tests {
         // A request builder with a `request_uri` parameter should fail to build.
         let request_url = RequestUrl::builder()
             .response_type(ResponseType::IdToken)
-            .client_id("did:example:123".to_owned())
+            .client_id("did:example:123".to_string())
             .scope(Scope::openid())
-            .redirect_uri("https://example.com".to_owned())
-            .nonce("nonce".to_owned())
-            .request_uri("https://example.com/request_uri".to_owned())
+            .redirect_uri("https://example.com".to_string())
+            .nonce("nonce".to_string())
+            .request_uri("https://example.com/request_uri".to_string())
             .build();
         assert!(request_url.is_err());
     }
@@ -147,14 +147,14 @@ mod tests {
     #[test]
     fn test_valid_request_uri_builder() {
         let request_url = RequestUrl::builder()
-            .request_uri("https://example.com/request_uri".to_owned())
+            .request_uri("https://example.com/request_uri".to_string())
             .build()
             .unwrap();
 
         assert_eq!(
             request_url,
             RequestUrl::RequestUri {
-                request_uri: "https://example.com/request_uri".to_owned()
+                request_uri: "https://example.com/request_uri".to_string()
             }
         );
     }

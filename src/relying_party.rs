@@ -92,14 +92,14 @@ mod tests {
         // Create a new RequestUrl with response mode `post` for cross-device communication.
         let request: SiopRequest = RequestUrl::builder()
             .response_type(ResponseType::IdToken)
-            .client_id("did:mock:1".to_owned())
+            .client_id("did:mock:1".to_string())
             .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
             .redirect_uri(format!("{server_url}/redirect_uri"))
-            .response_mode("post".to_owned())
+            .response_mode("post".to_string())
             .registration(
                 Registration::default()
-                    .with_subject_syntax_types_supported(vec!["did:mock".to_owned()])
-                    .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_owned()]),
+                    .with_subject_syntax_types_supported(vec!["did:mock".to_string()])
+                    .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
             )
             .claims(ClaimRequests {
                 id_token: Some(StandardClaims::<IndividualClaimRequest> {
@@ -117,7 +117,7 @@ mod tests {
                 ..Default::default()
             })
             .exp((Utc::now() + Duration::minutes(10)).timestamp())
-            .nonce("n-0S6_WzA2Mj".to_owned())
+            .nonce("n-0S6_WzA2Mj".to_string())
             .build()
             .and_then(TryInto::try_into)
             .unwrap();

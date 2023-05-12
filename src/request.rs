@@ -25,7 +25,7 @@ use std::str::FromStr;
 /// assert_eq!(
 ///     request_url,
 ///     RequestUrl::RequestUri {
-///         request_uri: "https://example.com/request_uri".to_owned()
+///         request_uri: "https://example.com/request_uri".to_string()
 ///     }
 /// );
 ///
@@ -156,7 +156,7 @@ pub struct SiopRequest {
 
 impl SiopRequest {
     pub fn is_cross_device_request(&self) -> bool {
-        self.response_mode == Some("post".to_owned())
+        self.response_mode == Some("post".to_string())
     }
 
     pub fn subject_syntax_types_supported(&self) -> Option<&Vec<String>> {
@@ -188,7 +188,7 @@ mod tests {
         assert_eq!(
             request_url,
             RequestUrl::RequestUri {
-                request_uri: "https://example.com/request_uri".to_owned()
+                request_uri: "https://example.com/request_uri".to_string()
             }
         );
     }
@@ -215,18 +215,18 @@ mod tests {
             request_url.clone(),
             RequestUrl::Request(Box::new(SiopRequest {
                 response_type: ResponseType::IdToken,
-                response_mode: Some("post".to_owned()),
+                response_mode: Some("post".to_string()),
                 client_id: "did:example:\
                             EiDrihTRe0GMdc3K16kgJB3Xbl9Hb8oqVHjzm6ufHcYDGA"
-                    .to_owned(),
+                    .to_string(),
                 scope: Scope::openid(),
                 claims: None,
-                redirect_uri: "https://client.example.org/cb".to_owned(),
-                nonce: "n-0S6_WzA2Mj".to_owned(),
+                redirect_uri: "https://client.example.org/cb".to_string(),
+                nonce: "n-0S6_WzA2Mj".to_string(),
                 registration: Some(
                     Registration::default()
-                        .with_subject_syntax_types_supported(vec!["did:mock".to_owned()])
-                        .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_owned()]),
+                        .with_subject_syntax_types_supported(vec!["did:mock".to_string()])
+                        .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
                 ),
                 iss: None,
                 iat: None,
