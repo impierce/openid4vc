@@ -198,6 +198,14 @@ where
     }
 }
 
+impl TryFrom<serde_json::Value> for ClaimRequests {
+    type Error = anyhow::Error;
+
+    fn try_from(value: serde_json::Value) -> Result<Self, Self::Error> {
+        serde_json::from_value(value).map_err(Into::into)
+    }
+}
+
 #[skip_serializing_none]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
