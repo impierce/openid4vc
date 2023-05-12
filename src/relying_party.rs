@@ -33,11 +33,13 @@ where
 mod tests {
     use super::*;
     use crate::{
-        claims::{Address, Claim, ClaimRequests, IndividualClaimRequest},
+        claims::{
+            Address, ClaimRequests, ClaimValue, IndividualClaimRequest, IndividualClaimRequestObject, StandardClaims,
+        },
         request::ResponseType,
         scope::{Scope, ScopeValue},
         test_utils::{MemoryStorage, MockSubject, Storage},
-        IdToken, Provider, Registration, RequestUrl, StandardClaims,
+        IdToken, Provider, Registration, RequestUrl,
     };
     use chrono::{Duration, Utc};
     use lazy_static::lazy_static;
@@ -100,14 +102,16 @@ mod tests {
                     .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_owned()]),
             )
             .claims(ClaimRequests {
-                id_token: Some(StandardClaims {
-                    name: Some(Claim::default()),
-                    email: Some(Claim::Request(IndividualClaimRequest {
-                        essential: Some(true),
-                        ..Default::default()
-                    })),
-                    address: Some(Claim::default()),
-                    updated_at: Some(Claim::default()),
+                id_token: Some(StandardClaims::<IndividualClaimRequest> {
+                    name: Some(IndividualClaimRequest::default()),
+                    email: Some(IndividualClaimRequest::from_request_object(
+                        IndividualClaimRequestObject {
+                            essential: Some(true),
+                            ..Default::default()
+                        },
+                    )),
+                    address: Some(IndividualClaimRequest::default()),
+                    updated_at: Some(IndividualClaimRequest::default()),
                     ..Default::default()
                 }),
                 ..Default::default()
@@ -157,15 +161,17 @@ mod tests {
         assert_eq!(
             request_claims,
             StandardClaims {
-                name: Some(Claim::default()),
-                email: Some(Claim::Request(IndividualClaimRequest {
-                    essential: Some(true),
-                    ..Default::default()
-                })),
-                address: Some(Claim::default()),
-                updated_at: Some(Claim::default()),
-                phone_number: Some(Claim::default()),
-                phone_number_verified: Some(Claim::default()),
+                name: Some(IndividualClaimRequest::default()),
+                email: Some(IndividualClaimRequest::from_request_object(
+                    IndividualClaimRequestObject {
+                        essential: Some(true),
+                        ..Default::default()
+                    }
+                )),
+                address: Some(IndividualClaimRequest::default()),
+                updated_at: Some(IndividualClaimRequest::default()),
+                phone_number: Some(IndividualClaimRequest::default()),
+                phone_number_verified: Some(IndividualClaimRequest::default()),
                 ..Default::default()
             }
         );
@@ -211,19 +217,17 @@ mod tests {
         assert_eq!(
             id_token.standard_claims,
             StandardClaims {
-                name: Some(Claim::Value("Jane Doe".to_string())),
-                email: Some(Claim::Value("jane.doe@example.com".to_string())),
-                updated_at: Some(Claim::Value(1311280970)),
-                phone_number: Some(Claim::Value("+1 555 555 5555".to_string())),
-                address: Some(Claim::Value(Address {
-                    formatted: Some(Claim::Value(
-                        "100 Universal City Plaza\nHollywood, CA 91608".to_string()
-                    )),
-                    street_address: Some(Claim::Value("100 Universal City Plaza".to_string())),
-                    locality: Some(Claim::Value("Hollywood".to_string())),
-                    region: Some(Claim::Value("CA".to_string())),
-                    postal_code: Some(Claim::Value("91608".to_string())),
-                    country: Some(Claim::Value("US".to_string()))
+                name: Some(ClaimValue("Jane Doe".to_string())),
+                email: Some(ClaimValue("jane.doe@example.com".to_string())),
+                updated_at: Some(ClaimValue(1311280970)),
+                phone_number: Some(ClaimValue("+1 555 555 5555".to_string())),
+                address: Some(ClaimValue(Address {
+                    formatted: Some(ClaimValue("100 Universal City Plaza\nHollywood, CA 91608".to_string())),
+                    street_address: Some(ClaimValue("100 Universal City Plaza".to_string())),
+                    locality: Some(ClaimValue("Hollywood".to_string())),
+                    region: Some(ClaimValue("CA".to_string())),
+                    postal_code: Some(ClaimValue("91608".to_string())),
+                    country: Some(ClaimValue("US".to_string())),
                 })),
                 ..Default::default()
             }

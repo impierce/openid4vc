@@ -1,4 +1,7 @@
-use crate::{claims::Claim, StandardClaims, Subject, Validator};
+use crate::{
+    claims::{ClaimValue, IndividualClaimRequest},
+    StandardClaims, Subject, Validator,
+};
 use anyhow::Result;
 use async_trait::async_trait;
 use derivative::{self, Derivative};
@@ -67,31 +70,28 @@ impl Validator for MockValidator {
 }
 
 pub trait Storage {
-    fn fetch_claims(&self, request_claims: &StandardClaims) -> StandardClaims;
+    fn fetch_claims(&self, request_claims: &StandardClaims<IndividualClaimRequest>) -> StandardClaims<ClaimValue>;
 }
 
 #[derive(Default, Debug)]
 pub struct MemoryStorage {
-    data: StandardClaims,
+    data: StandardClaims<ClaimValue>,
 }
 
 impl MemoryStorage {
-    pub fn new(data: StandardClaims) -> Self {
+    pub fn new(data: StandardClaims<ClaimValue>) -> Self {
         MemoryStorage { data }
     }
 }
 
 impl Storage for MemoryStorage {
-    fn fetch_claims(&self, request_claims: &StandardClaims) -> StandardClaims {
+    fn fetch_claims(&self, request_claims: &StandardClaims<IndividualClaimRequest>) -> StandardClaims<ClaimValue> {
         let mut present = StandardClaims::default();
 
         macro_rules! present_if {
             ($claim:ident) => {
-                if let Some(claim) = &request_claims.$claim {
-                    match claim {
-                        Claim::Request(_) | Claim::Default => present.$claim = self.data.$claim.clone(),
-                        _ => {}
-                    }
+                if request_claims.$claim.is_some() {
+                    present.$claim = self.data.$claim.clone();
                 }
             };
         }

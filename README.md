@@ -31,8 +31,8 @@ use ed25519_dalek::{Keypair, Signature, Signer};
 use lazy_static::lazy_static;
 use rand::rngs::OsRng;
 use siopv2::{
-    claims::{Claim, ClaimRequests, StandardClaims},
-    request::ResponseType,
+    claims::{Claim, ClaimRequests},
+    request::ResponseType, StandardClaim,
     IdToken, Provider, Registration, RelyingParty, RequestUrl, Scope, SiopRequest, SiopResponse, Subject, Validator,
 };
 use wiremock::{
@@ -114,7 +114,7 @@ async fn main() {
                 .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_owned()]),
         )
         .claims(ClaimRequests {
-            id_token: Some(StandardClaims {
+            id_token: Some(StandardClaim {
                 name: Some(Claim::default()),
                 ..Default::default()
             }),
@@ -165,7 +165,7 @@ async fn main() {
     // Let the provider generate a response based on the validated request. The response is an `IdToken` which is
     // encoded as a JWT.
     let response = provider
-        .generate_response(request, StandardClaims::default())
+        .generate_response(request, StandardClaim::default())
         .await
         .unwrap();
 

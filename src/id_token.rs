@@ -1,18 +1,18 @@
-use crate::StandardClaims;
+use crate::claims::{ClaimValue, StandardClaims};
 use chrono::Utc;
 use getset::Setters;
 use serde::{Deserialize, Serialize};
 
 // TODO: make fully feature complete and implement builder pattern: https://github.com/impierce/siopv2/issues/20
 /// An SIOPv2 [`IdToken`] as specified in the [SIOPv2 specification](https://openid.net/specs/openid-connect-self-issued-v2-1_0.html#name-self-issued-id-token).
-#[derive(Serialize, Deserialize, Debug, PartialEq, Setters)]
+#[derive(Serialize, Deserialize, Debug, Setters, Default, PartialEq)]
 pub struct IdToken {
     pub iss: String,
     // TODO: sub should be part of the standard claims?
     pub sub: String,
     #[getset(set)]
     #[serde(flatten)]
-    pub standard_claims: StandardClaims,
+    pub standard_claims: StandardClaims<ClaimValue>,
     pub aud: String,
     pub exp: i64,
     pub iat: i64,
@@ -39,7 +39,7 @@ impl IdToken {
         self
     }
 
-    pub fn claims(mut self, claims: StandardClaims) -> Self {
+    pub fn claims(mut self, claims: StandardClaims<ClaimValue>) -> Self {
         self.standard_claims = claims;
         self
     }

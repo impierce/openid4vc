@@ -1,4 +1,7 @@
-use crate::{IdToken, RequestUrl, SiopRequest, SiopResponse, StandardClaims, Subject, Validator};
+use crate::{
+    claims::{ClaimValue, StandardClaims},
+    IdToken, RequestUrl, SiopRequest, SiopResponse, Subject, Validator,
+};
 use anyhow::{anyhow, Result};
 use chrono::{Duration, Utc};
 
@@ -56,7 +59,11 @@ where
     // TODO: needs refactoring.
     /// Generates a [`SiopResponse`] in response to a [`SiopRequest`] and the user's claims. The [`SiopResponse`]
     /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
-    pub async fn generate_response(&self, request: SiopRequest, user_claims: StandardClaims) -> Result<SiopResponse> {
+    pub async fn generate_response(
+        &self,
+        request: SiopRequest,
+        user_claims: StandardClaims<ClaimValue>,
+    ) -> Result<SiopResponse> {
         let subject_did = self.subject.did()?;
         let mut id_token = IdToken::new(
             subject_did.to_string(),
