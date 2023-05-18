@@ -1,5 +1,16 @@
-# siopv2
-Self Issued OpenID Provider v2 (SIOPv2) authentication library in rust conform to the [SIOPv2 specification](https://openid.net/specs/openid-connect-self-issued-v2-1_0.html).
+# openid4vc
+This library aims to support all the specifications under the [OpenID for Verifiable Credentials](https://openid.net/openid4vc/)
+works.
+
+OpenID for Verifiable Credentials (OID4VC) consists of the following specifications:
+* [OpenID for Verifiable Credential Issuance (OID4VCI)](https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html) – Defines an API and corresponding OAuth-based authorization mechanisms for issuance of Verifiable Credentials
+
+* [OpenID for Verifiable Presentations (OID4VP)](https://openid.bitbucket.io/connect/openid-4-verifiable-presentations-1_0.html) – Defines a mechanism on top of OAuth 2.0 to allow presentation of claims in the form of Verifiable Credentials as part of the protocol flow
+
+* [Self-Issued OpenID Provider v2 (SIOPv2)](https://openid.bitbucket.io/connect/openid-connect-self-issued-v2-1_0.html) – Enables End-Users to use OpenID Providers (OPs) that they control
+
+* [OpenID for Verifiable Presentations over BLE](https://openid.bitbucket.io/connect/openid-4-verifiable-presentations-over-ble-1_0.html) – Enables using Bluetooth Low Energy (BLE) to request the presentation of verifiable credentials. It uses the request and response syntax as defined in OID4VP. 
+
 
 ## Description
 
