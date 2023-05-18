@@ -1,11 +1,11 @@
 [package]
-name = "siopv2"
+name = "openid4vc"
 version = "0.1.0"
 edition = "2021"
 homepage = "https://www.impierce.com/"
-keywords = ["siopv2", "OpenID Connect"]
+keywords = ["openid4vc", "siopv2", "openid4vp", "openid4vci", "OpenID Connect"]
 license = "Apache-2.0"
-repository = "https://github.com/impierce/siopv2"
+repository = "https://github.com/impierce/openid4vc"
 build = "build.rs"
 
 [dependencies]
