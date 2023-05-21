@@ -1,5 +1,5 @@
 use crate::{
-    claims::{ClaimRequests, IndividualClaimRequest},
+    claims::ClaimRequests,
     request::{RequestUrl, ResponseType, SiopRequest},
     Registration, Scope,
 };
@@ -13,7 +13,7 @@ pub struct RequestUrlBuilder {
     response_mode: Option<String>,
     client_id: Option<String>,
     scope: Option<Scope>,
-    claims: Option<ClaimRequests>,
+    claims: Option<Result<ClaimRequests>>,
     redirect_uri: Option<String>,
     nonce: Option<String>,
     registration: Option<Registration>,
@@ -55,7 +55,7 @@ impl RequestUrlBuilder {
                         .clone()
                         .ok_or(anyhow!("client_id parameter is required."))?,
                     scope: self.scope.clone().ok_or(anyhow!("scope parameter is required."))?,
-                    claims: self.claims.clone(),
+                    claims: self.claims.as_ref().and_then(|c| c.as_ref().ok()).cloned(),
                     redirect_uri: self
                         .redirect_uri
                         .clone()
@@ -77,11 +77,8 @@ impl RequestUrlBuilder {
         }
     }
 
-    pub fn claims<T: TryInto<ClaimRequests>>(mut self, value: T) -> Self
-    where
-        <T as TryInto<ClaimRequests>>::Error: std::fmt::Debug,
-    {
-        let value = value.try_into().unwrap();
+    pub fn claims<T: TryInto<ClaimRequests>>(mut self, value: T) -> Self {
+        let value = value.try_into().map_err(|_| anyhow!("faild to convert"));
         self.claims = Some(value);
         self
     }
@@ -91,7 +88,6 @@ impl RequestUrlBuilder {
     builder_fn!(response_mode, String);
     builder_fn!(client_id, String);
     builder_fn!(scope, Scope);
-    // builder_fn!(claims, ClaimRequests);
     builder_fn!(redirect_uri, String);
     builder_fn!(nonce, String);
     builder_fn!(registration, Registration);
