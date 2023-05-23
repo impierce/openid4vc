@@ -6,6 +6,7 @@ homepage = "https://www.impierce.com/"
 keywords = ["openid4vc", "siopv2", "openid4vp", "openid4vci", "OpenID Connect"]
 license = "Apache-2.0"
 repository = "https://github.com/impierce/openid4vc"
+build = "build.rs"
 
 [workspace]
 members = [
