@@ -20,10 +20,26 @@ pub use registration::Registration;
 pub use relying_party::RelyingParty;
 pub use request::{RequestUrl, SiopRequest};
 pub use request_builder::RequestUrlBuilder;
-pub use response::SiopResponse;
+pub use response::Response;
 pub use scope::Scope;
 pub use subject::Subject;
 pub use validator::Validator;
 
 #[cfg(test)]
 pub mod test_utils;
+
+#[macro_export]
+macro_rules! builder_fn {
+    ( $name:ident, $ty:ty) => {
+        pub fn $name(mut self, value: $ty) -> Self {
+            self.$name.replace(value);
+            self
+        }
+    };
+    ($field:ident, $name:ident, $ty:ty) => {
+        pub fn $name(mut self, value: $ty) -> Self {
+            self.$field.$name.replace(value);
+            self
+        }
+    };
+}

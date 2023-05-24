@@ -1,4 +1,4 @@
-use crate::{IdToken, RequestUrl, SiopRequest, SiopResponse, StandardClaimsValues, Subject, Validator};
+use crate::{id_token::IdTokenBuilder, RequestUrl, Response, SiopRequest, StandardClaimsValues, Subject, Validator};
 use anyhow::{anyhow, Result};
 use chrono::{Duration, Utc};
 
@@ -54,37 +54,36 @@ where
     }
 
     // TODO: needs refactoring.
-    /// Generates a [`SiopResponse`] in response to a [`SiopRequest`] and the user's claims. The [`SiopResponse`]
+    /// Generates a [`Response`] in response to a [`SiopRequest`] and the user's claims. The [`Response`]
     /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
-    pub async fn generate_response(
-        &self,
-        request: SiopRequest,
-        user_claims: StandardClaimsValues,
-    ) -> Result<SiopResponse> {
+    pub async fn generate_response(&self, request: SiopRequest, user_claims: StandardClaimsValues) -> Result<Response> {
         let subject_did = self.subject.did()?;
-        let id_token = {
-            let mut id_token = IdToken::new(
-                subject_did.to_string(),
-                subject_did.to_string(),
-                request.client_id().clone(),
-                request.nonce().clone(),
-                (Utc::now() + Duration::minutes(10)).timestamp(),
-            )
-            .state(request.state().clone());
-            // Include the user claims in the id token.
-            id_token.standard_claims = user_claims;
-            id_token
-        };
+
+        let mut builder = IdTokenBuilder::default()
+            .iss(subject_did.to_string())
+            .sub(subject_did.to_string())
+            .aud(request.client_id().to_owned())
+            .nonce(request.nonce().to_owned())
+            .exp((Utc::now() + Duration::minutes(10)).timestamp())
+            .iat((Utc::now()).timestamp())
+            .claims(user_claims);
+        if let Some(state) = request.state() {
+            builder = builder.state(state.clone());
+        }
+        let id_token = builder.build()?;
 
         // Include the user claims in the id token.
         id_token.standard_claims = user_claims;
 
         let jwt = self.subject.encode(id_token).await?;
 
-        Ok(SiopResponse::new(request.redirect_uri().clone(), jwt))
+        Response::builder()
+            .redirect_uri(request.redirect_uri().to_owned())
+            .id_token(jwt)
+            .build()
     }
 
-    pub async fn send_response(&self, response: SiopResponse) -> Result<()> {
+    pub async fn send_response(&self, response: Response) -> Result<()> {
         let client = reqwest::Client::new();
         let builder = client.post(response.redirect_uri()).form(&response);
         builder.send().await?.text().await?;
