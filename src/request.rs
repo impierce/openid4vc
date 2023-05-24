@@ -16,7 +16,7 @@ use std::str::FromStr;
 /// # Examples
 ///
 /// ```
-/// # use siopv2::RequestUrl;
+/// # use openid4vc::RequestUrl;
 /// # use std::str::FromStr;
 ///
 /// // An example of a form-urlencoded request with only the `request_uri` parameter will be parsed as a

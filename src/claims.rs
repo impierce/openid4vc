@@ -32,7 +32,7 @@ impl<T: Serialize + Default + Clone + DeserializeOwned> Claim for ClaimValue<T> 
 /// specification.
 /// # Example
 /// ```
-/// # use siopv2::claims::{StandardClaims, IndividualClaimRequest};
+/// # use openid4vc::claims::{StandardClaims, IndividualClaimRequest};
 /// # use serde_json::json;
 /// let claims = serde_json::from_value::<StandardClaims<IndividualClaimRequest>>(json!({
 ///     "name": null,
