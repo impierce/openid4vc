@@ -54,18 +54,18 @@ mod tests {
         let subject = MockSubject::new("did:mock:123".to_string(), "key_identifier".to_string()).unwrap();
         let encoded = subject.encode(claims).await.unwrap();
         let decoded = subject.decode::<IdToken>(encoded).await.unwrap();
+
         assert_eq!(
             decoded,
-            IdToken {
-                iss: "did:example:123".to_string(),
-                sub: "did:example:123".to_string(),
-                standard_claims: Default::default(),
-                aud: "did:example:456".to_string(),
-                exp: 9223372036854775807,
-                iat: 1593436422,
-                nonce: "nonce".to_string(),
-                state: None,
-            }
+            IdToken::builder()
+                .iss("did:example:123".to_string())
+                .sub("did:example:123".to_string())
+                .aud("did:example:456".to_string())
+                .exp(9223372036854775807i64)
+                .iat(1593436422)
+                .nonce("nonce".to_string())
+                .build()
+                .unwrap()
         )
     }
 }

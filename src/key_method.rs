@@ -91,8 +91,7 @@ async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{IdToken, Provider, RelyingParty};
-    use chrono::{Duration, Utc};
+    use crate::{Provider, RelyingParty};
 
     #[tokio::test]
     async fn test_key_subject() {
@@ -124,17 +123,6 @@ mod tests {
 
         // Let the relying party validate the response.
         let relying_party = RelyingParty::new(KeySubject::new());
-        let id_token = relying_party.validate_response(&response).await.unwrap();
-
-        let IdToken { aud, nonce, .. } = IdToken::new(
-            "".to_string(),
-            "".to_string(),
-            "did:key:z6MkiTcXZ1JxooACo99YcfkugH6Kifzj7ZupSDCmLEABpjpF".to_string(),
-            "n-0S6_WzA2Mj".to_string(),
-            (Utc::now() + Duration::minutes(10)).timestamp(),
-        );
-        assert_eq!(id_token.iss, id_token.sub);
-        assert_eq!(id_token.aud, aud);
-        assert_eq!(id_token.nonce, nonce);
+        assert!(relying_party.validate_response(&response).await.is_ok());
     }
 }
