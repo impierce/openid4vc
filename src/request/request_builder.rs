@@ -43,34 +43,31 @@ impl RequestUrlBuilder {
         let request_uri = self.request_uri.take();
         match (request_uri, self.is_empty()) {
             (Some(request_uri), true) => Ok(RequestUrl::RequestUri { request_uri }),
-            (None, _) => {
-                let request = SiopRequest {
-                    response_type: self
-                        .response_type
-                        .clone()
-                        .ok_or(anyhow!("response_type parameter is required."))?,
-                    response_mode: self.response_mode.clone(),
-                    client_id: self
-                        .client_id
-                        .clone()
-                        .ok_or(anyhow!("client_id parameter is required."))?,
-                    scope: self.scope.clone().ok_or(anyhow!("scope parameter is required."))?,
-                    claims: self.claims.as_ref().and_then(|c| c.as_ref().ok()).cloned(),
-                    redirect_uri: self
-                        .redirect_uri
-                        .clone()
-                        .ok_or(anyhow!("redirect_uri parameter is required."))?,
-                    nonce: self.nonce.clone().ok_or(anyhow!("nonce parameter is required."))?,
-                    registration: self.registration.clone(),
-                    iss: self.iss.clone(),
-                    iat: self.iat,
-                    exp: self.exp,
-                    nbf: self.nbf,
-                    jti: self.jti.clone(),
-                    state: self.state.clone(),
-                };
-                Ok(RequestUrl::Request(Box::new(request)))
-            }
+            (None, _) => Ok(RequestUrl::Request(Box::new(SiopRequest {
+                response_type: self
+                    .response_type
+                    .clone()
+                    .ok_or(anyhow!("response_type parameter is required."))?,
+                response_mode: self.response_mode.clone(),
+                client_id: self
+                    .client_id
+                    .clone()
+                    .ok_or(anyhow!("client_id parameter is required."))?,
+                scope: self.scope.clone().ok_or(anyhow!("scope parameter is required."))?,
+                claims: self.claims.as_ref().and_then(|c| c.as_ref().ok()).cloned(),
+                redirect_uri: self
+                    .redirect_uri
+                    .clone()
+                    .ok_or(anyhow!("redirect_uri parameter is required."))?,
+                nonce: self.nonce.clone().ok_or(anyhow!("nonce parameter is required."))?,
+                registration: self.registration.clone(),
+                iss: self.iss.clone(),
+                iat: self.iat,
+                exp: self.exp,
+                nbf: self.nbf,
+                jti: self.jti.clone(),
+                state: self.state.clone(),
+            }))),
             _ => Err(anyhow!(
                 "request_uri and other parameters cannot be set at the same time."
             )),
