@@ -38,7 +38,7 @@ where
 mod tests {
     use super::*;
     use crate::{
-        claims::{Address, ClaimRequests, IndividualClaimRequest},
+        claims::{Address, IndividualClaimRequest},
         request::ResponseType,
         scope::{Scope, ScopeValue},
         test_utils::{MemoryStorage, MockSubject, Storage},

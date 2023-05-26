@@ -7,6 +7,8 @@ use serde_json::{Map, Value};
 use std::convert::TryInto;
 use std::str::FromStr;
 
+pub mod request_builder;
+
 /// As specified in the
 /// [SIOPv2 specification](https://openid.net/specs/openid-connect-self-issued-v2-1_0.html#name-self-issued-openid-provider-a)
 /// [`RelyingParty`]'s can either send a request as a query parameter or as a request URI.
