@@ -42,11 +42,7 @@ mod tests {
         request::ResponseType,
         scope::{Scope, ScopeValue},
         test_utils::{MemoryStorage, MockSubject, Storage},
-<<<<<<< HEAD
         Provider, Registration, RequestUrl, StandardClaimsRequests, StandardClaimsValues,
-=======
-        Provider, Registration, RequestUrl, StandardClaimsRequests,
->>>>>>> d69b0f8 (feat: Add builder for Response and IdToken)
     };
     use chrono::{Duration, Utc};
     use lazy_static::lazy_static;
@@ -212,11 +208,7 @@ mod tests {
         let id_token = relying_party.validate_response(&response).await.unwrap();
         assert_eq!(
             id_token.standard_claims().to_owned(),
-<<<<<<< HEAD
             StandardClaimsValues {
-=======
-            StandardClaims {
->>>>>>> d69b0f8 (feat: Add builder for Response and IdToken)
                 name: Some("Jane Doe".to_string()),
                 email: Some("jane.doe@example.com".to_string()),
                 updated_at: Some(1311280970),
