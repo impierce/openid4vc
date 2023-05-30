@@ -1,4 +1,4 @@
-use crate::{id_token::IdTokenBuilder, RequestUrl, Response, SiopRequest, StandardClaimsValues, Subject, Validator};
+use crate::{IdToken, RequestUrl, Response, SiopRequest, StandardClaimsValues, Subject, Validator};
 use anyhow::{anyhow, Result};
 use chrono::{Duration, Utc};
 
@@ -59,28 +59,28 @@ where
     pub async fn generate_response(&self, request: SiopRequest, user_claims: StandardClaimsValues) -> Result<Response> {
         let subject_did = self.subject.did()?;
 
-        let mut builder = IdTokenBuilder::default()
+        let id_token = IdToken::builder()
             .iss(subject_did.to_string())
             .sub(subject_did.to_string())
             .aud(request.client_id().to_owned())
             .nonce(request.nonce().to_owned())
             .exp((Utc::now() + Duration::minutes(10)).timestamp())
             .iat((Utc::now()).timestamp())
-            .claims(user_claims);
-        if let Some(state) = request.state() {
-            builder = builder.state(state.clone());
-        }
-        let id_token = builder.build()?;
+            .claims(user_claims)
+            .build()?;
 
         // Include the user claims in the id token.
         id_token.standard_claims = user_claims;
 
         let jwt = self.subject.encode(id_token).await?;
 
-        Response::builder()
+        let mut builder = Response::builder()
             .redirect_uri(request.redirect_uri().to_owned())
-            .id_token(jwt)
-            .build()
+            .id_token(jwt);
+        if let Some(state) = request.state() {
+            builder = builder.state(state.clone());
+        }
+        builder.build()
     }
 
     pub async fn send_response(&self, response: Response) -> Result<()> {

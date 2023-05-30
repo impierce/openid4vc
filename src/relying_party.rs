@@ -38,11 +38,11 @@ where
 mod tests {
     use super::*;
     use crate::{
-        claims::{Address, ClaimRequests, IndividualClaimRequest, StandardClaims},
+        claims::{Address, ClaimRequests, IndividualClaimRequest},
         request::ResponseType,
         scope::{Scope, ScopeValue},
         test_utils::{MemoryStorage, MockSubject, Storage},
-        Provider, Registration, RequestUrl, StandardClaimsRequests,
+        Provider, Registration, RequestUrl, StandardClaimsRequests, StandardClaimsValues,
     };
     use chrono::{Duration, Utc};
     use lazy_static::lazy_static;
@@ -158,7 +158,7 @@ mod tests {
         let request_claims = request.id_token_request_claims().unwrap();
         assert_eq!(
             request_claims,
-            StandardClaims {
+            StandardClaimsRequests {
                 name: Some(IndividualClaimRequest::Null),
                 email: Some(IndividualClaimRequest::object().essential(true)),
                 address: Some(IndividualClaimRequest::Null),
@@ -196,7 +196,7 @@ mod tests {
         let id_token = relying_party.validate_response(&response).await.unwrap();
         assert_eq!(
             id_token.standard_claims().to_owned(),
-            StandardClaims {
+            StandardClaimsValues {
                 name: Some("Jane Doe".to_string()),
                 email: Some("jane.doe@example.com".to_string()),
                 updated_at: Some(1311280970),

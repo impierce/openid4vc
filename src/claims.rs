@@ -1,4 +1,7 @@
-use crate::scope::{Scope, ScopeValue};
+use crate::{
+    parse_other,
+    scope::{Scope, ScopeValue},
+};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -80,19 +83,6 @@ impl<T> IndividualClaimRequest<T> {
     object_member!(value, T);
     object_member!(values, Vec<T>);
     object_member!(other, serde_json::Map<String, serde_json::Value>);
-}
-
-// When a struct has fields of type `Option<serde_json::Map<String, serde_json::Value>>`, by default these fields are deserialized as
-// `Some(Object {})` instead of None when the corresponding values are missing.
-// The `parse_other()` helper function ensures that these fields are deserialized as `None` when no value is present.
-fn parse_other<'de, D>(deserializer: D) -> Result<Option<serde_json::Map<String, serde_json::Value>>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    serde_json::Value::deserialize(deserializer).map(|value| match value {
-        serde_json::Value::Object(object) if !object.is_empty() => Some(object),
-        _ => None,
-    })
 }
 
 /// An individual claim request as defined in [OpenID Connect Core 1.0, section 5.5.1](https://openid.net/specs/openid-connect-core-1_0.html#IndividualClaimsRequests).

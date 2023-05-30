@@ -26,6 +26,7 @@ pub struct Response {
     id_token: Option<String>,
     #[serde(flatten)]
     openid4vp_response: Option<Openid4vpParams>,
+    state: Option<String>,
 }
 
 impl Response {
@@ -41,6 +42,7 @@ pub struct ResponseBuilder {
     vp_token: Option<String>,
     presentation_submission: Option<String>,
     openid4vp_response_jwt: Option<String>,
+    state: Option<String>,
 }
 
 impl ResponseBuilder {
@@ -72,6 +74,7 @@ impl ResponseBuilder {
             redirect_uri,
             id_token: self.id_token.take(),
             openid4vp_response,
+            state: self.state.take(),
         })
     }
 
@@ -80,6 +83,7 @@ impl ResponseBuilder {
     builder_fn!(vp_token, String);
     builder_fn!(presentation_submission, String);
     builder_fn!(openid4vp_response_jwt, String);
+    builder_fn!(state, String);
 }
 
 // TODO: Improve tests
