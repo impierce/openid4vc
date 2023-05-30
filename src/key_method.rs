@@ -91,7 +91,7 @@ async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{IdToken, Provider, RelyingParty, StandardClaims};
+    use crate::{IdToken, Provider, RelyingParty};
     use chrono::{Duration, Utc};
 
     #[tokio::test]
