@@ -12,7 +12,7 @@ pub mod scope;
 pub mod subject;
 pub mod validator;
 
-pub use claims::StandardClaims;
+pub use claims::{StandardClaimsRequests, StandardClaimsValues};
 pub use id_token::IdToken;
 pub use jwt::JsonWebToken;
 pub use provider::Provider;

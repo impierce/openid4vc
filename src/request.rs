@@ -1,7 +1,4 @@
-use crate::{
-    claims::{ClaimRequests, IndividualClaimRequest},
-    Registration, RequestUrlBuilder, Scope, StandardClaims,
-};
+use crate::{claims::ClaimRequests, Registration, RequestUrlBuilder, Scope, StandardClaimsRequests};
 use anyhow::{anyhow, Result};
 use derive_more::Display;
 use getset::Getters;
@@ -166,7 +163,7 @@ impl SiopRequest {
     }
 
     /// Returns the `id_token` claims from the `claims` parameter including those from the request's scope values.
-    pub fn id_token_request_claims(&self) -> Option<StandardClaims<IndividualClaimRequest>> {
+    pub fn id_token_request_claims(&self) -> Option<StandardClaimsRequests> {
         self.claims()
             .as_ref()
             .and_then(|claims| claims.id_token.clone())

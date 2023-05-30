@@ -1,28 +1,98 @@
 use crate::scope::{Scope, ScopeValue};
-use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_with::skip_serializing_none;
 
 /// Functions as the `claims` parameter inside a [`crate::SiopRequest`].
 #[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct ClaimRequests {
-    pub user_claims: Option<StandardClaims<IndividualClaimRequest>>,
-    pub id_token: Option<StandardClaims<IndividualClaimRequest>>,
+    pub user_claims: Option<StandardClaimsRequests>,
+    pub id_token: Option<StandardClaimsRequests>,
 }
 
-/// [`Claim`] trait that is implemented by both [`ClaimValue`] and [`IndividualClaimRequest`].
-pub trait Claim: Default + Clone + DeserializeOwned {
-    type ValueType;
-    type ClaimType<S>: Claim<ValueType = S> + Serialize
-    where
-        S: Serialize + Default + Clone + DeserializeOwned;
+mod sealed {
+    /// [`Claim`] trait that is implemented by both [`ClaimValue`] and [`ClaimRequest`].
+    pub trait Claim {
+        type Container<T>;
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct ClaimValue<T = ()>(pub T);
+pub struct ClaimValue<T>(pub T);
 
-impl<T: Serialize + Default + Clone + DeserializeOwned> Claim for ClaimValue<T> {
-    type ValueType = T;
-    type ClaimType<S> = ClaimValue<S> where S: Serialize + Default + Clone + DeserializeOwned;
+impl<T> sealed::Claim for ClaimValue<T> {
+    type Container<U> = U;
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct ClaimRequest<T>(IndividualClaimRequest<T>);
+
+impl<T> sealed::Claim for ClaimRequest<T> {
+    type Container<U> = IndividualClaimRequest<U>;
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum IndividualClaimRequest<T> {
+    #[default]
+    Null,
+    Object {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        essential: Option<bool>,
+        // Requests that the Claim be returned with a particular value.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        value: Option<T>,
+        // Requests that the Claim be returned with one of a set of values, with the values appearing in order of
+        // preference.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        values: Option<Vec<T>>,
+        // Other members MAY be defined to provide additional information about the requested Claims. Any members used that
+        // are not understood MUST be ignored.
+        #[serde(flatten, deserialize_with = "parse_other")]
+        other: Option<serde_json::Map<String, serde_json::Value>>,
+    },
+}
+
+macro_rules! object_member {
+    ($name:ident, $type:ty) => {
+        pub fn $name(mut self, v: $type) -> Self {
+            match &mut self {
+                Self::Object { $name, .. } => {
+                    $name.replace(v);
+                    self
+                }
+                Self::Null => Self::object().$name(v),
+            }
+        }
+    };
+}
+
+impl<T> IndividualClaimRequest<T> {
+    pub fn object() -> Self {
+        Self::Object {
+            essential: None,
+            value: None,
+            values: None,
+            other: None,
+        }
+    }
+
+    object_member!(essential, bool);
+    object_member!(value, T);
+    object_member!(values, Vec<T>);
+    object_member!(other, serde_json::Map<String, serde_json::Value>);
+}
+
+// When a struct has fields of type `Option<serde_json::Map<String, serde_json::Value>>`, by default these fields are deserialized as
+// `Some(Object {})` instead of None when the corresponding values are missing.
+// The `parse_other()` helper function ensures that these fields are deserialized as `None` when no value is present.
+fn parse_other<'de, D>(deserializer: D) -> Result<Option<serde_json::Map<String, serde_json::Value>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    serde_json::Value::deserialize(deserializer).map(|value| match value {
+        serde_json::Value::Object(object) if !object.is_empty() => Some(object),
+        _ => None,
+    })
 }
 
 /// An individual claim request as defined in [OpenID Connect Core 1.0, section 5.5.1](https://openid.net/specs/openid-connect-core-1_0.html#IndividualClaimsRequests).
@@ -32,9 +102,8 @@ impl<T: Serialize + Default + Clone + DeserializeOwned> Claim for ClaimValue<T> 
 /// specification.
 /// # Example
 /// ```
-/// # use openid4vc::claims::{StandardClaims, IndividualClaimRequest};
-/// # use serde_json::json;
-/// let claims = serde_json::from_value::<StandardClaims<IndividualClaimRequest>>(json!({
+/// # use openid4vc::StandardClaimsRequests;
+/// let claims = serde_json::from_value::<StandardClaimsRequests>(serde_json::json!({
 ///     "name": null,
 ///     "family_name": {
 ///       "essential": true
@@ -51,53 +120,11 @@ impl<T: Serialize + Default + Clone + DeserializeOwned> Claim for ClaimValue<T> 
 ///         ]
 /// }}));
 /// assert!(claims.is_ok());
-/// dbg!(&claims);
 /// ```
-#[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct IndividualClaimRequest<T = ()>(Option<IndividualClaimRequestObject<T>>);
+pub type StandardClaimsRequests = StandardClaims<ClaimRequest<()>>;
 
-impl<T: Serialize + Default + Clone + DeserializeOwned> Claim for IndividualClaimRequest<T> {
-    type ValueType = T;
-    type ClaimType<S> = IndividualClaimRequest<S> where S: Serialize + Default + Clone + DeserializeOwned;
-}
-
-impl<T> IndividualClaimRequest<T> {
-    pub fn from_request_object(request: IndividualClaimRequestObject<T>) -> Self {
-        IndividualClaimRequest(Some(request))
-    }
-}
-
-#[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct IndividualClaimRequestObject<T> {
-    // By requesting Claims as Essential Claims, the RP indicates to the End-User that releasing these Claims will
-    // ensure a smooth authorization for the specific task requested by the End-User.
-    pub essential: Option<bool>,
-    // Requests that the Claim be returned with a particular value.
-    pub value: Option<T>,
-    // Requests that the Claim be returned with one of a set of values, with the values appearing in order of
-    // preference.
-    pub values: Option<Vec<T>>,
-    // Other members MAY be defined to provide additional information about the requested Claims. Any members used that
-    // are not understood MUST be ignored.
-    #[serde(flatten, deserialize_with = "parse_other")]
-    pub other: Option<serde_json::Value>,
-}
-
-// When a struct has fields of type `Option<serde_json::Value>`, by default these fields are deserialized as
-// `Some(Object {})` instead of None when the corresponding values are missing.
-// The `parse_other()` helper function ensures that these fields are deserialized as `None` when no value is present.
-fn parse_other<'de, D>(deserializer: D) -> Result<Option<serde_json::Value>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value = serde_json::Value::deserialize(deserializer)?;
-    match value {
-        serde_json::Value::Null => Ok(None),
-        serde_json::Value::Object(object) if object.is_empty() => Ok(None),
-        _ => Ok(Some(value)),
-    }
-}
+///
+pub type StandardClaimsValues = StandardClaims<ClaimValue<()>>;
 
 /// This struct represents the standard claims as defined in the
 /// [OpenID Connect Core 1.0 Specification](https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims)
@@ -106,69 +133,110 @@ where
 #[skip_serializing_none]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-pub struct StandardClaims<C: Claim> {
+pub struct StandardClaims<C: sealed::Claim> {
+    // Profile scope
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub name: Option<C::ClaimType<String>>,
+    pub name: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub family_name: Option<C::ClaimType<String>>,
+    pub family_name: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub given_name: Option<C::ClaimType<String>>,
+    pub given_name: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub middle_name: Option<C::ClaimType<String>>,
+    pub middle_name: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub nickname: Option<C::ClaimType<String>>,
+    pub nickname: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub preferred_username: Option<C::ClaimType<String>>,
+    pub preferred_username: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub profile: Option<C::ClaimType<String>>,
+    pub profile: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub picture: Option<C::ClaimType<String>>,
+    pub picture: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub website: Option<C::ClaimType<String>>,
+    pub website: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub gender: Option<C::ClaimType<String>>,
+    pub gender: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub birthdate: Option<C::ClaimType<String>>,
+    pub birthdate: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub zoneinfo: Option<C::ClaimType<String>>,
+    pub zoneinfo: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub locale: Option<C::ClaimType<String>>,
+    pub locale: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<i64>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<i64>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub updated_at: Option<C::ClaimType<i64>>,
+    pub updated_at: Option<C::Container<i64>>,
+    // Email scope
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub email: Option<C::ClaimType<String>>,
+    pub email: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<bool>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<bool>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub email_verified: Option<C::ClaimType<bool>>,
+    pub email_verified: Option<C::Container<bool>>,
+    // Address scope
+    #[serde(bound(serialize = "C::Container<Address<C>>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<Address<C>>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub address: Option<C::ClaimType<Address<C>>>,
+    pub address: Option<C::Container<Address<C>>>,
+    // Phone scope
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub phone_number: Option<C::ClaimType<String>>,
+    pub phone_number: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<bool>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<bool>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
-    pub phone_number_verified: Option<C::ClaimType<bool>>,
+    pub phone_number_verified: Option<C::Container<bool>>,
 }
 
 /// A helper function to deserialize a claim. If the claim is not present, it will be deserialized as a `None` value.
-/// If the claim is present, but the value is `null`, it will be deserialized as `Some(Claim::default())`.
-fn parse_optional_claim<'de, D, T, C>(d: D) -> Result<Option<C>, D::Error>
+/// If the claim is present, but the value is `null`, it will be deserialized as `Some(Default::default())`.
+fn parse_optional_claim<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
 where
     D: Deserializer<'de>,
-    T: DeserializeOwned,
-    C: Claim<ValueType = T>,
+    T: Deserialize<'de> + Default,
 {
-    Deserialize::deserialize(d).map(|x: Option<_>| x.unwrap_or(Some(C::default())))
+    Ok(Some(Option::<T>::deserialize(deserializer)?.unwrap_or_default()))
 }
 
 impl<C> StandardClaims<C>
 where
-    C: Claim,
+    C: sealed::Claim,
 {
     /// Takes another `StandardClaims<C>` and takes it's values for every missing `None` valued field.
-    pub fn merge(&mut self, other: Self) {
+    pub fn merge(&mut self, mut other: Self) {
         macro_rules! merge_if_none {
             ($($field: ident),+ $(,)?) => {
                 $(
                     if self.$field.is_none() {
-                        self.$field = other.$field.clone();
+                        self.$field = other.$field.take();
                     }
                 )+
             };
@@ -198,59 +266,40 @@ where
     }
 }
 
-#[skip_serializing_none]
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct Address<C: Claim> {
-    #[serde(deserialize_with = "parse_optional_claim")]
-    pub formatted: Option<C::ClaimType<String>>,
-    #[serde(deserialize_with = "parse_optional_claim")]
-    pub street_address: Option<C::ClaimType<String>>,
-    #[serde(deserialize_with = "parse_optional_claim")]
-    pub locality: Option<C::ClaimType<String>>,
-    #[serde(deserialize_with = "parse_optional_claim")]
-    pub region: Option<C::ClaimType<String>>,
-    #[serde(deserialize_with = "parse_optional_claim")]
-    pub postal_code: Option<C::ClaimType<String>>,
-    #[serde(deserialize_with = "parse_optional_claim")]
-    pub country: Option<C::ClaimType<String>>,
-}
-
-// TODO: Check whether claims from a scope are essential or not.
-impl From<&Scope> for StandardClaims<IndividualClaimRequest> {
+impl From<&Scope> for StandardClaimsRequests {
     fn from(value: &Scope) -> Self {
         value
             .iter()
             .map(|scope_value| match scope_value {
                 ScopeValue::Profile => StandardClaims {
-                    name: Some(IndividualClaimRequest::default()),
-                    family_name: Some(IndividualClaimRequest::default()),
-                    given_name: Some(IndividualClaimRequest::default()),
-                    middle_name: Some(IndividualClaimRequest::default()),
-                    nickname: Some(IndividualClaimRequest::default()),
-                    preferred_username: Some(IndividualClaimRequest::default()),
-                    profile: Some(IndividualClaimRequest::default()),
-                    picture: Some(IndividualClaimRequest::default()),
-                    website: Some(IndividualClaimRequest::default()),
-                    gender: Some(IndividualClaimRequest::default()),
-                    birthdate: Some(IndividualClaimRequest::default()),
-                    zoneinfo: Some(IndividualClaimRequest::default()),
-                    locale: Some(IndividualClaimRequest::default()),
-                    updated_at: Some(IndividualClaimRequest::default()),
+                    name: Some(IndividualClaimRequest::Null),
+                    family_name: Some(IndividualClaimRequest::Null),
+                    given_name: Some(IndividualClaimRequest::Null),
+                    middle_name: Some(IndividualClaimRequest::Null),
+                    nickname: Some(IndividualClaimRequest::Null),
+                    preferred_username: Some(IndividualClaimRequest::Null),
+                    profile: Some(IndividualClaimRequest::Null),
+                    picture: Some(IndividualClaimRequest::Null),
+                    website: Some(IndividualClaimRequest::Null),
+                    gender: Some(IndividualClaimRequest::Null),
+                    birthdate: Some(IndividualClaimRequest::Null),
+                    zoneinfo: Some(IndividualClaimRequest::Null),
+                    locale: Some(IndividualClaimRequest::Null),
+                    updated_at: Some(IndividualClaimRequest::Null),
                     ..Default::default()
                 },
                 ScopeValue::Email => StandardClaims {
-                    email: Some(IndividualClaimRequest::default()),
-                    email_verified: Some(IndividualClaimRequest::default()),
+                    email: Some(IndividualClaimRequest::Null),
+                    email_verified: Some(IndividualClaimRequest::Null),
                     ..Default::default()
                 },
                 ScopeValue::Address => StandardClaims {
-                    address: Some(IndividualClaimRequest::default()),
+                    address: Some(IndividualClaimRequest::Null),
                     ..Default::default()
                 },
                 ScopeValue::Phone => StandardClaims {
-                    phone_number: Some(IndividualClaimRequest::default()),
-                    phone_number_verified: Some(IndividualClaimRequest::default()),
+                    phone_number: Some(IndividualClaimRequest::Null),
+                    phone_number_verified: Some(IndividualClaimRequest::Null),
                     ..Default::default()
                 },
                 _ => Default::default(),
@@ -261,6 +310,37 @@ impl From<&Scope> for StandardClaims<IndividualClaimRequest> {
             })
             .unwrap()
     }
+}
+
+/// The Address Claim as defined in [OpenID Standard Claims](https://openid.net/specs/openid-connect-core-1_0.html#AddressClaim).
+#[skip_serializing_none]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Address<C: sealed::Claim> {
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
+    #[serde(deserialize_with = "parse_optional_claim")]
+    pub formatted: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
+    #[serde(deserialize_with = "parse_optional_claim")]
+    pub street_address: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
+    #[serde(deserialize_with = "parse_optional_claim")]
+    pub locality: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
+    #[serde(deserialize_with = "parse_optional_claim")]
+    pub region: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
+    #[serde(deserialize_with = "parse_optional_claim")]
+    pub postal_code: Option<C::Container<String>>,
+    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
+    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
+    #[serde(deserialize_with = "parse_optional_claim")]
+    pub country: Option<C::Container<String>>,
 }
 
 #[cfg(test)]
@@ -298,29 +378,29 @@ mod tests {
 
     #[test]
     fn test_deserialize_user_claims() {
-        let user_claims: StandardClaims<ClaimValue> = serde_json::from_value(USER_CLAIMS.clone()).unwrap();
+        let user_claims: StandardClaimsValues = serde_json::from_value(USER_CLAIMS.clone()).unwrap();
         assert_eq!(
             user_claims,
             StandardClaims {
-                name: Some(ClaimValue("Jane Doe".to_string())),
-                given_name: Some(ClaimValue("Jane".to_string())),
-                family_name: Some(ClaimValue("Doe".to_string())),
-                middle_name: Some(ClaimValue("Middle".to_string())),
-                nickname: Some(ClaimValue("JD".to_string())),
-                preferred_username: Some(ClaimValue("j.doe".to_string())),
-                profile: Some(ClaimValue("https://example.com/janedoe".to_string())),
-                picture: Some(ClaimValue("https://example.com/janedoe/me.jpg".to_string())),
-                website: Some(ClaimValue("https://example.com".to_string())),
-                email: Some(ClaimValue("jane.doe@example.com".to_string())),
-                updated_at: Some(ClaimValue(1311280970)),
-                address: Some(ClaimValue(Address {
-                    formatted: Some(ClaimValue("100 Universal City Plaza\nHollywood, CA 91608".to_string())),
-                    street_address: Some(ClaimValue("100 Universal City Plaza".to_string())),
-                    locality: Some(ClaimValue("Hollywood".to_string())),
-                    region: Some(ClaimValue("CA".to_string())),
-                    postal_code: Some(ClaimValue("91608".to_string())),
-                    country: Some(ClaimValue("US".to_string())),
-                })),
+                name: Some("Jane Doe".to_string()),
+                given_name: Some("Jane".to_string()),
+                family_name: Some("Doe".to_string()),
+                middle_name: Some("Middle".to_string()),
+                nickname: Some("JD".to_string()),
+                preferred_username: Some("j.doe".to_string()),
+                profile: Some("https://example.com/janedoe".to_string()),
+                picture: Some("https://example.com/janedoe/me.jpg".to_string()),
+                website: Some("https://example.com".to_string()),
+                email: Some("jane.doe@example.com".to_string()),
+                updated_at: Some(1311280970),
+                address: Some(Address {
+                    formatted: Some("100 Universal City Plaza\nHollywood, CA 91608".to_string()),
+                    street_address: Some("100 Universal City Plaza".to_string()),
+                    locality: Some("Hollywood".to_string()),
+                    region: Some("CA".to_string()),
+                    postal_code: Some("91608".to_string()),
+                    country: Some("US".to_string()),
+                }),
                 ..Default::default()
             }
         );
@@ -329,79 +409,49 @@ mod tests {
     #[test]
     fn test_request_claims() {
         // Store the user claims in the storage.
-        let storage =
-            MemoryStorage::new(serde_json::from_value::<StandardClaims<ClaimValue>>(USER_CLAIMS.clone()).unwrap());
+        let storage = MemoryStorage::new(serde_json::from_value::<StandardClaimsValues>(USER_CLAIMS.clone()).unwrap());
 
         // Initialize a set of request claims.
         let request_claims = ClaimRequests {
-            id_token: Some(StandardClaims::<IndividualClaimRequest> {
-                name: Some(IndividualClaimRequest::default()),
-                given_name: Some(IndividualClaimRequest::from_request_object(
-                    IndividualClaimRequestObject {
-                        essential: Some(false),
+            id_token: Some(StandardClaimsRequests {
+                name: Some(IndividualClaimRequest::Null),
+                given_name: Some(IndividualClaimRequest::object().essential(true)),
+                family_name: Some(IndividualClaimRequest::object().value("Doe".to_string())),
+                middle_name: Some(IndividualClaimRequest::object().values(vec!["Doe".to_string(), "Done".to_string()])),
+                nickname: Some(IndividualClaimRequest::object().essential(true).value("JD".to_string())),
+                updated_at: Some(
+                    IndividualClaimRequest::object()
+                        .essential(true)
+                        .values(vec![1311280970, 1311280971]),
+                ),
+                address: Some(
+                    IndividualClaimRequest::object().essential(false).value(Address {
+                        formatted: Some(IndividualClaimRequest::object().essential(false)),
+                        street_address: Some(
+                            IndividualClaimRequest::object().value("100 Universal City Plaza".to_string()),
+                        ),
+                        locality: Some(
+                            IndividualClaimRequest::object()
+                                .values(vec!["Hollywood".to_string(), "Amsterdam".to_string()]),
+                        ),
+                        region: Some(
+                            IndividualClaimRequest::object()
+                                .essential(false)
+                                .value("CA".to_string()),
+                        ),
+                        postal_code: Some(
+                            IndividualClaimRequest::object().other(
+                                serde_json::json!({
+                                    "other": "member"
+                                })
+                                .as_object()
+                                .unwrap()
+                                .to_owned(),
+                            ),
+                        ),
                         ..Default::default()
-                    },
-                )),
-                family_name: Some(IndividualClaimRequest::from_request_object(
-                    IndividualClaimRequestObject {
-                        value: Some("Doe".to_string()),
-                        ..Default::default()
-                    },
-                )),
-                middle_name: Some(IndividualClaimRequest::from_request_object(
-                    IndividualClaimRequestObject {
-                        values: Some(vec!["Doe".to_string(), "Done".to_string()]),
-                        ..Default::default()
-                    },
-                )),
-                nickname: Some(IndividualClaimRequest::from_request_object(
-                    IndividualClaimRequestObject {
-                        essential: Some(false),
-                        value: Some("JD".to_string()),
-                        ..Default::default()
-                    },
-                )),
-                updated_at: Some(IndividualClaimRequest::from_request_object(
-                    IndividualClaimRequestObject {
-                        essential: Some(false),
-                        values: Some(vec![1311280970, 1311280971]),
-                        ..Default::default()
-                    },
-                )),
-                address: Some(IndividualClaimRequest::from_request_object(
-                    IndividualClaimRequestObject {
-                        essential: Some(false),
-                        value: Some(Address {
-                            formatted: Some(IndividualClaimRequest::from_request_object(
-                                IndividualClaimRequestObject {
-                                    essential: Some(false),
-                                    ..Default::default()
-                                },
-                            )),
-                            street_address: Some(IndividualClaimRequest::from_request_object(
-                                IndividualClaimRequestObject {
-                                    value: Some("100 Universal City Plaza".to_string()),
-                                    ..Default::default()
-                                },
-                            )),
-                            locality: Some(IndividualClaimRequest::from_request_object(
-                                IndividualClaimRequestObject {
-                                    values: Some(vec!["Hollywood".to_string(), "Amsterdam".to_string()]),
-                                    ..Default::default()
-                                },
-                            )),
-                            region: Some(IndividualClaimRequest::from_request_object(
-                                IndividualClaimRequestObject {
-                                    essential: Some(false),
-                                    value: Some("CA".to_string()),
-                                    ..Default::default()
-                                },
-                            )),
-                            ..Default::default()
-                        }),
-                        ..Default::default()
-                    },
-                )),
+                    }),
+                ),
                 ..Default::default()
             }),
             user_claims: None,
@@ -413,20 +463,20 @@ mod tests {
         assert_eq!(
             response_claims,
             StandardClaims {
-                name: Some(ClaimValue("Jane Doe".to_string())),
-                given_name: Some(ClaimValue("Jane".to_string())),
-                family_name: Some(ClaimValue("Doe".to_string())),
-                middle_name: Some(ClaimValue("Middle".to_string())),
-                nickname: Some(ClaimValue("JD".to_string())),
-                updated_at: Some(ClaimValue(1311280970)),
-                address: Some(ClaimValue(Address {
-                    formatted: Some(ClaimValue("100 Universal City Plaza\nHollywood, CA 91608".to_string())),
-                    street_address: Some(ClaimValue("100 Universal City Plaza".to_string())),
-                    locality: Some(ClaimValue("Hollywood".to_string())),
-                    region: Some(ClaimValue("CA".to_string())),
-                    postal_code: Some(ClaimValue("91608".to_string())),
-                    country: Some(ClaimValue("US".to_string())),
-                })),
+                name: Some("Jane Doe".to_string()),
+                given_name: Some("Jane".to_string()),
+                family_name: Some("Doe".to_string()),
+                middle_name: Some("Middle".to_string()),
+                nickname: Some("JD".to_string()),
+                updated_at: Some(1311280970),
+                address: Some(Address {
+                    formatted: Some("100 Universal City Plaza\nHollywood, CA 91608".to_string()),
+                    street_address: Some("100 Universal City Plaza".to_string()),
+                    locality: Some("Hollywood".to_string()),
+                    region: Some("CA".to_string()),
+                    postal_code: Some("91608".to_string()),
+                    country: Some("US".to_string()),
+                }),
                 ..Default::default()
             }
         );
@@ -444,11 +494,11 @@ mod tests {
         assert_eq!(
             StandardClaims::from(&scope),
             StandardClaims {
-                email: Some(IndividualClaimRequest::default()),
-                email_verified: Some(IndividualClaimRequest::default()),
-                address: Some(IndividualClaimRequest::default()),
-                phone_number: Some(IndividualClaimRequest::default()),
-                phone_number_verified: Some(IndividualClaimRequest::default()),
+                email: Some(IndividualClaimRequest::Null),
+                email_verified: Some(IndividualClaimRequest::Null),
+                address: Some(IndividualClaimRequest::Null),
+                phone_number: Some(IndividualClaimRequest::Null),
+                phone_number_verified: Some(IndividualClaimRequest::Null),
                 ..Default::default()
             }
         );

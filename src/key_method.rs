@@ -91,7 +91,7 @@ async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{IdToken, Provider, RelyingParty, StandardClaims};
+    use crate::{IdToken, Provider, RelyingParty};
     use chrono::{Duration, Utc};
 
     #[tokio::test]
@@ -120,10 +120,7 @@ mod tests {
         let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
 
         // Test whether the provider can generate a response for the request succesfully.
-        let response = provider
-            .generate_response(request, StandardClaims::default())
-            .await
-            .unwrap();
+        let response = provider.generate_response(request, Default::default()).await.unwrap();
 
         // Let the relying party validate the response.
         let relying_party = RelyingParty::new(KeySubject::new());

@@ -1,4 +1,4 @@
-use crate::claims::{ClaimValue, StandardClaims};
+use crate::{claims::StandardClaims, StandardClaimsValues};
 use chrono::Utc;
 use getset::Setters;
 use serde::{Deserialize, Serialize};
@@ -12,7 +12,7 @@ pub struct IdToken {
     pub sub: String,
     #[getset(set)]
     #[serde(flatten)]
-    pub standard_claims: StandardClaims<ClaimValue>,
+    pub standard_claims: StandardClaimsValues,
     pub aud: String,
     pub exp: i64,
     pub iat: i64,
@@ -39,7 +39,7 @@ impl IdToken {
         self
     }
 
-    pub fn claims(mut self, claims: StandardClaims<ClaimValue>) -> Self {
+    pub fn claims(mut self, claims: StandardClaimsValues) -> Self {
         self.standard_claims = claims;
         self
     }

@@ -1,7 +1,4 @@
-use crate::{
-    claims::{ClaimValue, StandardClaims},
-    IdToken, RequestUrl, SiopRequest, SiopResponse, Subject, Validator,
-};
+use crate::{IdToken, RequestUrl, SiopRequest, SiopResponse, StandardClaimsValues, Subject, Validator};
 use anyhow::{anyhow, Result};
 use chrono::{Duration, Utc};
 
@@ -62,7 +59,7 @@ where
     pub async fn generate_response(
         &self,
         request: SiopRequest,
-        user_claims: StandardClaims<ClaimValue>,
+        user_claims: StandardClaimsValues,
     ) -> Result<SiopResponse> {
         let subject_did = self.subject.did()?;
         let id_token = {
@@ -123,10 +120,7 @@ mod tests {
         let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
 
         // Test whether the provider can generate a response for the request succesfully.
-        assert!(provider
-            .generate_response(request, StandardClaims::default())
-            .await
-            .is_ok());
+        assert!(provider.generate_response(request, Default::default()).await.is_ok());
     }
 
     #[tokio::test]
