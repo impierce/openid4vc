@@ -31,12 +31,14 @@ pub mod test_utils;
 #[macro_export]
 macro_rules! builder_fn {
     ( $name:ident, $ty:ty) => {
+        #[allow(clippy::should_implement_trait)]
         pub fn $name(mut self, value: $ty) -> Self {
             self.$name.replace(value);
             self
         }
     };
     ($field:ident, $name:ident, $ty:ty) => {
+        #[allow(clippy::should_implement_trait)]
         pub fn $name(mut self, value: $ty) -> Self {
             self.$field.$name.replace(value);
             self
