@@ -37,7 +37,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{test_utils::MockSubject, IdToken, StandardClaims, Validator};
+    use crate::{test_utils::MockSubject, IdToken, Validator};
     use serde_json::json;
 
     #[tokio::test]

@@ -116,16 +116,11 @@ mod tests {
                 }"#,
             )
             .claims(ClaimRequests {
-                id_token: Some(StandardClaims::<IndividualClaimRequest> {
-                    name: Some(IndividualClaimRequest::default()),
-                    email: Some(IndividualClaimRequest::from_request_object(
-                        IndividualClaimRequestObject {
-                            essential: Some(true),
-                            ..Default::default()
-                        },
-                    )),
-                    address: Some(IndividualClaimRequest::default()),
-                    updated_at: Some(IndividualClaimRequest::default()),
+                id_token: Some(StandardClaimsRequests {
+                    name: Some(IndividualClaimRequest::Null),
+                    email: Some(IndividualClaimRequest::object().essential(true)),
+                    address: Some(IndividualClaimRequest::Null),
+                    updated_at: Some(IndividualClaimRequest::Null),
                     ..Default::default()
                 }),
                 ..Default::default()
