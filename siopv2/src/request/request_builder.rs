@@ -1,6 +1,8 @@
 use crate::{
+    builder_fn,
     claims::ClaimRequests,
     request::{AuthorizationRequest, RequestUrl, ResponseType},
+    token::id_token::RFC7519Claims,
     Registration, Scope,
 };
 use anyhow::{anyhow, Result};
@@ -8,30 +10,18 @@ use is_empty::IsEmpty;
 
 #[derive(Default, IsEmpty)]
 pub struct RequestUrlBuilder {
+    rfc7519_claims: RFC7519Claims,
+    client_id: Option<String>,
+    request: Option<String>,
     request_uri: Option<String>,
     response_type: Option<ResponseType>,
     response_mode: Option<String>,
-    client_id: Option<String>,
     scope: Option<Scope>,
     claims: Option<Result<ClaimRequests>>,
     redirect_uri: Option<String>,
     nonce: Option<String>,
     registration: Option<Registration>,
-    iss: Option<String>,
-    iat: Option<i64>,
-    exp: Option<i64>,
-    nbf: Option<i64>,
-    jti: Option<String>,
     state: Option<String>,
-}
-
-macro_rules! builder_fn {
-    ($name:ident, $ty:ty) => {
-        pub fn $name(mut self, value: $ty) -> Self {
-            self.$name = Some(value);
-            self
-        }
-    };
 }
 
 impl RequestUrlBuilder {
@@ -39,37 +29,42 @@ impl RequestUrlBuilder {
         RequestUrlBuilder::default()
     }
 
-    pub fn build(&mut self) -> Result<RequestUrl> {
-        let request_uri = self.request_uri.take();
-        match (request_uri, self.is_empty()) {
-            (Some(request_uri), true) => Ok(RequestUrl::RequestUri { request_uri }),
-            (None, _) => Ok(RequestUrl::Request(Box::new(AuthorizationRequest {
+    pub fn build(mut self) -> Result<RequestUrl> {
+        match (
+            self.client_id.take(),
+            self.request.take(),
+            self.request_uri.take(),
+            self.is_empty(),
+        ) {
+            (None, _, _, _) => Err(anyhow!("client_id parameter is required.")),
+            (Some(client_id), Some(request), None, true) => Ok(RequestUrl::RequestObject { client_id, request }),
+            (Some(client_id), None, Some(request_uri), true) => Ok(RequestUrl::RequestUri { client_id, request_uri }),
+            (Some(client_id), None, None, false) => Ok(RequestUrl::Request(Box::new(AuthorizationRequest {
+                rfc7519_claims: self.rfc7519_claims,
+                client_id,
                 response_type: self
                     .response_type
                     .take()
-                    .ok_or(anyhow!("response_type parameter is required."))?,
+                    .ok_or_else(|| anyhow!("response_type parameter is required."))?,
                 response_mode: self.response_mode.take(),
-                client_id: self
-                    .client_id
+                scope: self
+                    .scope
                     .take()
-                    .ok_or(anyhow!("client_id parameter is required."))?,
-                scope: self.scope.take().ok_or(anyhow!("scope parameter is required."))?,
+                    .ok_or_else(|| anyhow!("scope parameter is required."))?,
                 claims: self.claims.take().transpose()?,
                 redirect_uri: self
                     .redirect_uri
                     .take()
-                    .ok_or(anyhow!("redirect_uri parameter is required."))?,
-                nonce: self.nonce.take().ok_or(anyhow!("nonce parameter is required."))?,
+                    .ok_or_else(|| anyhow!("redirect_uri parameter is required."))?,
+                nonce: self
+                    .nonce
+                    .take()
+                    .ok_or_else(|| anyhow!("nonce parameter is required."))?,
                 registration: self.registration.take(),
-                iss: self.iss.take(),
-                iat: self.iat,
-                exp: self.exp,
-                nbf: self.nbf,
-                jti: self.jti.take(),
                 state: self.state.take(),
             }))),
             _ => Err(anyhow!(
-                "request_uri and other parameters cannot be set at the same time."
+                "one of either request_uri, request or other parameters should be set"
             )),
         }
     }
@@ -79,6 +74,13 @@ impl RequestUrlBuilder {
         self
     }
 
+    builder_fn!(rfc7519_claims, iss, String);
+    builder_fn!(rfc7519_claims, sub, String);
+    builder_fn!(rfc7519_claims, aud, String);
+    builder_fn!(rfc7519_claims, exp, i64);
+    builder_fn!(rfc7519_claims, nbf, i64);
+    builder_fn!(rfc7519_claims, iat, i64);
+    builder_fn!(rfc7519_claims, jti, String);
     builder_fn!(request_uri, String);
     builder_fn!(response_type, ResponseType);
     builder_fn!(response_mode, String);
@@ -87,11 +89,6 @@ impl RequestUrlBuilder {
     builder_fn!(redirect_uri, String);
     builder_fn!(nonce, String);
     builder_fn!(registration, Registration);
-    builder_fn!(iss, String);
-    builder_fn!(iat, i64);
-    builder_fn!(exp, i64);
-    builder_fn!(nbf, i64);
-    builder_fn!(jti, String);
     builder_fn!(state, String);
 }
 
@@ -121,6 +118,7 @@ mod tests {
         assert_eq!(
             request_url,
             RequestUrl::Request(Box::new(AuthorizationRequest {
+                rfc7519_claims: RFC7519Claims::default(),
                 response_type: ResponseType::IdToken,
                 response_mode: None,
                 client_id: "did:example:123".to_string(),
@@ -135,11 +133,6 @@ mod tests {
                 redirect_uri: "https://example.com".to_string(),
                 nonce: "nonce".to_string(),
                 registration: None,
-                iss: None,
-                iat: None,
-                exp: None,
-                nbf: None,
-                jti: None,
                 state: None,
             }))
         );
@@ -167,10 +160,10 @@ mod tests {
             .nonce("nonce".to_string())
             .claims(
                 r#"{
-                "id_token": {
-                    "name": "invalid"
-                }
-            }"#,
+                    "id_token": {
+                        "name": "invalid"
+                    }
+                }"#,
             )
             .build()
             .is_err());
@@ -179,6 +172,7 @@ mod tests {
     #[test]
     fn test_valid_request_uri_builder() {
         let request_url = RequestUrl::builder()
+            .client_id("did:example:123".to_string())
             .request_uri("https://example.com/request_uri".to_string())
             .build()
             .unwrap();
@@ -186,6 +180,7 @@ mod tests {
         assert_eq!(
             request_url,
             RequestUrl::RequestUri {
+                client_id: "did:example:123".to_string(),
                 request_uri: "https://example.com/request_uri".to_string()
             }
         );

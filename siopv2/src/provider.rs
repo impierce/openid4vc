@@ -33,22 +33,30 @@ where
     /// request by value. If the [`RequestUrl`] is a request by value, the request is decoded by the [`Subject`] of the [`Provider`].
     /// If the request is valid, the request is returned.
     pub async fn validate_request(&self, request: RequestUrl) -> Result<AuthorizationRequest> {
-        let request = match request {
-            RequestUrl::AuthorizationRequest(request) => *request,
-            RequestUrl::RequestUri { request_uri } => {
-                let client = reqwest::Client::new();
-                let builder = client.get(request_uri);
-                let request_value = builder.send().await?.text().await?;
-                self.subject.decode(request_value).await?
-            }
+        let authorization_request = if let RequestUrl::Request(request) = request {
+            *request
+        } else {
+            let (request_object, client_id) = match request {
+                RequestUrl::RequestUri { request_uri, client_id } => {
+                    let client = reqwest::Client::new();
+                    let builder = client.get(request_uri);
+                    let request_value = builder.send().await?.text().await?;
+                    (request_value, client_id)
+                }
+                RequestUrl::RequestObject { request, client_id } => (request, client_id),
+                _ => unreachable!(),
+            };
+            let authorization_request: AuthorizationRequest = self.subject.decode(request_object).await?;
+            anyhow::ensure!(*authorization_request.client_id() == client_id, "Client id mismatch.");
+            authorization_request
         };
         self.subject_syntax_types_supported().and_then(|supported| {
-            request.subject_syntax_types_supported().map_or_else(
+            authorization_request.subject_syntax_types_supported().map_or_else(
                 || Err(anyhow!("No supported subject syntax types found.")),
                 |supported_types| {
                     supported_types.iter().find(|sst| supported.contains(sst)).map_or_else(
                         || Err(anyhow!("Subject syntax type not supported.")),
-                        |_| Ok(request.clone()),
+                        |_| Ok(authorization_request.clone()),
                     )
                 },
             )

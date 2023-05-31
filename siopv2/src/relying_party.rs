@@ -42,7 +42,7 @@ mod tests {
         request::ResponseType,
         scope::{Scope, ScopeValue},
         test_utils::{MemoryStorage, MockSubject, Storage},
-        Provider, Registration, RequestUrl, StandardClaimsRequests, StandardClaimsValues,
+        ClaimRequests, Provider, Registration, RequestUrl, StandardClaimsRequests, StandardClaimsValues,
     };
     use chrono::{Duration, Utc};
     use lazy_static::lazy_static;
@@ -156,6 +156,7 @@ mod tests {
 
         // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
         let request_url = RequestUrl::builder()
+            .client_id("did:mock:1".to_string())
             .request_uri(format!("{server_url}/request_uri"))
             .build()
             .unwrap();

@@ -1,3 +1,4 @@
+use crate::token::id_token::RFC7519Claims;
 use crate::{claims::ClaimRequests, Registration, RequestUrlBuilder, Scope, StandardClaimsRequests};
 use anyhow::{anyhow, Result};
 use derive_more::Display;
@@ -20,10 +21,11 @@ pub mod request_builder;
 ///
 /// // An example of a form-urlencoded request with only the `request_uri` parameter will be parsed as a
 /// // `RequestUrl::RequestUri` variant.
-/// let request_url = RequestUrl::from_str("siopv2://idtoken?request_uri=https://example.com/request_uri").unwrap();
+/// let request_url = RequestUrl::from_str("siopv2://idtoken?client_id=did%3Aexample%3AEiDrihTRe0GMdc3K16kgJB3Xbl9Hb8oqVHjzm6ufHcYDGA&request_uri=https://example.com/request_uri").unwrap();
 /// assert_eq!(
 ///     request_url,
 ///     RequestUrl::RequestUri {
+///         client_id: "did:example:EiDrihTRe0GMdc3K16kgJB3Xbl9Hb8oqVHjzm6ufHcYDGA".to_string(),
 ///         request_uri: "https://example.com/request_uri".to_string()
 ///     }
 /// );
@@ -47,14 +49,15 @@ pub mod request_builder;
 /// assert!(match request_url {
 ///    RequestUrl::AuthorizationRequest(_) => Ok(()),
 ///   RequestUrl::RequestUri { .. } => Err(()),
+///   RequestUrl::RequestObject { .. } => Err(()),
 /// }.is_ok());
 /// ```
-#[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
+#[derive(Deserialize, Debug, PartialEq, Serialize, Clone)]
 #[serde(untagged, deny_unknown_fields)]
 pub enum RequestUrl {
     Request(Box<AuthorizationRequest>),
-    // TODO: Add client_id parameter.
-    RequestUri { request_uri: String },
+    RequestObject { client_id: String, request: String },
+    RequestUri { client_id: String, request_uri: String },
 }
 
 impl RequestUrl {
@@ -68,8 +71,9 @@ impl TryInto<AuthorizationRequest> for RequestUrl {
 
     fn try_into(self) -> Result<AuthorizationRequest, Self::Error> {
         match self {
-            RequestUrl::AuthorizationRequest(request) => Ok(*request),
-            RequestUrl::RequestUri { .. } => Err(anyhow!("AuthorizationRequest is a request URI.")),
+            RequestUrl::Request(request) => Ok(*request),
+            RequestUrl::RequestUri { .. } => Err(anyhow!("Request is a request URI.")),
+            RequestUrl::RequestObject { .. } => Err(anyhow!("Request is a request object.")),
         }
     }
 }
@@ -127,9 +131,12 @@ pub enum ResponseType {
 
 /// [`AuthorizationRequest`] is a request from a [crate::relying_party::RelyingParty] (RP) to a [crate::provider::Provider] (SIOP).
 #[allow(dead_code)]
-#[derive(Debug, Getters, PartialEq, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Getters, PartialEq, Default, Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct AuthorizationRequest {
+    #[serde(flatten)]
+    #[getset(get = "pub")]
+    pub(super) rfc7519_claims: RFC7519Claims,
     pub(crate) response_type: ResponseType,
     pub(crate) response_mode: Option<String>,
     #[getset(get = "pub")]
@@ -144,11 +151,6 @@ pub struct AuthorizationRequest {
     pub(crate) nonce: String,
     #[getset(get = "pub")]
     pub(crate) registration: Option<Registration>,
-    pub(crate) iss: Option<String>,
-    pub(crate) iat: Option<i64>,
-    pub(crate) exp: Option<i64>,
-    pub(crate) nbf: Option<i64>,
-    pub(crate) jti: Option<String>,
     #[getset(get = "pub")]
     pub(crate) state: Option<String>,
 }
@@ -183,11 +185,12 @@ mod tests {
     #[test]
     fn test_valid_request_uri() {
         // A form urlencoded string with a `request_uri` parameter should deserialize into the `RequestUrl::RequestUri` variant.
-        let request_url = RequestUrl::from_str("siopv2://idtoken?request_uri=https://example.com/request_uri").unwrap();
+        let request_url = RequestUrl::from_str("siopv2://idtoken?client_id=https%3A%2F%2Fclient.example.org%2Fcb&request_uri=https://example.com/request_uri").unwrap();
         assert_eq!(
             request_url,
             RequestUrl::RequestUri {
-                request_uri: "https://example.com/request_uri".to_string()
+                client_id: "https://client.example.org/cb".to_string(),
+                request_uri: "https://example.com/request_uri".to_string(),
             }
         );
     }
@@ -213,6 +216,7 @@ mod tests {
         assert_eq!(
             request_url.clone(),
             RequestUrl::Request(Box::new(AuthorizationRequest {
+                rfc7519_claims: RFC7519Claims::default(),
                 response_type: ResponseType::IdToken,
                 response_mode: Some("post".to_string()),
                 client_id: "did:example:\
@@ -227,11 +231,6 @@ mod tests {
                         .with_subject_syntax_types_supported(vec!["did:mock".to_string()])
                         .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
                 ),
-                iss: None,
-                iat: None,
-                exp: None,
-                nbf: None,
-                jti: None,
                 state: None,
             }))
         );
@@ -239,6 +238,22 @@ mod tests {
         assert_eq!(
             request_url,
             RequestUrl::from_str(&RequestUrl::to_string(&request_url)).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_valid_request_object() {
+        // A form urlencoded string with a `request` parameter should deserialize into the `RequestUrl::RequestObject` variant.
+        let request_url = RequestUrl::from_str(
+            "siopv2://idtoken?client_id=https%3A%2F%2Fclient.example.org%2Fcb&request=eyJhb...lMGzw",
+        )
+        .unwrap();
+        assert_eq!(
+            request_url,
+            RequestUrl::RequestObject {
+                client_id: "https://client.example.org/cb".to_string(),
+                request: "eyJhb...lMGzw".to_string()
+            }
         );
     }
 

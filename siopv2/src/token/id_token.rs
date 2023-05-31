@@ -1,6 +1,7 @@
 use super::id_token_builder::IdTokenBuilder;
 use crate::{parse_other, StandardClaimsValues};
 use getset::Getters;
+use is_empty::IsEmpty;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -41,15 +42,15 @@ pub struct SubJwk {
 
 /// Set of IANA registered claims by the Internet Engineering Task Force (IETF) in
 /// [RFC 7519](https://tools.ietf.org/html/rfc7519#section-4.1).
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone, IsEmpty)]
 pub struct RFC7519Claims {
-    pub(super) iss: Option<String>,
-    pub(super) sub: Option<String>,
-    pub(super) aud: Option<String>,
-    pub(super) exp: Option<i64>,
-    pub(super) nbf: Option<i64>,
-    pub(super) iat: Option<i64>,
-    pub(super) jti: Option<String>,
+    pub(crate) iss: Option<String>,
+    pub(crate) sub: Option<String>,
+    pub(crate) aud: Option<String>,
+    pub(crate) exp: Option<i64>,
+    pub(crate) nbf: Option<i64>,
+    pub(crate) iat: Option<i64>,
+    pub(crate) jti: Option<String>,
 }
 
 #[cfg(test)]
