@@ -52,7 +52,7 @@ pub mod request_builder;
 #[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
 #[serde(untagged, deny_unknown_fields)]
 pub enum RequestUrl {
-    AuthorizationRequest(Box<AuthorizationRequest>),
+    Request(Box<AuthorizationRequest>),
     // TODO: Add client_id parameter.
     RequestUri { request_uri: String },
 }
@@ -212,7 +212,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             request_url.clone(),
-            RequestUrl::AuthorizationRequest(Box::new(AuthorizationRequest {
+            RequestUrl::Request(Box::new(AuthorizationRequest {
                 response_type: ResponseType::IdToken,
                 response_mode: Some("post".to_string()),
                 client_id: "did:example:\

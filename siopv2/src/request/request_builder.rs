@@ -43,7 +43,7 @@ impl RequestUrlBuilder {
         let request_uri = self.request_uri.take();
         match (request_uri, self.is_empty()) {
             (Some(request_uri), true) => Ok(RequestUrl::RequestUri { request_uri }),
-            (None, _) => Ok(RequestUrl::AuthorizationRequest(Box::new(AuthorizationRequest {
+            (None, _) => Ok(RequestUrl::Request(Box::new(AuthorizationRequest {
                 response_type: self
                     .response_type
                     .take()
@@ -120,7 +120,7 @@ mod tests {
 
         assert_eq!(
             request_url,
-            RequestUrl::AuthorizationRequest(Box::new(AuthorizationRequest {
+            RequestUrl::Request(Box::new(AuthorizationRequest {
                 response_type: ResponseType::IdToken,
                 response_mode: None,
                 client_id: "did:example:123".to_string(),
