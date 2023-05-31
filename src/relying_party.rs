@@ -46,7 +46,6 @@ mod tests {
     };
     use chrono::{Duration, Utc};
     use lazy_static::lazy_static;
-    use serde_json::{json, Value};
     use wiremock::{
         http::Method,
         matchers::{method, path},
@@ -54,7 +53,7 @@ mod tests {
     };
 
     lazy_static! {
-        pub static ref USER_CLAIMS: Value = json!(
+        pub static ref USER_CLAIMS: serde_json::Value = serde_json::json!(
             {
                 "name": "Jane Doe",
                 "given_name": "Jane",
@@ -104,16 +103,18 @@ mod tests {
                     .with_subject_syntax_types_supported(vec!["did:mock".to_string()])
                     .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
             )
-            .claims(json!({
-                "id_token": {
-                    "name": null,
-                    "email": {
-                        "essential": true
-                    },
-                    "address": null,
-                    "updated_at": null
-                }
-            }))
+            .claims(
+                r#"{
+                    "id_token": {
+                        "name": null,
+                        "email": {
+                            "essential": true
+                        },
+                        "address": null,
+                        "updated_at": null
+                    }
+                }"#,
+            )
             .exp((Utc::now() + Duration::minutes(10)).timestamp())
             .nonce("n-0S6_WzA2Mj".to_string())
             .build()
