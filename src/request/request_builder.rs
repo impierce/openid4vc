@@ -46,27 +46,28 @@ impl RequestUrlBuilder {
             (None, _) => Ok(RequestUrl::Request(Box::new(SiopRequest {
                 response_type: self
                     .response_type
-                    .clone()
+                    .take()
                     .ok_or(anyhow!("response_type parameter is required."))?,
-                response_mode: self.response_mode.clone(),
+                response_mode: self.response_mode.take(),
                 client_id: self
                     .client_id
-                    .clone()
+                    .take()
                     .ok_or(anyhow!("client_id parameter is required."))?,
-                scope: self.scope.clone().ok_or(anyhow!("scope parameter is required."))?,
-                claims: self.claims.as_ref().and_then(|c| c.as_ref().ok()).cloned(),
+                scope: self.scope.take().ok_or(anyhow!("scope parameter is required."))?,
+                // claims: self.claims.take().and_then(|c| c.ok()),
+                claims: self.claims.take().transpose()?,
                 redirect_uri: self
                     .redirect_uri
-                    .clone()
+                    .take()
                     .ok_or(anyhow!("redirect_uri parameter is required."))?,
-                nonce: self.nonce.clone().ok_or(anyhow!("nonce parameter is required."))?,
-                registration: self.registration.clone(),
-                iss: self.iss.clone(),
+                nonce: self.nonce.take().ok_or(anyhow!("nonce parameter is required."))?,
+                registration: self.registration.take(),
+                iss: self.iss.take(),
                 iat: self.iat,
                 exp: self.exp,
                 nbf: self.nbf,
-                jti: self.jti.clone(),
-                state: self.state.clone(),
+                jti: self.jti.take(),
+                state: self.state.take(),
             }))),
             _ => Err(anyhow!(
                 "request_uri and other parameters cannot be set at the same time."
@@ -75,8 +76,7 @@ impl RequestUrlBuilder {
     }
 
     pub fn claims<T: TryInto<ClaimRequests>>(mut self, value: T) -> Self {
-        let value = value.try_into().map_err(|_| anyhow!("faild to convert"));
-        self.claims = Some(value);
+        self.claims = Some(value.try_into().map_err(|_| anyhow!("failed to convert")));
         self
     }
 
@@ -99,6 +99,7 @@ impl RequestUrlBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{claims::IndividualClaimRequest, ClaimRequests, StandardClaimsRequests};
 
     #[test]
     fn test_valid_request_builder() {
@@ -108,6 +109,13 @@ mod tests {
             .scope(Scope::openid())
             .redirect_uri("https://example.com".to_string())
             .nonce("nonce".to_string())
+            .claims(
+                r#"{
+                    "id_token": {
+                        "name": null
+                    }
+                }"#,
+            )
             .build()
             .unwrap();
 
@@ -118,7 +126,13 @@ mod tests {
                 response_mode: None,
                 client_id: "did:example:123".to_string(),
                 scope: Scope::openid(),
-                claims: None,
+                claims: Some(ClaimRequests {
+                    id_token: Some(StandardClaimsRequests {
+                        name: Some(IndividualClaimRequest::Null),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }),
                 redirect_uri: "https://example.com".to_string(),
                 nonce: "nonce".to_string(),
                 registration: None,
@@ -135,15 +149,32 @@ mod tests {
     #[test]
     fn test_invalid_request_builder() {
         // A request builder with a `request_uri` parameter should fail to build.
-        let request_url = RequestUrl::builder()
+        assert!(RequestUrl::builder()
             .response_type(ResponseType::IdToken)
             .client_id("did:example:123".to_string())
             .scope(Scope::openid())
             .redirect_uri("https://example.com".to_string())
             .nonce("nonce".to_string())
             .request_uri("https://example.com/request_uri".to_string())
-            .build();
-        assert!(request_url.is_err());
+            .build()
+            .is_err());
+
+        // A request builder without an invalid claim request should fail to build.
+        assert!(RequestUrl::builder()
+            .response_type(ResponseType::IdToken)
+            .client_id("did:example:123".to_string())
+            .scope(Scope::openid())
+            .redirect_uri("https://example.com".to_string())
+            .nonce("nonce".to_string())
+            .claims(
+                r#"{
+                "id_token": {
+                    "name": "invalid"
+                }
+            }"#,
+            )
+            .build()
+            .is_err());
     }
 
     #[test]

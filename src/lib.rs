@@ -11,7 +11,7 @@ pub mod subject;
 pub mod token;
 pub mod validator;
 
-pub use claims::{StandardClaimsRequests, StandardClaimsValues};
+pub use claims::{ClaimRequests, StandardClaimsRequests, StandardClaimsValues};
 pub use jwt::JsonWebToken;
 pub use provider::Provider;
 pub use registration::Registration;
