@@ -42,7 +42,7 @@ mod tests {
         request::ResponseType,
         scope::{Scope, ScopeValue},
         test_utils::{MemoryStorage, MockSubject, Storage},
-        Provider, Registration, RequestUrl, StandardClaimsRequests, StandardClaimsValues,
+        ClaimRequests, Provider, Registration, RequestUrl, StandardClaimsRequests, StandardClaimsValues,
     };
     use chrono::{Duration, Utc};
     use lazy_static::lazy_static;
