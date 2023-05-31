@@ -245,7 +245,6 @@ where
     }
 }
 
-// TODO: Check whether claims from a scope are essential or not.
 impl From<&Scope> for StandardClaimsRequests {
     fn from(value: &Scope) -> Self {
         value

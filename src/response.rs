@@ -67,7 +67,15 @@ impl ResponseBuilder {
             })),
             (None, None, Some(response)) => Ok(Some(Openid4vpParams::Jwt { response })),
             (None, None, None) => Ok(None),
-            _ => Err(anyhow!("Invalid combination of openid4vp response parameters.")),
+            (Some(_), None, None) => Err(anyhow!(
+                "`presentation_submission` parameter is required when using `vp_token` parameter."
+            )),
+            (None, Some(_), None) => Err(anyhow!(
+                "`vp_token` parameter is required when using `presentation_submission` parameter."
+            )),
+            _ => Err(anyhow!(
+                "`response` parameter can not be used with `vp_token` and `presentation_submission` parameters."
+            )),
         }?;
 
         Ok(Response {
@@ -86,32 +94,74 @@ impl ResponseBuilder {
     builder_fn!(state, String);
 }
 
-// TODO: Improve tests
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_openid4vp_response() {
-        let response = Response::builder()
+    fn test_valid_response() {
+        assert!(Response::builder()
+            .redirect_uri("redirect".to_string())
+            .id_token("id_token".to_string())
+            .build()
+            .is_ok());
+
+        assert!(Response::builder()
             .redirect_uri("redirect".to_string())
             .vp_token("vp_token".to_string())
             .presentation_submission("presentation_submission".to_string())
             .build()
-            .unwrap();
+            .is_ok());
 
-        let response_string = serde_json::to_string(&response).unwrap();
+        assert!(Response::builder()
+            .redirect_uri("redirect".to_string())
+            .id_token("id_token".to_string())
+            .vp_token("vp_token".to_string())
+            .presentation_submission("presentation_submission".to_string())
+            .build()
+            .is_ok());
+    }
+
+    #[test]
+    fn test_invalid_response() {
+        assert_eq!(
+            Response::builder()
+                .id_token("id_token".to_string())
+                .build()
+                .unwrap_err()
+                .to_string(),
+            "redirect_uri parameter is required."
+        );
 
         assert_eq!(
-            Response {
-                id_token: None,
-                openid4vp_response: Some(Openid4vpParams::Params {
-                    vp_token: "vp_token".to_string(),
-                    presentation_submission: "presentation_submission".to_string(),
-                }),
-                ..Default::default()
-            },
-            serde_json::from_str(&response_string).unwrap()
+            Response::builder()
+                .redirect_uri("redirect".to_string())
+                .vp_token("vp_token".to_string())
+                .build()
+                .unwrap_err()
+                .to_string(),
+            "`presentation_submission` parameter is required when using `vp_token` parameter."
+        );
+
+        assert_eq!(
+            Response::builder()
+                .redirect_uri("redirect".to_string())
+                .presentation_submission("presentation_submission".to_string())
+                .build()
+                .unwrap_err()
+                .to_string(),
+            "`vp_token` parameter is required when using `presentation_submission` parameter."
+        );
+
+        assert_eq!(
+            Response::builder()
+                .redirect_uri("redirect".to_string())
+                .presentation_submission("presentation_submission".to_string())
+                .openid4vp_response_jwt("response".to_string())
+                .build()
+                .unwrap_err()
+                .to_string(),
+            "`response` parameter can not be used with `vp_token` and `presentation_submission` parameters."
         );
     }
 }

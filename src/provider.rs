@@ -53,7 +53,6 @@ where
         })
     }
 
-    // TODO: needs refactoring.
     /// Generates a [`Response`] in response to a [`SiopRequest`] and the user's claims. The [`Response`]
     /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
     pub async fn generate_response(&self, request: SiopRequest, user_claims: StandardClaimsValues) -> Result<Response> {

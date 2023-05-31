@@ -54,7 +54,6 @@ impl RequestUrlBuilder {
                     .take()
                     .ok_or(anyhow!("client_id parameter is required."))?,
                 scope: self.scope.take().ok_or(anyhow!("scope parameter is required."))?,
-                // claims: self.claims.take().and_then(|c| c.ok()),
                 claims: self.claims.take().transpose()?,
                 redirect_uri: self
                     .redirect_uri
