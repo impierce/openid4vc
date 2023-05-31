@@ -3,7 +3,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use serde_with::skip_serializing_none;
 
 /// Functions as the `claims` parameter inside a [`crate::SiopRequest`].
-#[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ClaimRequests {
     pub user_claims: Option<StandardClaimsRequests>,
     pub id_token: Option<StandardClaimsRequests>,
@@ -16,14 +16,14 @@ mod sealed {
     }
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ClaimValue<T>(pub T);
 
 impl<T> sealed::Claim for ClaimValue<T> {
     type Container<U> = U;
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ClaimRequest<T>(IndividualClaimRequest<T>);
 
 impl<T> sealed::Claim for ClaimRequest<T> {
@@ -123,7 +123,6 @@ where
 /// ```
 pub type StandardClaimsRequests = StandardClaims<ClaimRequest<()>>;
 
-///
 pub type StandardClaimsValues = StandardClaims<ClaimValue<()>>;
 
 /// This struct represents the standard claims as defined in the
@@ -134,84 +133,58 @@ pub type StandardClaimsValues = StandardClaims<ClaimValue<()>>;
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct StandardClaims<C: sealed::Claim> {
+    #[serde(bound(
+        serialize = r#"
+            C::Container<String>: Serialize,
+            C::Container<i64>: Serialize,
+            C::Container<bool>: Serialize,
+            C::Container<Address<C>>: Serialize"#,
+        deserialize = r#"
+            C::Container<String>: Deserialize<'de> + Default,
+            C::Container<i64>: Deserialize<'de> + Default,
+            C::Container<bool>: Deserialize<'de> + Default,
+            C::Container<Address<C>>: Deserialize<'de> + Default"#
+    ))]
     // Profile scope
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub name: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub family_name: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub given_name: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub middle_name: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub nickname: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub preferred_username: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub profile: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub picture: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub website: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub gender: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub birthdate: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub zoneinfo: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub locale: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<i64>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<i64>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub updated_at: Option<C::Container<i64>>,
     // Email scope
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub email: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<bool>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<bool>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub email_verified: Option<C::Container<bool>>,
     // Address scope
-    #[serde(bound(serialize = "C::Container<Address<C>>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<Address<C>>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub address: Option<C::Container<Address<C>>>,
     // Phone scope
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub phone_number: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<bool>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<bool>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub phone_number_verified: Option<C::Container<bool>>,
 }
@@ -321,24 +294,14 @@ pub struct Address<C: sealed::Claim> {
     #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub formatted: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub street_address: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub locality: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub region: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub postal_code: Option<C::Container<String>>,
-    #[serde(bound(serialize = "C::Container<String>: Serialize"))]
-    #[serde(bound(deserialize = "C::Container<String>: Deserialize<'de> + Default"))]
     #[serde(deserialize_with = "parse_optional_claim")]
     pub country: Option<C::Container<String>>,
 }
