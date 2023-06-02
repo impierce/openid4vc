@@ -120,7 +120,7 @@ mod tests {
         let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
 
         // Test whether the provider can generate a response for the request succesfully.
-        let response = provider.generate_response(request).await.unwrap();
+        let response = provider.generate_response(request, Default::default()).await.unwrap();
 
         // Let the relying party validate the response.
         let relying_party = RelyingParty::new(KeySubject::new());

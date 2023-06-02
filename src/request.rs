@@ -1,4 +1,4 @@
-use crate::{Registration, RequestUrlBuilder};
+use crate::{claims::ClaimRequests, Registration, RequestUrlBuilder, Scope, StandardClaimsRequests};
 use anyhow::{anyhow, Result};
 use derive_more::Display;
 use getset::Getters;
@@ -13,7 +13,7 @@ use std::str::FromStr;
 /// # Examples
 ///
 /// ```
-/// # use siopv2::RequestUrl;
+/// # use openid4vc::RequestUrl;
 /// # use std::str::FromStr;
 ///
 /// // An example of a form-urlencoded request with only the `request_uri` parameter will be parsed as a
@@ -22,7 +22,7 @@ use std::str::FromStr;
 /// assert_eq!(
 ///     request_url,
 ///     RequestUrl::RequestUri {
-///         request_uri: "https://example.com/request_uri".to_owned()
+///         request_uri: "https://example.com/request_uri".to_string()
 ///     }
 /// );
 ///
@@ -72,23 +72,46 @@ impl TryInto<SiopRequest> for RequestUrl {
     }
 }
 
+/// In order to convert a string to a [`RequestUrl`], we need to try to parse each value as a JSON object. This way we
+/// can catch any non-primitive types. If the value is not a JSON object or an Array, we just leave it as a string.
 impl FromStr for RequestUrl {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let url = url::Url::parse(s)?;
-        let query = url.query().ok_or(anyhow!("No query found."))?;
-        let request: RequestUrl = serde_urlencoded::from_str(query)?;
+        let query = url.query().ok_or_else(|| anyhow!("No query found."))?;
+        let map = serde_urlencoded::from_str::<Map<String, Value>>(query)?
+            .into_iter()
+            .filter_map(|(k, v)| match v {
+                Value::String(s) => Some(Ok((k, serde_json::from_str(&s).unwrap_or(Value::String(s))))),
+                _ => None,
+            })
+            .collect::<Result<_, anyhow::Error>>()?;
+        let request: RequestUrl = serde_json::from_value(Value::Object(map))?;
         Ok(request)
     }
 }
 
+/// In order to convert a [`RequestUrl`] to a string, we need to convert all the values to strings. This is because
+/// `serde_urlencoded` does not support serializing non-primitive types.
 // TODO: Find a way to dynamically generate the `siopv2://idtoken?` part of the URL. This will require some refactoring
 // for the `RequestUrl` enum.
 impl std::fmt::Display for RequestUrl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let encoded = serde_urlencoded::to_string(self).map_err(|_| std::fmt::Error)?;
-        write!(f, "siopv2://idtoken?{encoded}")
+        let map: Map<String, Value> = serde_json::to_value(self)
+            .map_err(|_| std::fmt::Error)?
+            .as_object()
+            .ok_or(std::fmt::Error)?
+            .iter()
+            .filter_map(|(k, v)| match v {
+                Value::Object(_) | Value::Array(_) => Some((k.clone(), Value::String(serde_json::to_string(v).ok()?))),
+                Value::String(_) => Some((k.clone(), v.clone())),
+                _ => None,
+            })
+            .collect();
+
+        let encoded = serde_urlencoded::to_string(map).map_err(|_| std::fmt::Error)?;
+        write!(f, "siopv2://idtoken?{}", encoded)
     }
 }
 
@@ -109,8 +132,10 @@ pub struct SiopRequest {
     pub(crate) response_mode: Option<String>,
     #[getset(get = "pub")]
     pub(crate) client_id: String,
-    pub(crate) scope: String,
-    pub(crate) claims: Option<Map<String, Value>>,
+    #[getset(get = "pub")]
+    pub(crate) scope: Scope,
+    #[getset(get = "pub")]
+    pub(crate) claims: Option<ClaimRequests>,
     #[getset(get = "pub")]
     pub(crate) redirect_uri: String,
     #[getset(get = "pub")]
@@ -128,13 +153,24 @@ pub struct SiopRequest {
 
 impl SiopRequest {
     pub fn is_cross_device_request(&self) -> bool {
-        self.response_mode == Some("post".to_owned())
+        self.response_mode == Some("post".to_string())
     }
 
     pub fn subject_syntax_types_supported(&self) -> Option<&Vec<String>> {
         self.registration
             .as_ref()
             .and_then(|r| r.subject_syntax_types_supported().as_ref())
+    }
+
+    /// Returns the `id_token` claims from the `claims` parameter including those from the request's scope values.
+    pub fn id_token_request_claims(&self) -> Option<StandardClaimsRequests> {
+        self.claims()
+            .as_ref()
+            .and_then(|claims| claims.id_token.clone())
+            .map(|mut id_token_claims| {
+                id_token_claims.merge(self.scope().into());
+                id_token_claims
+            })
     }
 }
 
@@ -149,7 +185,7 @@ mod tests {
         assert_eq!(
             request_url,
             RequestUrl::RequestUri {
-                request_uri: "https://example.com/request_uri".to_owned()
+                request_uri: "https://example.com/request_uri".to_string()
             }
         );
     }
@@ -176,18 +212,18 @@ mod tests {
             request_url.clone(),
             RequestUrl::Request(Box::new(SiopRequest {
                 response_type: ResponseType::IdToken,
-                response_mode: Some("post".to_owned()),
+                response_mode: Some("post".to_string()),
                 client_id: "did:example:\
                             EiDrihTRe0GMdc3K16kgJB3Xbl9Hb8oqVHjzm6ufHcYDGA"
-                    .to_owned(),
-                scope: "openid".to_owned(),
+                    .to_string(),
+                scope: Scope::openid(),
                 claims: None,
-                redirect_uri: "https://client.example.org/cb".to_owned(),
-                nonce: "n-0S6_WzA2Mj".to_owned(),
+                redirect_uri: "https://client.example.org/cb".to_string(),
+                nonce: "n-0S6_WzA2Mj".to_string(),
                 registration: Some(
                     Registration::default()
-                        .with_subject_syntax_types_supported(vec!["did:mock".to_owned()])
-                        .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_owned()]),
+                        .with_subject_syntax_types_supported(vec!["did:mock".to_string()])
+                        .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
                 ),
                 iss: None,
                 iat: None,

@@ -31,8 +31,9 @@ use ed25519_dalek::{Keypair, Signature, Signer};
 use lazy_static::lazy_static;
 use rand::rngs::OsRng;
 use siopv2::{
-    request::ResponseType, IdToken, Provider, Registration, RelyingParty, RequestUrl, SiopRequest, SiopResponse,
-    Subject, Validator,
+    claims::{Claim, ClaimRequests},
+    request::ResponseType, StandardClaim,
+    IdToken, Provider, Registration, RelyingParty, RequestUrl, Scope, SiopRequest, SiopResponse, Subject, Validator,
 };
 use wiremock::{
     http::Method,
@@ -103,17 +104,24 @@ async fn main() {
     // Create a new RequestUrl with response mode `post` for cross-device communication.
     let request: SiopRequest = RequestUrl::builder()
         .response_type(ResponseType::IdToken)
-        .client_id("did:mymethod:relyingparty".to_owned())
-        .scope("openid".to_owned())
+        .client_id("did:mymethod:relyingparty".to_string())
+        .scope(Scope::openid())
         .redirect_uri(format!("{server_url}/redirect_uri"))
-        .response_mode("post".to_owned())
+        .response_mode("post".to_string())
         .registration(
             Registration::default()
-                .with_subject_syntax_types_supported(vec!["did:mymethod".to_owned()])
-                .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_owned()]),
+                .with_subject_syntax_types_supported(vec!["did:mymethod".to_string()])
+                .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
         )
+        .claims(ClaimRequests {
+            id_token: Some(StandardClaim {
+                name: Some(Claim::default()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        })
         .exp((Utc::now() + Duration::minutes(10)).timestamp())
-        .nonce("n-0S6_WzA2Mj".to_owned())
+        .nonce("n-0S6_WzA2Mj".to_string())
         .build()
         .and_then(TryInto::try_into)
         .unwrap();
@@ -156,7 +164,10 @@ async fn main() {
 
     // Let the provider generate a response based on the validated request. The response is an `IdToken` which is
     // encoded as a JWT.
-    let response = provider.generate_response(request).await.unwrap();
+    let response = provider
+        .generate_response(request, StandardClaim::default())
+        .await
+        .unwrap();
 
     // The provider sends it's response to the mock server's `redirect_uri` endpoint.
     provider.send_response(response).await.unwrap();

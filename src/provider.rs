@@ -1,4 +1,4 @@
-use crate::{IdToken, RequestUrl, SiopRequest, SiopResponse, Subject, Validator};
+use crate::{IdToken, RequestUrl, SiopRequest, SiopResponse, StandardClaimsValues, Subject, Validator};
 use anyhow::{anyhow, Result};
 use chrono::{Duration, Utc};
 
@@ -54,18 +54,27 @@ where
     }
 
     // TODO: needs refactoring.
-    /// Generates a [`SiopResponse`] in response to a [`SiopRequest`]. The [`SiopResponse`] contains an [`IdToken`],
-    /// which is signed by the [`Subject`] of the [`Provider`].
-    pub async fn generate_response(&self, request: SiopRequest) -> Result<SiopResponse> {
+    /// Generates a [`SiopResponse`] in response to a [`SiopRequest`] and the user's claims. The [`SiopResponse`]
+    /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
+    pub async fn generate_response(
+        &self,
+        request: SiopRequest,
+        user_claims: StandardClaimsValues,
+    ) -> Result<SiopResponse> {
         let subject_did = self.subject.did()?;
-        let id_token = IdToken::new(
-            subject_did.to_string(),
-            subject_did.to_string(),
-            request.client_id().clone(),
-            request.nonce().clone(),
-            (Utc::now() + Duration::minutes(10)).timestamp(),
-        )
-        .state(request.state().clone());
+        let id_token = {
+            let mut id_token = IdToken::new(
+                subject_did.to_string(),
+                subject_did.to_string(),
+                request.client_id().clone(),
+                request.nonce().clone(),
+                (Utc::now() + Duration::minutes(10)).timestamp(),
+            )
+            .state(request.state().clone());
+            // Include the user claims in the id token.
+            id_token.standard_claims = user_claims;
+            id_token
+        };
 
         let jwt = self.subject.encode(id_token).await?;
 
@@ -111,7 +120,7 @@ mod tests {
         let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
 
         // Test whether the provider can generate a response for the request succesfully.
-        assert!(provider.generate_response(request).await.is_ok());
+        assert!(provider.generate_response(request, Default::default()).await.is_ok());
     }
 
     #[tokio::test]

@@ -59,6 +59,7 @@ mod tests {
             IdToken {
                 iss: "did:example:123".to_string(),
                 sub: "did:example:123".to_string(),
+                standard_claims: Default::default(),
                 aud: "did:example:456".to_string(),
                 exp: 9223372036854775807,
                 iat: 1593436422,

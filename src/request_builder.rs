@@ -1,10 +1,10 @@
 use crate::{
+    claims::ClaimRequests,
     request::{RequestUrl, ResponseType, SiopRequest},
-    Registration,
+    Registration, Scope,
 };
 use anyhow::{anyhow, Result};
 use is_empty::IsEmpty;
-use serde_json::{Map, Value};
 
 #[derive(Default, IsEmpty)]
 pub struct RequestUrlBuilder {
@@ -12,8 +12,8 @@ pub struct RequestUrlBuilder {
     response_type: Option<ResponseType>,
     response_mode: Option<String>,
     client_id: Option<String>,
-    scope: Option<String>,
-    claims: Option<Map<String, Value>>,
+    scope: Option<Scope>,
+    claims: Option<ClaimRequests>,
     redirect_uri: Option<String>,
     nonce: Option<String>,
     registration: Option<Registration>,
@@ -81,8 +81,8 @@ impl RequestUrlBuilder {
     builder_fn!(response_type, ResponseType);
     builder_fn!(response_mode, String);
     builder_fn!(client_id, String);
-    builder_fn!(scope, String);
-    builder_fn!(claims, Map<String, Value>);
+    builder_fn!(scope, Scope);
+    builder_fn!(claims, ClaimRequests);
     builder_fn!(redirect_uri, String);
     builder_fn!(nonce, String);
     builder_fn!(registration, Registration);
@@ -102,10 +102,10 @@ mod tests {
     fn test_valid_request_builder() {
         let request_url = RequestUrl::builder()
             .response_type(ResponseType::IdToken)
-            .client_id("did:example:123".to_owned())
-            .scope("openid".to_owned())
-            .redirect_uri("https://example.com".to_owned())
-            .nonce("nonce".to_owned())
+            .client_id("did:example:123".to_string())
+            .scope(Scope::openid())
+            .redirect_uri("https://example.com".to_string())
+            .nonce("nonce".to_string())
             .build()
             .unwrap();
 
@@ -114,11 +114,11 @@ mod tests {
             RequestUrl::Request(Box::new(SiopRequest {
                 response_type: ResponseType::IdToken,
                 response_mode: None,
-                client_id: "did:example:123".to_owned(),
-                scope: "openid".to_owned(),
+                client_id: "did:example:123".to_string(),
+                scope: Scope::openid(),
                 claims: None,
-                redirect_uri: "https://example.com".to_owned(),
-                nonce: "nonce".to_owned(),
+                redirect_uri: "https://example.com".to_string(),
+                nonce: "nonce".to_string(),
                 registration: None,
                 iss: None,
                 iat: None,
@@ -135,11 +135,11 @@ mod tests {
         // A request builder with a `request_uri` parameter should fail to build.
         let request_url = RequestUrl::builder()
             .response_type(ResponseType::IdToken)
-            .client_id("did:example:123".to_owned())
-            .scope("openid".to_owned())
-            .redirect_uri("https://example.com".to_owned())
-            .nonce("nonce".to_owned())
-            .request_uri("https://example.com/request_uri".to_owned())
+            .client_id("did:example:123".to_string())
+            .scope(Scope::openid())
+            .redirect_uri("https://example.com".to_string())
+            .nonce("nonce".to_string())
+            .request_uri("https://example.com/request_uri".to_string())
             .build();
         assert!(request_url.is_err());
     }
@@ -147,14 +147,14 @@ mod tests {
     #[test]
     fn test_valid_request_uri_builder() {
         let request_url = RequestUrl::builder()
-            .request_uri("https://example.com/request_uri".to_owned())
+            .request_uri("https://example.com/request_uri".to_string())
             .build()
             .unwrap();
 
         assert_eq!(
             request_url,
             RequestUrl::RequestUri {
-                request_uri: "https://example.com/request_uri".to_owned()
+                request_uri: "https://example.com/request_uri".to_string()
             }
         );
     }
