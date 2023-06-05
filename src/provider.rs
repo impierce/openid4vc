@@ -68,9 +68,6 @@ where
             .claims(user_claims)
             .build()?;
 
-        // Include the user claims in the id token.
-        id_token.standard_claims = user_claims;
-
         let jwt = self.subject.encode(id_token).await?;
 
         let mut builder = Response::builder()
