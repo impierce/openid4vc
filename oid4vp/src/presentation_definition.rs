@@ -1,6 +1,4 @@
 use getset::Getters;
-use jsonpath_lib as jsonpath;
-use jsonschema::JSONSchema;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::HashMap;
@@ -36,14 +34,14 @@ impl Default for VerifiablePresentation {
 #[derive(Deserialize, Debug, Getters, PartialEq, Clone, Serialize)]
 pub struct PresentationDefinition {
     #[getset(get = "pub")]
-    id: String,
+    pub(crate) id: String,
     // All inputs listed in the `input_descriptors` array are required for submission, unless otherwise specified by a
     // Feature.
     #[getset(get = "pub")]
-    input_descriptors: Vec<InputDescriptor>,
-    name: Option<String>,
-    purpose: Option<String>,
-    format: Option<HashMap<ClaimFormatDesignation, ClaimFormatProperty>>,
+    pub(crate) input_descriptors: Vec<InputDescriptor>,
+    pub(crate) name: Option<String>,
+    pub(crate) purpose: Option<String>,
+    pub(crate) format: Option<HashMap<ClaimFormatDesignation, ClaimFormatProperty>>,
 }
 
 /// As specified in https://identity.foundation/presentation-exchange/#input-descriptor-object.
@@ -52,22 +50,13 @@ pub struct PresentationDefinition {
 #[derive(Deserialize, Debug, Getters, PartialEq, Clone, Serialize)]
 pub struct InputDescriptor {
     // Must not conflict with other input descriptors.
-    id: String,
-    name: Option<String>,
-    purpose: Option<String>,
-    format: Option<HashMap<ClaimFormatDesignation, ClaimFormatProperty>>,
+    pub(crate) id: String,
+    pub(crate) name: Option<String>,
+    pub(crate) purpose: Option<String>,
+    pub(crate) format: Option<HashMap<ClaimFormatDesignation, ClaimFormatProperty>>,
     #[getset(get = "pub")]
-    constraints: Constraints,
-    schema: Option<String>,
-}
-
-impl InputDescriptor {
-    pub fn evaluate<'a, F>(&self, selector: &mut F) -> bool
-    where
-        F: FnMut(&str) -> Result<Vec<&'a serde_json::Value>, jsonpath::JsonPathError>,
-    {
-        self.constraints.evaluate(selector)
-    }
+    pub(crate) constraints: Constraints,
+    pub(crate) schema: Option<String>,
 }
 
 // Its value MUST be an array of one or more format-specific algorithmic identifier references
@@ -84,6 +73,9 @@ pub enum ClaimFormatDesignation {
     Ldp,
     LdpVc,
     LdpVp,
+    AcVc,
+    AcVp,
+    MsoMdoc,
 }
 
 #[allow(dead_code)]
@@ -98,26 +90,11 @@ pub enum ClaimFormatProperty {
 #[derive(Deserialize, Debug, Getters, Default, PartialEq, Clone, Serialize)]
 pub struct Constraints {
     #[getset(get = "pub")]
-    pub(self) fields: Option<Vec<Field>>,
+    pub(crate) fields: Option<Vec<Field>>,
     // Omission of the `limit_disclosure` property indicates the Conforment Consumer MAY submit a response that contains
     // more than the data described in the `fields` array.
     #[getset(get = "pub")]
-    pub(self) limit_disclosure: Option<LimitDisclosure>,
-}
-
-impl Constraints {
-    fn evaluate<'a, F>(&self, selector: &mut F) -> bool
-    where
-        F: FnMut(&str) -> Result<Vec<&'a serde_json::Value>, jsonpath::JsonPathError>,
-    {
-        self.fields()
-            .as_ref()
-            .map(|fields| {
-                let results: Vec<FieldQueryResult> = fields.iter().map(|field| field.evaluate(selector)).collect();
-                results.iter().all(FieldQueryResult::is_valid)
-            })
-            .unwrap_or(false)
-    }
+    pub(crate) limit_disclosure: Option<LimitDisclosure>,
 }
 
 #[allow(dead_code)]
@@ -134,73 +111,15 @@ pub struct Field {
     // The value of this property MUST be an array of ONE OR MORE JSONPath string expressions.
     // The ability to declare multiple expressions in this way allows the Verifier to account for format differences.
     #[getset(get = "pub")]
-    path: Vec<String>,
-    id: Option<String>,
-    purpose: Option<String>,
-    name: Option<String>,
+    pub(crate) path: Vec<String>,
+    pub(crate) id: Option<String>,
+    pub(crate) purpose: Option<String>,
+    pub(crate) name: Option<String>,
     #[getset(get = "pub")]
-    filter: Option<serde_json::Value>,
+    pub(crate) filter: Option<serde_json::Value>,
     // TODO: check default behaviour
     #[getset(get = "pub")]
-    optional: Option<bool>,
-}
-
-impl Field {
-    fn evaluate<'a, F>(&self, selector: &mut F) -> FieldQueryResult
-    where
-        F: FnMut(&str) -> Result<Vec<&'a serde_json::Value>, jsonpath::JsonPathError>,
-    {
-        let filter = self
-            .filter()
-            .as_ref()
-            .map(JSONSchema::compile)
-            .transpose()
-            .ok()
-            .flatten();
-
-        self.path()
-            .iter()
-            .find_map(|path| {
-                selector(path).unwrap().into_iter().find_map(|result| {
-                    filter
-                        .as_ref()
-                        .map(|filter| filter.is_valid(result))
-                        .unwrap_or(true)
-                        .then(|| FieldQueryResult::Some {
-                            value: result.to_owned(),
-                            path: path.to_owned(),
-                        })
-                })
-            })
-            .or_else(|| self.optional().and_then(|opt| opt.then(|| FieldQueryResult::None)))
-            .unwrap_or(FieldQueryResult::Invalid)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum FieldQueryResult {
-    Some { value: serde_json::Value, path: String },
-    None,
-    Invalid,
-}
-
-impl FieldQueryResult {
-    pub fn is_valid(&self) -> bool {
-        !self.is_invalid()
-    }
-
-    pub fn is_invalid(&self) -> bool {
-        *self == FieldQueryResult::Invalid
-    }
-}
-
-pub fn input_evaluation(presentation_definition: &PresentationDefinition, value: &serde_json::Value) -> bool {
-    // For each Input Descriptor in the input_descriptors array of a Presentation Definition, a conformant consumer
-    // compares each candidate input (JWT, Verifiable Credential, etc.) it holds to determine whether there is a match.
-    presentation_definition
-        .input_descriptors()
-        .iter()
-        .all(|input_descriptor| input_descriptor.evaluate(&mut jsonpath::selector(&value)))
+    pub(crate) optional: Option<bool>,
 }
 
 #[cfg(test)]
@@ -222,11 +141,116 @@ mod tests {
     fn test_deserialize_presentation_definition() {
         assert_eq!(
             PresentationDefinition {
-                id: "vp token example".to_string(),
+                id: "example_vc_ac_sd".to_string(),
                 name: None,
                 format: None,
                 input_descriptors: vec![InputDescriptor {
-                    id: "id card credential".to_string(),
+                    id: "id_credential".to_string(),
+                    name: None,
+                    purpose: None,
+                    format: Some(HashMap::from_iter(vec![(
+                        ClaimFormatDesignation::AcVc,
+                        ClaimFormatProperty::ProofType(vec![serde_json::json!("CLSignature2019")])
+                    )])),
+                    constraints: Constraints {
+                        limit_disclosure: Some(LimitDisclosure::Required),
+                        fields: Some(vec![
+                            Field {
+                                path: vec!["$.schema_id".to_string()],
+                                filter: Some(serde_json::json!({
+                                    "type": "string",
+                                    "const": "did:indy:idu:test:3QowxFtwciWceMFr7WbwnM:2:BasicScheme:0\\.1"
+                                })),
+                                ..Default::default()
+                            },
+                            Field {
+                                path: vec!["$.values.first_name".to_string()],
+                                ..Default::default()
+                            },
+                            Field {
+                                path: vec!["$.values.last_name".to_string()],
+                                ..Default::default()
+                            }
+                        ]),
+                    },
+                    schema: None,
+                }],
+                purpose: None,
+            },
+            json_example::<PresentationDefinition>("./tests/examples/request/pd_ac_vc_sd.json")
+        );
+
+        assert_eq!(
+            PresentationDefinition {
+                id: "example_vc_ac".to_string(),
+                name: None,
+                format: None,
+                input_descriptors: vec![InputDescriptor {
+                    id: "id_credential".to_string(),
+                    name: None,
+                    purpose: None,
+                    format: Some(HashMap::from_iter(vec![(
+                        ClaimFormatDesignation::AcVc,
+                        ClaimFormatProperty::ProofType(vec![serde_json::json!("CLSignature2019")])
+                    )])),
+                    constraints: Constraints {
+                        fields: Some(vec![Field {
+                            path: vec!["$.schema_id".to_string()],
+                            filter: Some(serde_json::json!({
+                                "type": "string",
+                                "const": "did:indy:idu:test:3QowxFtwciWceMFr7WbwnM:2:BasicScheme:0\\.1"
+                            })),
+                            ..Default::default()
+                        }]),
+                        limit_disclosure: None,
+                    },
+                    schema: None,
+                }],
+                purpose: None,
+            },
+            json_example::<PresentationDefinition>("./tests/examples/request/pd_ac_vc.json")
+        );
+
+        assert_eq!(
+            PresentationDefinition {
+                id: "example_jwt_vc".to_string(),
+                name: None,
+                format: None,
+                input_descriptors: vec![InputDescriptor {
+                    id: "id_credential".to_string(),
+                    name: None,
+                    purpose: None,
+                    format: Some(HashMap::from_iter(vec![(
+                        ClaimFormatDesignation::JwtVcJson,
+                        ClaimFormatProperty::ProofType(vec![serde_json::json!("JsonWebSignature2020")])
+                    )])),
+                    constraints: Constraints {
+                        fields: Some(vec![Field {
+                            path: vec!["$.vc.type".to_string()],
+                            filter: Some(serde_json::json!({
+                                "type": "array",
+                                "contains": {
+                                    "const": "IDCredential"
+                                }
+                            })),
+                            ..Default::default()
+                        }]),
+                        limit_disclosure: None,
+                    },
+                    schema: None,
+                }],
+                purpose: None,
+            },
+            json_example::<PresentationDefinition>("./tests/examples/request/pd_jwt_vc.json")
+        );
+
+        assert_eq!(
+            PresentationDefinition {
+                id: "example_ldp_vc".to_string(),
+                name: None,
+                format: None,
+                input_descriptors: vec![InputDescriptor {
+                    id: "id_credential".to_string(),
                     name: None,
                     purpose: None,
                     format: Some(HashMap::from_iter(vec![(
@@ -237,8 +261,10 @@ mod tests {
                         fields: Some(vec![Field {
                             path: vec!["$.type".to_string()],
                             filter: Some(serde_json::json!({
-                                "type": "string",
-                                "pattern": "IDCardCredential"
+                                "type": "array",
+                                "contains": {
+                                    "const": "IDCredential"
+                                }
                             })),
                             ..Default::default()
                         }]),
@@ -248,7 +274,61 @@ mod tests {
                 }],
                 purpose: None,
             },
-            json_example::<PresentationDefinition>("./examples/request/vp_token_type_only.json")
+            json_example::<PresentationDefinition>("./tests/examples/request/pd_ldp_vc.json")
+        );
+
+        // TODO: report json file bug + add retention feature: https://identity.foundation/presentation-exchange/spec/v2.0.0/#retention-feature
+        assert_eq!(
+            PresentationDefinition {
+                id: "mDL-sample-req".to_string(),
+                name: None,
+                format: None,
+                input_descriptors: vec![InputDescriptor {
+                    id: "mDL".to_string(),
+                    name: None,
+                    purpose: None,
+                    format: Some(HashMap::from_iter(vec![(
+                        ClaimFormatDesignation::MsoMdoc,
+                        ClaimFormatProperty::Alg(vec![serde_json::json!("EdDSA"), serde_json::json!("ES256")])
+                    )])),
+                    constraints: Constraints {
+                        limit_disclosure: Some(LimitDisclosure::Required),
+                        fields: Some(vec![
+                            Field {
+                                path: vec!["$.mdoc.doctype".to_string()],
+                                filter: Some(serde_json::json!({
+                                    "type": "string",
+                                    "const": "org.iso.18013.5.1.mDL"
+                                })),
+                                ..Default::default()
+                            },
+                            Field {
+                                path: vec!["$.mdoc.namespace".to_string()],
+                                filter: Some(serde_json::json!({
+                                    "type": "string",
+                                    "const": "org.iso.18013.5.1"
+                                })),
+                                ..Default::default()
+                            },
+                            Field {
+                                path: vec!["$.mdoc.family_name".to_string()],
+                                ..Default::default()
+                            },
+                            Field {
+                                path: vec!["$.mdoc.portrait".to_string()],
+                                ..Default::default()
+                            },
+                            Field {
+                                path: vec!["$.mdoc.driving_privileges".to_string()],
+                                ..Default::default()
+                            },
+                        ]),
+                    },
+                    schema: None,
+                }],
+                purpose: None,
+            },
+            json_example::<PresentationDefinition>("./tests/examples/request/pd_mdl_iso_cbor.json")
         );
 
         assert_eq!(
@@ -293,166 +373,38 @@ mod tests {
                 }],
                 purpose: None,
             },
-            json_example::<PresentationDefinition>("./examples/request/vp_token_type_and_claims.json")
+            json_example::<PresentationDefinition>("./tests/examples/request/vp_token_type_and_claims.json")
         );
-    }
 
-    #[test]
-    fn test_constraints() {
-        let json = json_example::<serde_json::Value>("./examples/credentials/jwt_vc.json");
-        let selector = &mut jsonpath::selector(&json);
-
-        // Has NO fields.
-        let constraints = Constraints::default();
-        assert!(!constraints.evaluate(selector));
-
-        // Has ONE VALID field.
-        let constraints = Constraints {
-            fields: Some(vec![Field {
-                path: vec!["$.vc.type".to_string()],
-                ..Default::default()
-            }]),
-            ..Default::default()
-        };
-        assert!(constraints.evaluate(selector));
-
-        // Has ONE INVALID field.
-        let constraints = Constraints {
-            fields: Some(vec![Field {
-                path: vec!["$.vc.foo".to_string()],
-                ..Default::default()
-            }]),
-            ..Default::default()
-        };
-        assert!(!constraints.evaluate(selector));
-
-        // First field is INVALID.
-        let constraints = Constraints {
-            fields: Some(vec![
-                Field {
-                    path: vec!["$.vc.foo".to_string()],
-                    ..Default::default()
-                },
-                Field {
-                    path: vec!["$.vc.type".to_string()],
-                    ..Default::default()
-                },
-            ]),
-            ..Default::default()
-        };
-        assert!(!constraints.evaluate(selector));
-
-        // Second field is INVALID.
-        let constraints = Constraints {
-            fields: Some(vec![
-                Field {
-                    path: vec!["$.vc.type".to_string()],
-                    ..Default::default()
-                },
-                Field {
-                    path: vec!["$.vc.foo".to_string()],
-                    ..Default::default()
-                },
-            ]),
-            ..Default::default()
-        };
-        assert!(!constraints.evaluate(selector));
-
-        // Second field is INVALID.
-        let constraints = Constraints {
-            fields: Some(vec![
-                Field {
-                    path: vec!["$.vc.type".to_string()],
-                    ..Default::default()
-                },
-                Field {
-                    path: vec!["$.vc.foo".to_string()],
-                    optional: Some(true),
-                    ..Default::default()
-                },
-            ]),
-            ..Default::default()
-        };
-        assert!(constraints.evaluate(selector));
-    }
-
-    #[test]
-    fn test_field() {
-        let json = json_example::<serde_json::Value>("./examples/credentials/jwt_vc.json");
-        let selector = &mut jsonpath::selector(&json);
-
-        // Has NO path.
-        let field = Field::default();
-        assert!(matches!(field.evaluate(selector), FieldQueryResult::Invalid));
-
-        // Has ONE path.
-        let field = Field {
-            path: vec!["$.vc.type".to_string()],
-            ..Default::default()
-        };
-        assert!(matches!(field.evaluate(selector), FieldQueryResult::Some { .. }));
-
-        // Has TWO paths. First is NO match, second is a match without filter.
-        let field = Field {
-            path: vec!["$.vc.foo".to_string(), "$.vc.type".to_string()],
-            ..Default::default()
-        };
-        assert!(matches!(field.evaluate(selector), FieldQueryResult::Some { .. }));
-
-        // Has TWO paths. First is a match, with filter.
-        let field = Field {
-            path: vec!["$.vc.type".to_string(), "$.vc.foo".to_string()],
-            filter: Some(serde_json::json!({
-                "type": "array",
-                "contains": {
-                    "const": "IDCredential"
-                }
-            })),
-            ..Default::default()
-        };
-        assert!(matches!(field.evaluate(selector), FieldQueryResult::Some { .. }));
-
-        // Has ONE paths. With non-matching filter.
-        let field = Field {
-            path: vec!["$.vc.type".to_string()],
-            filter: Some(serde_json::json!({
-                "type": "array",
-                "contains": {
-                    "const": "Foo"
-                }
-            })),
-            ..Default::default()
-        };
-        assert!(matches!(field.evaluate(selector), FieldQueryResult::Invalid));
-
-        // Has ONE path. With non-matching filter. Is optional
-        let field = Field {
-            path: vec!["$.vc.type".to_string()],
-            filter: Some(serde_json::json!({
-                "type": "array",
-                "contains": {
-                    "const": "Foo"
-                }
-            })),
-            optional: Some(true),
-            ..Default::default()
-        };
-        assert!(matches!(field.evaluate(selector), FieldQueryResult::None));
-
-        // Has ONE path, which does not exist. Is optional
-        let field = Field {
-            path: vec!["$.vc.foo".to_string()],
-            optional: Some(true),
-            ..Default::default()
-        };
-        assert!(matches!(field.evaluate(selector), FieldQueryResult::None));
-
-        // Has ONE path, which does not exist. Is NOT optional (explicitly).
-        let field = Field {
-            path: vec!["$.vc.foo".to_string()],
-            optional: Some(false),
-            ..Default::default()
-        };
-        assert!(matches!(field.evaluate(selector), FieldQueryResult::Invalid));
+        assert_eq!(
+            PresentationDefinition {
+                id: "vp token example".to_string(),
+                name: None,
+                format: None,
+                input_descriptors: vec![InputDescriptor {
+                    id: "id card credential".to_string(),
+                    name: None,
+                    purpose: None,
+                    format: Some(HashMap::from_iter(vec![(
+                        ClaimFormatDesignation::LdpVc,
+                        ClaimFormatProperty::ProofType(vec![serde_json::json!("Ed25519Signature2018")])
+                    )])),
+                    constraints: Constraints {
+                        fields: Some(vec![Field {
+                            path: vec!["$.type".to_string()],
+                            filter: Some(serde_json::json!({
+                                "type": "string",
+                                "pattern": "IDCardCredential"
+                            })),
+                            ..Default::default()
+                        }]),
+                        limit_disclosure: None,
+                    },
+                    schema: None,
+                }],
+                purpose: None,
+            },
+            json_example::<PresentationDefinition>("./tests/examples/request/vp_token_type_only.json")
+        );
     }
 }
