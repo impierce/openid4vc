@@ -5,7 +5,7 @@ use crate::{
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_with::skip_serializing_none;
 
-/// Functions as the `claims` parameter inside a [`crate::Request`].
+/// Functions as the `claims` parameter inside a [`crate::AuthorizationRequest`].
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ClaimRequests {
     pub user_claims: Option<StandardClaimsRequests>,
@@ -134,7 +134,7 @@ pub type StandardClaimsValues = StandardClaims<ClaimValue<()>>;
 /// This struct represents the standard claims as defined in the
 /// [OpenID Connect Core 1.0 Specification](https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims)
 /// specification. It can be used either for requesting claims using [`IndividualClaimRequest`]'s in the `claims`
-/// parameter of a [`crate::Request`], or for returning actual [`ClaimValue`]'s in an [`crate::IdToken`].
+/// parameter of a [`crate::AuthorizationRequest`], or for returning actual [`ClaimValue`]'s in an [`crate::IdToken`].
 #[skip_serializing_none]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]

@@ -16,9 +16,9 @@ OpenID for Verifiable Credentials (OID4VC) consists of the following specificati
 
 Currently the Implicit Flow is consists of four major parts:
 
-- A `Provider` that can accept a `Request` and generate a `Response` by creating an `IdToken`, adding its key identifier to the header of the `id_token`, signing the `id_token` and wrap it into a `Response`. It can also send the `Response` using the `redirect_uri` parameter.
-- A `RelyingParty` struct which can validate a `Response` by validating its `IdToken` using a key identifier (which is extracted from the `id_token`) and its public key.
-- The `Subject` trait can be implemented on a custom struct representing the signing logic of a DID method. A `Provider` can ingest an object that implements the `Subject` trait so that during generation of a `Response` the DID method syntax, key identifier and signing method of the specific `Subject` can be used.
+- A `Provider` that can accept a `AuthorizationRequest` and generate a `AuthorizationResponse` by creating an `IdToken`, adding its key identifier to the header of the `id_token`, signing the `id_token` and wrap it into a `AuthorizationResponse`. It can also send the `AuthorizationResponse` using the `redirect_uri` parameter.
+- A `RelyingParty` struct which can validate a `AuthorizationResponse` by validating its `IdToken` using a key identifier (which is extracted from the `id_token`) and its public key.
+- The `Subject` trait can be implemented on a custom struct representing the signing logic of a DID method. A `Provider` can ingest an object that implements the `Subject` trait so that during generation of a `AuthorizationResponse` the DID method syntax, key identifier and signing method of the specific `Subject` can be used.
 - The `Validator` trait can be implemented on a custom struct representing the validating logic of a DID method. When ingested by a `RelyingParty`, it can resolve the public key that is needed for validating an `IdToken`.
 
 ## Example
@@ -32,7 +32,7 @@ use lazy_static::lazy_static;
 use openid4vc::{
     claims::{ClaimRequests, ClaimValue, IndividualClaimRequest},
     request::ResponseType,
-    Provider, Registration, RelyingParty, RequestUrl, Response, Scope, Request, StandardClaims, Subject, Validator,
+    Provider, Registration, RelyingParty, RequestUrl, AuthorizationResponse, Scope, AuthorizationRequest, StandardClaims, Subject, Validator,
 };
 use rand::rngs::OsRng;
 use wiremock::{
@@ -102,7 +102,7 @@ async fn main() {
     let relying_party = RelyingParty::new(validator);
 
     // Create a new RequestUrl with response mode `post` for cross-device communication.
-    let request: Request = RequestUrl::builder()
+    let request: AuthorizationRequest = RequestUrl::builder()
         .response_type(ResponseType::IdToken)
         .client_id("did:mymethod:relyingparty".to_string())
         .scope(Scope::openid())
@@ -126,14 +126,14 @@ async fn main() {
         .and_then(TryInto::try_into)
         .unwrap();
 
-    // Create a new `request_uri` endpoint on the mock server and load it with the JWT encoded `Request`.
+    // Create a new `request_uri` endpoint on the mock server and load it with the JWT encoded `AuthorizationRequest`.
     Mock::given(method("GET"))
         .and(path("/request_uri"))
         .respond_with(ResponseTemplate::new(200).set_body_string(relying_party.encode(&request).await.unwrap()))
         .mount(&mock_server)
         .await;
 
-    // Create a new `redirect_uri` endpoint on the mock server where the `Provider` will send the `Response`.
+    // Create a new `redirect_uri` endpoint on the mock server where the `Provider` will send the `AuthorizationResponse`.
     Mock::given(method("POST"))
         .and(path("/redirect_uri"))
         .respond_with(ResponseTemplate::new(200))
@@ -178,11 +178,11 @@ async fn main() {
     // The provider sends it's response to the mock server's `redirect_uri` endpoint.
     provider.send_response(response).await.unwrap();
 
-    // Assert that the Response was successfully received by the mock server at the expected endpoint.
+    // Assert that the AuthorizationResponse was successfully received by the mock server at the expected endpoint.
     let post_request = mock_server.received_requests().await.unwrap()[1].clone();
     assert_eq!(post_request.method, Method::Post);
     assert_eq!(post_request.url.path(), "/redirect_uri");
-    let response: Response = serde_urlencoded::from_bytes(post_request.body.as_slice()).unwrap();
+    let response: AuthorizationResponse = serde_urlencoded::from_bytes(post_request.body.as_slice()).unwrap();
 
     // The `RelyingParty` then validates the response by decoding the header of the id_token, by fetching the public
     // key corresponding to the key identifier and finally decoding the id_token using the public key and by

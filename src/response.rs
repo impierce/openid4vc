@@ -18,11 +18,11 @@ pub enum Openid4vpParams {
     },
 }
 
-/// Represents an Authorization Response. It can hold an ID Token, a Verifiable Presentation Token, a Presentation
+/// Represents an Authorization AuthorizationResponse. It can hold an ID Token, a Verifiable Presentation Token, a Presentation
 /// Submission, or a combination of them.
 #[derive(Serialize, Default, Deserialize, Debug, Getters, PartialEq)]
 #[skip_serializing_none]
-pub struct Response {
+pub struct AuthorizationResponse {
     #[serde(skip)]
     #[getset(get = "pub")]
     redirect_uri: String,
@@ -33,7 +33,7 @@ pub struct Response {
     state: Option<String>,
 }
 
-impl Response {
+impl AuthorizationResponse {
     pub fn builder() -> ResponseBuilder {
         ResponseBuilder::new()
     }
@@ -54,7 +54,7 @@ impl ResponseBuilder {
         ResponseBuilder::default()
     }
 
-    pub fn build(&mut self) -> Result<Response> {
+    pub fn build(&mut self) -> Result<AuthorizationResponse> {
         let redirect_uri = self
             .redirect_uri
             .take()
@@ -82,7 +82,7 @@ impl ResponseBuilder {
             )),
         }?;
 
-        Ok(Response {
+        Ok(AuthorizationResponse {
             redirect_uri,
             id_token: self.id_token.take(),
             openid4vp_response,
@@ -104,20 +104,20 @@ mod tests {
 
     #[test]
     fn test_valid_response() {
-        assert!(Response::builder()
+        assert!(AuthorizationResponse::builder()
             .redirect_uri("redirect".to_string())
             .id_token("id_token".to_string())
             .build()
             .is_ok());
 
-        assert!(Response::builder()
+        assert!(AuthorizationResponse::builder()
             .redirect_uri("redirect".to_string())
             .vp_token("vp_token".to_string())
             .presentation_submission("presentation_submission".to_string())
             .build()
             .is_ok());
 
-        assert!(Response::builder()
+        assert!(AuthorizationResponse::builder()
             .redirect_uri("redirect".to_string())
             .id_token("id_token".to_string())
             .vp_token("vp_token".to_string())
@@ -129,7 +129,7 @@ mod tests {
     #[test]
     fn test_invalid_response() {
         assert_eq!(
-            Response::builder()
+            AuthorizationResponse::builder()
                 .id_token("id_token".to_string())
                 .build()
                 .unwrap_err()
@@ -138,7 +138,7 @@ mod tests {
         );
 
         assert_eq!(
-            Response::builder()
+            AuthorizationResponse::builder()
                 .redirect_uri("redirect".to_string())
                 .vp_token("vp_token".to_string())
                 .build()
@@ -148,7 +148,7 @@ mod tests {
         );
 
         assert_eq!(
-            Response::builder()
+            AuthorizationResponse::builder()
                 .redirect_uri("redirect".to_string())
                 .presentation_submission("presentation_submission".to_string())
                 .build()
@@ -158,7 +158,7 @@ mod tests {
         );
 
         assert_eq!(
-            Response::builder()
+            AuthorizationResponse::builder()
                 .redirect_uri("redirect".to_string())
                 .presentation_submission("presentation_submission".to_string())
                 .openid4vp_response_jwt("response".to_string())

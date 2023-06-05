@@ -1,4 +1,4 @@
-use crate::{IdToken, Request, Response, Subject, Validator};
+use crate::{AuthorizationRequest, AuthorizationResponse, IdToken, Subject, Validator};
 use anyhow::Result;
 
 pub struct RelyingParty<V>
@@ -16,15 +16,15 @@ where
         RelyingParty { validator }
     }
 
-    pub async fn encode(&self, request: &Request) -> Result<String> {
+    pub async fn encode(&self, request: &AuthorizationRequest) -> Result<String> {
         self.validator.encode(request).await
     }
 
-    /// Validates a [`Response`] by decoding the header of the id_token, fetching the public key corresponding to
+    /// Validates a [`AuthorizationResponse`] by decoding the header of the id_token, fetching the public key corresponding to
     /// the key identifier and finally decoding the id_token using the public key and by validating the signature.
     // TODO: Validate the claims in the id_token as described here:
     // https://openid.net/specs/openid-connect-self-issued-v2-1_0.html#name-self-issued-id-token-valida
-    pub async fn validate_response(&self, response: &Response) -> Result<IdToken> {
+    pub async fn validate_response(&self, response: &AuthorizationResponse) -> Result<IdToken> {
         let token = response
             .id_token()
             .to_owned()
@@ -92,7 +92,7 @@ mod tests {
         let relying_party = RelyingParty::new(validator);
 
         // Create a new RequestUrl with response mode `post` for cross-device communication.
-        let request: Request = RequestUrl::builder()
+        let request: AuthorizationRequest = RequestUrl::builder()
             .response_type(ResponseType::IdToken)
             .client_id("did:mock:1".to_string())
             .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
@@ -121,14 +121,14 @@ mod tests {
             .and_then(TryInto::try_into)
             .unwrap();
 
-        // Create a new `request_uri` endpoint on the mock server and load it with the JWT encoded `Request`.
+        // Create a new `request_uri` endpoint on the mock server and load it with the JWT encoded `AuthorizationRequest`.
         Mock::given(method("GET"))
             .and(path("/request_uri"))
             .respond_with(ResponseTemplate::new(200).set_body_string(relying_party.encode(&request).await.unwrap()))
             .mount(&mock_server)
             .await;
 
-        // Create a new `redirect_uri` endpoint on the mock server where the `Provider` will send the `Response`.
+        // Create a new `redirect_uri` endpoint on the mock server where the `Provider` will send the `AuthorizationResponse`.
         Mock::given(method("POST"))
             .and(path("/redirect_uri"))
             .respond_with(ResponseTemplate::new(200))
@@ -185,11 +185,11 @@ mod tests {
         // The provider sends it's response to the mock server's `redirect_uri` endpoint.
         provider.send_response(response).await.unwrap();
 
-        // Assert that the Response was successfully received by the mock server at the expected endpoint.
+        // Assert that the AuthorizationResponse was successfully received by the mock server at the expected endpoint.
         let post_request = mock_server.received_requests().await.unwrap()[1].clone();
         assert_eq!(post_request.method, Method::Post);
         assert_eq!(post_request.url.path(), "/redirect_uri");
-        let response: Response = serde_urlencoded::from_bytes(post_request.body.as_slice()).unwrap();
+        let response: AuthorizationResponse = serde_urlencoded::from_bytes(post_request.body.as_slice()).unwrap();
 
         // The `RelyingParty` then validates the response by decoding the header of the id_token, by fetching the public
         // key corresponding to the key identifier and finally decoding the id_token using the public key and by

@@ -28,7 +28,7 @@ pub mod request_builder;
 ///     }
 /// );
 ///
-/// // An example of a form-urlencoded request that is parsed as a `RequestUrl::Request` variant.
+/// // An example of a form-urlencoded request that is parsed as a `RequestUrl::AuthorizationRequest` variant.
 /// let request_url = RequestUrl::from_str(
 ///     "\
 ///         siopv2://idtoken?\
@@ -45,14 +45,14 @@ pub mod request_builder;
 /// )
 /// .unwrap();
 /// assert!(match request_url {
-///    RequestUrl::Request(_) => Ok(()),
+///    RequestUrl::AuthorizationRequest(_) => Ok(()),
 ///   RequestUrl::RequestUri { .. } => Err(()),
 /// }.is_ok());
 /// ```
 #[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
 #[serde(untagged, deny_unknown_fields)]
 pub enum RequestUrl {
-    Request(Box<Request>),
+    AuthorizationRequest(Box<AuthorizationRequest>),
     // TODO: Add client_id parameter.
     RequestUri { request_uri: String },
 }
@@ -63,13 +63,13 @@ impl RequestUrl {
     }
 }
 
-impl TryInto<Request> for RequestUrl {
+impl TryInto<AuthorizationRequest> for RequestUrl {
     type Error = anyhow::Error;
 
-    fn try_into(self) -> Result<Request, Self::Error> {
+    fn try_into(self) -> Result<AuthorizationRequest, Self::Error> {
         match self {
-            RequestUrl::Request(request) => Ok(*request),
-            RequestUrl::RequestUri { .. } => Err(anyhow!("Request is a request URI.")),
+            RequestUrl::AuthorizationRequest(request) => Ok(*request),
+            RequestUrl::RequestUri { .. } => Err(anyhow!("AuthorizationRequest is a request URI.")),
         }
     }
 }
@@ -125,11 +125,11 @@ pub enum ResponseType {
     IdToken,
 }
 
-/// [`Request`] is a request from a [crate::relying_party::RelyingParty] (RP) to a [crate::provider::Provider] (SIOP).
+/// [`AuthorizationRequest`] is a request from a [crate::relying_party::RelyingParty] (RP) to a [crate::provider::Provider] (SIOP).
 #[allow(dead_code)]
 #[derive(Debug, Getters, PartialEq, Clone, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Request {
+pub struct AuthorizationRequest {
     pub(crate) response_type: ResponseType,
     pub(crate) response_mode: Option<String>,
     #[getset(get = "pub")]
@@ -153,7 +153,7 @@ pub struct Request {
     pub(crate) state: Option<String>,
 }
 
-impl Request {
+impl AuthorizationRequest {
     pub fn is_cross_device_request(&self) -> bool {
         self.response_mode == Some("post".to_string())
     }
@@ -194,7 +194,7 @@ mod tests {
 
     #[test]
     fn test_valid_request() {
-        // A form urlencoded string without a `request_uri` parameter should deserialize into the `RequestUrl::Request` variant.
+        // A form urlencoded string without a `request_uri` parameter should deserialize into the `RequestUrl::AuthorizationRequest` variant.
         let request_url = RequestUrl::from_str(
             "\
             siopv2://idtoken?\
@@ -212,7 +212,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             request_url.clone(),
-            RequestUrl::Request(Box::new(Request {
+            RequestUrl::AuthorizationRequest(Box::new(AuthorizationRequest {
                 response_type: ResponseType::IdToken,
                 response_mode: Some("post".to_string()),
                 client_id: "did:example:\
