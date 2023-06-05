@@ -16,7 +16,7 @@ OpenID for Verifiable Credentials (OID4VC) consists of the following specificati
 
 Currently the Implicit Flow is consists of four major parts:
 
-- A `Provider` that can accept a `SiopRequest` and generate a `Response` by creating an `IdToken`, adding its key identifier to the header of the `id_token`, signing the `id_token` and wrap it into a `Response`. It can also send the `Response` using the `redirect_uri` parameter.
+- A `Provider` that can accept a `Request` and generate a `Response` by creating an `IdToken`, adding its key identifier to the header of the `id_token`, signing the `id_token` and wrap it into a `Response`. It can also send the `Response` using the `redirect_uri` parameter.
 - A `RelyingParty` struct which can validate a `Response` by validating its `IdToken` using a key identifier (which is extracted from the `id_token`) and its public key.
 - The `Subject` trait can be implemented on a custom struct representing the signing logic of a DID method. A `Provider` can ingest an object that implements the `Subject` trait so that during generation of a `Response` the DID method syntax, key identifier and signing method of the specific `Subject` can be used.
 - The `Validator` trait can be implemented on a custom struct representing the validating logic of a DID method. When ingested by a `RelyingParty`, it can resolve the public key that is needed for validating an `IdToken`.
@@ -32,7 +32,7 @@ use lazy_static::lazy_static;
 use openid4vc::{
     claims::{ClaimRequests, ClaimValue, IndividualClaimRequest},
     request::ResponseType,
-    Provider, Registration, RelyingParty, RequestUrl, Response, Scope, SiopRequest, StandardClaims, Subject, Validator,
+    Provider, Registration, RelyingParty, RequestUrl, Response, Scope, Request, StandardClaims, Subject, Validator,
 };
 use rand::rngs::OsRng;
 use wiremock::{
@@ -102,7 +102,7 @@ async fn main() {
     let relying_party = RelyingParty::new(validator);
 
     // Create a new RequestUrl with response mode `post` for cross-device communication.
-    let request: SiopRequest = RequestUrl::builder()
+    let request: Request = RequestUrl::builder()
         .response_type(ResponseType::IdToken)
         .client_id("did:mymethod:relyingparty".to_string())
         .scope(Scope::openid())
@@ -126,7 +126,7 @@ async fn main() {
         .and_then(TryInto::try_into)
         .unwrap();
 
-    // Create a new `request_uri` endpoint on the mock server and load it with the JWT encoded `SiopRequest`.
+    // Create a new `request_uri` endpoint on the mock server and load it with the JWT encoded `Request`.
     Mock::given(method("GET"))
         .and(path("/request_uri"))
         .respond_with(ResponseTemplate::new(200).set_body_string(relying_party.encode(&request).await.unwrap()))

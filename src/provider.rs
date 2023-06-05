@@ -1,9 +1,9 @@
-use crate::{IdToken, RequestUrl, Response, SiopRequest, StandardClaimsValues, Subject, Validator};
+use crate::{IdToken, Request, RequestUrl, Response, StandardClaimsValues, Subject, Validator};
 use anyhow::{anyhow, Result};
 use chrono::{Duration, Utc};
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
-/// [`SiopRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
+/// [`Request`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
 /// the user who is trying to authenticate.
 #[derive(Default)]
 pub struct Provider<S>
@@ -27,10 +27,10 @@ where
     }
 
     /// TODO: Add more validation rules.
-    /// Takes a [`RequestUrl`] and returns a [`SiopRequest`]. The [`RequestUrl`] can either be a [`SiopRequest`] or a
+    /// Takes a [`RequestUrl`] and returns a [`Request`]. The [`RequestUrl`] can either be a [`Request`] or a
     /// request by value. If the [`RequestUrl`] is a request by value, the request is decoded by the [`Subject`] of the [`Provider`].
     /// If the request is valid, the request is returned.
-    pub async fn validate_request(&self, request: RequestUrl) -> Result<SiopRequest> {
+    pub async fn validate_request(&self, request: RequestUrl) -> Result<Request> {
         let request = match request {
             RequestUrl::Request(request) => *request,
             RequestUrl::RequestUri { request_uri } => {
@@ -53,9 +53,9 @@ where
         })
     }
 
-    /// Generates a [`Response`] in response to a [`SiopRequest`] and the user's claims. The [`Response`]
+    /// Generates a [`Response`] in response to a [`Request`] and the user's claims. The [`Response`]
     /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
-    pub async fn generate_response(&self, request: SiopRequest, user_claims: StandardClaimsValues) -> Result<Response> {
+    pub async fn generate_response(&self, request: Request, user_claims: StandardClaimsValues) -> Result<Response> {
         let subject_did = self.subject.did()?;
 
         let id_token = IdToken::builder()

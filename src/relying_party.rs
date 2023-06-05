@@ -1,4 +1,4 @@
-use crate::{IdToken, Response, SiopRequest, Subject, Validator};
+use crate::{IdToken, Request, Response, Subject, Validator};
 use anyhow::Result;
 
 pub struct RelyingParty<V>
@@ -16,7 +16,7 @@ where
         RelyingParty { validator }
     }
 
-    pub async fn encode(&self, request: &SiopRequest) -> Result<String> {
+    pub async fn encode(&self, request: &Request) -> Result<String> {
         self.validator.encode(request).await
     }
 
@@ -92,7 +92,7 @@ mod tests {
         let relying_party = RelyingParty::new(validator);
 
         // Create a new RequestUrl with response mode `post` for cross-device communication.
-        let request: SiopRequest = RequestUrl::builder()
+        let request: Request = RequestUrl::builder()
             .response_type(ResponseType::IdToken)
             .client_id("did:mock:1".to_string())
             .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
@@ -121,7 +121,7 @@ mod tests {
             .and_then(TryInto::try_into)
             .unwrap();
 
-        // Create a new `request_uri` endpoint on the mock server and load it with the JWT encoded `SiopRequest`.
+        // Create a new `request_uri` endpoint on the mock server and load it with the JWT encoded `Request`.
         Mock::given(method("GET"))
             .and(path("/request_uri"))
             .respond_with(ResponseTemplate::new(200).set_body_string(relying_party.encode(&request).await.unwrap()))

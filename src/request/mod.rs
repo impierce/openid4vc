@@ -52,7 +52,7 @@ pub mod request_builder;
 #[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
 #[serde(untagged, deny_unknown_fields)]
 pub enum RequestUrl {
-    Request(Box<SiopRequest>),
+    Request(Box<Request>),
     // TODO: Add client_id parameter.
     RequestUri { request_uri: String },
 }
@@ -63,10 +63,10 @@ impl RequestUrl {
     }
 }
 
-impl TryInto<SiopRequest> for RequestUrl {
+impl TryInto<Request> for RequestUrl {
     type Error = anyhow::Error;
 
-    fn try_into(self) -> Result<SiopRequest, Self::Error> {
+    fn try_into(self) -> Result<Request, Self::Error> {
         match self {
             RequestUrl::Request(request) => Ok(*request),
             RequestUrl::RequestUri { .. } => Err(anyhow!("Request is a request URI.")),
@@ -125,11 +125,11 @@ pub enum ResponseType {
     IdToken,
 }
 
-/// [`SiopRequest`] is a request from a [crate::relying_party::RelyingParty] (RP) to a [crate::provider::Provider] (SIOP).
+/// [`Request`] is a request from a [crate::relying_party::RelyingParty] (RP) to a [crate::provider::Provider] (SIOP).
 #[allow(dead_code)]
 #[derive(Debug, Getters, PartialEq, Clone, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct SiopRequest {
+pub struct Request {
     pub(crate) response_type: ResponseType,
     pub(crate) response_mode: Option<String>,
     #[getset(get = "pub")]
@@ -153,7 +153,7 @@ pub struct SiopRequest {
     pub(crate) state: Option<String>,
 }
 
-impl SiopRequest {
+impl Request {
     pub fn is_cross_device_request(&self) -> bool {
         self.response_mode == Some("post".to_string())
     }
@@ -212,7 +212,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             request_url.clone(),
-            RequestUrl::Request(Box::new(SiopRequest {
+            RequestUrl::Request(Box::new(Request {
                 response_type: ResponseType::IdToken,
                 response_mode: Some("post".to_string()),
                 client_id: "did:example:\

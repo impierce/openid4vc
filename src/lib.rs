@@ -16,7 +16,7 @@ pub use jwt::JsonWebToken;
 pub use provider::Provider;
 pub use registration::Registration;
 pub use relying_party::RelyingParty;
-pub use request::{request_builder::RequestUrlBuilder, RequestUrl, SiopRequest};
+pub use request::{request_builder::RequestUrlBuilder, Request, RequestUrl};
 pub use response::Response;
 pub use scope::Scope;
 pub use subject::Subject;

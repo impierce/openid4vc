@@ -4,6 +4,8 @@ use getset::Getters;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
+/// Represents the parameters of an OpenID4VP response. It can hold a Verifiable Presentation Token and a Presentation
+/// Submission, or a JWT containing them.
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum Openid4vpParams {
@@ -16,6 +18,8 @@ pub enum Openid4vpParams {
     },
 }
 
+/// Represents an Authorization Response. It can hold an ID Token, a Verifiable Presentation Token, a Presentation
+/// Submission, or a combination of them.
 #[derive(Serialize, Default, Deserialize, Debug, Getters, PartialEq)]
 #[skip_serializing_none]
 pub struct Response {
