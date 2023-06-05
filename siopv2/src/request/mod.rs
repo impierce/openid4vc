@@ -47,7 +47,7 @@ pub mod request_builder;
 /// )
 /// .unwrap();
 /// assert!(match request_url {
-///    RequestUrl::AuthorizationRequest(_) => Ok(()),
+///   RequestUrl::Request(_) => Ok(()),
 ///   RequestUrl::RequestUri { .. } => Err(()),
 ///   RequestUrl::RequestObject { .. } => Err(()),
 /// }.is_ok());
