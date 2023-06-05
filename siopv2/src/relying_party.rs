@@ -42,7 +42,7 @@ mod tests {
         request::ResponseType,
         scope::{Scope, ScopeValue},
         test_utils::{MemoryStorage, MockSubject, Storage},
-        ClaimRequests, Provider, Registration, RequestUrl, StandardClaimsRequests, StandardClaimsValues,
+        Provider, Registration, RequestUrl, StandardClaimsRequests, StandardClaimsValues,
     };
     use chrono::{Duration, Utc};
     use lazy_static::lazy_static;
@@ -115,16 +115,6 @@ mod tests {
                     }
                 }"#,
             )
-            .claims(ClaimRequests {
-                id_token: Some(StandardClaimsRequests {
-                    name: Some(IndividualClaimRequest::Null),
-                    email: Some(IndividualClaimRequest::object().essential(true)),
-                    address: Some(IndividualClaimRequest::Null),
-                    updated_at: Some(IndividualClaimRequest::Null),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            })
             .exp((Utc::now() + Duration::minutes(10)).timestamp())
             .nonce("n-0S6_WzA2Mj".to_string())
             .build()
