@@ -41,8 +41,9 @@ mod tests {
         claims::{Address, IndividualClaimRequest},
         request::ResponseType,
         scope::{Scope, ScopeValue},
+        subject_syntax_type::DidMethod,
         test_utils::{MemoryStorage, MockSubject, Storage},
-        ClientMetadata, Provider, RequestUrl, StandardClaimsRequests, StandardClaimsValues,
+        ClientMetadata, Provider, RequestUrl, StandardClaimsRequests, StandardClaimsValues, SubjectSyntaxType,
     };
     use chrono::{Duration, Utc};
     use lazy_static::lazy_static;
@@ -100,7 +101,7 @@ mod tests {
             .response_mode("post".to_string())
             .client_metadata(
                 ClientMetadata::default()
-                    .with_subject_syntax_types_supported(vec!["did:mock".to_string()])
+                    .with_subject_syntax_types_supported(vec![SubjectSyntaxType::Did(DidMethod("mock".to_string()))])
                     .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
             )
             .claims(

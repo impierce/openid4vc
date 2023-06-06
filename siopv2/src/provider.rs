@@ -1,5 +1,6 @@
 use crate::{
-    AuthorizationRequest, AuthorizationResponse, IdToken, RequestUrl, StandardClaimsValues, Subject, Validator,
+    AuthorizationRequest, AuthorizationResponse, IdToken, RequestUrl, StandardClaimsValues, Subject, SubjectSyntaxType,
+    Validator,
 };
 use anyhow::{anyhow, Result};
 use chrono::{Duration, Utc};
@@ -24,8 +25,8 @@ where
         Ok(Provider { subject })
     }
 
-    pub fn subject_syntax_types_supported(&self) -> Result<Vec<String>> {
-        Ok(vec![format!("did:{}", self.subject.did()?.method())])
+    pub fn subject_syntax_types_supported(&self) -> Result<Vec<SubjectSyntaxType>> {
+        Ok(vec![format!("did:{}", self.subject.did()?.method()).try_into()?])
     }
 
     /// TODO: Add more validation rules.
@@ -61,6 +62,7 @@ where
                 },
             )
         })
+        // Ok(authorization_request)
     }
 
     /// Generates a [`AuthorizationResponse`] in response to a [`AuthorizationRequest`] and the user's claims. The [`AuthorizationResponse`]
@@ -104,7 +106,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::MockSubject;
+    use crate::{subject_syntax_type::DidMethod, test_utils::MockSubject};
 
     #[tokio::test]
     async fn test_provider() {
@@ -143,7 +145,7 @@ mod tests {
         // Test whether the provider returns the correct subject syntax types.
         assert_eq!(
             provider.subject_syntax_types_supported().unwrap(),
-            vec!["did:mock".to_string()]
+            vec![SubjectSyntaxType::Did(DidMethod("mock".to_string()))]
         );
     }
 }
