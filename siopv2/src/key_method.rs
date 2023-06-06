@@ -109,7 +109,7 @@ mod tests {
                 &client_id=did:key:z6MkiTcXZ1JxooACo99YcfkugH6Kifzj7ZupSDCmLEABpjpF\
                 &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
                 &response_mode=post\
-                &registration=%7B%22subject_syntax_types_supported%22%3A\
+                &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
                 %5B%22did%3Akey%22%5D%2C%0A%20%20%20%20\
                 %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\

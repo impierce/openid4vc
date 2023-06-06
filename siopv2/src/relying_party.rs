@@ -42,7 +42,7 @@ mod tests {
         request::ResponseType,
         scope::{Scope, ScopeValue},
         test_utils::{MemoryStorage, MockSubject, Storage},
-        Provider, Registration, RequestUrl, StandardClaimsRequests, StandardClaimsValues,
+        ClientMetadata, Provider, RequestUrl, StandardClaimsRequests, StandardClaimsValues,
     };
     use chrono::{Duration, Utc};
     use lazy_static::lazy_static;
@@ -98,8 +98,8 @@ mod tests {
             .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
             .redirect_uri(format!("{server_url}/redirect_uri"))
             .response_mode("post".to_string())
-            .registration(
-                Registration::default()
+            .client_metadata(
+                ClientMetadata::default()
                     .with_subject_syntax_types_supported(vec!["did:mock".to_string()])
                     .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
             )

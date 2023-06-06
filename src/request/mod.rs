@@ -1,5 +1,5 @@
 use crate::token::id_token::RFC7519Claims;
-use crate::{claims::ClaimRequests, Registration, RequestUrlBuilder, Scope, StandardClaimsRequests};
+use crate::{claims::ClaimRequests, ClientMetadata, RequestUrlBuilder, Scope, StandardClaimsRequests};
 use anyhow::{anyhow, Result};
 use derive_more::Display;
 use getset::Getters;
@@ -39,7 +39,7 @@ pub mod request_builder;
 ///             &client_id=did%3Aexample%3AEiDrihTRe0GMdc3K16kgJB3Xbl9Hb8oqVHjzm6ufHcYDGA\
 ///             &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
 ///             &response_mode=post\
-///             &registration=%7B%22subject_syntax_types_supported%22%3A\
+///             &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
 ///             %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
 ///             %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
 ///             &nonce=n-0S6_WzA2Mj\
@@ -150,7 +150,7 @@ pub struct AuthorizationRequest {
     #[getset(get = "pub")]
     pub(crate) nonce: String,
     #[getset(get = "pub")]
-    pub(crate) registration: Option<Registration>,
+    pub(crate) client_metadata: Option<ClientMetadata>,
     #[getset(get = "pub")]
     pub(crate) state: Option<String>,
 }
@@ -161,7 +161,7 @@ impl AuthorizationRequest {
     }
 
     pub fn subject_syntax_types_supported(&self) -> Option<&Vec<String>> {
-        self.registration
+        self.client_metadata
             .as_ref()
             .and_then(|r| r.subject_syntax_types_supported().as_ref())
     }
@@ -206,7 +206,7 @@ mod tests {
                 &client_id=did%3Aexample%3AEiDrihTRe0GMdc3K16kgJB3Xbl9Hb8oqVHjzm6ufHcYDGA\
                 &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
                 &response_mode=post\
-                &registration=%7B%22subject_syntax_types_supported%22%3A\
+                &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
                 %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
                 %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\
@@ -226,8 +226,8 @@ mod tests {
                 claims: None,
                 redirect_uri: "https://client.example.org/cb".to_string(),
                 nonce: "n-0S6_WzA2Mj".to_string(),
-                registration: Some(
-                    Registration::default()
+                client_metadata: Some(
+                    ClientMetadata::default()
                         .with_subject_syntax_types_supported(vec!["did:mock".to_string()])
                         .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
                 ),
@@ -269,7 +269,7 @@ mod tests {
                 &client_id=did%3Aexample%3AEiDrihTRe0GMdc3K16kgJB3Xbl9Hb8oqVHjzm6ufHcYDGA\
                 &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
                 &response_mode=post\
-                &registration=%7B%22subject_syntax_types_supported%22%3A\
+                &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
                 %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
                 %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\

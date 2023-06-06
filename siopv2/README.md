@@ -32,7 +32,7 @@ use lazy_static::lazy_static;
 use siopv2::{
     claims::{ClaimRequests, ClaimValue, IndividualClaimRequest},
     request::ResponseType,
-    Provider, Registration, RelyingParty, RequestUrl, AuthorizationResponse, Scope, AuthorizationRequest, StandardClaims, Subject, Validator,
+    Provider, ClientMetadata, RelyingParty, RequestUrl, AuthorizationResponse, Scope, AuthorizationRequest, StandardClaims, Subject, Validator,
 };
 use rand::rngs::OsRng;
 use wiremock::{
@@ -108,8 +108,8 @@ async fn main() {
         .scope(Scope::openid())
         .redirect_uri(format!("{server_url}/redirect_uri"))
         .response_mode("post".to_string())
-        .registration(
-            Registration::default()
+        .client_metadata(
+            ClientMetadata::default()
                 .with_subject_syntax_types_supported(vec!["did:mymethod".to_string()])
                 .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
         )
