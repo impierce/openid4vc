@@ -1,11 +1,14 @@
+use crate::SubjectSyntaxType;
 use getset::Getters;
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 /// [`ClientMetadata`] is a request parameter used by a [`crate::RelyingParty`] to communicate its capabilities to a [`crate::Provider`].
+#[skip_serializing_none]
 #[derive(Getters, Debug, PartialEq, Clone, Default, Deserialize, Serialize)]
 pub struct ClientMetadata {
     #[getset(get = "pub")]
-    subject_syntax_types_supported: Option<Vec<String>>,
+    subject_syntax_types_supported: Option<Vec<SubjectSyntaxType>>,
     id_token_signing_alg_values_supported: Option<Vec<String>>,
 }
 
@@ -14,7 +17,10 @@ impl ClientMetadata {
         Self::default()
     }
 
-    pub fn with_subject_syntax_types_supported(mut self, subject_syntax_types_supported: Vec<String>) -> Self {
+    pub fn with_subject_syntax_types_supported(
+        mut self,
+        subject_syntax_types_supported: Vec<SubjectSyntaxType>,
+    ) -> Self {
         self.subject_syntax_types_supported = Some(subject_syntax_types_supported);
         self
     }

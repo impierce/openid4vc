@@ -1,4 +1,5 @@
 use crate::token::id_token::RFC7519Claims;
+use crate::SubjectSyntaxType;
 use crate::{claims::ClaimRequests, ClientMetadata, RequestUrlBuilder, Scope, StandardClaimsRequests};
 use anyhow::{anyhow, Result};
 use derive_more::Display;
@@ -160,7 +161,7 @@ impl AuthorizationRequest {
         self.response_mode == Some("post".to_string())
     }
 
-    pub fn subject_syntax_types_supported(&self) -> Option<&Vec<String>> {
+    pub fn subject_syntax_types_supported(&self) -> Option<&Vec<SubjectSyntaxType>> {
         self.client_metadata
             .as_ref()
             .and_then(|r| r.subject_syntax_types_supported().as_ref())
@@ -180,6 +181,8 @@ impl AuthorizationRequest {
 
 #[cfg(test)]
 mod tests {
+    use crate::subject_syntax_type::DidMethod;
+
     use super::*;
 
     #[test]
@@ -228,7 +231,9 @@ mod tests {
                 nonce: "n-0S6_WzA2Mj".to_string(),
                 client_metadata: Some(
                     ClientMetadata::default()
-                        .with_subject_syntax_types_supported(vec!["did:mock".to_string()])
+                        .with_subject_syntax_types_supported(vec![SubjectSyntaxType::Did(DidMethod(
+                            "mock".to_string()
+                        ))])
                         .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
                 ),
                 state: None,
