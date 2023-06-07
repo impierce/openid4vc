@@ -7,7 +7,7 @@ use serde::de::DeserializeOwned;
 /// This [`Validator`] trait is used to verify JWTs.
 #[async_trait]
 pub trait Validator: Sync {
-    async fn public_key<'a>(&self, kid: &'a str) -> Result<Vec<u8>>;
+    async fn public_key(&self, kid: &str) -> Result<Vec<u8>>;
 
     async fn decode<T>(&self, token: String) -> Result<T>
     where

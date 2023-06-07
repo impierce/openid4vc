@@ -52,7 +52,7 @@ impl Subject for KeySubject {
 
 #[async_trait]
 impl Validator for KeySubject {
-    async fn public_key<'a>(&self, kid: &'a str) -> Result<Vec<u8>> {
+    async fn public_key(&self, kid: &str) -> Result<Vec<u8>> {
         Ok(resolve_public_key(kid).await?)
     }
 }
@@ -70,7 +70,7 @@ impl KeyValidator {
 
 #[async_trait]
 impl Validator for KeyValidator {
-    async fn public_key<'a>(&self, kid: &'a str) -> Result<Vec<u8>> {
+    async fn public_key(&self, kid: &str) -> Result<Vec<u8>> {
         Ok(resolve_public_key(kid).await?)
     }
 }

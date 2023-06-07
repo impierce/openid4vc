@@ -46,7 +46,7 @@ impl Subject for MockSubject {
 
 #[async_trait]
 impl Validator for MockSubject {
-    async fn public_key<'a>(&self, _kid: &'a str) -> Result<Vec<u8>> {
+    async fn public_key(&self, _kid: &str) -> Result<Vec<u8>> {
         Ok(MOCK_KEYPAIR.public.to_bytes().to_vec())
     }
 }
@@ -61,7 +61,7 @@ impl MockValidator {
 
 #[async_trait]
 impl Validator for MockValidator {
-    async fn public_key<'a>(&self, _kid: &'a str) -> Result<Vec<u8>> {
+    async fn public_key(&self, _kid: &str) -> Result<Vec<u8>> {
         Ok(MOCK_KEYPAIR.public.to_bytes().to_vec())
     }
 }
