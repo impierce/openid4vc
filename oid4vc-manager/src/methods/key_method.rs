@@ -1,3 +1,4 @@
+use crate::{Sign, Subject, Validator};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use did_key::{generate, resolve, Config, CoreSign, DIDCore, Document, Ed25519KeyPair, KeyMaterial, PatchedKeyPair};
@@ -128,6 +129,9 @@ mod tests {
             .generate_response(request, Default::default())
             .await
             .unwrap();
+
+        // Create a new validator
+        let validator = KeyValidator::new();
 
         // Let the relying party validate the response.
         let relying_party_manager = RelyingPartyManager::new([Arc::new(KeySubject::new())]).unwrap();
