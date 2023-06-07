@@ -30,7 +30,7 @@ pub mod test_utils;
 
 #[macro_export]
 macro_rules! builder_fn {
-    ( $name:ident, $ty:ty) => {
+    ($name:ident, $ty:ty) => {
         #[allow(clippy::should_implement_trait)]
         pub fn $name(mut self, value: impl Into<$ty>) -> Self {
             self.$name.replace(value.into());
