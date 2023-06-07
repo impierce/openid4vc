@@ -1,8 +1,7 @@
+use crate::{Sign, Subject, Validator};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use did_key::{generate, resolve, Config, CoreSign, DIDCore, Document, Ed25519KeyPair, KeyMaterial, PatchedKeyPair};
-
-use crate::{Subject, Validator};
 
 /// This [`KeySubject`] implements the [`Subject`] trait and can be used as a subject for a [`Provider`]. It uses the
 /// 'key' DID method.
@@ -33,6 +32,12 @@ impl Default for KeySubject {
 }
 
 #[async_trait]
+impl Sign for KeySubject {
+    async fn sign<'a>(&self, message: &'a str) -> Result<Vec<u8>> {
+        Ok(self.keypair.sign(message.as_bytes()).to_vec())
+    }
+}
+
 impl Subject for KeySubject {
     fn did(&self) -> Result<did_url::DID> {
         Ok(did_url::DID::parse(self.document.id.clone())?)
@@ -43,17 +48,6 @@ impl Subject for KeySubject {
             .authentication
             .as_ref()
             .and_then(|authentication_methods| authentication_methods.get(0).cloned())
-    }
-
-    async fn sign<'a>(&self, message: &'a str) -> Result<Vec<u8>> {
-        Ok(self.keypair.sign(message.as_bytes()).to_vec())
-    }
-}
-
-#[async_trait]
-impl Validator for KeySubject {
-    async fn public_key(&self, kid: &str) -> Result<Vec<u8>> {
-        Ok(resolve_public_key(kid).await?)
     }
 }
 
@@ -99,7 +93,8 @@ mod tests {
         let subject = KeySubject::new();
 
         // Create a new provider.
-        let provider = Provider::new(subject).await.unwrap();
+        let mut provider = Provider::new();
+        provider.subjects.add(subject);
 
         // Get a new SIOP request with response mode `post` for cross-device communication.
         let request_url = "\
@@ -121,8 +116,13 @@ mod tests {
         // Test whether the provider can generate a response for the request succesfully.
         let response = provider.generate_response(request, Default::default()).await.unwrap();
 
+        // Create a new validator
+        let validator = KeyValidator::new();
+
         // Let the relying party validate the response.
-        let relying_party = RelyingParty::new(KeySubject::new());
+        let mut relying_party = RelyingParty::new();
+        relying_party.validators.add(validator);
+
         assert!(relying_party.validate_response(&response).await.is_ok());
     }
 }

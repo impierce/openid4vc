@@ -1,23 +1,20 @@
-use crate::{AuthorizationRequest, AuthorizationResponse, IdToken, Subject, Validator};
+use crate::{jwt, subject::Subjects, validator::Validators, AuthorizationRequest, AuthorizationResponse, IdToken};
 use anyhow::Result;
 
-pub struct RelyingParty<V>
-where
-    V: Validator + Subject,
-{
-    validator: V,
+#[derive(Default)]
+pub struct RelyingParty {
+    pub subjects: Subjects,
+    pub validators: Validators,
 }
 
-impl<V> RelyingParty<V>
-where
-    V: Validator + Subject,
-{
-    pub fn new(validator: V) -> Self {
-        RelyingParty { validator }
+impl RelyingParty {
+    pub fn new() -> Self {
+        RelyingParty::default()
     }
 
     pub async fn encode(&self, request: &AuthorizationRequest) -> Result<String> {
-        self.validator.encode(request).await
+        let subject = self.subjects.select_subject()?;
+        jwt::encode(subject, request).await
     }
 
     /// Validates a [`AuthorizationResponse`] by decoding the header of the id_token, fetching the public key corresponding to
@@ -29,7 +26,9 @@ where
             .id_token()
             .to_owned()
             .ok_or(anyhow::anyhow!("No id_token parameter in response"))?;
-        let id_token: IdToken = self.validator.decode(token).await?;
+        let (kid, algorithm) = jwt::extract_header(&token)?;
+        let public_key = self.validators.select_validator()?.public_key(&kid).await?;
+        let id_token: IdToken = jwt::decode(&token, public_key, algorithm)?;
         Ok(id_token)
     }
 }
@@ -42,7 +41,7 @@ mod tests {
         request::ResponseType,
         scope::{Scope, ScopeValue},
         subject_syntax_type::DidMethod,
-        test_utils::{MemoryStorage, MockSubject, Storage},
+        test_utils::{MemoryStorage, MockSubject, MockValidator, Storage},
         ClientMetadata, Provider, RequestUrl, StandardClaimsRequests, StandardClaimsValues, SubjectSyntaxType,
     };
     use chrono::{Duration, Utc};
@@ -86,11 +85,14 @@ mod tests {
         let mock_server = MockServer::start().await;
         let server_url = mock_server.uri();
 
-        // Create a new validator.
-        let validator = MockSubject::new("did:mock:1".to_string(), "key_identifier".to_string()).unwrap();
+        // Create a new subject and validator.
+        let subject = MockSubject::new("did:mock:1".to_string(), "key_identifier".to_string()).unwrap();
+        let validator = MockValidator::new();
 
         // Create a new relying party.
-        let relying_party = RelyingParty::new(validator);
+        let mut relying_party = RelyingParty::new();
+        relying_party.subjects.add(subject);
+        relying_party.validators.add(validator);
 
         // Create a new RequestUrl with response mode `post` for cross-device communication.
         let request: AuthorizationRequest = RequestUrl::builder()
@@ -136,14 +138,17 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        // Create a new subject.
+        // Create a new subject and validator.
         let subject = MockSubject::new("did:mock:123".to_string(), "key_identifier".to_string()).unwrap();
+        let validator = MockValidator::new();
 
         // Create a new storage for the user's claims.
         let storage = MemoryStorage::new(serde_json::from_value(USER_CLAIMS.clone()).unwrap());
 
         // Create a new provider.
-        let provider = Provider::new(subject).await.unwrap();
+        let mut provider = Provider::new();
+        provider.subjects.add(subject);
+        provider.validators.add(validator);
 
         // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
         let request_url = RequestUrl::builder()

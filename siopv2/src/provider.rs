@@ -1,6 +1,6 @@
 use crate::{
-    AuthorizationRequest, AuthorizationResponse, IdToken, RequestUrl, StandardClaimsValues, Subject, SubjectSyntaxType,
-    Validator,
+    jwt, subject::Subjects, validator::Validators, AuthorizationRequest, AuthorizationResponse, IdToken, RequestUrl,
+    StandardClaimsValues, SubjectSyntaxType,
 };
 use anyhow::{anyhow, Result};
 use chrono::{Duration, Utc};
@@ -9,24 +9,21 @@ use chrono::{Duration, Utc};
 /// [`AuthorizationRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
 /// the user who is trying to authenticate.
 #[derive(Default)]
-pub struct Provider<S>
-where
-    S: Subject + Validator,
-{
-    pub subject: S,
+pub struct Provider {
+    pub subjects: Subjects,
+    pub validators: Validators,
 }
 
-impl<S> Provider<S>
-where
-    S: Subject + Validator,
-{
+impl Provider {
     // TODO: Use ProviderBuilder instead.
-    pub async fn new(subject: S) -> Result<Self> {
-        Ok(Provider { subject })
+    pub fn new() -> Self {
+        Provider::default()
     }
 
     pub fn subject_syntax_types_supported(&self) -> Result<Vec<SubjectSyntaxType>> {
-        Ok(vec![format!("did:{}", self.subject.did()?.method()).try_into()?])
+        Ok(vec![
+            format!("did:{}", self.subjects.select_subject()?.did()?.method()).try_into()?
+        ])
     }
 
     /// TODO: Add more validation rules.
@@ -47,7 +44,9 @@ where
                 RequestUrl::RequestObject { request, client_id } => (request, client_id),
                 _ => unreachable!(),
             };
-            let authorization_request: AuthorizationRequest = self.subject.decode(request_object).await?;
+            let (kid, algorithm) = jwt::extract_header(&request_object)?;
+            let public_key = self.validators.select_validator()?.public_key(&kid).await?;
+            let authorization_request: AuthorizationRequest = jwt::decode(&request_object, public_key, algorithm)?;
             anyhow::ensure!(*authorization_request.client_id() == client_id, "Client id mismatch.");
             authorization_request
         };
@@ -62,7 +61,6 @@ where
                 },
             )
         })
-        // Ok(authorization_request)
     }
 
     /// Generates a [`AuthorizationResponse`] in response to a [`AuthorizationRequest`] and the user's claims. The [`AuthorizationResponse`]
@@ -72,7 +70,7 @@ where
         request: AuthorizationRequest,
         user_claims: StandardClaimsValues,
     ) -> Result<AuthorizationResponse> {
-        let subject_did = self.subject.did()?;
+        let subject_did = self.subjects.select_subject()?.did()?;
 
         let id_token = IdToken::builder()
             .iss(subject_did.to_string())
@@ -84,7 +82,8 @@ where
             .claims(user_claims)
             .build()?;
 
-        let jwt = self.subject.encode(id_token).await?;
+        let subject = self.subjects.select_subject()?;
+        let jwt = jwt::encode(subject, id_token).await?;
 
         let mut builder = AuthorizationResponse::builder()
             .redirect_uri(request.redirect_uri().to_owned())
@@ -106,15 +105,21 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{subject_syntax_type::DidMethod, test_utils::MockSubject};
+    use crate::{
+        subject_syntax_type::DidMethod,
+        test_utils::{MockSubject, MockValidator},
+    };
 
     #[tokio::test]
     async fn test_provider() {
-        // Create a new subject.
+        // Create a new subject and validator.
         let subject = MockSubject::new("did:mock:123".to_string(), "key_identifier".to_string()).unwrap();
+        let validator = MockValidator::new();
 
         // Create a new provider.
-        let provider = Provider::new(subject).await.unwrap();
+        let mut provider = Provider::new();
+        provider.subjects.add(subject);
+        provider.validators.add(validator);
 
         // Get a new SIOP request with response mode `post` for cross-device communication.
         let request_url = "\
@@ -139,8 +144,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_provider_subject_syntax_types_supported() {
+        // Create a new subject.
+        let subject = MockSubject::new("did:mock:123".to_string(), "key_identifier".to_string()).unwrap();
+
         // Create a new provider.
-        let provider = Provider::<MockSubject>::default();
+        let mut provider = Provider::default();
+        provider.subjects.add(subject);
 
         // Test whether the provider returns the correct subject syntax types.
         assert_eq!(

@@ -1,4 +1,4 @@
-use crate::{StandardClaimsRequests, StandardClaimsValues, Subject, Validator};
+use crate::{Sign, StandardClaimsRequests, StandardClaimsValues, Subject, Validator};
 use anyhow::Result;
 use async_trait::async_trait;
 use derivative::{self, Derivative};
@@ -29,6 +29,13 @@ impl MockSubject {
 }
 
 #[async_trait]
+impl Sign for MockSubject {
+    async fn sign<'a>(&self, message: &'a str) -> Result<Vec<u8>> {
+        let signature: Signature = MOCK_KEYPAIR.sign(message.as_bytes());
+        Ok(signature.to_bytes().to_vec())
+    }
+}
+
 impl Subject for MockSubject {
     fn did(&self) -> Result<did_url::DID> {
         Ok(self.did.clone())
@@ -36,18 +43,6 @@ impl Subject for MockSubject {
 
     fn key_identifier(&self) -> Option<String> {
         Some(self.key_identifier.clone())
-    }
-
-    async fn sign<'a>(&self, message: &'a str) -> Result<Vec<u8>> {
-        let signature: Signature = MOCK_KEYPAIR.sign(message.as_bytes());
-        Ok(signature.to_bytes().to_vec())
-    }
-}
-
-#[async_trait]
-impl Validator for MockSubject {
-    async fn public_key(&self, _kid: &str) -> Result<Vec<u8>> {
-        Ok(MOCK_KEYPAIR.public.to_bytes().to_vec())
     }
 }
 

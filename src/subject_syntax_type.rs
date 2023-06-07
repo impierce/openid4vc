@@ -39,7 +39,7 @@ pub mod serde_jwk_thumbprint {
     {
         let s: String = Deserialize::deserialize(deserializer)?;
         (s == JWK_THUMBPRINT)
-            .then(|| ())
+            .then_some(())
             .ok_or(Error::custom("Invalid subject syntax type"))
     }
 }
