@@ -1,12 +1,31 @@
-use crate::scope::{Scope, ScopeValue};
+use crate::{
+    parse_other,
+    scope::{Scope, ScopeValue},
+};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_with::skip_serializing_none;
 
-/// Functions as the `claims` parameter inside a [`crate::SiopRequest`].
+/// Functions as the `claims` parameter inside a [`crate::AuthorizationRequest`].
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ClaimRequests {
     pub user_claims: Option<StandardClaimsRequests>,
     pub id_token: Option<StandardClaimsRequests>,
+}
+
+impl TryFrom<serde_json::Value> for ClaimRequests {
+    type Error = anyhow::Error;
+
+    fn try_from(value: serde_json::Value) -> Result<Self, Self::Error> {
+        serde_json::from_value(value).map_err(Into::into)
+    }
+}
+
+impl TryFrom<&str> for ClaimRequests {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        serde_json::from_str(value).map_err(Into::into)
+    }
 }
 
 mod sealed {
@@ -82,19 +101,6 @@ impl<T> IndividualClaimRequest<T> {
     object_member!(other, serde_json::Map<String, serde_json::Value>);
 }
 
-// When a struct has fields of type `Option<serde_json::Map<String, serde_json::Value>>`, by default these fields are deserialized as
-// `Some(Object {})` instead of None when the corresponding values are missing.
-// The `parse_other()` helper function ensures that these fields are deserialized as `None` when no value is present.
-fn parse_other<'de, D>(deserializer: D) -> Result<Option<serde_json::Map<String, serde_json::Value>>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    serde_json::Value::deserialize(deserializer).map(|value| match value {
-        serde_json::Value::Object(object) if !object.is_empty() => Some(object),
-        _ => None,
-    })
-}
-
 /// An individual claim request as defined in [OpenID Connect Core 1.0, section 5.5.1](https://openid.net/specs/openid-connect-core-1_0.html#IndividualClaimsRequests).
 /// Individual claims can be requested by simply some key with a `null` value, or by using the `essential`, `value`,
 /// and `values` fields. Additional information about the requested claim MAY be added to the claim request. This
@@ -128,7 +134,7 @@ pub type StandardClaimsValues = StandardClaims<ClaimValue<()>>;
 /// This struct represents the standard claims as defined in the
 /// [OpenID Connect Core 1.0 Specification](https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims)
 /// specification. It can be used either for requesting claims using [`IndividualClaimRequest`]'s in the `claims`
-/// parameter of a [`crate::SiopRequest`], or for returning actual [`ClaimValue`]'s in an [`crate::IdToken`].
+/// parameter of a [`crate::AuthorizationRequest`], or for returning actual [`ClaimValue`]'s in an [`crate::IdToken`].
 #[skip_serializing_none]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]

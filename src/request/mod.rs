@@ -7,6 +7,8 @@ use serde_json::{Map, Value};
 use std::convert::TryInto;
 use std::str::FromStr;
 
+pub mod request_builder;
+
 /// As specified in the
 /// [SIOPv2 specification](https://openid.net/specs/openid-connect-self-issued-v2-1_0.html#name-self-issued-openid-provider-a)
 /// [`RelyingParty`]'s can either send a request as a query parameter or as a request URI.
@@ -26,7 +28,7 @@ use std::str::FromStr;
 ///     }
 /// );
 ///
-/// // An example of a form-urlencoded request that is parsed as a `RequestUrl::Request` variant.
+/// // An example of a form-urlencoded request that is parsed as a `RequestUrl::AuthorizationRequest` variant.
 /// let request_url = RequestUrl::from_str(
 ///     "\
 ///         siopv2://idtoken?\
@@ -43,14 +45,14 @@ use std::str::FromStr;
 /// )
 /// .unwrap();
 /// assert!(match request_url {
-///    RequestUrl::Request(_) => Ok(()),
+///    RequestUrl::AuthorizationRequest(_) => Ok(()),
 ///   RequestUrl::RequestUri { .. } => Err(()),
 /// }.is_ok());
 /// ```
 #[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
 #[serde(untagged, deny_unknown_fields)]
 pub enum RequestUrl {
-    Request(Box<SiopRequest>),
+    AuthorizationRequest(Box<AuthorizationRequest>),
     // TODO: Add client_id parameter.
     RequestUri { request_uri: String },
 }
@@ -61,13 +63,13 @@ impl RequestUrl {
     }
 }
 
-impl TryInto<SiopRequest> for RequestUrl {
+impl TryInto<AuthorizationRequest> for RequestUrl {
     type Error = anyhow::Error;
 
-    fn try_into(self) -> Result<SiopRequest, Self::Error> {
+    fn try_into(self) -> Result<AuthorizationRequest, Self::Error> {
         match self {
-            RequestUrl::Request(request) => Ok(*request),
-            RequestUrl::RequestUri { .. } => Err(anyhow!("Request is a request URI.")),
+            RequestUrl::AuthorizationRequest(request) => Ok(*request),
+            RequestUrl::RequestUri { .. } => Err(anyhow!("AuthorizationRequest is a request URI.")),
         }
     }
 }
@@ -123,11 +125,11 @@ pub enum ResponseType {
     IdToken,
 }
 
-/// [`SiopRequest`] is a request from a [crate::relying_party::RelyingParty] (RP) to a [crate::provider::Provider] (SIOP).
+/// [`AuthorizationRequest`] is a request from a [crate::relying_party::RelyingParty] (RP) to a [crate::provider::Provider] (SIOP).
 #[allow(dead_code)]
 #[derive(Debug, Getters, PartialEq, Clone, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct SiopRequest {
+pub struct AuthorizationRequest {
     pub(crate) response_type: ResponseType,
     pub(crate) response_mode: Option<String>,
     #[getset(get = "pub")]
@@ -151,7 +153,7 @@ pub struct SiopRequest {
     pub(crate) state: Option<String>,
 }
 
-impl SiopRequest {
+impl AuthorizationRequest {
     pub fn is_cross_device_request(&self) -> bool {
         self.response_mode == Some("post".to_string())
     }
@@ -192,7 +194,7 @@ mod tests {
 
     #[test]
     fn test_valid_request() {
-        // A form urlencoded string without a `request_uri` parameter should deserialize into the `RequestUrl::Request` variant.
+        // A form urlencoded string without a `request_uri` parameter should deserialize into the `RequestUrl::AuthorizationRequest` variant.
         let request_url = RequestUrl::from_str(
             "\
             siopv2://idtoken?\
@@ -210,7 +212,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             request_url.clone(),
-            RequestUrl::Request(Box::new(SiopRequest {
+            RequestUrl::AuthorizationRequest(Box::new(AuthorizationRequest {
                 response_type: ResponseType::IdToken,
                 response_mode: Some("post".to_string()),
                 client_id: "did:example:\

@@ -1,9 +1,11 @@
-use crate::{IdToken, RequestUrl, SiopRequest, SiopResponse, StandardClaimsValues, Subject, Validator};
+use crate::{
+    AuthorizationRequest, AuthorizationResponse, IdToken, RequestUrl, StandardClaimsValues, Subject, Validator,
+};
 use anyhow::{anyhow, Result};
 use chrono::{Duration, Utc};
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
-/// [`SiopRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
+/// [`AuthorizationRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
 /// the user who is trying to authenticate.
 #[derive(Default)]
 pub struct Provider<S>
@@ -27,12 +29,12 @@ where
     }
 
     /// TODO: Add more validation rules.
-    /// Takes a [`RequestUrl`] and returns a [`SiopRequest`]. The [`RequestUrl`] can either be a [`SiopRequest`] or a
+    /// Takes a [`RequestUrl`] and returns a [`AuthorizationRequest`]. The [`RequestUrl`] can either be a [`AuthorizationRequest`] or a
     /// request by value. If the [`RequestUrl`] is a request by value, the request is decoded by the [`Subject`] of the [`Provider`].
     /// If the request is valid, the request is returned.
-    pub async fn validate_request(&self, request: RequestUrl) -> Result<SiopRequest> {
+    pub async fn validate_request(&self, request: RequestUrl) -> Result<AuthorizationRequest> {
         let request = match request {
-            RequestUrl::Request(request) => *request,
+            RequestUrl::AuthorizationRequest(request) => *request,
             RequestUrl::RequestUri { request_uri } => {
                 let client = reqwest::Client::new();
                 let builder = client.get(request_uri);
@@ -53,35 +55,37 @@ where
         })
     }
 
-    // TODO: needs refactoring.
-    /// Generates a [`SiopResponse`] in response to a [`SiopRequest`] and the user's claims. The [`SiopResponse`]
+    /// Generates a [`AuthorizationResponse`] in response to a [`AuthorizationRequest`] and the user's claims. The [`AuthorizationResponse`]
     /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
     pub async fn generate_response(
         &self,
-        request: SiopRequest,
+        request: AuthorizationRequest,
         user_claims: StandardClaimsValues,
-    ) -> Result<SiopResponse> {
+    ) -> Result<AuthorizationResponse> {
         let subject_did = self.subject.did()?;
-        let id_token = {
-            let mut id_token = IdToken::new(
-                subject_did.to_string(),
-                subject_did.to_string(),
-                request.client_id().clone(),
-                request.nonce().clone(),
-                (Utc::now() + Duration::minutes(10)).timestamp(),
-            )
-            .state(request.state().clone());
-            // Include the user claims in the id token.
-            id_token.standard_claims = user_claims;
-            id_token
-        };
+
+        let id_token = IdToken::builder()
+            .iss(subject_did.to_string())
+            .sub(subject_did.to_string())
+            .aud(request.client_id().to_owned())
+            .nonce(request.nonce().to_owned())
+            .exp((Utc::now() + Duration::minutes(10)).timestamp())
+            .iat((Utc::now()).timestamp())
+            .claims(user_claims)
+            .build()?;
 
         let jwt = self.subject.encode(id_token).await?;
 
-        Ok(SiopResponse::new(request.redirect_uri().clone(), jwt))
+        let mut builder = AuthorizationResponse::builder()
+            .redirect_uri(request.redirect_uri().to_owned())
+            .id_token(jwt);
+        if let Some(state) = request.state() {
+            builder = builder.state(state.clone());
+        }
+        builder.build()
     }
 
-    pub async fn send_response(&self, response: SiopResponse) -> Result<()> {
+    pub async fn send_response(&self, response: AuthorizationResponse) -> Result<()> {
         let client = reqwest::Client::new();
         let builder = client.post(response.redirect_uri()).form(&response);
         builder.send().await?.text().await?;
