@@ -15,7 +15,7 @@ pub mod request_builder;
 /// # Examples
 ///
 /// ```
-/// # use openid4vc::RequestUrl;
+/// # use siopv2::RequestUrl;
 /// # use std::str::FromStr;
 ///
 /// // An example of a form-urlencoded request with only the `request_uri` parameter will be parsed as a

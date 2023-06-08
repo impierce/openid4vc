@@ -108,7 +108,7 @@ impl<T> IndividualClaimRequest<T> {
 /// specification.
 /// # Example
 /// ```
-/// # use openid4vc::StandardClaimsRequests;
+/// # use siopv2::StandardClaimsRequests;
 /// let claims = serde_json::from_value::<StandardClaimsRequests>(serde_json::json!({
 ///     "name": null,
 ///     "family_name": {

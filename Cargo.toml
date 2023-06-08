@@ -1,5 +1,5 @@
-[package]
-name = "openid4vc"
+[workspace.package]
+name = "oid4vc"
 version = "0.1.0"
 edition = "2021"
 homepage = "https://www.impierce.com/"
@@ -7,28 +7,10 @@ keywords = ["openid4vc", "siopv2", "openid4vp", "openid4vci", "OpenID Connect"]
 license = "Apache-2.0"
 repository = "https://github.com/impierce/openid4vc"
 
-[dependencies]
-tokio = { version = "1.26.0", features = ["rt", "macros", "rt-multi-thread"] }
-serde = { version = "1.0", features = ["derive"]}
-serde_json = "1.0"
-serde_with = "2.3"
-anyhow = "1.0.70"
-chrono = "0.4.24"
-getset = "0.1.2"
-jsonwebtoken = "8.2.0"
-reqwest = { version = "0.11.14", default-features = false, features = ["json", "rustls-tls"] }
-base64-url = "2.0.0"
-async-trait = "0.1.68"
-did_url = "0.1.0"
-did-key = "0.2.1"
-url = { version = "2.3.1", features = ["serde"] }
-is_empty = "0.2.0"
-serde_urlencoded = "0.7.1"
-derive_more = "0.99.16"
-
-[dev-dependencies]
-ed25519-dalek = "1.0.1"
-rand = "0.7"
-lazy_static = "1.4.0"
-derivative = "2.2.0"
-wiremock = "0.5.18"
+[workspace]
+members = [
+    "oid4vci",
+    "oid4vp",
+    "siopv2",
+    "dif-presentation-exchange"
+]

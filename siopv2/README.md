@@ -29,7 +29,7 @@ use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use ed25519_dalek::{Keypair, Signature, Signer};
 use lazy_static::lazy_static;
-use openid4vc::{
+use siopv2::{
     claims::{ClaimRequests, ClaimValue, IndividualClaimRequest},
     request::ResponseType,
     Provider, Registration, RelyingParty, RequestUrl, AuthorizationResponse, Scope, AuthorizationRequest, StandardClaims, Subject, Validator,
