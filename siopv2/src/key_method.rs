@@ -93,8 +93,7 @@ mod tests {
         let subject = KeySubject::new();
 
         // Create a new provider.
-        let mut provider = Provider::new();
-        provider.subjects.add(subject);
+        let provider = Provider::new(subject);
 
         // Get a new SIOP request with response mode `post` for cross-device communication.
         let request_url = "\
@@ -120,7 +119,7 @@ mod tests {
         let validator = KeyValidator::new();
 
         // Let the relying party validate the response.
-        let mut relying_party = RelyingParty::new();
+        let mut relying_party = RelyingParty::new(KeySubject::new());
         relying_party.validators.add(validator);
 
         assert!(relying_party.validate_response(&response).await.is_ok());

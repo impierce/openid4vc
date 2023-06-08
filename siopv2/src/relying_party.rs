@@ -1,20 +1,31 @@
-use crate::{jwt, subject::Subjects, validator::Validators, AuthorizationRequest, AuthorizationResponse, IdToken};
+use crate::{
+    jwt, subject::Subjects, validator::Validators, AuthorizationRequest, AuthorizationResponse, IdToken, Subject,
+};
 use anyhow::Result;
+use std::sync::Arc;
 
-#[derive(Default)]
 pub struct RelyingParty {
+    // TODO: Need to change this to active_sign-method or other solution. Probably move this abstraction layer to the
+    // oid-agent crate.
+    pub active_subject: Arc<dyn Subject>,
     pub subjects: Subjects,
     pub validators: Validators,
 }
 
 impl RelyingParty {
-    pub fn new() -> Self {
-        RelyingParty::default()
+    // TODO: Use ProviderBuilder instead.
+    pub fn new<S: Subject + 'static>(subject: S) -> Self {
+        let active_subject = Arc::new(subject);
+        let subjects = Subjects(vec![active_subject.clone()]);
+        RelyingParty {
+            active_subject,
+            subjects,
+            validators: Validators::default(),
+        }
     }
 
     pub async fn encode(&self, request: &AuthorizationRequest) -> Result<String> {
-        let subject = self.subjects.select_subject()?;
-        jwt::encode(subject, request).await
+        jwt::encode(self.active_subject.clone(), request).await
     }
 
     /// Validates a [`AuthorizationResponse`] by decoding the header of the id_token, fetching the public key corresponding to
@@ -90,8 +101,7 @@ mod tests {
         let validator = MockValidator::new();
 
         // Create a new relying party.
-        let mut relying_party = RelyingParty::new();
-        relying_party.subjects.add(subject);
+        let mut relying_party = RelyingParty::new(subject);
         relying_party.validators.add(validator);
 
         // Create a new RequestUrl with response mode `post` for cross-device communication.
@@ -146,8 +156,7 @@ mod tests {
         let storage = MemoryStorage::new(serde_json::from_value(USER_CLAIMS.clone()).unwrap());
 
         // Create a new provider.
-        let mut provider = Provider::new();
-        provider.subjects.add(subject);
+        let mut provider = Provider::new(subject);
         provider.validators.add(validator);
 
         // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.

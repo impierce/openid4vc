@@ -1,29 +1,55 @@
 use crate::{
     jwt, subject::Subjects, validator::Validators, AuthorizationRequest, AuthorizationResponse, IdToken, RequestUrl,
-    StandardClaimsValues, SubjectSyntaxType,
+    StandardClaimsValues, Subject, SubjectSyntaxType,
 };
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use chrono::{Duration, Utc};
+use std::sync::Arc;
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
 /// [`AuthorizationRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
 /// the user who is trying to authenticate.
-#[derive(Default)]
 pub struct Provider {
+    // TODO: Might need to change this to active_signer. Probably move this abstraction layer to the
+    // oid-agent crate.
+    pub active_subject: Arc<dyn Subject>,
     pub subjects: Subjects,
     pub validators: Validators,
 }
 
 impl Provider {
     // TODO: Use ProviderBuilder instead.
-    pub fn new() -> Self {
-        Provider::default()
+    pub fn new<S: Subject + 'static>(subject: S) -> Self {
+        let active_subject = Arc::new(subject);
+        let subjects = Subjects(vec![active_subject.clone()]);
+        Provider {
+            active_subject,
+            subjects,
+            validators: Validators::default(),
+        }
+    }
+
+    pub fn set_active_subject(&mut self, subject_syntax_type: SubjectSyntaxType) -> Result<()> {
+        let subject = self
+            .subjects
+            .iter()
+            .find(|&subject| {
+                subject_syntax_type
+                    == subject
+                        .did()
+                        .and_then(|did| format!("did:{}", did.method()).try_into())
+                        .unwrap()
+            })
+            .ok_or_else(|| anyhow::anyhow!("No subject with the given syntax type found."))?;
+        self.active_subject = subject.clone();
+        Ok(())
     }
 
     pub fn subject_syntax_types_supported(&self) -> Result<Vec<SubjectSyntaxType>> {
-        Ok(vec![
-            format!("did:{}", self.subjects.select_subject()?.did()?.method()).try_into()?
-        ])
+        self.subjects
+            .iter()
+            .map(|subject| subject.did().and_then(|did| format!("did:{}", did.method()).try_into()))
+            .collect()
     }
 
     /// TODO: Add more validation rules.
@@ -31,8 +57,8 @@ impl Provider {
     /// request by value. If the [`RequestUrl`] is a request by value, the request is decoded by the [`Subject`] of the [`Provider`].
     /// If the request is valid, the request is returned.
     pub async fn validate_request(&self, request: RequestUrl) -> Result<AuthorizationRequest> {
-        let authorization_request = if let RequestUrl::Request(request) = request {
-            *request
+        if let RequestUrl::Request(authorization_request) = request {
+            Ok(*authorization_request)
         } else {
             let (request_object, client_id) = match request {
                 RequestUrl::RequestUri { request_uri, client_id } => {
@@ -48,19 +74,22 @@ impl Provider {
             let public_key = self.validators.select_validator()?.public_key(&kid).await?;
             let authorization_request: AuthorizationRequest = jwt::decode(&request_object, public_key, algorithm)?;
             anyhow::ensure!(*authorization_request.client_id() == client_id, "Client id mismatch.");
-            authorization_request
-        };
-        self.subject_syntax_types_supported().and_then(|supported| {
-            authorization_request.subject_syntax_types_supported().map_or_else(
-                || Err(anyhow!("No supported subject syntax types found.")),
-                |supported_types| {
-                    supported_types.iter().find(|sst| supported.contains(sst)).map_or_else(
-                        || Err(anyhow!("Subject syntax type not supported.")),
-                        |_| Ok(authorization_request.clone()),
-                    )
-                },
-            )
-        })
+            Ok(authorization_request)
+        }
+    }
+
+    // TODO: consider moving this functionality to the oid4vc-agent crate.
+    pub fn matching_subject_syntax_types(
+        &self,
+        authorization_request: &AuthorizationRequest,
+    ) -> Option<Vec<SubjectSyntaxType>> {
+        let supported = self.subject_syntax_types_supported().ok()?;
+        let supported_types = authorization_request
+            .subject_syntax_types_supported()
+            .map_or(Vec::new(), |types| {
+                types.into_iter().filter(|sst| supported.contains(sst)).collect()
+            });
+        (!supported_types.is_empty()).then_some(supported_types.iter().map(|&sst| sst.clone()).collect())
     }
 
     /// Generates a [`AuthorizationResponse`] in response to a [`AuthorizationRequest`] and the user's claims. The [`AuthorizationResponse`]
@@ -70,7 +99,8 @@ impl Provider {
         request: AuthorizationRequest,
         user_claims: StandardClaimsValues,
     ) -> Result<AuthorizationResponse> {
-        let subject_did = self.subjects.select_subject()?.did()?;
+        let subject = self.active_subject.clone();
+        let subject_did = subject.did()?;
 
         let id_token = IdToken::builder()
             .iss(subject_did.to_string())
@@ -82,7 +112,6 @@ impl Provider {
             .claims(user_claims)
             .build()?;
 
-        let subject = self.subjects.select_subject()?;
         let jwt = jwt::encode(subject, id_token).await?;
 
         let mut builder = AuthorizationResponse::builder()
@@ -106,8 +135,11 @@ impl Provider {
 mod tests {
     use super::*;
     use crate::{
+        key_method::KeySubject,
+        request::ResponseType,
         subject_syntax_type::DidMethod,
         test_utils::{MockSubject, MockValidator},
+        ClientMetadata, Scope,
     };
 
     #[tokio::test]
@@ -117,8 +149,7 @@ mod tests {
         let validator = MockValidator::new();
 
         // Create a new provider.
-        let mut provider = Provider::new();
-        provider.subjects.add(subject);
+        let mut provider = Provider::new(subject);
         provider.validators.add(validator);
 
         // Get a new SIOP request with response mode `post` for cross-device communication.
@@ -143,18 +174,47 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_provider_subject_syntax_types_supported() {
-        // Create a new subject.
-        let subject = MockSubject::new("did:mock:123".to_string(), "key_identifier".to_string()).unwrap();
+    async fn test_multiple_subjects() {
+        // Create a new provider with just one did:mock subject.
+        let mock_subject = MockSubject::new("did:mock:123".to_string(), "key_identifier".to_string()).unwrap();
+        let mut provider = Provider::new(mock_subject);
 
-        // Create a new provider.
-        let mut provider = Provider::default();
-        provider.subjects.add(subject);
+        // A request with only did:key stated in the `subject_syntax_types_supported`.
+        let authorization_request: AuthorizationRequest = RequestUrl::builder()
+            .client_id("did:example:123".to_string())
+            .redirect_uri("https://example.com".to_string())
+            .response_type(ResponseType::IdToken)
+            .scope(Scope::openid())
+            .nonce("123".to_string())
+            .client_metadata(
+                ClientMetadata::default()
+                    .with_subject_syntax_types_supported(vec![SubjectSyntaxType::Did(DidMethod("key".to_string()))]),
+            )
+            .build()
+            .and_then(TryInto::try_into)
+            .unwrap();
 
-        // Test whether the provider returns the correct subject syntax types.
+        // There are no subjects that match the request's supported subject syntax types.
+        assert!(provider.matching_subject_syntax_types(&authorization_request).is_none());
+
+        // Trying to set the active subject to a did:key subject fails.
+        let key_method = SubjectSyntaxType::Did(DidMethod("key".to_string()));
         assert_eq!(
-            provider.subject_syntax_types_supported().unwrap(),
-            vec![SubjectSyntaxType::Did(DidMethod("mock".to_string()))]
+            provider.set_active_subject(key_method.clone()).unwrap_err().to_string(),
+            "No subject with the given syntax type found."
+        );
+
+        // Add a did:key subject to the provider.
+        let key_subject = KeySubject::new();
+        provider.subjects.add(key_subject);
+
+        // Setting the active subject to a did:key subject succeeds.
+        assert!(provider.set_active_subject(key_method.clone()).is_ok());
+
+        // The provider now has a subject that matches the request's supported subject syntax types.
+        assert_eq!(
+            provider.matching_subject_syntax_types(&authorization_request),
+            Some(vec![SubjectSyntaxType::Did(DidMethod("key".to_string()))])
         );
     }
 }

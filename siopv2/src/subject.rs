@@ -1,5 +1,5 @@
-use anyhow::{anyhow, Result};
-use std::sync::Arc;
+use anyhow::Result;
+use std::{slice::Iter, sync::Arc};
 
 use crate::Sign;
 
@@ -10,14 +10,14 @@ pub trait Subject: Sign {
 }
 
 #[derive(Default)]
-pub struct Subjects(Vec<Arc<dyn Subject>>);
+pub struct Subjects(pub Vec<Arc<dyn Subject>>);
 
 impl Subjects {
-    pub fn select_subject(&self) -> Result<Arc<dyn Subject>> {
-        self.0.get(0).cloned().ok_or_else(|| anyhow!("No subject found."))
-    }
-
     pub fn add<S: Subject + 'static>(&mut self, subject: S) {
         self.0.push(Arc::new(subject));
+    }
+
+    pub fn iter(&self) -> Iter<'_, Arc<dyn Subject>> {
+        self.0.iter()
     }
 }
