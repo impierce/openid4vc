@@ -1,5 +1,6 @@
 use crate::{jwt, provider::SigningSubject, AuthorizationRequest, AuthorizationResponse, Decoder, IdToken};
 use anyhow::Result;
+use std::sync::Arc;
 
 pub struct RelyingParty {
     // TODO: Strictly speaking a relying party doesn't need to have a [`Subject`]. It just needs methods to
