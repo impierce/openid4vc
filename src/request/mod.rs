@@ -231,9 +231,9 @@ mod tests {
                 nonce: "n-0S6_WzA2Mj".to_string(),
                 client_metadata: Some(
                     ClientMetadata::default()
-                        .with_subject_syntax_types_supported(vec![SubjectSyntaxType::Did(DidMethod(
-                            "mock".to_string()
-                        ))])
+                        .with_subject_syntax_types_supported(vec![SubjectSyntaxType::Did(
+                            DidMethod::from_str("did:mock").unwrap()
+                        )])
                         .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
                 ),
                 state: None,

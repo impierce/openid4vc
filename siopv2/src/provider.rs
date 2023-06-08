@@ -86,6 +86,8 @@ impl Provider {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
     use crate::{test_utils::MockSubject, SubjectSyntaxType, Validator, Validators};
     use std::str::FromStr;
