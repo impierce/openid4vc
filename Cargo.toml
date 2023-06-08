@@ -1,4 +1,4 @@
-[workspace.package]
+[package]
 name = "oid4vc"
 version = "0.1.0"
 edition = "2021"
@@ -14,3 +14,14 @@ members = [
     "siopv2",
     "dif-presentation-exchange"
 ]
+
+[workspace.package]
+homepage = "https://www.impierce.com/"
+license = "Apache-2.0"
+repository = "https://github.com/impierce/openid4vc"
+
+[dependencies]
+oid4vci = { path = "oid4vci" }
+oid4vp = { path = "oid4vp" }
+siopv2 = { path = "siopv2" }
+dif-presentation-exchange = { path = "dif-presentation-exchange" }
