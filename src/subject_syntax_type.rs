@@ -1,4 +1,6 @@
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
+use serde_with::{DeserializeFromStr, SerializeDisplay};
+use std::{fmt::Display, str::FromStr};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -18,6 +20,12 @@ impl TryFrom<String> for SubjectSyntaxType {
                 serde_json::Value::String(value),
             )?)),
         }
+    }
+}
+
+impl From<DidMethod> for SubjectSyntaxType {
+    fn from(did_method: DidMethod) -> Self {
+        SubjectSyntaxType::Did(did_method)
     }
 }
 
@@ -44,38 +52,51 @@ pub mod serde_jwk_thumbprint {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-#[serde(transparent)]
-pub struct DidMethod(
-    #[serde(deserialize_with = "deserialize_did_method", serialize_with = "serialize_did_method")] pub String,
-);
+#[derive(Debug, Clone, PartialEq, DeserializeFromStr, SerializeDisplay)]
+pub struct DidMethod(String);
 
-fn deserialize_did_method<'de, D>(deserializer: D) -> Result<String, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s: String = Deserialize::deserialize(deserializer)?;
-    let mut did_scheme = s.splitn(3, ':');
-
-    match (did_scheme.next(), did_scheme.next(), did_scheme.next()) {
-        (Some("did"), Some(method), None) if !method.is_empty() && method.chars().all(char::is_alphanumeric) => {
-            Ok(method.to_owned())
-        }
-        _ => Err(Error::custom("Invalid DID method")),
+impl From<did_url::DID> for DidMethod {
+    fn from(did: did_url::DID) -> Self {
+        DidMethod(did.method().to_owned())
     }
 }
 
-fn serialize_did_method<S>(did_method: &String, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    serializer.serialize_str(&format!("did:{}", did_method))
+impl FromStr for DidMethod {
+    type Err = serde_json::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut did_scheme = s.splitn(3, ':');
+
+        match (did_scheme.next(), did_scheme.next(), did_scheme.next()) {
+            (Some("did"), Some(method), None) if !method.is_empty() && method.chars().all(char::is_alphanumeric) => {
+                Ok(DidMethod(method.to_owned()))
+            }
+            _ => Err(Error::custom("Invalid DID method")),
+        }
+    }
+}
+
+impl Display for DidMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "did:{}", self.0.as_str())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::ClientMetadata;
+
+    #[test]
+    fn test_did_method() {
+        assert!(DidMethod::from_str("").is_err());
+        assert!(DidMethod::from_str("did").is_err());
+        assert!(DidMethod::from_str("did:").is_err());
+        assert!(DidMethod::from_str("invalid:").is_err());
+        assert!(DidMethod::from_str("did:example:").is_err());
+        assert!(DidMethod::from_str("did:example_").is_err());
+        assert!(DidMethod::from_str("did:example").is_ok());
+    }
 
     #[test]
     fn test_subject_syntax_type_serde() {
@@ -91,24 +112,19 @@ mod tests {
         assert_eq!(
             client_metadata,
             ClientMetadata::default().with_subject_syntax_types_supported(vec![
-                SubjectSyntaxType::Did(DidMethod("example".to_string())),
+                SubjectSyntaxType::Did(DidMethod::from_str("did:example").unwrap()),
                 SubjectSyntaxType::JwkThumbprint,
             ])
         );
 
-        // let client_metadata: ClientMetadata = serde_json::from_value(json).unwrap();
+        assert_eq!(
+            SubjectSyntaxType::JwkThumbprint,
+            serde_json::from_str::<SubjectSyntaxType>(r#""urn:ietf:params:oauth:jwk-thumbprint""#).unwrap()
+        );
 
-        // let client_metadata = ClientMetadata::default()
-        //     .with_subject_syntax_types_supported(vec![SubjectSyntaxType::Did(DidMethod("example".to_string()))]);
-
-        // assert_eq!(
-        //     SubjectSyntaxType::JwkThumbprint,
-        //     serde_json::from_str::<SubjectSyntaxType>(r#""urn:ietf:params:oauth:jwk-thumbprint""#).unwrap()
-        // );
-
-        // assert_eq!(
-        //     SubjectSyntaxType::Did(DidMethod("example".to_string())),
-        //     serde_json::from_str::<SubjectSyntaxType>(r#"did:example"#).unwrap()
-        // );
+        assert_eq!(
+            SubjectSyntaxType::Did(DidMethod::from_str("did:example").unwrap()),
+            serde_json::from_str::<SubjectSyntaxType>(r#""did:example""#).unwrap()
+        );
     }
 }

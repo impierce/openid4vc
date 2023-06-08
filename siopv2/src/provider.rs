@@ -1,6 +1,6 @@
 use crate::{
-    jwt, subject::Subjects, validator::Validators, AuthorizationRequest, AuthorizationResponse, IdToken, RequestUrl,
-    StandardClaimsValues, Subject, SubjectSyntaxType,
+    jwt, subject::Subjects, subject_syntax_type::DidMethod, validator::Validators, AuthorizationRequest,
+    AuthorizationResponse, IdToken, RequestUrl, StandardClaimsValues, Subject, SubjectSyntaxType,
 };
 use anyhow::Result;
 use chrono::{Duration, Utc};
@@ -34,11 +34,10 @@ impl Provider {
             .subjects
             .iter()
             .find(|&subject| {
-                subject_syntax_type
-                    == subject
-                        .did()
-                        .and_then(|did| format!("did:{}", did.method()).try_into())
-                        .unwrap()
+                subject
+                    .did()
+                    .map(|did| subject_syntax_type == DidMethod::from(did).into())
+                    .unwrap_or(false)
             })
             .ok_or_else(|| anyhow::anyhow!("No subject with the given syntax type found."))?;
         self.active_subject = subject.clone();
@@ -48,7 +47,7 @@ impl Provider {
     pub fn subject_syntax_types_supported(&self) -> Result<Vec<SubjectSyntaxType>> {
         self.subjects
             .iter()
-            .map(|subject| subject.did().and_then(|did| format!("did:{}", did.method()).try_into()))
+            .map(|subject| subject.did().map(|did| DidMethod::from(did).into()))
             .collect()
     }
 
@@ -133,6 +132,8 @@ impl Provider {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
     use crate::{
         key_method::KeySubject,
@@ -186,10 +187,9 @@ mod tests {
             .response_type(ResponseType::IdToken)
             .scope(Scope::openid())
             .nonce("123".to_string())
-            .client_metadata(
-                ClientMetadata::default()
-                    .with_subject_syntax_types_supported(vec![SubjectSyntaxType::Did(DidMethod("key".to_string()))]),
-            )
+            .client_metadata(ClientMetadata::default().with_subject_syntax_types_supported(vec![
+                SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap()),
+            ]))
             .build()
             .and_then(TryInto::try_into)
             .unwrap();
@@ -198,7 +198,7 @@ mod tests {
         assert!(provider.matching_subject_syntax_types(&authorization_request).is_none());
 
         // Trying to set the active subject to a did:key subject fails.
-        let key_method = SubjectSyntaxType::Did(DidMethod("key".to_string()));
+        let key_method = SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap());
         assert_eq!(
             provider.set_active_subject(key_method.clone()).unwrap_err().to_string(),
             "No subject with the given syntax type found."
@@ -214,7 +214,7 @@ mod tests {
         // The provider now has a subject that matches the request's supported subject syntax types.
         assert_eq!(
             provider.matching_subject_syntax_types(&authorization_request),
-            Some(vec![SubjectSyntaxType::Did(DidMethod("key".to_string()))])
+            Some(vec![SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap())])
         );
     }
 }

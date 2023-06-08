@@ -46,6 +46,8 @@ impl RelyingParty {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
     use crate::{
         claims::{Address, IndividualClaimRequest},
@@ -113,7 +115,9 @@ mod tests {
             .response_mode("post".to_string())
             .client_metadata(
                 ClientMetadata::default()
-                    .with_subject_syntax_types_supported(vec![SubjectSyntaxType::Did(DidMethod("mock".to_string()))])
+                    .with_subject_syntax_types_supported(vec![SubjectSyntaxType::Did(
+                        DidMethod::from_str("did:mock").unwrap(),
+                    )])
                     .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
             )
             .claims(
