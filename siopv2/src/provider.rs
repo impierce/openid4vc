@@ -3,7 +3,7 @@ use crate::{
 };
 use anyhow::Result;
 use chrono::{Duration, Utc};
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 pub type SigningSubject = Arc<dyn Subject>;
 
