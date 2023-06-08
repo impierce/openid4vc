@@ -1,4 +1,6 @@
-use crate::{Sign, StandardClaimsRequests, StandardClaimsValues, Subject, Validator};
+use std::str::FromStr;
+
+use crate::{subject_syntax_type::DidMethod, Sign, StandardClaimsRequests, StandardClaimsValues, Subject, Validator};
 use anyhow::Result;
 use async_trait::async_trait;
 use derivative::{self, Derivative};
@@ -58,6 +60,10 @@ impl MockValidator {
 impl Validator for MockValidator {
     async fn public_key(&self, _kid: &str) -> Result<Vec<u8>> {
         Ok(MOCK_KEYPAIR.public.to_bytes().to_vec())
+    }
+
+    fn did_method(&self) -> DidMethod {
+        DidMethod::from_str("did:mock").expect("Invalid DID method")
     }
 }
 

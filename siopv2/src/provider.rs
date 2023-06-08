@@ -4,7 +4,7 @@ use crate::{
 };
 use anyhow::Result;
 use chrono::{Duration, Utc};
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
 /// [`AuthorizationRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
@@ -70,7 +70,11 @@ impl Provider {
                 _ => unreachable!(),
             };
             let (kid, algorithm) = jwt::extract_header(&request_object)?;
-            let public_key = self.validators.select_validator()?.public_key(&kid).await?;
+            let did_method = DidMethod::from(did_url::DID::from_str(&kid)?);
+
+            let validator = self.validators.find_validator(did_method)?;
+
+            let public_key = validator.public_key(&kid).await?;
             let authorization_request: AuthorizationRequest = jwt::decode(&request_object, public_key, algorithm)?;
             anyhow::ensure!(*authorization_request.client_id() == client_id, "Client id mismatch.");
             Ok(authorization_request)
@@ -86,7 +90,7 @@ impl Provider {
         let supported_types = authorization_request
             .subject_syntax_types_supported()
             .map_or(Vec::new(), |types| {
-                types.into_iter().filter(|sst| supported.contains(sst)).collect()
+                types.iter().filter(|sst| supported.contains(sst)).collect()
             });
         (!supported_types.is_empty()).then_some(supported_types.iter().map(|&sst| sst.clone()).collect())
     }

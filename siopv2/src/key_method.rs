@@ -1,4 +1,6 @@
-use crate::{Sign, Subject, Validator};
+use std::str::FromStr;
+
+use crate::{subject_syntax_type::DidMethod, Sign, Subject, Validator};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use did_key::{generate, resolve, Config, CoreSign, DIDCore, Document, Ed25519KeyPair, KeyMaterial, PatchedKeyPair};
@@ -66,6 +68,10 @@ impl KeyValidator {
 impl Validator for KeyValidator {
     async fn public_key(&self, kid: &str) -> Result<Vec<u8>> {
         Ok(resolve_public_key(kid).await?)
+    }
+
+    fn did_method(&self) -> DidMethod {
+        DidMethod::from_str("did:key").expect("Invalid DID method")
     }
 }
 

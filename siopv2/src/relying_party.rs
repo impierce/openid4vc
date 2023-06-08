@@ -1,8 +1,9 @@
 use crate::{
-    jwt, subject::Subjects, validator::Validators, AuthorizationRequest, AuthorizationResponse, IdToken, Subject,
+    jwt, subject::Subjects, subject_syntax_type::DidMethod, validator::Validators, AuthorizationRequest,
+    AuthorizationResponse, IdToken, Subject,
 };
 use anyhow::Result;
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 pub struct RelyingParty {
     // TODO: Need to change this to active_sign-method or other solution. Probably move this abstraction layer to the
@@ -38,7 +39,11 @@ impl RelyingParty {
             .to_owned()
             .ok_or(anyhow::anyhow!("No id_token parameter in response"))?;
         let (kid, algorithm) = jwt::extract_header(&token)?;
-        let public_key = self.validators.select_validator()?.public_key(&kid).await?;
+        let did_method = DidMethod::from(did_url::DID::from_str(&kid)?);
+
+        let validator = self.validators.find_validator(did_method)?;
+
+        let public_key = validator.public_key(&kid).await?;
         let id_token: IdToken = jwt::decode(&token, public_key, algorithm)?;
         Ok(id_token)
     }
@@ -99,7 +104,7 @@ mod tests {
         let server_url = mock_server.uri();
 
         // Create a new subject and validator.
-        let subject = MockSubject::new("did:mock:1".to_string(), "key_identifier".to_string()).unwrap();
+        let subject = MockSubject::new("did:mock:1".to_string(), "did:mock:1#key_identifier".to_string()).unwrap();
         let validator = MockValidator::new();
 
         // Create a new relying party.
@@ -153,7 +158,7 @@ mod tests {
             .await;
 
         // Create a new subject and validator.
-        let subject = MockSubject::new("did:mock:123".to_string(), "key_identifier".to_string()).unwrap();
+        let subject = MockSubject::new("did:mock:123".to_string(), "did:mock:123#key_identifier".to_string()).unwrap();
         let validator = MockValidator::new();
 
         // Create a new storage for the user's claims.
