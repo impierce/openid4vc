@@ -1,0 +1,8 @@
+[package]
+name = "oid4vp"
+version = "0.1.0"
+edition = "2021"
+homepage.workspace = true
+keywords = ["oid4vc", "openid4vc", "oid4vp", "OpenID Connect"]
+license.workspace = true
+repository.workspace = true
