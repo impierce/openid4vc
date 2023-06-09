@@ -177,7 +177,7 @@ mod tests {
                 }],
                 purpose: None,
             },
-            json_example::<PresentationDefinition>("./tests/examples/request/pd_ac_vc_sd.json")
+            json_example::<PresentationDefinition>("../oid4vp/tests/examples/request/pd_ac_vc_sd.json")
         );
 
         assert_eq!(
@@ -208,7 +208,7 @@ mod tests {
                 }],
                 purpose: None,
             },
-            json_example::<PresentationDefinition>("./tests/examples/request/pd_ac_vc.json")
+            json_example::<PresentationDefinition>("../oid4vp/tests/examples/request/pd_ac_vc.json")
         );
 
         assert_eq!(
@@ -241,7 +241,7 @@ mod tests {
                 }],
                 purpose: None,
             },
-            json_example::<PresentationDefinition>("./tests/examples/request/pd_jwt_vc.json")
+            json_example::<PresentationDefinition>("../oid4vp/tests/examples/request/pd_jwt_vc.json")
         );
 
         assert_eq!(
@@ -274,7 +274,7 @@ mod tests {
                 }],
                 purpose: None,
             },
-            json_example::<PresentationDefinition>("./tests/examples/request/pd_ldp_vc.json")
+            json_example::<PresentationDefinition>("../oid4vp/tests/examples/request/pd_ldp_vc.json")
         );
 
         // TODO: report json file bug + add retention feature: https://identity.foundation/presentation-exchange/spec/v2.0.0/#retention-feature
@@ -328,7 +328,7 @@ mod tests {
                 }],
                 purpose: None,
             },
-            json_example::<PresentationDefinition>("./tests/examples/request/pd_mdl_iso_cbor.json")
+            json_example::<PresentationDefinition>("../oid4vp/tests/examples/request/pd_mdl_iso_cbor.json")
         );
 
         assert_eq!(
@@ -373,7 +373,7 @@ mod tests {
                 }],
                 purpose: None,
             },
-            json_example::<PresentationDefinition>("./tests/examples/request/vp_token_type_and_claims.json")
+            json_example::<PresentationDefinition>("../oid4vp/tests/examples/request/vp_token_type_and_claims.json")
         );
 
         assert_eq!(
@@ -404,7 +404,7 @@ mod tests {
                 }],
                 purpose: None,
             },
-            json_example::<PresentationDefinition>("./tests/examples/request/vp_token_type_only.json")
+            json_example::<PresentationDefinition>("../oid4vp/tests/examples/request/vp_token_type_only.json")
         );
     }
 }

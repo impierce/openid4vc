@@ -83,7 +83,7 @@ mod tests {
                 ]
             },
             json_example::<PresentationSubmission>(
-                "./tests/examples/response/presentation_submission_multiple_vps.json"
+                "../oid4vp/tests/examples/response/presentation_submission_multiple_vps.json"
             )
         );
 
@@ -103,7 +103,7 @@ mod tests {
                     })
                 }]
             },
-            json_example::<PresentationSubmission>("./tests/examples/response/presentation_submission.json")
+            json_example::<PresentationSubmission>("../oid4vp/tests/examples/response/presentation_submission.json")
         );
 
         assert_eq!(
@@ -122,7 +122,7 @@ mod tests {
                     })
                 }]
             },
-            json_example::<PresentationSubmission>("./tests/examples/response/ps_ac_vc_sd.json")
+            json_example::<PresentationSubmission>("../oid4vp/tests/examples/response/ps_ac_vc_sd.json")
         );
 
         assert_eq!(
@@ -141,7 +141,7 @@ mod tests {
                     })
                 }]
             },
-            json_example::<PresentationSubmission>("./tests/examples/response/ps_jwt_vc.json")
+            json_example::<PresentationSubmission>("../oid4vp/tests/examples/response/ps_jwt_vc.json")
         );
 
         assert_eq!(
@@ -160,7 +160,7 @@ mod tests {
                     })
                 }]
             },
-            json_example::<PresentationSubmission>("./tests/examples/response/ps_ldp_vc.json")
+            json_example::<PresentationSubmission>("../oid4vp/tests/examples/response/ps_ldp_vc.json")
         );
 
         assert_eq!(
@@ -174,7 +174,7 @@ mod tests {
                     path_nested: None
                 }]
             },
-            json_example::<PresentationSubmission>("./tests/examples/response/ps_mdl_iso_cbor.json")
+            json_example::<PresentationSubmission>("../oid4vp/tests/examples/response/ps_mdl_iso_cbor.json")
         );
     }
 }

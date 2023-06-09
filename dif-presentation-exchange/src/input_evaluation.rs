@@ -130,7 +130,7 @@ mod tests {
 
     #[test]
     fn test_constraints() {
-        let credential = json_example::<serde_json::Value>("./tests/examples/credentials/jwt_vc.json");
+        let credential = json_example::<serde_json::Value>("../oid4vp/tests/examples/credentials/jwt_vc.json");
 
         // Has NO fields.
         assert!(!evaluate_input(
@@ -220,7 +220,7 @@ mod tests {
 
     #[test]
     fn test_field() {
-        let credential = json_example::<serde_json::Value>("./tests/examples/credentials/jwt_vc.json");
+        let credential = json_example::<serde_json::Value>("../oid4vp/tests/examples/credentials/jwt_vc.json");
 
         // Has NO path.
         assert!(!evaluate_input(
