@@ -1,33 +1,6 @@
 use getset::Getters;
 use serde::{Deserialize, Serialize};
-use serde_with::skip_serializing_none;
 use std::collections::HashMap;
-
-// TODO: replace with identity_credential once this issue is resolved:
-// https://github.com/iotaledger/identity.rs/issues/1151
-#[skip_serializing_none]
-#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct VerifiablePresentation {
-    #[serde(rename = "@context")]
-    pub context: Vec<String>,
-    pub id: Option<String>,
-    pub type_: Vec<String>,
-    pub verifiable_credential: Option<Vec<String>>,
-    pub holder: Option<String>,
-}
-
-impl Default for VerifiablePresentation {
-    fn default() -> Self {
-        VerifiablePresentation {
-            context: vec!["https://www.w3.org/2018/credentials/v1".to_string()],
-            id: None,
-            type_: vec!["VerifiablePresentation".to_string()],
-            verifiable_credential: None,
-            holder: None,
-        }
-    }
-}
 
 /// As specified in https://identity.foundation/presentation-exchange/#presentation-definition.
 #[allow(dead_code)]
