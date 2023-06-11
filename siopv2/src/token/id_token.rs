@@ -1,7 +1,6 @@
 use super::id_token_builder::IdTokenBuilder;
 use crate::{parse_other, StandardClaimsValues};
 use getset::Getters;
-use getset::Getters;
 use is_empty::IsEmpty;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
