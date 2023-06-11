@@ -14,7 +14,7 @@ pub struct RelyingParty {
 }
 
 impl RelyingParty {
-    // TODO: Use ProviderBuilder instead.
+    // TODO: Use RelyingPartyBuilder instead.
     pub fn new<S: Subject + 'static>(subject: S) -> Self {
         let active_subject = Arc::new(subject);
         let subjects = Subjects(vec![active_subject.clone()]);
