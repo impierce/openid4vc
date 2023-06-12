@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2021"
 description = "Rust implementation for the DIF Presentation Exchange specification"
 homepage.workspace = true
-keywords = ["oid4vc", "dif-presentation-exchange", "Decentralized Identity Foundation", "DIF", "OpenID"]
+keywords = ["oid4vc", "dif-presentation-exchange", "DIF", "OpenID"]
 license.workspace = true
 repository.workspace = true
