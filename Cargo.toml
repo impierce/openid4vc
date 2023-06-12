@@ -22,7 +22,7 @@ license = "Apache-2.0"
 repository = "https://github.com/impierce/openid4vc"
 
 [dependencies]
-oid4vci = { path = "oid4vci" }
-oid4vp = { path = "oid4vp" }
-siopv2 = { path = "siopv2" }
-dif-presentation-exchange = { path = "dif-presentation-exchange" }
+oid4vci = "0.1.0"
+oid4vp = "0.1.0"
+siopv2 = "0.1.0"
+dif-presentation-exchange = "0.1.0"
