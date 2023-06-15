@@ -1,12 +1,10 @@
-use std::sync::Arc;
-
+use crate::Sign;
 use anyhow::{anyhow, Result};
 use getset::Getters;
 use jsonwebtoken::{Algorithm, DecodingKey, Header, Validation};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-
-use crate::Subject;
+use std::sync::Arc;
 
 #[derive(Debug, Serialize, Getters)]
 pub struct JsonWebToken<C>
@@ -54,11 +52,12 @@ where
 }
 
 // TODO: Refactor so that signer = Arc<dyn Sign>.
-pub async fn encode<C>(signer: Arc<dyn Subject>, claims: C) -> Result<String>
+pub async fn encode<C, S>(signer: Arc<S>, claims: C) -> Result<String>
 where
     C: Serialize + Send,
+    S: Sign + ?Sized,
 {
-    let kid = signer.key_identifier().ok_or(anyhow!("No key identifier found."))?;
+    let kid = signer.key_id().ok_or(anyhow!("No key identifier found."))?;
 
     let jwt = JsonWebToken::new(claims).kid(kid);
 
@@ -97,7 +96,7 @@ mod tests {
             "nonce": "nonce",
 
         });
-        let subject = MockSubject::new("did:mock:123".to_string(), "key_identifier".to_string()).unwrap();
+        let subject = MockSubject::new("did:mock:123".to_string(), "key_id".to_string()).unwrap();
         let encoded = encode(Arc::new(subject), claims).await.unwrap();
 
         let validator = MockValidator::new();

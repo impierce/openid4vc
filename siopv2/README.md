@@ -61,8 +61,8 @@ impl Subject for MySubject {
         Ok(did_url::DID::parse("did:mymethod:subject")?)
     }
 
-    fn key_identifier(&self) -> Option<String> {
-        Some("key_identifier".to_string())
+    fn key_id(&self) -> Option<String> {
+        Some("key_id".to_string())
     }
 
     async fn sign<'a>(&self, message: &'a str) -> Result<Vec<u8>> {

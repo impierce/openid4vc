@@ -2,23 +2,21 @@ use serde::{de::Error, Deserialize, Deserializer, Serialize};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::{fmt::Display, str::FromStr};
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum SubjectSyntaxType {
-    #[serde(with = "serde_jwk_thumbprint")]
+    #[serde(with = "serde_unit_variant")]
     JwkThumbprint,
     Did(DidMethod),
 }
 
-impl TryFrom<String> for SubjectSyntaxType {
-    type Error = anyhow::Error;
+impl FromStr for SubjectSyntaxType {
+    type Err = anyhow::Error;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        match value.as_str() {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
             "urn:ietf:params:oauth:jwk-thumbprint" => Ok(SubjectSyntaxType::JwkThumbprint),
-            _ => Ok(SubjectSyntaxType::Did(serde_json::from_value(
-                serde_json::Value::String(value),
-            )?)),
+            _ => Ok(SubjectSyntaxType::Did(DidMethod::from_str(s)?)),
         }
     }
 }
@@ -29,7 +27,7 @@ impl From<DidMethod> for SubjectSyntaxType {
     }
 }
 
-pub mod serde_jwk_thumbprint {
+pub mod serde_unit_variant {
     use super::*;
 
     static JWK_THUMBPRINT: &str = "urn:ietf:params:oauth:jwk-thumbprint";
@@ -52,7 +50,7 @@ pub mod serde_jwk_thumbprint {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, DeserializeFromStr, SerializeDisplay)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, DeserializeFromStr, SerializeDisplay)]
 pub struct DidMethod(String);
 
 impl From<did_url::DID> for DidMethod {

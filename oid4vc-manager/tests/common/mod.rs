@@ -1,10 +1,11 @@
-use crate::{Sign, StandardClaimsRequests, StandardClaimsValues, Subject, Validator};
+// Move this to the mock repo.
 use anyhow::Result;
 use async_trait::async_trait;
 use derivative::{self, Derivative};
 use ed25519_dalek::{Keypair, Signature, Signer};
 use lazy_static::lazy_static;
 use rand::rngs::OsRng;
+use siopv2::{Sign, StandardClaimsRequests, StandardClaimsValues, Subject, Validator};
 
 // Keypair for mocking purposes.
 lazy_static! {

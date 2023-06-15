@@ -12,7 +12,8 @@ members = [
     "oid4vci",
     "oid4vp",
     "siopv2",
-    "dif-presentation-exchange"
+    "dif-presentation-exchange",
+    "oid4vc-manager"
 ]
 
 [workspace.package]

@@ -1,5 +1,6 @@
 pub mod claims;
 pub mod client_metadata;
+pub mod collection;
 pub mod jwt;
 pub mod key_method;
 pub mod provider;
@@ -15,6 +16,7 @@ pub mod validator;
 
 pub use claims::{ClaimRequests, StandardClaimsRequests, StandardClaimsValues};
 pub use client_metadata::ClientMetadata;
+pub use collection::Collection;
 pub use jwt::JsonWebToken;
 pub use provider::Provider;
 pub use relying_party::RelyingParty;

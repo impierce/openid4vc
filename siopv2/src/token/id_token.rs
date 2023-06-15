@@ -42,6 +42,7 @@ pub struct SubJwk {
 
 /// Set of IANA registered claims by the Internet Engineering Task Force (IETF) in
 /// [RFC 7519](https://tools.ietf.org/html/rfc7519#section-4.1).
+#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone, IsEmpty, Getters)]
 pub struct RFC7519Claims {
     #[getset(get = "pub")]

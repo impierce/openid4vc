@@ -1,6 +1,6 @@
-use std::str::FromStr;
+// TODO: Move to manager?
 
-use crate::{subject_syntax_type::DidMethod, Sign, Subject, Validator};
+use crate::{Sign, Subject, Validator};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use did_key::{generate, resolve, Config, CoreSign, DIDCore, Document, Ed25519KeyPair, KeyMaterial, PatchedKeyPair};
@@ -35,21 +35,28 @@ impl Default for KeySubject {
 
 #[async_trait]
 impl Sign for KeySubject {
-    async fn sign<'a>(&self, message: &'a str) -> Result<Vec<u8>> {
-        Ok(self.keypair.sign(message.as_bytes()).to_vec())
-    }
-}
-
-impl Subject for KeySubject {
-    fn did(&self) -> Result<did_url::DID> {
-        Ok(did_url::DID::parse(self.document.id.clone())?)
-    }
-
-    fn key_identifier(&self) -> Option<String> {
+    fn key_id(&self) -> Option<String> {
         self.document
             .authentication
             .as_ref()
             .and_then(|authentication_methods| authentication_methods.get(0).cloned())
+    }
+
+    async fn sign(&self, message: &str) -> Result<Vec<u8>> {
+        Ok(self.keypair.sign(message.as_bytes()).to_vec())
+    }
+}
+
+#[async_trait]
+impl Validator for KeySubject {
+    async fn public_key(&self, kid: &str) -> Result<Vec<u8>> {
+        Ok(resolve_public_key(kid).await?)
+    }
+}
+
+impl Subject for KeySubject {
+    fn identifier(&self) -> Result<String> {
+        Ok(self.document.id.clone())
     }
 }
 
@@ -69,10 +76,6 @@ impl Validator for KeyValidator {
     async fn public_key(&self, kid: &str) -> Result<Vec<u8>> {
         Ok(resolve_public_key(kid).await?)
     }
-
-    fn did_method(&self) -> DidMethod {
-        DidMethod::from_str("did:key").expect("Invalid DID method")
-    }
 }
 
 /// Resolves the public key from the given key identifier.
@@ -91,7 +94,8 @@ async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Provider, RelyingParty};
+    use crate::{sign::Signers, subject::Subjects, validator::Validators, Provider, RelyingParty, SubjectSyntaxType};
+    use std::{str::FromStr, sync::Arc};
 
     #[tokio::test]
     async fn test_key_subject() {
@@ -99,7 +103,11 @@ mod tests {
         let subject = KeySubject::new();
 
         // Create a new provider.
-        let provider = Provider::new(subject);
+        let provider = Provider::new(Subjects::from([(
+            SubjectSyntaxType::from_str("did:key").unwrap(),
+            Arc::new(subject) as Arc<dyn Subject>,
+        )]))
+        .unwrap();
 
         // Get a new SIOP request with response mode `post` for cross-device communication.
         let request_url = "\
@@ -125,8 +133,14 @@ mod tests {
         let validator = KeyValidator::new();
 
         // Let the relying party validate the response.
-        let mut relying_party = RelyingParty::new(KeySubject::new());
-        relying_party.validators.add(validator);
+        let relying_party = RelyingParty::new(
+            Signers::default(),
+            Validators::from([(
+                SubjectSyntaxType::from_str("did:key").unwrap(),
+                Arc::new(validator) as Arc<dyn Validator>,
+            )]),
+        );
+        // relying_party.validators.add(validator);
 
         assert!(relying_party.validate_response(&response).await.is_ok());
     }

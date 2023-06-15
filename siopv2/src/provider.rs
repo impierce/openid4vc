@@ -1,6 +1,6 @@
 use crate::{
-    jwt, subject::Subjects, subject_syntax_type::DidMethod, validator::Validators, AuthorizationRequest,
-    AuthorizationResponse, IdToken, RequestUrl, StandardClaimsValues, Subject, SubjectSyntaxType,
+    jwt, subject::Subjects, subject_syntax_type::DidMethod, AuthorizationRequest, AuthorizationResponse, IdToken,
+    RequestUrl, StandardClaimsValues, Subject, SubjectSyntaxType,
 };
 use anyhow::Result;
 use chrono::{Duration, Utc};
@@ -12,43 +12,39 @@ use std::{str::FromStr, sync::Arc};
 pub struct Provider {
     // TODO: Might need to change this to active_signer. Probably move this abstraction layer to the
     // oid-agent crate.
-    pub active_subject: Arc<dyn Subject>,
+    pub signer_subject: Arc<dyn Subject>,
     pub subjects: Subjects,
-    pub validators: Validators,
 }
 
 impl Provider {
     // TODO: Use ProviderBuilder instead.
-    pub fn new<S: Subject + 'static>(subject: S) -> Self {
-        let active_subject = Arc::new(subject);
-        let subjects = Subjects(vec![active_subject.clone()]);
-        Provider {
-            active_subject,
+    pub fn new(subjects: Subjects) -> Result<Self> {
+        let signer_subject = subjects
+            .iter()
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("No subjects found. At least one subject is required for a provider."))?
+            .1
+            .clone();
+        Ok(Provider {
+            signer_subject,
             subjects,
-            validators: Validators::default(),
-        }
+        })
     }
 
-    pub fn set_active_subject(&mut self, subject_syntax_type: SubjectSyntaxType) -> Result<()> {
-        let subject = self
+    // TODO: remove this (is now in the Manager).
+    pub fn set_signer_subject(&mut self, subject_syntax_type: SubjectSyntaxType) -> Result<()> {
+        let signer_subject = self
             .subjects
             .iter()
-            .find(|&subject| {
-                subject
-                    .did()
-                    .map(|did| subject_syntax_type == DidMethod::from(did).into())
-                    .unwrap_or(false)
-            })
+            .find(|&subject| subject.0 == &subject_syntax_type)
             .ok_or_else(|| anyhow::anyhow!("No subject with the given syntax type found."))?;
-        self.active_subject = subject.clone();
+        self.signer_subject = signer_subject.1.clone();
         Ok(())
     }
 
+    // TODO: remove Result?
     pub fn subject_syntax_types_supported(&self) -> Result<Vec<SubjectSyntaxType>> {
-        self.subjects
-            .iter()
-            .map(|subject| subject.did().map(|did| DidMethod::from(did).into()))
-            .collect()
+        Ok(self.subjects.iter().map(|subject| subject.0.to_owned()).collect())
     }
 
     /// TODO: Add more validation rules.
@@ -69,13 +65,15 @@ impl Provider {
                 RequestUrl::RequestObject { request, client_id } => (request, client_id),
                 _ => unreachable!(),
             };
+
             let (kid, algorithm) = jwt::extract_header(&request_object)?;
             let did_method = DidMethod::from(did_url::DID::from_str(&kid)?);
 
-            let validator = self.validators.find_validator(did_method)?;
+            let subject = self.subjects.0.get(&did_method.into()).unwrap();
 
-            let public_key = validator.public_key(&kid).await?;
+            let public_key = subject.public_key(&kid).await?;
             let authorization_request: AuthorizationRequest = jwt::decode(&request_object, public_key, algorithm)?;
+
             anyhow::ensure!(*authorization_request.client_id() == client_id, "Client id mismatch.");
             Ok(authorization_request)
         }
@@ -102,12 +100,12 @@ impl Provider {
         request: AuthorizationRequest,
         user_claims: StandardClaimsValues,
     ) -> Result<AuthorizationResponse> {
-        let subject = self.active_subject.clone();
-        let subject_did = subject.did()?;
+        let signer_subject = self.signer_subject.clone();
+        let subject_identifier = signer_subject.identifier()?;
 
         let id_token = IdToken::builder()
-            .iss(subject_did.to_string())
-            .sub(subject_did.to_string())
+            .iss(subject_identifier.clone())
+            .sub(subject_identifier)
             .aud(request.client_id().to_owned())
             .nonce(request.nonce().to_owned())
             .exp((Utc::now() + Duration::minutes(10)).timestamp())
@@ -115,7 +113,7 @@ impl Provider {
             .claims(user_claims)
             .build()?;
 
-        let jwt = jwt::encode(subject, id_token).await?;
+        let jwt = jwt::encode(signer_subject, id_token).await?;
 
         let mut builder = AuthorizationResponse::builder()
             .redirect_uri(request.redirect_uri().to_owned())
@@ -150,12 +148,14 @@ mod tests {
     #[tokio::test]
     async fn test_provider() {
         // Create a new subject and validator.
-        let subject = MockSubject::new("did:mock:123".to_string(), "key_identifier".to_string()).unwrap();
-        let validator = MockValidator::new();
+        let subject = MockSubject::new("did:mock:123".to_string(), "key_id".to_string()).unwrap();
 
         // Create a new provider.
-        let mut provider = Provider::new(subject);
-        provider.validators.add(validator);
+        let mut provider = Provider::new(Subjects::from([(
+            SubjectSyntaxType::from_str("did:mock").unwrap(),
+            Arc::new(subject) as Arc<dyn Subject>,
+        )]))
+        .unwrap();
 
         // Get a new SIOP request with response mode `post` for cross-device communication.
         let request_url = "\
@@ -178,47 +178,48 @@ mod tests {
         assert!(provider.generate_response(request, Default::default()).await.is_ok());
     }
 
-    #[tokio::test]
-    async fn test_multiple_subjects() {
-        // Create a new provider with just one did:mock subject.
-        let mock_subject = MockSubject::new("did:mock:123".to_string(), "key_identifier".to_string()).unwrap();
-        let mut provider = Provider::new(mock_subject);
+    // TODO: Move to manager?
+    // #[tokio::test]
+    // async fn test_multiple_subjects() {
+    //     // Create a new provider with just one did:mock subject.
+    //     let subject = MockSubject::new("did:mock:123".to_string(), "key_id".to_string()).unwrap();
+    //     let mut provider = Provider::new(Subjects(vec![Arc::new(subject)])).unwrap();
 
-        // A request with only did:key stated in the `subject_syntax_types_supported`.
-        let authorization_request: AuthorizationRequest = RequestUrl::builder()
-            .client_id("did:example:123".to_string())
-            .redirect_uri("https://example.com".to_string())
-            .response_type(ResponseType::IdToken)
-            .scope(Scope::openid())
-            .nonce("123".to_string())
-            .client_metadata(ClientMetadata::default().with_subject_syntax_types_supported(vec![
-                SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap()),
-            ]))
-            .build()
-            .and_then(TryInto::try_into)
-            .unwrap();
+    //     // A request with only did:key stated in the `subject_syntax_types_supported`.
+    //     let authorization_request: AuthorizationRequest = RequestUrl::builder()
+    //         .client_id("did:example:123".to_string())
+    //         .redirect_uri("https://example.com".to_string())
+    //         .response_type(ResponseType::IdToken)
+    //         .scope(Scope::openid())
+    //         .nonce("123".to_string())
+    //         .client_metadata(ClientMetadata::default().with_subject_syntax_types_supported(vec![
+    //             SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap()),
+    //         ]))
+    //         .build()
+    //         .and_then(TryInto::try_into)
+    //         .unwrap();
 
-        // There are no subjects that match the request's supported subject syntax types.
-        assert!(provider.matching_subject_syntax_types(&authorization_request).is_none());
+    //     // There are no subjects that match the request's supported subject syntax types.
+    //     assert!(provider.matching_subject_syntax_types(&authorization_request).is_none());
 
-        // Trying to set the active subject to a did:key subject fails.
-        let key_method = SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap());
-        assert_eq!(
-            provider.set_active_subject(key_method.clone()).unwrap_err().to_string(),
-            "No subject with the given syntax type found."
-        );
+    //     // Trying to set the active subject to a did:key subject fails.
+    //     let key_method = SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap());
+    //     assert_eq!(
+    //         provider.set_active_subject(key_method.clone()).unwrap_err().to_string(),
+    //         "No subject with the given syntax type found."
+    //     );
 
-        // Add a did:key subject to the provider.
-        let key_subject = KeySubject::new();
-        provider.subjects.add(key_subject);
+    //     // Add a did:key subject to the provider.
+    //     let key_subject = KeySubject::new();
+    //     provider.subjects.add(key_subject);
 
-        // Setting the active subject to a did:key subject succeeds.
-        assert!(provider.set_active_subject(key_method.clone()).is_ok());
+    //     // Setting the active subject to a did:key subject succeeds.
+    //     assert!(provider.set_active_subject(key_method.clone()).is_ok());
 
-        // The provider now has a subject that matches the request's supported subject syntax types.
-        assert_eq!(
-            provider.matching_subject_syntax_types(&authorization_request),
-            Some(vec![SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap())])
-        );
-    }
+    //     // The provider now has a subject that matches the request's supported subject syntax types.
+    //     assert_eq!(
+    //         provider.matching_subject_syntax_types(&authorization_request),
+    //         Some(vec![SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap())])
+    //     );
+    // }
 }

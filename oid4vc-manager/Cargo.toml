@@ -1,0 +1,23 @@
+[package]
+name = "oid4vc-manager"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+siopv2 = { path = "../siopv2" }
+tokio = { version = "1.26.0", features = ["rt", "macros", "rt-multi-thread"] }
+anyhow = "1.0"
+async-trait = "0.1"
+did_url = "0.1"
+chrono = "0.4"
+serde_json = "1.0"
+serde_urlencoded = "0.7"
+
+[dev-dependencies]
+ed25519-dalek = "1.0.1"
+rand = "0.7"
+lazy_static = "1.4.0"
+derivative = "2.2.0"
+wiremock = "0.5.18"
