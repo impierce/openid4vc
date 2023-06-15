@@ -51,6 +51,7 @@ impl Provider {
     /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
     pub async fn generate_response(
         &self,
+        subject_syntax_type: SubjectSyntaxType,
         request: AuthorizationRequest,
         user_claims: StandardClaimsValues,
     ) -> Result<AuthorizationResponse> {
@@ -86,8 +87,6 @@ impl Provider {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
     use super::*;
     use crate::{test_utils::MockSubject, SubjectSyntaxType, Validator, Validators};
     use std::str::FromStr;
@@ -129,6 +128,13 @@ mod tests {
             .unwrap();
 
         // Test whether the provider can generate a response for the request succesfully.
-        assert!(provider.generate_response(request, Default::default()).await.is_ok());
+        assert!(provider
+            .generate_response(
+                SubjectSyntaxType::from_str("did:mock").unwrap(),
+                request,
+                Default::default()
+            )
+            .await
+            .is_ok());
     }
 }
