@@ -66,10 +66,6 @@ impl Verify for MockVerifier {
     async fn public_key(&self, _kid: &str) -> Result<Vec<u8>> {
         Ok(MOCK_KEYPAIR.public.to_bytes().to_vec())
     }
-
-    fn did_method(&self) -> DidMethod {
-        DidMethod::from_str("did:mock").expect("Invalid DID method")
-    }
 }
 
 pub trait Storage {
