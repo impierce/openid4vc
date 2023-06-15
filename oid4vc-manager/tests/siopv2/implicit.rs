@@ -178,7 +178,14 @@ async fn test_implicit_flow() {
 
     // Let the provider generate a response based on the validated request. The response is an `IdToken` which is
     // encoded as a JWT.
-    let response = provider.generate_response(request, response_claims).await.unwrap();
+    let response = provider
+        .generate_response(
+            SubjectSyntaxType::from_str("did:mock").unwrap(),
+            request,
+            response_claims,
+        )
+        .await
+        .unwrap();
 
     // The provider sends it's response to the mock server's `redirect_uri` endpoint.
     provider.send_response(response).await.unwrap();

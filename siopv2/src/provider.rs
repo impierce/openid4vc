@@ -31,22 +31,6 @@ impl Provider {
         })
     }
 
-    // TODO: remove this (is now in the Manager).
-    pub fn set_signer_subject(&mut self, subject_syntax_type: SubjectSyntaxType) -> Result<()> {
-        let signer_subject = self
-            .subjects
-            .iter()
-            .find(|&subject| subject.0 == &subject_syntax_type)
-            .ok_or_else(|| anyhow::anyhow!("No subject with the given syntax type found."))?;
-        self.signer_subject = signer_subject.1.clone();
-        Ok(())
-    }
-
-    // TODO: remove Result?
-    pub fn subject_syntax_types_supported(&self) -> Result<Vec<SubjectSyntaxType>> {
-        Ok(self.subjects.iter().map(|subject| subject.0.to_owned()).collect())
-    }
-
     /// TODO: Add more validation rules.
     /// Takes a [`RequestUrl`] and returns a [`AuthorizationRequest`]. The [`RequestUrl`] can either be a [`AuthorizationRequest`] or a
     /// request by value. If the [`RequestUrl`] is a request by value, the request is decoded by the [`Subject`] of the [`Provider`].
@@ -69,7 +53,7 @@ impl Provider {
             let (kid, algorithm) = jwt::extract_header(&request_object)?;
             let did_method = DidMethod::from(did_url::DID::from_str(&kid)?);
 
-            let subject = self.subjects.0.get(&did_method.into()).unwrap();
+            let subject = self.subjects.get(&did_method.into()).unwrap();
 
             let public_key = subject.public_key(&kid).await?;
             let authorization_request: AuthorizationRequest = jwt::decode(&request_object, public_key, algorithm)?;
@@ -79,28 +63,15 @@ impl Provider {
         }
     }
 
-    // TODO: consider moving this functionality to the oid4vc-agent crate.
-    pub fn matching_subject_syntax_types(
-        &self,
-        authorization_request: &AuthorizationRequest,
-    ) -> Option<Vec<SubjectSyntaxType>> {
-        let supported = self.subject_syntax_types_supported().ok()?;
-        let supported_types = authorization_request
-            .subject_syntax_types_supported()
-            .map_or(Vec::new(), |types| {
-                types.iter().filter(|sst| supported.contains(sst)).collect()
-            });
-        (!supported_types.is_empty()).then_some(supported_types.iter().map(|&sst| sst.clone()).collect())
-    }
-
     /// Generates a [`AuthorizationResponse`] in response to a [`AuthorizationRequest`] and the user's claims. The [`AuthorizationResponse`]
     /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
     pub async fn generate_response(
         &self,
+        subject_syntax_type: SubjectSyntaxType,
         request: AuthorizationRequest,
         user_claims: StandardClaimsValues,
     ) -> Result<AuthorizationResponse> {
-        let signer_subject = self.signer_subject.clone();
+        let signer_subject = self.subjects.get(&subject_syntax_type).unwrap();
         let subject_identifier = signer_subject.identifier()?;
 
         let id_token = IdToken::builder()
@@ -113,7 +84,7 @@ impl Provider {
             .claims(user_claims)
             .build()?;
 
-        let jwt = jwt::encode(signer_subject, id_token).await?;
+        let jwt = jwt::encode(signer_subject.clone(), id_token).await?;
 
         let mut builder = AuthorizationResponse::builder()
             .redirect_uri(request.redirect_uri().to_owned())
@@ -134,16 +105,9 @@ impl Provider {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
     use super::*;
-    use crate::{
-        key_method::KeySubject,
-        request::ResponseType,
-        subject_syntax_type::DidMethod,
-        test_utils::{MockSubject, MockValidator},
-        ClientMetadata, Scope,
-    };
+    use crate::test_utils::MockSubject;
+    use std::str::FromStr;
 
     #[tokio::test]
     async fn test_provider() {
@@ -151,7 +115,7 @@ mod tests {
         let subject = MockSubject::new("did:mock:123".to_string(), "key_id".to_string()).unwrap();
 
         // Create a new provider.
-        let mut provider = Provider::new(Subjects::from([(
+        let provider = Provider::new(Subjects::from([(
             SubjectSyntaxType::from_str("did:mock").unwrap(),
             Arc::new(subject) as Arc<dyn Subject>,
         )]))
@@ -175,7 +139,14 @@ mod tests {
         let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
 
         // Test whether the provider can generate a response for the request succesfully.
-        assert!(provider.generate_response(request, Default::default()).await.is_ok());
+        assert!(provider
+            .generate_response(
+                SubjectSyntaxType::from_str("did:mock").unwrap(),
+                request,
+                Default::default()
+            )
+            .await
+            .is_ok());
     }
 
     // TODO: Move to manager?

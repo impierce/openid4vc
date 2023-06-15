@@ -127,7 +127,14 @@ mod tests {
         let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
 
         // Test whether the provider can generate a response for the request succesfully.
-        let response = provider.generate_response(request, Default::default()).await.unwrap();
+        let response = provider
+            .generate_response(
+                SubjectSyntaxType::from_str("did:key").unwrap(),
+                request,
+                Default::default(),
+            )
+            .await
+            .unwrap();
 
         // Create a new validator
         let validator = KeyValidator::new();
