@@ -1,9 +1,9 @@
 // TODO: Move to manager?
 
-use crate::{Sign, Subject, Validator};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use did_key::{generate, resolve, Config, CoreSign, DIDCore, Document, Ed25519KeyPair, KeyMaterial, PatchedKeyPair};
+use siopv2::{Sign, Subject, Validator};
 
 /// This [`KeySubject`] implements the [`Subject`] trait and can be used as a subject for a [`Provider`]. It uses the
 /// 'key' DID method.
@@ -94,7 +94,7 @@ async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{sign::Signers, subject::Subjects, validator::Validators, Provider, RelyingParty, SubjectSyntaxType};
+    use siopv2::{sign::Signers, subject::Subjects, validator::Validators, Provider, RelyingParty, SubjectSyntaxType};
     use std::{str::FromStr, sync::Arc};
 
     #[tokio::test]

@@ -2,7 +2,6 @@ pub mod claims;
 pub mod client_metadata;
 pub mod collection;
 pub mod jwt;
-pub mod key_method;
 pub mod provider;
 pub mod relying_party;
 pub mod request;

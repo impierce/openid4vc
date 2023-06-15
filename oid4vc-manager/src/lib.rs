@@ -1,3 +1,5 @@
+pub mod methods;
+
 use anyhow::Result;
 use siopv2::{AuthorizationRequest, Provider, RequestUrl, SubjectSyntaxType};
 
