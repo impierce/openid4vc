@@ -1,33 +1,44 @@
 use crate::{
-    jwt, subject::Subjects, subject_syntax_type::DidMethod, AuthorizationRequest, AuthorizationResponse, IdToken,
-    RequestUrl, StandardClaimsValues, Subject, SubjectSyntaxType,
+    jwt, subject_syntax_type::DidMethod, AuthorizationRequest, AuthorizationResponse, IdToken, RequestUrl,
+    StandardClaimsValues, Subject, Validators,
 };
 use anyhow::Result;
 use chrono::{Duration, Utc};
+use serde::de::DeserializeOwned;
 use std::{str::FromStr, sync::Arc};
+
+pub type SigningSubject = Arc<dyn Subject>;
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
 /// [`AuthorizationRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
 /// the user who is trying to authenticate.
 pub struct Provider {
-    // TODO: Might need to change this to active_signer. Probably move this abstraction layer to the
-    // oid-agent crate.
-    pub signer_subject: Arc<dyn Subject>,
-    pub subjects: Subjects,
+    pub subject: SigningSubject,
+    client: reqwest::Client,
+}
+
+pub struct Decoder {
+    pub subjects: Validators,
+}
+
+impl Decoder {
+    pub async fn decode<T: DeserializeOwned>(&self, jwt: String) -> Result<T> {
+        let (kid, algorithm) = jwt::extract_header(&jwt)?;
+        //  TODO: fix other methods
+        let did_method = DidMethod::from(did_url::DID::from_str(&kid)?);
+
+        let validator = self.subjects.get(&did_method.into()).unwrap();
+        let public_key = validator.public_key(&kid).await?;
+        jwt::decode(&jwt, public_key, algorithm)
+    }
 }
 
 impl Provider {
     // TODO: Use ProviderBuilder instead.
-    pub fn new(subjects: Subjects) -> Result<Self> {
-        let signer_subject = subjects
-            .iter()
-            .next()
-            .ok_or_else(|| anyhow::anyhow!("No subjects found. At least one subject is required for a provider."))?
-            .1
-            .clone();
+    pub fn new(subject: SigningSubject) -> Result<Self> {
         Ok(Provider {
-            signer_subject,
-            subjects,
+            subject,
+            client: reqwest::Client::new(),
         })
     }
 
@@ -35,29 +46,20 @@ impl Provider {
     /// Takes a [`RequestUrl`] and returns a [`AuthorizationRequest`]. The [`RequestUrl`] can either be a [`AuthorizationRequest`] or a
     /// request by value. If the [`RequestUrl`] is a request by value, the request is decoded by the [`Subject`] of the [`Provider`].
     /// If the request is valid, the request is returned.
-    pub async fn validate_request(&self, request: RequestUrl) -> Result<AuthorizationRequest> {
+    pub async fn validate_request(&self, request: RequestUrl, decoder: &Decoder) -> Result<AuthorizationRequest> {
         if let RequestUrl::Request(authorization_request) = request {
             Ok(*authorization_request)
         } else {
             let (request_object, client_id) = match request {
                 RequestUrl::RequestUri { request_uri, client_id } => {
-                    let client = reqwest::Client::new();
-                    let builder = client.get(request_uri);
+                    let builder = self.client.get(request_uri);
                     let request_value = builder.send().await?.text().await?;
                     (request_value, client_id)
                 }
                 RequestUrl::RequestObject { request, client_id } => (request, client_id),
                 _ => unreachable!(),
             };
-
-            let (kid, algorithm) = jwt::extract_header(&request_object)?;
-            let did_method = DidMethod::from(did_url::DID::from_str(&kid)?);
-
-            let subject = self.subjects.get(&did_method.into()).unwrap();
-
-            let public_key = subject.public_key(&kid).await?;
-            let authorization_request: AuthorizationRequest = jwt::decode(&request_object, public_key, algorithm)?;
-
+            let authorization_request: AuthorizationRequest = decoder.decode(request_object).await?;
             anyhow::ensure!(*authorization_request.client_id() == client_id, "Client id mismatch.");
             Ok(authorization_request)
         }
@@ -67,12 +69,10 @@ impl Provider {
     /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
     pub async fn generate_response(
         &self,
-        subject_syntax_type: SubjectSyntaxType,
         request: AuthorizationRequest,
         user_claims: StandardClaimsValues,
     ) -> Result<AuthorizationResponse> {
-        let signer_subject = self.subjects.get(&subject_syntax_type).unwrap();
-        let subject_identifier = signer_subject.identifier()?;
+        let subject_identifier = self.subject.identifier()?;
 
         let id_token = IdToken::builder()
             .iss(subject_identifier.clone())
@@ -84,7 +84,7 @@ impl Provider {
             .claims(user_claims)
             .build()?;
 
-        let jwt = jwt::encode(signer_subject.clone(), id_token).await?;
+        let jwt = jwt::encode(self.subject.clone(), id_token).await?;
 
         let mut builder = AuthorizationResponse::builder()
             .redirect_uri(request.redirect_uri().to_owned())
@@ -96,8 +96,7 @@ impl Provider {
     }
 
     pub async fn send_response(&self, response: AuthorizationResponse) -> Result<()> {
-        let client = reqwest::Client::new();
-        let builder = client.post(response.redirect_uri()).form(&response);
+        let builder = self.client.post(response.redirect_uri()).form(&response);
         builder.send().await?.text().await?;
         Ok(())
     }
@@ -106,7 +105,7 @@ impl Provider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::MockSubject;
+    use crate::{test_utils::MockSubject, SubjectSyntaxType, Validator};
     use std::str::FromStr;
 
     #[tokio::test]
@@ -115,11 +114,7 @@ mod tests {
         let subject = MockSubject::new("did:mock:123".to_string(), "key_id".to_string()).unwrap();
 
         // Create a new provider.
-        let provider = Provider::new(Subjects::from([(
-            SubjectSyntaxType::from_str("did:mock").unwrap(),
-            Arc::new(subject) as Arc<dyn Subject>,
-        )]))
-        .unwrap();
+        let provider = Provider::new(Arc::new(subject)).unwrap();
 
         // Get a new SIOP request with response mode `post` for cross-device communication.
         let request_url = "\
@@ -136,17 +131,23 @@ mod tests {
             ";
 
         // Let the provider validate the request.
-        let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
-
-        // Test whether the provider can generate a response for the request succesfully.
-        assert!(provider
-            .generate_response(
-                SubjectSyntaxType::from_str("did:mock").unwrap(),
-                request,
-                Default::default()
+        let request = provider
+            .validate_request(
+                request_url.parse().unwrap(),
+                &Decoder {
+                    subjects: Validators::from([(
+                        SubjectSyntaxType::from_str("did:mock").unwrap(),
+                        Arc::new(Validator::Subject(
+                            Arc::new(MockSubject::new("".into(), "".into()).unwrap()) as Arc<dyn Subject>,
+                        )),
+                    )]),
+                },
             )
             .await
-            .is_ok());
+            .unwrap();
+
+        // Test whether the provider can generate a response for the request succesfully.
+        assert!(provider.generate_response(request, Default::default()).await.is_ok());
     }
 
     // TODO: Move to manager?

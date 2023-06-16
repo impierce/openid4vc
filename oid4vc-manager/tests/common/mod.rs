@@ -5,7 +5,7 @@ use derivative::{self, Derivative};
 use ed25519_dalek::{Keypair, Signature, Signer};
 use lazy_static::lazy_static;
 use rand::rngs::OsRng;
-use siopv2::{Sign, StandardClaimsRequests, StandardClaimsValues, Subject, Validator};
+use siopv2::{Sign, StandardClaimsRequests, StandardClaimsValues, Subject, Verify};
 
 // Keypair for mocking purposes.
 lazy_static! {
@@ -42,7 +42,7 @@ impl Sign for MockSubject {
 }
 
 #[async_trait]
-impl Validator for MockSubject {
+impl Verify for MockSubject {
     async fn public_key(&self, _kid: &str) -> Result<Vec<u8>> {
         Ok(MOCK_KEYPAIR.public.to_bytes().to_vec())
     }
@@ -54,16 +54,16 @@ impl Subject for MockSubject {
     }
 }
 
-pub struct MockValidator;
+pub struct MockVerifier;
 
-impl MockValidator {
+impl MockVerifier {
     pub fn new() -> Self {
-        MockValidator {}
+        MockVerifier {}
     }
 }
 
 #[async_trait]
-impl Validator for MockValidator {
+impl Verify for MockVerifier {
     async fn public_key(&self, _kid: &str) -> Result<Vec<u8>> {
         Ok(MOCK_KEYPAIR.public.to_bytes().to_vec())
     }

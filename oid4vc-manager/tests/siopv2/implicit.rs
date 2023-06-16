@@ -1,19 +1,16 @@
-use std::{str::FromStr, sync::Arc};
-
-use crate::common::{MemoryStorage, MockSubject, MockValidator, Storage};
+use crate::common::{MemoryStorage, MockSubject, Storage};
 use chrono::{Duration, Utc};
 use lazy_static::lazy_static;
+use oid4vc_manager::{ProviderManager, RelyingPartyManager};
 use siopv2::{
     claims::{Address, IndividualClaimRequest},
     request::ResponseType,
     scope::ScopeValue,
-    sign::Signers,
-    subject::Subjects,
     subject_syntax_type::DidMethod,
-    validator::Validators,
-    AuthorizationRequest, AuthorizationResponse, ClientMetadata, Provider, RelyingParty, RequestUrl, Scope, Sign,
-    StandardClaimsRequests, StandardClaimsValues, Subject, SubjectSyntaxType, Validator,
+    AuthorizationRequest, AuthorizationResponse, ClientMetadata, RequestUrl, Scope, StandardClaimsRequests,
+    StandardClaimsValues, SubjectSyntaxType,
 };
+use std::{str::FromStr, sync::Arc};
 use wiremock::{
     http::Method,
     matchers::{method, path},
@@ -54,31 +51,18 @@ async fn test_implicit_flow() {
     let server_url = mock_server.uri();
 
     // Create a new subject and validator.
-    // TODO: clean this up!!
-    let signers = Signers::from([(
-        SubjectSyntaxType::from_str("did:mock").unwrap(),
-        Arc::new(
-            MockSubject::new(
-                "did:mock:relyingparty".to_string(),
-                "did:mock:relyingparty#key_id".to_string(),
-            )
-            .unwrap(),
-        ) as Arc<dyn Sign>,
-    )]);
+    let subject = MockSubject::new(
+        "did:mock:relying_party".to_string(),
+        "did:mock:relying_party#key_id".to_string(),
+    )
+    .unwrap();
 
-    // TODO: clean this up!!
-    let validators = Validators::from([(
-        SubjectSyntaxType::from_str("did:mock").unwrap(),
-        Arc::new(MockValidator) as Arc<dyn Validator>,
-    )]);
-
-    let relying_party = RelyingParty::new(signers, validators);
+    let relying_party_manager = RelyingPartyManager::new([Arc::new(subject)]);
 
     // Create a new RequestUrl with response mode `post` for cross-device communication.
     let request: AuthorizationRequest = RequestUrl::builder()
         .response_type(ResponseType::IdToken)
         .client_id("did:mock:relyingparty".to_string())
-        // TODO: from [ScopeValue; N]
         .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
         .redirect_uri(format!("{server_url}/redirect_uri"))
         .response_mode("post".to_string())
@@ -111,12 +95,8 @@ async fn test_implicit_flow() {
     Mock::given(method("GET"))
         .and(path("/request_uri"))
         .respond_with(
-            ResponseTemplate::new(200).set_body_string(
-                relying_party
-                    .encode(SubjectSyntaxType::from_str("did:mock").unwrap(), &request)
-                    .await
-                    .unwrap(),
-            ),
+            ResponseTemplate::new(200)
+                .set_body_string(relying_party_manager.relying_party.encode(&request).await.unwrap()),
         )
         .mount(&mock_server)
         .await;
@@ -134,12 +114,8 @@ async fn test_implicit_flow() {
     // Create a new subject and validator.
     let subject = MockSubject::new("did:mock:subject".to_string(), "did:mock:subject#key_id".to_string()).unwrap();
 
-    // Create a new provider.
-    let provider = Provider::new(Subjects::from([(
-        SubjectSyntaxType::from_str("did:mock").unwrap(),
-        Arc::new(subject) as Arc<dyn Subject>,
-    )]))
-    .unwrap();
+    // let provider = Provider::new([Arc::new(subject)]).unwrap();
+    let provider_manager = ProviderManager::new([Arc::new(subject)]);
 
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
     let request_url = RequestUrl::builder()
@@ -151,7 +127,7 @@ async fn test_implicit_flow() {
     // The Provider obtains the reuquest url either by a deeplink or by scanning a QR code. It then validates the
     // request. Since in this case the request is a JWT, the provider will fetch the request by sending a GET
     // request to mock server's `request_uri` endpoint.
-    let request = provider.validate_request(request_url).await.unwrap();
+    let request = provider_manager.validate_request(request_url).await.unwrap();
 
     // The provider can now access the claims requested by the relying party.
     let request_claims = request.id_token_request_claims().unwrap();
@@ -178,17 +154,14 @@ async fn test_implicit_flow() {
 
     // Let the provider generate a response based on the validated request. The response is an `IdToken` which is
     // encoded as a JWT.
-    let response = provider
-        .generate_response(
-            SubjectSyntaxType::from_str("did:mock").unwrap(),
-            request,
-            response_claims,
-        )
+    let response = provider_manager
+        .provider
+        .generate_response(request, response_claims)
         .await
         .unwrap();
 
     // The provider sends it's response to the mock server's `redirect_uri` endpoint.
-    provider.send_response(response).await.unwrap();
+    provider_manager.provider.send_response(response).await.unwrap();
 
     // Assert that the AuthorizationResponse was successfully received by the mock server at the expected endpoint.
     let post_request = mock_server.received_requests().await.unwrap()[1].clone();
@@ -199,7 +172,7 @@ async fn test_implicit_flow() {
     // The `RelyingParty` then validates the response by decoding the header of the id_token, by fetching the public
     // key corresponding to the key identifier and finally decoding the id_token using the public key and by
     // validating the signature.
-    let id_token = relying_party.validate_response(&response).await.unwrap();
+    let id_token = relying_party_manager.validate_response(&response).await.unwrap();
     assert_eq!(
         id_token.standard_claims().to_owned(),
         StandardClaimsValues {

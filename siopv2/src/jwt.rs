@@ -80,8 +80,8 @@ where
 mod tests {
     use super::*;
     use crate::{
-        test_utils::{MockSubject, MockValidator},
-        IdToken, Validator,
+        test_utils::{MockSubject, MockVerifier},
+        IdToken, Verify,
     };
     use serde_json::json;
 
@@ -99,9 +99,9 @@ mod tests {
         let subject = MockSubject::new("did:mock:123".to_string(), "key_id".to_string()).unwrap();
         let encoded = encode(Arc::new(subject), claims).await.unwrap();
 
-        let validator = MockValidator::new();
+        let verifier = MockVerifier::new();
         let (kid, algorithm) = extract_header(&encoded).unwrap();
-        let public_key = validator.public_key(&kid).await.unwrap();
+        let public_key = verifier.public_key(&kid).await.unwrap();
         let decoded: IdToken = decode(&encoded, public_key, algorithm).unwrap();
 
         assert_eq!(
