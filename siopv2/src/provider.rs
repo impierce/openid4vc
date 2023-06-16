@@ -3,6 +3,7 @@ use crate::{
 };
 use anyhow::Result;
 use chrono::{Duration, Utc};
+use serde::de::DeserializeOwned;
 use std::{str::FromStr, sync::Arc};
 
 pub type SigningSubject = Arc<dyn Subject>;
@@ -51,7 +52,6 @@ impl Provider {
     /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
     pub async fn generate_response(
         &self,
-        subject_syntax_type: SubjectSyntaxType,
         request: AuthorizationRequest,
         user_claims: StandardClaimsValues,
     ) -> Result<AuthorizationResponse> {
@@ -135,6 +135,9 @@ mod tests {
                 Default::default()
             )
             .await
-            .is_ok());
+            .unwrap();
+
+        // Test whether the provider can generate a response for the request succesfully.
+        assert!(provider.generate_response(request, Default::default()).await.is_ok());
     }
 }
