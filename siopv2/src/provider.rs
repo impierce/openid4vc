@@ -2,7 +2,7 @@ use crate::{
     jwt, subject_syntax_type::DidMethod, AuthorizationRequest, AuthorizationResponse, IdToken, RequestUrl,
     StandardClaimsValues, Subject, Validators,
 };
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::{Duration, Utc};
 use serde::de::DeserializeOwned;
 use std::{str::FromStr, sync::Arc};
@@ -18,16 +18,19 @@ pub struct Provider {
 }
 
 pub struct Decoder {
-    pub subjects: Validators,
+    pub validators: Validators,
 }
 
 impl Decoder {
     pub async fn decode<T: DeserializeOwned>(&self, jwt: String) -> Result<T> {
         let (kid, algorithm) = jwt::extract_header(&jwt)?;
-        //  TODO: fix other methods
+        //  TODO: decode for JWK Thumbprint
         let did_method = DidMethod::from(did_url::DID::from_str(&kid)?);
 
-        let validator = self.subjects.get(&did_method.into()).unwrap();
+        let validator = self
+            .validators
+            .get(&did_method.into())
+            .ok_or_else(|| anyhow!("No validator found."))?; // TODO: Use a better error message.
         let public_key = validator.public_key(&kid).await?;
         jwt::decode(&jwt, public_key, algorithm)
     }
@@ -135,7 +138,7 @@ mod tests {
             .validate_request(
                 request_url.parse().unwrap(),
                 &Decoder {
-                    subjects: Validators::from([(
+                    validators: Validators::from([(
                         SubjectSyntaxType::from_str("did:mock").unwrap(),
                         Arc::new(Validator::Subject(
                             Arc::new(MockSubject::new("".into(), "".into()).unwrap()) as Arc<dyn Subject>,

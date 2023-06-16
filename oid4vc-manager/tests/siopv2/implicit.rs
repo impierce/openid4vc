@@ -57,7 +57,7 @@ async fn test_implicit_flow() {
     )
     .unwrap();
 
-    let relying_party_manager = RelyingPartyManager::new([Arc::new(subject)]);
+    let relying_party_manager = RelyingPartyManager::new([Arc::new(subject)]).unwrap();
 
     // Create a new RequestUrl with response mode `post` for cross-device communication.
     let request: AuthorizationRequest = RequestUrl::builder()
@@ -94,10 +94,7 @@ async fn test_implicit_flow() {
     // Create a new `request_uri` endpoint on the mock server and load it with the JWT encoded `AuthorizationRequest`.
     Mock::given(method("GET"))
         .and(path("/request_uri"))
-        .respond_with(
-            ResponseTemplate::new(200)
-                .set_body_string(relying_party_manager.relying_party.encode(&request).await.unwrap()),
-        )
+        .respond_with(ResponseTemplate::new(200).set_body_string(relying_party_manager.encode(&request).await.unwrap()))
         .mount(&mock_server)
         .await;
 
@@ -114,8 +111,7 @@ async fn test_implicit_flow() {
     // Create a new subject and validator.
     let subject = MockSubject::new("did:mock:subject".to_string(), "did:mock:subject#key_id".to_string()).unwrap();
 
-    // let provider = Provider::new([Arc::new(subject)]).unwrap();
-    let provider_manager = ProviderManager::new([Arc::new(subject)]);
+    let provider_manager = ProviderManager::new([Arc::new(subject)]).unwrap();
 
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
     let request_url = RequestUrl::builder()
@@ -155,13 +151,12 @@ async fn test_implicit_flow() {
     // Let the provider generate a response based on the validated request. The response is an `IdToken` which is
     // encoded as a JWT.
     let response = provider_manager
-        .provider
         .generate_response(request, response_claims)
         .await
         .unwrap();
 
     // The provider sends it's response to the mock server's `redirect_uri` endpoint.
-    provider_manager.provider.send_response(response).await.unwrap();
+    provider_manager.send_response(response).await.unwrap();
 
     // Assert that the AuthorizationResponse was successfully received by the mock server at the expected endpoint.
     let post_request = mock_server.received_requests().await.unwrap()[1].clone();
