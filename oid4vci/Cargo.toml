@@ -2,6 +2,7 @@
 name = "oid4vci"
 version = "0.1.0"
 edition = "2021"
+description = "Rust implementation for the OpenID Connect OpenID for Verifiable Credential Issuance standard"
 homepage.workspace = true
 keywords = ["oid4vc", "openid4vc", "oid4vci", "OpenID Connect"]
 license.workspace = true
