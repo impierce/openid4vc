@@ -21,8 +21,10 @@ homepage = "https://www.impierce.com/"
 license = "Apache-2.0"
 repository = "https://github.com/impierce/openid4vc"
 
+# TODO: Fix these dependencies once publishing to crates.io is automated.
 [dependencies]
 oid4vci = { path = "oid4vci" }
 oid4vp = { path = "oid4vp" }
 siopv2 = { path = "siopv2" }
+oid4vc-manager = { path = "oid4vc-manager" }
 dif-presentation-exchange = { path = "dif-presentation-exchange" }
