@@ -50,13 +50,14 @@ async fn test_implicit_flow() {
     let mock_server = MockServer::start().await;
     let server_url = mock_server.uri();
 
-    // Create a new subject and validator.
+    // Create a new subject.
     let subject = MockSubject::new(
         "did:mock:relying_party".to_string(),
         "did:mock:relying_party#key_id".to_string(),
     )
     .unwrap();
 
+    // Create a new relying party manager.
     let relying_party_manager = RelyingPartyManager::new([Arc::new(subject)]).unwrap();
 
     // Create a new RequestUrl with response mode `post` for cross-device communication.
@@ -111,6 +112,7 @@ async fn test_implicit_flow() {
     // Create a new subject and validator.
     let subject = MockSubject::new("did:mock:subject".to_string(), "did:mock:subject#key_id".to_string()).unwrap();
 
+    // Create a new provider manager.
     let provider_manager = ProviderManager::new([Arc::new(subject)]).unwrap();
 
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
@@ -155,7 +157,7 @@ async fn test_implicit_flow() {
         .await
         .unwrap();
 
-    // The provider sends it's response to the mock server's `redirect_uri` endpoint.
+    // The provider manager sends it's response to the mock server's `redirect_uri` endpoint.
     provider_manager.send_response(response).await.unwrap();
 
     // Assert that the AuthorizationResponse was successfully received by the mock server at the expected endpoint.

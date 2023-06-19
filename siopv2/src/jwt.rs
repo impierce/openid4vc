@@ -51,7 +51,6 @@ where
     Ok(jsonwebtoken::decode::<T>(jwt, &key, &Validation::new(algorithm))?.claims)
 }
 
-// TODO: Refactor so that signer = Arc<dyn Sign>.
 pub async fn encode<C, S>(signer: Arc<S>, claims: C) -> Result<String>
 where
     C: Serialize + Send,

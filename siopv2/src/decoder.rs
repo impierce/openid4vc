@@ -16,7 +16,7 @@ impl Decoder {
         let validator = self
             .validators
             .get(&did_method.into())
-            .ok_or_else(|| anyhow!("No validator found."))?; // TODO: Use a better error message.
+            .ok_or_else(|| anyhow!("No validator found for this signed JWT."))?;
         let public_key = validator.public_key(&kid).await?;
         jwt::decode(&jwt, public_key, algorithm)
     }

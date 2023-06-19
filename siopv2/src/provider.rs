@@ -129,49 +129,4 @@ mod tests {
         // Test whether the provider can generate a response for the request succesfully.
         assert!(provider.generate_response(request, Default::default()).await.is_ok());
     }
-
-    // TODO: Move to manager?
-    // #[tokio::test]
-    // async fn test_multiple_subjects() {
-    //     // Create a new provider with just one did:mock subject.
-    //     let subject = MockSubject::new("did:mock:123".to_string(), "key_id".to_string()).unwrap();
-    //     let mut provider = Provider::new(Subjects(vec![Arc::new(subject)])).unwrap();
-
-    //     // A request with only did:key stated in the `subject_syntax_types_supported`.
-    //     let authorization_request: AuthorizationRequest = RequestUrl::builder()
-    //         .client_id("did:example:123".to_string())
-    //         .redirect_uri("https://example.com".to_string())
-    //         .response_type(ResponseType::IdToken)
-    //         .scope(Scope::openid())
-    //         .nonce("123".to_string())
-    //         .client_metadata(ClientMetadata::default().with_subject_syntax_types_supported(vec![
-    //             SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap()),
-    //         ]))
-    //         .build()
-    //         .and_then(TryInto::try_into)
-    //         .unwrap();
-
-    //     // There are no subjects that match the request's supported subject syntax types.
-    //     assert!(provider.matching_subject_syntax_types(&authorization_request).is_none());
-
-    //     // Trying to set the active subject to a did:key subject fails.
-    //     let key_method = SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap());
-    //     assert_eq!(
-    //         provider.set_active_subject(key_method.clone()).unwrap_err().to_string(),
-    //         "No subject with the given syntax type found."
-    //     );
-
-    //     // Add a did:key subject to the provider.
-    //     let key_subject = KeySubject::new();
-    //     provider.subjects.add(key_subject);
-
-    //     // Setting the active subject to a did:key subject succeeds.
-    //     assert!(provider.set_active_subject(key_method.clone()).is_ok());
-
-    //     // The provider now has a subject that matches the request's supported subject syntax types.
-    //     assert_eq!(
-    //         provider.matching_subject_syntax_types(&authorization_request),
-    //         Some(vec![SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap())])
-    //     );
-    // }
 }

@@ -2,8 +2,6 @@ use crate::{jwt, provider::SigningSubject, AuthorizationRequest, AuthorizationRe
 use anyhow::Result;
 
 pub struct RelyingParty {
-    // TODO: Need to change this to active_sign-method or other solution. Probably move this abstraction layer to the
-    // oid-agent crate.
     pub subject: SigningSubject,
 }
 
