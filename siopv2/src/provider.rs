@@ -1,10 +1,9 @@
 use crate::{
     jwt, AuthorizationRequest, AuthorizationResponse, Decoder, IdToken, RequestUrl, StandardClaimsValues, Subject,
 };
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use chrono::{Duration, Utc};
-use serde::de::DeserializeOwned;
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 pub type SigningSubject = Arc<dyn Subject>;
 
