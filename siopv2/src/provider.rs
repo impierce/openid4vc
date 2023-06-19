@@ -1,11 +1,9 @@
 use crate::{
-    jwt, subject_syntax_type::DidMethod, AuthorizationRequest, AuthorizationResponse, IdToken, RequestUrl,
-    StandardClaimsValues, Subject, Validators,
+    jwt, AuthorizationRequest, AuthorizationResponse, Decoder, IdToken, RequestUrl, StandardClaimsValues, Subject,
 };
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use chrono::{Duration, Utc};
-use serde::de::DeserializeOwned;
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 pub type SigningSubject = Arc<dyn Subject>;
 
@@ -15,25 +13,6 @@ pub type SigningSubject = Arc<dyn Subject>;
 pub struct Provider {
     pub subject: SigningSubject,
     client: reqwest::Client,
-}
-
-pub struct Decoder {
-    pub validators: Validators,
-}
-
-impl Decoder {
-    pub async fn decode<T: DeserializeOwned>(&self, jwt: String) -> Result<T> {
-        let (kid, algorithm) = jwt::extract_header(&jwt)?;
-        //  TODO: decode for JWK Thumbprint
-        let did_method = DidMethod::from(did_url::DID::from_str(&kid)?);
-
-        let validator = self
-            .validators
-            .get(&did_method.into())
-            .ok_or_else(|| anyhow!("No validator found."))?; // TODO: Use a better error message.
-        let public_key = validator.public_key(&kid).await?;
-        jwt::decode(&jwt, public_key, algorithm)
-    }
 }
 
 impl Provider {
@@ -49,7 +28,7 @@ impl Provider {
     /// Takes a [`RequestUrl`] and returns a [`AuthorizationRequest`]. The [`RequestUrl`] can either be a [`AuthorizationRequest`] or a
     /// request by value. If the [`RequestUrl`] is a request by value, the request is decoded by the [`Subject`] of the [`Provider`].
     /// If the request is valid, the request is returned.
-    pub async fn validate_request(&self, request: RequestUrl, decoder: &Decoder) -> Result<AuthorizationRequest> {
+    pub async fn validate_request(&self, request: RequestUrl, decoder: Decoder) -> Result<AuthorizationRequest> {
         if let RequestUrl::Request(authorization_request) = request {
             Ok(*authorization_request)
         } else {
@@ -108,7 +87,7 @@ impl Provider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{test_utils::MockSubject, SubjectSyntaxType, Validator};
+    use crate::{test_utils::MockSubject, SubjectSyntaxType, Validator, Validators};
     use std::str::FromStr;
 
     #[tokio::test]
@@ -137,12 +116,10 @@ mod tests {
         let request = provider
             .validate_request(
                 request_url.parse().unwrap(),
-                &Decoder {
+                Decoder {
                     validators: Validators::from([(
                         SubjectSyntaxType::from_str("did:mock").unwrap(),
-                        Arc::new(Validator::Subject(
-                            Arc::new(MockSubject::new("".into(), "".into()).unwrap()) as Arc<dyn Subject>,
-                        )),
+                        Arc::new(Validator::Subject(Arc::new(MockSubject::default()) as Arc<dyn Subject>)),
                     )]),
                 },
             )

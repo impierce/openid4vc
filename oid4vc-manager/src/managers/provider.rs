@@ -1,7 +1,7 @@
 use anyhow::Result;
 use siopv2::{
-    provider::Decoder, AuthorizationRequest, AuthorizationResponse, Provider, RequestUrl, StandardClaimsValues,
-    Subject, SubjectSyntaxType, Subjects, Validators,
+    AuthorizationRequest, AuthorizationResponse, Decoder, Provider, RequestUrl, StandardClaimsValues, Subject,
+    SubjectSyntaxType, Subjects,
 };
 use std::sync::Arc;
 
@@ -20,12 +20,7 @@ impl ProviderManager {
 
     pub async fn validate_request(&self, request: RequestUrl) -> Result<AuthorizationRequest> {
         self.provider
-            .validate_request(
-                request,
-                &Decoder {
-                    validators: Validators::from(&self.subjects),
-                },
-            )
+            .validate_request(request, Decoder::from(&self.subjects))
             .await
     }
 

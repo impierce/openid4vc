@@ -1,8 +1,4 @@
-use crate::{
-    jwt,
-    provider::{Decoder, SigningSubject},
-    AuthorizationRequest, AuthorizationResponse, IdToken,
-};
+use crate::{jwt, provider::SigningSubject, AuthorizationRequest, AuthorizationResponse, Decoder, IdToken};
 use anyhow::Result;
 
 pub struct RelyingParty {
@@ -25,7 +21,7 @@ impl RelyingParty {
     /// the key identifier and finally decoding the id_token using the public key and by validating the signature.
     // TODO: Validate the claims in the id_token as described here:
     // https://openid.net/specs/openid-connect-self-issued-v2-1_0.html#name-self-issued-id-token-valida
-    pub async fn validate_response(&self, response: &AuthorizationResponse, decoder: &Decoder) -> Result<IdToken> {
+    pub async fn validate_response(&self, response: &AuthorizationResponse, decoder: Decoder) -> Result<IdToken> {
         let token = response
             .id_token()
             .to_owned()

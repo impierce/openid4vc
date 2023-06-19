@@ -1,7 +1,6 @@
 use anyhow::{anyhow, Result};
 use siopv2::{
-    provider::Decoder, AuthorizationRequest, AuthorizationResponse, IdToken, RelyingParty, Subject, SubjectSyntaxType,
-    Subjects, Validators,
+    AuthorizationRequest, AuthorizationResponse, Decoder, IdToken, RelyingParty, Subject, SubjectSyntaxType, Subjects,
 };
 use std::sync::Arc;
 
@@ -24,12 +23,7 @@ impl RelyingPartyManager {
 
     pub async fn validate_response(&self, response: &AuthorizationResponse) -> Result<IdToken> {
         self.relying_party
-            .validate_response(
-                response,
-                &Decoder {
-                    validators: Validators::from(&self.subjects),
-                },
-            )
+            .validate_response(response, Decoder::from(&self.subjects))
             .await
     }
 
