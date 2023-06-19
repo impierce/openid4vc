@@ -5,7 +5,6 @@ pub mod collection;
 pub mod decoder;
 pub mod jwt;
 pub mod provider;
-pub mod registration;
 pub mod relying_party;
 pub mod request;
 pub mod response;
