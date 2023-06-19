@@ -28,7 +28,11 @@ impl RelyingPartyManager {
             .await
     }
 
-    pub fn set_signer_subject(&mut self, subject_syntax_type: SubjectSyntaxType) -> Result<()> {
+    pub fn current_subject_syntax_type(&self) -> Result<SubjectSyntaxType> {
+        self.relying_party.subject.type_()
+    }
+
+    pub fn set_subject_syntax_type(&mut self, subject_syntax_type: SubjectSyntaxType) -> Result<()> {
         self.relying_party.subject = self
             .subjects
             .get_subject(subject_syntax_type)

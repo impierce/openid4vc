@@ -8,8 +8,8 @@ use identity_iota::{
     iota_core::{IotaDID, IotaDIDUrl},
     prelude::*,
 };
-use siopv2::{Sign, Subject, SubjectSyntaxType, Verify};
-use std::{str::FromStr, sync::Arc};
+use siopv2::{Sign, Subject, Verify};
+use std::sync::Arc;
 
 pub struct IotaSubject<C = Arc<Client>>
 where
@@ -46,10 +46,6 @@ impl Sign for IotaSubject {
 impl Subject for IotaSubject {
     fn identifier(&self) -> Result<String> {
         Ok(self.account.did().to_string())
-    }
-
-    fn type_(&self) -> Result<SubjectSyntaxType> {
-        Ok(SubjectSyntaxType::from_str("did:iota")?)
     }
 }
 
@@ -133,33 +129,55 @@ impl IotaSubject {
 #[async_trait]
 impl Verify for IotaSubject {
     async fn public_key(&self, kid: &str) -> Result<Vec<u8>> {
-        let did_url = IotaDIDUrl::parse(kid)?;
-
-        let did = did_url.did();
-        let fragment = did_url.fragment().ok_or_else(|| anyhow!("No fragment found."))?;
-
-        let resolver: Resolver = Resolver::new().await?;
-
-        let document = resolver.resolve(did).await?.document;
-        let method = document
-            .resolve_method(fragment, None)
-            .ok_or_else(|| anyhow!("No method found."))?;
-
-        Ok(method.data().try_decode()?)
+        resolve_public_key(kid).await
     }
+}
+
+/// This [`IotaValidator`] implements the [`Verify`] trait and can be used as a validator for a [`RelyingParty`]. It uses
+/// the 'iota' DID method.
+#[derive(Default)]
+pub struct IotaValidator;
+
+impl IotaValidator {
+    pub fn new() -> Self {
+        IotaValidator {}
+    }
+}
+
+#[async_trait]
+impl Verify for IotaValidator {
+    async fn public_key(&self, kid: &str) -> Result<Vec<u8>> {
+        resolve_public_key(kid).await
+    }
+}
+
+async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
+    let did_url = IotaDIDUrl::parse(kid)?;
+
+    let did = did_url.did();
+    let fragment = did_url.fragment().ok_or_else(|| anyhow!("No fragment found."))?;
+
+    let resolver: Resolver = Resolver::new().await?;
+
+    let document = resolver.resolve(did).await?.document;
+    let method = document
+        .resolve_method(fragment, None)
+        .ok_or_else(|| anyhow!("No method found."))?;
+
+    Ok(method.data().try_decode()?)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{ProviderManager, RelyingPartyManager};
-
     use super::*;
+    use crate::{ProviderManager, RelyingPartyManager};
     use chrono::{Duration, Utc};
     use identity_iota::{account::MethodContent, did::MethodRelationship};
     use siopv2::{
         request::ResponseType, scope::ScopeValue, subject_syntax_type::DidMethod, AuthorizationRequest, ClientMetadata,
         RequestUrl, Scope, StandardClaimsValues,
     };
+    use std::str::FromStr;
 
     const AUTHENTICATION_KEY: &'static str = "authentication-key";
 
