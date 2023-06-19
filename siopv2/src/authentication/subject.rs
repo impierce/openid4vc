@@ -4,7 +4,7 @@ use std::{str::FromStr, sync::Arc};
 
 // TODO: Use a URI of some sort.
 /// This [`Subject`] trait is used to sign and verify JWTs.
-pub trait Subject: Sign + Verify {
+pub trait Subject: Sign + Verify + Send + Sync {
     fn identifier(&self) -> Result<String>;
     fn type_(&self) -> Result<SubjectSyntaxType> {
         SubjectSyntaxType::from_str(&self.identifier()?)

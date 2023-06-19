@@ -5,6 +5,7 @@ use siopv2::{
 };
 use std::sync::Arc;
 
+/// Manager struct for [`siopv2::Provider`].
 pub struct ProviderManager {
     pub provider: Provider,
     subjects: Subjects,

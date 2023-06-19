@@ -4,6 +4,7 @@ use siopv2::{
 };
 use std::sync::Arc;
 
+/// Manager struct for [`siopv2::RelyingParty`].
 pub struct RelyingPartyManager {
     pub relying_party: RelyingParty,
     subjects: Subjects,

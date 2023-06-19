@@ -89,59 +89,48 @@ async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
         .map_err(|_| anyhow!("Failed to construct keypair from the default authentication method"))
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use siopv2::{sign::Signers, subject::Subjects, validator::Validators, Provider, RelyingParty, SubjectSyntaxType};
-//     use std::{str::FromStr, sync::Arc};
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{ProviderManager, RelyingPartyManager};
+    use std::sync::Arc;
 
-//     #[tokio::test]
-//     async fn test_key_subject() {
-//         // Create a new subject.
-//         let subject = KeySubject::new();
+    #[tokio::test]
+    async fn test_key_subject() {
+        // Create a new subject.
+        let subject = KeySubject::new();
 
-//         // Create a new provider.
-//         let provider = Provider::new([Arc::new(subject)]).unwrap();
+        // Create a new provider manager.
+        let provider_manager = ProviderManager::new([Arc::new(subject)]).unwrap();
 
-//         // Get a new SIOP request with response mode `post` for cross-device communication.
-//         let request_url = "\
-//             siopv2://idtoken?\
-//                 scope=openid\
-//                 &response_type=id_token\
-//                 &client_id=did:key:z6MkiTcXZ1JxooACo99YcfkugH6Kifzj7ZupSDCmLEABpjpF\
-//                 &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
-//                 &response_mode=post\
-//                 &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
-//                 %5B%22did%3Akey%22%5D%2C%0A%20%20%20%20\
-//                 %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
-//                 &nonce=n-0S6_WzA2Mj\
-//             ";
+        // Get a new SIOP request with response mode `post` for cross-device communication.
+        let request_url = "\
+            siopv2://idtoken?\
+                scope=openid\
+                &response_type=id_token\
+                &client_id=did:key:z6MkiTcXZ1JxooACo99YcfkugH6Kifzj7ZupSDCmLEABpjpF\
+                &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
+                &response_mode=post\
+                &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
+                %5B%22did%3Akey%22%5D%2C%0A%20%20%20%20\
+                %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
+                &nonce=n-0S6_WzA2Mj\
+            ";
 
-//         // Let the provider validate the request.
-//         let request = provider.validate_request(request_url.parse().unwrap()).await.unwrap();
+        // Let the provider amanger validate the request.
+        let request = provider_manager
+            .validate_request(request_url.parse().unwrap())
+            .await
+            .unwrap();
 
-//         // Test whether the provider can generate a response for the request succesfully.
-//         let response = provider
-//             .generate_response(
-//                 SubjectSyntaxType::from_str("did:key").unwrap(),
-//                 request,
-//                 Default::default(),
-//             )
-//             .await
-//             .unwrap();
+        // Test whether the provider manager can generate a response for the request succesfully.
+        let response = provider_manager
+            .generate_response(request, Default::default())
+            .await
+            .unwrap();
 
-//         // Create a new validator
-//         let validator = KeyValidator::new();
-
-//         // Let the relying party validate the response.
-//         let relying_party = RelyingParty::new(
-//             Signers::default(),
-//             Validators::from([(
-//                 SubjectSyntaxType::from_str("did:key").unwrap(),
-//                 Arc::new(validator) as Arc<dyn Verify>,
-//             )]),
-//         );
-
-//         assert!(relying_party.validate_response(&response).await.is_ok());
-//     }
-// }
+        // Let the relying party validate the response.
+        let relying_party_manager = RelyingPartyManager::new([Arc::new(KeySubject::new())]).unwrap();
+        assert!(relying_party_manager.validate_response(&response).await.is_ok());
+    }
+}
