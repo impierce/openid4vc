@@ -22,6 +22,13 @@ homepage = "https://www.impierce.com/"
 license = "Apache-2.0"
 repository = "https://github.com/impierce/openid4vc"
 
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"]}
+serde_json = "1.0"
+serde_with = "3.0"
+url = { version = "2.3", features = ["serde"] }
+getset = "0.1"
+
 # TODO: Fix these dependencies once publishing to crates.io is automated.
 [dependencies]
 oid4vci = { path = "oid4vci" }

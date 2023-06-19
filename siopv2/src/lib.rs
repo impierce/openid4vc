@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 pub mod authentication;
 pub mod claims;
 pub mod client_metadata;
@@ -6,23 +5,11 @@ pub mod collection;
 pub mod decoder;
 pub mod jwt;
 pub mod provider;
-=======
-<<<<<<<< HEAD:src/lib.rs
-pub use oid4vci;
-pub use oid4vp;
-pub use siopv2;
-========
-pub mod claims;
-pub mod jwt;
-pub mod key_method;
-pub mod provider;
 pub mod registration;
->>>>>>> 211a9a8 (feat: add workspace)
 pub mod relying_party;
 pub mod request;
 pub mod response;
 pub mod scope;
-<<<<<<< HEAD
 pub mod subject_syntax_type;
 pub mod token;
 
@@ -80,11 +67,3 @@ where
         _ => None,
     })
 }
-=======
-pub mod subject;
-pub mod token;
-pub mod validator;
->>>>>>>> 211a9a8 (feat: add workspace):siopv2/src/lib.rs
-
-pub use dif_presentation_exchange;
->>>>>>> 211a9a8 (feat: add workspace)
