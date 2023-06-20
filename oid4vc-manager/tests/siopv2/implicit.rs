@@ -153,7 +153,7 @@ async fn test_implicit_flow() {
     // Let the provider generate a response based on the validated request. The response is an `IdToken` which is
     // encoded as a JWT.
     let response = provider_manager
-        .generate_response(request, response_claims)
+        .generate_response(request, response_claims, None, None)
         .await
         .unwrap();
 

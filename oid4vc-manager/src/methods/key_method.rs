@@ -125,7 +125,7 @@ mod tests {
 
         // Test whether the provider manager can generate a response for the request succesfully.
         let response = provider_manager
-            .generate_response(request, Default::default())
+            .generate_response(request, Default::default(), None, None)
             .await
             .unwrap();
 

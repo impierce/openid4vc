@@ -1,4 +1,6 @@
 use anyhow::Result;
+use identity_iota::did::verifiable;
+use oid4vp::{PresentationSubmission, VerifiablePresentation};
 use siopv2::{
     AuthorizationRequest, AuthorizationResponse, Decoder, Provider, RequestUrl, StandardClaimsValues, Subject,
     SubjectSyntaxType, Subjects,
@@ -29,8 +31,12 @@ impl ProviderManager {
         &self,
         request: AuthorizationRequest,
         user_claims: StandardClaimsValues,
+        verifiable_presentation: Option<VerifiablePresentation>,
+        presentation_submission: Option<PresentationSubmission>,
     ) -> Result<AuthorizationResponse> {
-        self.provider.generate_response(request, user_claims).await
+        self.provider
+            .generate_response(request, user_claims, verifiable_presentation, presentation_submission)
+            .await
     }
 
     pub async fn send_response(&self, response: AuthorizationResponse) -> Result<()> {
