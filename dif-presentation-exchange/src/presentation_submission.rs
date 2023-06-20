@@ -1,39 +1,41 @@
 use crate::presentation_definition::ClaimFormatDesignation;
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 /// As specified in https://identity.foundation/presentation-exchange/#presentation-definition.
 #[allow(dead_code)]
 #[derive(Deserialize, Debug, Serialize, PartialEq)]
 pub struct PresentationSubmission {
     // TODO: Must be unique.
-    id: String,
+    pub id: String,
     // TODO: Value must be the id value of a valid presentation definition.
-    definition_id: String,
-    descriptor_map: Vec<InputDescriptorMappingObject>,
+    pub definition_id: String,
+    pub descriptor_map: Vec<InputDescriptorMappingObject>,
 }
 
 #[allow(dead_code)]
+#[skip_serializing_none]
 #[derive(Deserialize, Debug, Serialize, PartialEq)]
 pub struct InputDescriptorMappingObject {
     // Matches the `id` property of the Input Descriptor in the Presentation Definition that this Presentation
     // Submission is related to.
-    id: String,
+    pub id: String,
     // Matches one of the Claim Format Designation. This denotes the data format of the Claim.
-    format: ClaimFormatDesignation,
+    pub format: ClaimFormatDesignation,
     // TODO Must be a JSONPath string expression
-    // Indicates the Claim submitted in relateion to the identified Input Descriptor, When executed against the
+    // Indicates the Claim submitted in relation to the identified Input Descriptor, When executed against the
     // top-level of the object the Presentation Submission is embedded within.
-    path: String,
-    path_nested: Option<PathNested>,
+    pub path: String,
+    pub path_nested: Option<PathNested>,
 }
 
 #[allow(dead_code)]
 #[derive(Deserialize, Debug, Serialize, PartialEq)]
 pub struct PathNested {
-    id: Option<String>,
-    format: ClaimFormatDesignation,
-    path: String,
-    path_nested: Option<Box<Self>>,
+    pub id: Option<String>,
+    pub format: ClaimFormatDesignation,
+    pub path: String,
+    pub path_nested: Option<Box<Self>>,
 }
 
 #[cfg(test)]

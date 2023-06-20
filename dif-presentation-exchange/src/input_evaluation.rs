@@ -1,4 +1,4 @@
-use crate::PresentationDefinition;
+use crate::{InputDescriptor, PresentationDefinition};
 use jsonpath_lib as jsonpath;
 use jsonschema::JSONSchema;
 
@@ -22,74 +22,67 @@ impl FieldQueryResult {
 /// Input Evaluation as described in section [8. Input
 /// Evaluation](https://identity.foundation/presentation-exchange/spec/v2.0.0/#input-evaluation) of the DIF
 /// Presentation Exchange specification.
-pub fn evaluate_input(presentation_definition: &PresentationDefinition, value: &serde_json::Value) -> bool {
-    // For each Input Descriptor in the input_descriptors array of a [`PresentationDefinition`], a conformant consumer
-    // compares each candidate input (JWT, Verifiable Credential, etc.) it holds to determine whether there is a match.
+pub fn evaluate_input(input_descriptor: &InputDescriptor, value: &serde_json::Value) -> bool {
     let selector = &mut jsonpath::selector(value);
-    // If the `constraints` property of the [`InputDescriptor`] is present, and it contains a `fields` property with
-    // one or more fields objects, evaluate each fields object against the candidate input as described in the
-    // following subsequence.
-    presentation_definition
-        .input_descriptors()
-        .iter()
-        // Accept the candidate input if every fields object yields a [`FieldQueryResult`]; else, reject.
-        .all(|input_descriptor| {
-            input_descriptor
-                .constraints()
-                .fields()
-                .as_ref()
-                .map(|fields| {
-                    let results: Vec<FieldQueryResult> = fields
-                        .iter()
-                        .map(|field| {
-                            let filter = field
-                                .filter()
-                                .as_ref()
-                                .map(JSONSchema::compile)
-                                .transpose()
-                                .ok()
-                                .flatten();
 
-                            // For each JSONPath expression in the `path` array (incrementing from the 0-index),
-                            // evaluate the JSONPath expression against the candidate input and repeat the following
-                            // subsequence on the result.
-                            field
-                                .path()
-                                .iter()
-                                // Repeat until a Field Query Result is found, or the path array elements are exhausted:
-                                .find_map(|path| {
-                                    // If the result returned no JSONPath match, skip to the next path array element.
-                                    // Else, evaluate the first JSONPath match (candidate) as follows:
-                                    selector(path).ok().and_then(|values| {
-                                        values.into_iter().find_map(|result| {
-                                            // If the fields object has no `filter`, or if candidate validates against
-                                            // the JSON Schema descriptor specified in `filter`, then:
-                                            filter
-                                                .as_ref()
-                                                .map(|filter| filter.is_valid(result))
-                                                .unwrap_or(true)
-                                                // set Field Query Result to be candidate
-                                                .then(|| FieldQueryResult::Some {
-                                                    value: result.to_owned(),
-                                                    path: path.to_owned(),
-                                                })
-                                            // Else, skip to the next `path` array element.
+    input_descriptor
+        .constraints()
+        .fields()
+        .as_ref()
+        .map(|fields| {
+            let results: Vec<FieldQueryResult> = fields
+                .iter()
+                .map(|field| {
+                    let filter = field
+                        .filter()
+                        .as_ref()
+                        .map(JSONSchema::compile)
+                        .transpose()
+                        .ok()
+                        .flatten();
+
+                    // For each JSONPath expression in the `path` array (incrementing from the 0-index),
+                    // evaluate the JSONPath expression against the candidate input and repeat the following
+                    // subsequence on the result.
+                    field
+                        .path()
+                        .iter()
+                        // Repeat until a Field Query Result is found, or the path array elements are exhausted:
+                        .find_map(|path| {
+                            // If the result returned no JSONPath match, skip to the next path array element.
+                            // Else, evaluate the first JSONPath match (candidate) as follows:
+                            selector(path).ok().and_then(|values| {
+                                values.into_iter().find_map(|result| {
+                                    // If the fields object has no `filter`, or if candidate validates against
+                                    // the JSON Schema descriptor specified in `filter`, then:
+                                    filter
+                                        .as_ref()
+                                        .map(|filter| filter.is_valid(result))
+                                        .unwrap_or(true)
+                                        // set Field Query Result to be candidate
+                                        .then(|| FieldQueryResult::Some {
+                                            value: result.to_owned(),
+                                            path: path.to_owned(),
                                         })
-                                    })
+                                    // Else, skip to the next `path` array element.
                                 })
-                                // If no value is located for any of the specified `path` queries, and the fields
-                                // object DOES NOT contain the `optional` property or it is set to `false`, reject the
-                                // field as invalid. If no value is located for any of the specified `path` queries and
-                                // the fields object DOES contain the `optional` property set to the value `true`,
-                                // treat the field as valid and proceed to the next fields object.
-                                .or_else(|| field.optional().and_then(|opt| opt.then(|| FieldQueryResult::None)))
-                                .unwrap_or(FieldQueryResult::Invalid)
+                            })
                         })
-                        .collect();
-                    results.iter().all(FieldQueryResult::is_valid)
+                        // If no value is located for any of the specified `path` queries, and the fields
+                        // object DOES NOT contain the `optional` property or it is set to `false`, reject the
+                        // field as invalid. If no value is located for any of the specified `path` queries and
+                        // the fields object DOES contain the `optional` property set to the value `true`,
+                        // treat the field as valid and proceed to the next fields object.
+                        .or_else(|| field.optional().and_then(|opt| opt.then(|| FieldQueryResult::None)))
+                        .unwrap_or(FieldQueryResult::Invalid)
                 })
-                .unwrap_or(false)
+                .collect();
+            let id = input_descriptor.id();
+            dbg!(&id);
+            dbg!(&results);
+            results.iter().all(FieldQueryResult::is_valid)
         })
+        .unwrap_or(false)
 }
 
 #[cfg(test)]
@@ -111,20 +104,14 @@ mod tests {
         serde_json::from_reader::<_, T>(file).expect("could not parse json")
     }
 
-    fn presentation_definition(constraints: Constraints) -> PresentationDefinition {
-        PresentationDefinition {
-            id: "test_presentation_definition".to_string(),
-            input_descriptors: vec![InputDescriptor {
-                id: "test_input_descriptor".to_string(),
-                name: None,
-                purpose: None,
-                format: None,
-                constraints,
-                schema: None,
-            }],
+    fn input_descriptor(constraints: Constraints) -> InputDescriptor {
+        InputDescriptor {
+            id: "test_input_descriptor".to_string(),
             name: None,
             purpose: None,
             format: None,
+            constraints,
+            schema: None,
         }
     }
 
@@ -133,14 +120,11 @@ mod tests {
         let credential = json_example::<serde_json::Value>("../oid4vp/tests/examples/credentials/jwt_vc.json");
 
         // Has NO fields.
-        assert!(!evaluate_input(
-            &presentation_definition(Constraints::default()),
-            &credential
-        ));
+        assert!(!evaluate_input(&input_descriptor(Constraints::default()), &credential));
 
         // Has ONE VALID field.
         assert!(evaluate_input(
-            &presentation_definition(Constraints {
+            &input_descriptor(Constraints {
                 fields: Some(vec![Field {
                     path: vec!["$.vc.type".to_string()],
                     ..Default::default()
@@ -152,7 +136,7 @@ mod tests {
 
         // // Has ONE INVALID field.
         assert!(!evaluate_input(
-            &presentation_definition(Constraints {
+            &input_descriptor(Constraints {
                 fields: Some(vec![Field {
                     path: vec!["$.vc.foo".to_string()],
                     ..Default::default()
@@ -164,7 +148,7 @@ mod tests {
 
         // First field is INVALID.
         assert!(!evaluate_input(
-            &presentation_definition(Constraints {
+            &input_descriptor(Constraints {
                 fields: Some(vec![
                     Field {
                         path: vec!["$.vc.foo".to_string()],
@@ -182,7 +166,7 @@ mod tests {
 
         // Second field is INVALID.
         assert!(!evaluate_input(
-            &presentation_definition(Constraints {
+            &input_descriptor(Constraints {
                 fields: Some(vec![
                     Field {
                         path: vec!["$.vc.type".to_string()],
@@ -200,7 +184,7 @@ mod tests {
 
         // Second field is INVALID but optional.
         assert!(evaluate_input(
-            &presentation_definition(Constraints {
+            &input_descriptor(Constraints {
                 fields: Some(vec![
                     Field {
                         path: vec!["$.vc.type".to_string()],
@@ -224,7 +208,7 @@ mod tests {
 
         // Has NO path.
         assert!(!evaluate_input(
-            &presentation_definition(Constraints {
+            &input_descriptor(Constraints {
                 fields: Some(vec![Field::default()]),
                 ..Default::default()
             }),
@@ -233,7 +217,7 @@ mod tests {
 
         // Has ONE path.
         assert!(evaluate_input(
-            &presentation_definition(Constraints {
+            &input_descriptor(Constraints {
                 fields: Some(vec![Field {
                     path: vec!["$.vc.type".to_string()],
                     ..Default::default()
@@ -245,7 +229,7 @@ mod tests {
 
         // Has TWO paths. First is NO match, second is a match without filter.
         assert!(evaluate_input(
-            &presentation_definition(Constraints {
+            &input_descriptor(Constraints {
                 fields: Some(vec![Field {
                     path: vec!["$.vc.foo".to_string(), "$.vc.type".to_string()],
                     ..Default::default()
@@ -257,7 +241,7 @@ mod tests {
 
         // Has TWO paths. First is a match, with filter.
         assert!(evaluate_input(
-            &presentation_definition(Constraints {
+            &input_descriptor(Constraints {
                 fields: Some(vec![Field {
                     path: vec!["$.vc.type".to_string(), "$.vc.foo".to_string()],
                     filter: Some(serde_json::json!({
@@ -275,7 +259,7 @@ mod tests {
 
         // Has ONE paths. With non-matching filter.
         assert!(!evaluate_input(
-            &presentation_definition(Constraints {
+            &input_descriptor(Constraints {
                 fields: Some(vec![Field {
                     path: vec!["$.vc.type".to_string()],
                     filter: Some(serde_json::json!({
@@ -293,7 +277,7 @@ mod tests {
 
         // Has ONE path. With non-matching filter. Is optional
         assert!(evaluate_input(
-            &presentation_definition(Constraints {
+            &input_descriptor(Constraints {
                 fields: Some(vec![Field {
                     path: vec!["$.vc.type".to_string()],
                     filter: Some(serde_json::json!({
@@ -312,7 +296,7 @@ mod tests {
 
         // Has ONE path, which does not exist. Is optional
         assert!(evaluate_input(
-            &presentation_definition(Constraints {
+            &input_descriptor(Constraints {
                 fields: Some(vec![Field {
                     path: vec!["$.vc.foo".to_string()],
                     optional: Some(true),
@@ -325,7 +309,7 @@ mod tests {
 
         // Has ONE path, which does not exist. Is NOT optional (explicitly).
         assert!(!evaluate_input(
-            &presentation_definition(Constraints {
+            &input_descriptor(Constraints {
                 fields: Some(vec![Field {
                     path: vec!["$.vc.foo".to_string()],
                     optional: Some(false),

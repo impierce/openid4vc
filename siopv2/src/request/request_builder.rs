@@ -7,6 +7,7 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use is_empty::IsEmpty;
+use oid4vp::PresentationDefinition;
 
 #[derive(Default, IsEmpty)]
 pub struct RequestUrlBuilder {
@@ -18,6 +19,7 @@ pub struct RequestUrlBuilder {
     response_mode: Option<String>,
     scope: Option<Scope>,
     claims: Option<Result<ClaimRequests>>,
+    presentation_definition: Option<PresentationDefinition>,
     redirect_uri: Option<String>,
     nonce: Option<String>,
     client_metadata: Option<ClientMetadata>,
@@ -52,6 +54,7 @@ impl RequestUrlBuilder {
                     .take()
                     .ok_or_else(|| anyhow!("scope parameter is required."))?,
                 claims: self.claims.take().transpose()?,
+                presentation_definition: self.presentation_definition.take(),
                 redirect_uri: self
                     .redirect_uri
                     .take()
@@ -86,6 +89,7 @@ impl RequestUrlBuilder {
     builder_fn!(response_mode, String);
     builder_fn!(client_id, String);
     builder_fn!(scope, Scope);
+    builder_fn!(presentation_definition, PresentationDefinition);
     builder_fn!(redirect_uri, String);
     builder_fn!(nonce, String);
     builder_fn!(client_metadata, ClientMetadata);
@@ -130,6 +134,7 @@ mod tests {
                     }),
                     ..Default::default()
                 }),
+                presentation_definition: None,
                 redirect_uri: "https://example.com".to_string(),
                 nonce: "nonce".to_string(),
                 client_metadata: None,

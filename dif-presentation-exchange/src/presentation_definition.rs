@@ -1,9 +1,11 @@
 use getset::Getters;
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 use std::collections::HashMap;
 
 /// As specified in https://identity.foundation/presentation-exchange/#presentation-definition.
 #[allow(dead_code)]
+#[skip_serializing_none]
 #[derive(Deserialize, Debug, Getters, PartialEq, Clone, Serialize)]
 pub struct PresentationDefinition {
     #[getset(get = "pub")]
@@ -20,9 +22,11 @@ pub struct PresentationDefinition {
 /// As specified in https://identity.foundation/presentation-exchange/#input-descriptor-object.
 /// All input descriptors MUST be satisfied, unless otherwise specified by a Feature.
 #[allow(dead_code)]
+#[skip_serializing_none]
 #[derive(Deserialize, Debug, Getters, PartialEq, Clone, Serialize)]
 pub struct InputDescriptor {
     // Must not conflict with other input descriptors.
+    #[getset(get = "pub")]
     pub(crate) id: String,
     pub(crate) name: Option<String>,
     pub(crate) purpose: Option<String>,
@@ -60,6 +64,7 @@ pub enum ClaimFormatProperty {
 }
 
 #[allow(dead_code)]
+#[skip_serializing_none]
 #[derive(Deserialize, Debug, Getters, Default, PartialEq, Clone, Serialize)]
 pub struct Constraints {
     #[getset(get = "pub")]
@@ -79,6 +84,7 @@ pub enum LimitDisclosure {
 }
 
 #[allow(dead_code)]
+#[skip_serializing_none]
 #[derive(Deserialize, Debug, Getters, Default, PartialEq, Clone, Serialize)]
 pub struct Field {
     // The value of this property MUST be an array of ONE OR MORE JSONPath string expressions.

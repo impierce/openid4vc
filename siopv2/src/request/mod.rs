@@ -4,6 +4,7 @@ use crate::{claims::ClaimRequests, ClientMetadata, RequestUrlBuilder, Scope, Sta
 use anyhow::{anyhow, Result};
 use derive_more::Display;
 use getset::Getters;
+use oid4vp::PresentationDefinition;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::convert::TryInto;
@@ -128,6 +129,11 @@ pub enum ResponseType {
     #[default]
     #[display(fmt = "id_token")]
     IdToken,
+    //TODO: Is this possible in SIOP?
+    // #[display(fmt = "vp_token")]
+    // VpToken,
+    #[display(fmt = "id_token vp_token")]
+    IdTokenVpToken,
 }
 
 /// [`AuthorizationRequest`] is a request from a [crate::relying_party::RelyingParty] (RP) to a [crate::provider::Provider] (SIOP).
@@ -138,6 +144,7 @@ pub struct AuthorizationRequest {
     #[serde(flatten)]
     #[getset(get = "pub")]
     pub(super) rfc7519_claims: RFC7519Claims,
+    #[getset(get = "pub")]
     pub(crate) response_type: ResponseType,
     pub(crate) response_mode: Option<String>,
     #[getset(get = "pub")]
@@ -146,6 +153,8 @@ pub struct AuthorizationRequest {
     pub(crate) scope: Scope,
     #[getset(get = "pub")]
     pub(crate) claims: Option<ClaimRequests>,
+    #[getset(get = "pub")]
+    pub(crate) presentation_definition: Option<PresentationDefinition>,
     #[getset(get = "pub")]
     pub(crate) redirect_uri: String,
     #[getset(get = "pub")]
@@ -227,6 +236,7 @@ mod tests {
                     .to_string(),
                 scope: Scope::openid(),
                 claims: None,
+                presentation_definition: None,
                 redirect_uri: "https://client.example.org/cb".to_string(),
                 nonce: "n-0S6_WzA2Mj".to_string(),
                 client_metadata: Some(

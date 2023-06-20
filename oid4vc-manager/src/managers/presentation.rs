@@ -255,16 +255,16 @@ mod tests {
         .build()
         .unwrap();
 
-        let verifiable_presentation = VerifiablePresentation::JwtVpJson(verifiable_presentation);
+        let verifiable_presentation = VerifiablePresentation::JwtVp(verifiable_presentation);
 
-        dbg!(&verifiable_presentation);
+        dbg!(&serde_json::to_string(&verifiable_presentation));
 
         let presentation_submission = PresentationSubmission {
             id: "id".to_string(),
             definition_id: "Verifiable Presentation request for sign-on".to_string(),
             descriptor_map: vec![InputDescriptorMappingObject {
                 id: "Request for Ferris's Verifiable Credential".to_string(),
-                format: ClaimFormatDesignation::JwtVpJson,
+                format: ClaimFormatDesignation::JwtVp,
                 path: "$".to_string(),
                 path_nested: Some(PathNested {
                     id: None,
