@@ -100,74 +100,90 @@ impl ResponseBuilder {
     builder_fn!(state, String);
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     #[test]
-//     fn test_valid_response() {
-//         assert!(AuthorizationResponse::builder()
-//             .redirect_uri("redirect".to_string())
-//             .id_token("id_token".to_string())
-//             .build()
-//             .is_ok());
+    #[test]
+    fn test_valid_response() {
+        assert!(AuthorizationResponse::builder()
+            .redirect_uri("redirect".to_string())
+            .id_token("id_token".to_string())
+            .build()
+            .is_ok());
 
-//         assert!(AuthorizationResponse::builder()
-//             .redirect_uri("redirect".to_string())
-//             .vp_token("vp_token".to_string())
-//             .presentation_submission("presentation_submission".to_string())
-//             .build()
-//             .is_ok());
+        assert!(AuthorizationResponse::builder()
+            .redirect_uri("redirect".to_string())
+            .vp_token("vp_token".to_string())
+            .presentation_submission(PresentationSubmission {
+                id: "id".to_string(),
+                definition_id: "definition_id".to_string(),
+                descriptor_map: vec![],
+            })
+            .build()
+            .is_ok());
 
-//         assert!(AuthorizationResponse::builder()
-//             .redirect_uri("redirect".to_string())
-//             .id_token("id_token".to_string())
-//             .vp_token("vp_token".to_string())
-//             .presentation_submission("presentation_submission".to_string())
-//             .build()
-//             .is_ok());
-//     }
+        assert!(AuthorizationResponse::builder()
+            .redirect_uri("redirect".to_string())
+            .id_token("id_token".to_string())
+            .vp_token("vp_token".to_string())
+            .presentation_submission(PresentationSubmission {
+                id: "id".to_string(),
+                definition_id: "definition_id".to_string(),
+                descriptor_map: vec![],
+            })
+            .build()
+            .is_ok());
+    }
 
-//     #[test]
-//     fn test_invalid_response() {
-//         assert_eq!(
-//             AuthorizationResponse::builder()
-//                 .id_token("id_token".to_string())
-//                 .build()
-//                 .unwrap_err()
-//                 .to_string(),
-//             "redirect_uri parameter is required."
-//         );
+    #[test]
+    fn test_invalid_response() {
+        assert_eq!(
+            AuthorizationResponse::builder()
+                .id_token("id_token".to_string())
+                .build()
+                .unwrap_err()
+                .to_string(),
+            "redirect_uri parameter is required."
+        );
 
-//         assert_eq!(
-//             AuthorizationResponse::builder()
-//                 .redirect_uri("redirect".to_string())
-//                 .vp_token("vp_token".to_string())
-//                 .build()
-//                 .unwrap_err()
-//                 .to_string(),
-//             "`presentation_submission` parameter is required when using `vp_token` parameter."
-//         );
+        assert_eq!(
+            AuthorizationResponse::builder()
+                .redirect_uri("redirect".to_string())
+                .vp_token("vp_token".to_string())
+                .build()
+                .unwrap_err()
+                .to_string(),
+            "`presentation_submission` parameter is required when using `vp_token` parameter."
+        );
 
-//         assert_eq!(
-//             AuthorizationResponse::builder()
-//                 .redirect_uri("redirect".to_string())
-//                 .presentation_submission("presentation_submission".to_string())
-//                 .build()
-//                 .unwrap_err()
-//                 .to_string(),
-//             "`vp_token` parameter is required when using `presentation_submission` parameter."
-//         );
+        assert_eq!(
+            AuthorizationResponse::builder()
+                .redirect_uri("redirect".to_string())
+                .presentation_submission(PresentationSubmission {
+                    id: "id".to_string(),
+                    definition_id: "definition_id".to_string(),
+                    descriptor_map: vec![],
+                })
+                .build()
+                .unwrap_err()
+                .to_string(),
+            "`vp_token` parameter is required when using `presentation_submission` parameter."
+        );
 
-//         assert_eq!(
-//             AuthorizationResponse::builder()
-//                 .redirect_uri("redirect".to_string())
-//                 .presentation_submission("presentation_submission".to_string())
-//                 .oid4vp_response_jwt("response".to_string())
-//                 .build()
-//                 .unwrap_err()
-//                 .to_string(),
-//             "`response` parameter can not be used with `vp_token` and `presentation_submission` parameters."
-//         );
-//     }
-// }
+        assert_eq!(
+            AuthorizationResponse::builder()
+                .redirect_uri("redirect".to_string())
+                .presentation_submission(PresentationSubmission {
+                    id: "id".to_string(),
+                    definition_id: "definition_id".to_string(),
+                    descriptor_map: vec![],
+                })
+                .oid4vp_response_jwt("response".to_string())
+                .build()
+                .unwrap_err()
+                .to_string(),
+            "`response` parameter can not be used with `vp_token` and `presentation_submission` parameters."
+        );
+    }
+}
