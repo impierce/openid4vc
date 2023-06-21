@@ -2,7 +2,7 @@ use crate::{jwt, provider::SigningSubject, AuthorizationRequest, AuthorizationRe
 use anyhow::Result;
 
 pub struct RelyingParty {
-    // TODO: Strictly speaking a relying party doesn't needd to have a [`Subject`]. It just needs methods to
+    // TODO: Strictly speaking a relying party doesn't need to have a [`Subject`]. It just needs methods to
     // sign and verify tokens. For simplicity we use a [`Subject`] here for now but we should consider a cleaner solution.
     pub subject: SigningSubject,
 }
