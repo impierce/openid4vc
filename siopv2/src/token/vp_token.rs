@@ -1,6 +1,6 @@
 // TODO: Move this to the OID4vp crate
 use getset::Getters;
-use oid4vp::VerifiablePresentation;
+use identity_credential::presentation::JwtPresentation;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -12,7 +12,8 @@ pub struct VpToken {
     #[serde(flatten)]
     #[getset(get = "pub")]
     pub(super) rfc7519_claims: RFC7519Claims,
-    pub(super) verifiable_presentation: VerifiablePresentation,
+    #[serde(rename = "vp")]
+    pub(super) verifiable_presentation: JwtPresentation,
     pub(super) nonce: Option<String>,
 }
 

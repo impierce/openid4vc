@@ -169,7 +169,7 @@ async fn test_implicit_flow() {
     // The `RelyingParty` then validates the response by decoding the header of the id_token, by fetching the public
     // key corresponding to the key identifier and finally decoding the id_token using the public key and by
     // validating the signature.
-    let id_token = relying_party_manager.validate_response(&response).await.unwrap();
+    let (id_token, _) = relying_party_manager.validate_response(&response).await.unwrap();
     assert_eq!(
         id_token.standard_claims().to_owned(),
         StandardClaimsValues {

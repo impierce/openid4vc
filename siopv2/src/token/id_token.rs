@@ -46,19 +46,19 @@ pub struct SubJwk {
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone, IsEmpty, Getters)]
 pub struct RFC7519Claims {
     #[getset(get = "pub")]
-    pub(crate) iss: Option<String>,
+    pub iss: Option<String>,
     #[getset(get = "pub")]
-    pub(crate) sub: Option<String>,
+    pub sub: Option<String>,
     #[getset(get = "pub")]
-    pub(crate) aud: Option<String>,
+    pub aud: Option<String>,
     #[getset(get = "pub")]
-    pub(crate) exp: Option<i64>,
+    pub exp: Option<i64>,
     #[getset(get = "pub")]
-    pub(crate) nbf: Option<i64>,
+    pub nbf: Option<i64>,
     #[getset(get = "pub")]
-    pub(crate) iat: Option<i64>,
+    pub iat: Option<i64>,
     #[getset(get = "pub")]
-    pub(crate) jti: Option<String>,
+    pub jti: Option<String>,
 }
 
 #[cfg(test)]

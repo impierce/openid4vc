@@ -1,6 +1,6 @@
 use anyhow::Result;
-use identity_iota::did::verifiable;
-use oid4vp::{PresentationSubmission, VerifiablePresentation};
+use identity_credential::presentation::JwtPresentation;
+use oid4vp::PresentationSubmission;
 use siopv2::{
     AuthorizationRequest, AuthorizationResponse, Decoder, Provider, RequestUrl, StandardClaimsValues, Subject,
     SubjectSyntaxType, Subjects,
@@ -31,7 +31,7 @@ impl ProviderManager {
         &self,
         request: AuthorizationRequest,
         user_claims: StandardClaimsValues,
-        verifiable_presentation: Option<VerifiablePresentation>,
+        verifiable_presentation: Option<JwtPresentation>,
         presentation_submission: Option<PresentationSubmission>,
     ) -> Result<AuthorizationResponse> {
         self.provider

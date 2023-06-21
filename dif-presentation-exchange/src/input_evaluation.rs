@@ -1,4 +1,4 @@
-use crate::{InputDescriptor, PresentationDefinition};
+use crate::InputDescriptor;
 use jsonpath_lib as jsonpath;
 use jsonschema::JSONSchema;
 
@@ -77,9 +77,6 @@ pub fn evaluate_input(input_descriptor: &InputDescriptor, value: &serde_json::Va
                         .unwrap_or(FieldQueryResult::Invalid)
                 })
                 .collect();
-            let id = input_descriptor.id();
-            dbg!(&id);
-            dbg!(&results);
             results.iter().all(FieldQueryResult::is_valid)
         })
         .unwrap_or(false)

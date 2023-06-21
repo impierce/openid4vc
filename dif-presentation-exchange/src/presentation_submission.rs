@@ -30,6 +30,7 @@ pub struct InputDescriptorMappingObject {
 }
 
 #[allow(dead_code)]
+#[skip_serializing_none]
 #[derive(Deserialize, Debug, Serialize, PartialEq)]
 pub struct PathNested {
     pub id: Option<String>,

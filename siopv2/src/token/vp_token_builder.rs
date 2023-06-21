@@ -1,14 +1,13 @@
 // TODO: Move this to the OID4vp crate
-use oid4vp::VerifiablePresentation;
-
 use super::id_token::RFC7519Claims;
 use crate::{builder_fn, token::vp_token::VpToken};
 use anyhow::{anyhow, Result};
+use identity_credential::presentation::JwtPresentation;
 
 #[derive(Default)]
 pub struct VpTokenBuilder {
     rfc7519_claims: RFC7519Claims,
-    verifiable_presentation: Option<VerifiablePresentation>,
+    verifiable_presentation: Option<JwtPresentation>,
     // TODO: Is this required?
     nonce: Option<String>,
 }
@@ -49,6 +48,6 @@ impl VpTokenBuilder {
     builder_fn!(rfc7519_claims, nbf, i64);
     builder_fn!(rfc7519_claims, iat, i64);
     builder_fn!(rfc7519_claims, jti, String);
-    builder_fn!(verifiable_presentation, VerifiablePresentation);
+    builder_fn!(verifiable_presentation, JwtPresentation);
     builder_fn!(nonce, String);
 }

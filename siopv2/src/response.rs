@@ -9,7 +9,7 @@ use serde_with::skip_serializing_none;
 /// Submission, or a JWT containing them.
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(untagged)]
-pub enum Openid4vpParams {
+pub enum Oid4vpParams {
     Jwt {
         response: String,
     },
@@ -21,8 +21,8 @@ pub enum Openid4vpParams {
 
 /// Represents an Authorization AuthorizationResponse. It can hold an ID Token, a Verifiable Presentation Token, a Presentation
 /// Submission, or a combination of them.
-#[derive(Serialize, Default, Deserialize, Debug, Getters, PartialEq)]
 #[skip_serializing_none]
+#[derive(Serialize, Default, Deserialize, Debug, Getters, PartialEq)]
 pub struct AuthorizationResponse {
     #[serde(skip)]
     #[getset(get = "pub")]
@@ -30,7 +30,8 @@ pub struct AuthorizationResponse {
     #[getset(get = "pub")]
     id_token: Option<String>,
     #[serde(flatten)]
-    openid4vp_response: Option<Openid4vpParams>,
+    #[getset(get = "pub")]
+    oid4vp_response: Option<Oid4vpParams>,
     state: Option<String>,
 }
 
@@ -46,7 +47,7 @@ pub struct ResponseBuilder {
     id_token: Option<String>,
     vp_token: Option<String>,
     presentation_submission: Option<PresentationSubmission>,
-    openid4vp_response_jwt: Option<String>,
+    oid4vp_response_jwt: Option<String>,
     state: Option<String>,
 }
 
@@ -61,16 +62,16 @@ impl ResponseBuilder {
             .take()
             .ok_or(anyhow!("redirect_uri parameter is required."))?;
 
-        let openid4vp_response = match (
+        let oid4vp_response = match (
             self.vp_token.take(),
             self.presentation_submission.take(),
-            self.openid4vp_response_jwt.take(),
+            self.oid4vp_response_jwt.take(),
         ) {
-            (Some(vp_token), Some(presentation_submission), None) => Ok(Some(Openid4vpParams::Params {
+            (Some(vp_token), Some(presentation_submission), None) => Ok(Some(Oid4vpParams::Params {
                 vp_token,
                 presentation_submission,
             })),
-            (None, None, Some(response)) => Ok(Some(Openid4vpParams::Jwt { response })),
+            (None, None, Some(response)) => Ok(Some(Oid4vpParams::Jwt { response })),
             (None, None, None) => Ok(None),
             (Some(_), None, None) => Err(anyhow!(
                 "`presentation_submission` parameter is required when using `vp_token` parameter."
@@ -86,7 +87,7 @@ impl ResponseBuilder {
         Ok(AuthorizationResponse {
             redirect_uri,
             id_token: self.id_token.take(),
-            openid4vp_response,
+            oid4vp_response,
             state: self.state.take(),
         })
     }
@@ -95,7 +96,7 @@ impl ResponseBuilder {
     builder_fn!(id_token, String);
     builder_fn!(vp_token, String);
     builder_fn!(presentation_submission, PresentationSubmission);
-    builder_fn!(openid4vp_response_jwt, String);
+    builder_fn!(oid4vp_response_jwt, String);
     builder_fn!(state, String);
 }
 
@@ -162,7 +163,7 @@ impl ResponseBuilder {
 //             AuthorizationResponse::builder()
 //                 .redirect_uri("redirect".to_string())
 //                 .presentation_submission("presentation_submission".to_string())
-//                 .openid4vp_response_jwt("response".to_string())
+//                 .oid4vp_response_jwt("response".to_string())
 //                 .build()
 //                 .unwrap_err()
 //                 .to_string(),

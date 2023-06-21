@@ -4,7 +4,8 @@ use crate::{
 };
 use anyhow::Result;
 use chrono::{Duration, Utc};
-use oid4vp::{PresentationDefinition, PresentationSubmission, VerifiablePresentation};
+use identity_credential::presentation::JwtPresentation;
+use oid4vp::PresentationSubmission;
 use std::sync::Arc;
 
 pub type SigningSubject = Arc<dyn Subject>;
@@ -55,7 +56,7 @@ impl Provider {
         &self,
         request: AuthorizationRequest,
         user_claims: StandardClaimsValues,
-        verifiable_presentation: Option<VerifiablePresentation>,
+        verifiable_presentation: Option<JwtPresentation>,
         presentation_submission: Option<PresentationSubmission>,
     ) -> Result<AuthorizationResponse> {
         let subject_identifier = self.subject.identifier()?;
