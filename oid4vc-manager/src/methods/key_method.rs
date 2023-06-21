@@ -129,9 +129,6 @@ mod tests {
             .await
             .unwrap();
 
-        //         // Create a new validator
-        //         let validator = KeyValidator::new();
-
         // Let the relying party validate the response.
         let relying_party_manager = RelyingPartyManager::new([Arc::new(KeySubject::new())]).unwrap();
         assert!(relying_party_manager.validate_response(&response).await.is_ok());

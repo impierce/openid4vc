@@ -6,8 +6,6 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::sync::Arc;
 
-use crate::Subject;
-
 #[derive(Debug, Serialize, Getters)]
 pub struct JsonWebToken<C>
 where
