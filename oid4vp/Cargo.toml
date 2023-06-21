@@ -2,6 +2,7 @@
 name = "oid4vp"
 version = "0.1.0"
 edition = "2021"
+description = "Rust implementation of the OpenID Connect OpenID for Verifiable Presentations standard"
 homepage.workspace = true
 keywords = ["oid4vc", "openid4vc", "oid4vp", "OpenID"]
 license.workspace = true

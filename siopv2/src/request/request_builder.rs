@@ -3,7 +3,7 @@ use crate::{
     claims::ClaimRequests,
     request::{AuthorizationRequest, RequestUrl, ResponseType},
     token::id_token::RFC7519Claims,
-    Registration, Scope,
+    ClientMetadata, Scope,
 };
 use anyhow::{anyhow, Result};
 use is_empty::IsEmpty;
@@ -20,7 +20,7 @@ pub struct RequestUrlBuilder {
     claims: Option<Result<ClaimRequests>>,
     redirect_uri: Option<String>,
     nonce: Option<String>,
-    registration: Option<Registration>,
+    client_metadata: Option<ClientMetadata>,
     state: Option<String>,
 }
 
@@ -60,7 +60,7 @@ impl RequestUrlBuilder {
                     .nonce
                     .take()
                     .ok_or_else(|| anyhow!("nonce parameter is required."))?,
-                registration: self.registration.take(),
+                client_metadata: self.client_metadata.take(),
                 state: self.state.take(),
             }))),
             _ => Err(anyhow!(
@@ -88,7 +88,7 @@ impl RequestUrlBuilder {
     builder_fn!(scope, Scope);
     builder_fn!(redirect_uri, String);
     builder_fn!(nonce, String);
-    builder_fn!(registration, Registration);
+    builder_fn!(client_metadata, ClientMetadata);
     builder_fn!(state, String);
 }
 
@@ -132,7 +132,7 @@ mod tests {
                 }),
                 redirect_uri: "https://example.com".to_string(),
                 nonce: "nonce".to_string(),
-                registration: None,
+                client_metadata: None,
                 state: None,
             }))
         );

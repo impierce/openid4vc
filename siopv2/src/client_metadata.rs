@@ -1,20 +1,26 @@
+use crate::SubjectSyntaxType;
 use getset::Getters;
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
-/// [`Registration`] is a request parameter used by a [`crate::RelyingParty`] to communicate its capabilities to a [`crate::Provider`].
+/// [`ClientMetadata`] is a request parameter used by a [`crate::RelyingParty`] to communicate its capabilities to a [`crate::Provider`].
+#[skip_serializing_none]
 #[derive(Getters, Debug, PartialEq, Clone, Default, Deserialize, Serialize)]
-pub struct Registration {
+pub struct ClientMetadata {
     #[getset(get = "pub")]
-    subject_syntax_types_supported: Option<Vec<String>>,
+    subject_syntax_types_supported: Option<Vec<SubjectSyntaxType>>,
     id_token_signing_alg_values_supported: Option<Vec<String>>,
 }
 
-impl Registration {
+impl ClientMetadata {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn with_subject_syntax_types_supported(mut self, subject_syntax_types_supported: Vec<String>) -> Self {
+    pub fn with_subject_syntax_types_supported(
+        mut self,
+        subject_syntax_types_supported: Vec<SubjectSyntaxType>,
+    ) -> Self {
         self.subject_syntax_types_supported = Some(subject_syntax_types_supported);
         self
     }
@@ -43,7 +49,7 @@ mod tests {
                 &client_id=did%3Aexample%3AEiDrihTRe0GMdc3K16kgJB3Xbl9Hb8oqVHjzm6ufHcYDGA\
                 &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
                 &response_mode=post\
-                &registration=%7B%22subject_syntax_types_supported%22%3A\
+                &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
                 %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
                 %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\

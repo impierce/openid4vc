@@ -1,27 +1,35 @@
+pub mod authentication;
 pub mod claims;
+pub mod client_metadata;
+pub mod collection;
+pub mod decoder;
 pub mod jwt;
-pub mod key_method;
 pub mod provider;
-pub mod registration;
 pub mod relying_party;
 pub mod request;
 pub mod response;
 pub mod scope;
-pub mod subject;
+pub mod subject_syntax_type;
 pub mod token;
-pub mod validator;
 
+pub use authentication::{
+    sign::Sign,
+    subject::{Subject, Subjects},
+    validator::{Validator, Validators},
+    verify::Verify,
+};
 pub use claims::{ClaimRequests, StandardClaimsRequests, StandardClaimsValues};
+pub use client_metadata::ClientMetadata;
+pub use collection::Collection;
+pub use decoder::Decoder;
 pub use jwt::JsonWebToken;
 pub use provider::Provider;
-pub use registration::Registration;
 pub use relying_party::RelyingParty;
 pub use request::{request_builder::RequestUrlBuilder, AuthorizationRequest, RequestUrl};
 pub use response::AuthorizationResponse;
 pub use scope::Scope;
-pub use subject::Subject;
+pub use subject_syntax_type::SubjectSyntaxType;
 pub use token::{id_token::IdToken, id_token_builder::IdTokenBuilder};
-pub use validator::Validator;
 
 use serde::{Deserialize, Deserializer};
 

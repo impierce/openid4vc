@@ -2,6 +2,7 @@
 name = "siopv2"
 version = "0.1.0"
 edition = "2021"
+description = "Rust implementation of the OpenID Connect Self-Issued OpenID Provider v2 standard"
 homepage.workspace = true
 keywords = ["oid4vc", "openid4vc", "siopv2", "OpenID"]
 license.workspace = true
@@ -16,11 +17,11 @@ anyhow = "1.0.70"
 chrono = "0.4.24"
 getset = "0.1.2"
 jsonwebtoken = "8.2.0"
+jwt-simple = "0.11"
 reqwest = { version = "0.11.14", default-features = false, features = ["json", "rustls-tls"] }
 base64-url = "2.0.0"
 async-trait = "0.1.68"
 did_url = "0.1.0"
-did-key = "0.2.1"
 url = { version = "2.3.1", features = ["serde"] }
 is_empty = "0.2.0"
 serde_urlencoded = "0.7.1"

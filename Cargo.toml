@@ -2,6 +2,7 @@
 name = "oid4vc"
 version = "0.1.0"
 edition = "2021"
+description = "Rust implementation of the OpenID4VC standards"
 homepage = "https://www.impierce.com/"
 keywords = ["openid4vc", "siopv2", "openid4vp", "openid4vci", "OpenID"]
 license = "Apache-2.0"
@@ -12,7 +13,8 @@ members = [
     "oid4vci",
     "oid4vp",
     "siopv2",
-    "dif-presentation-exchange"
+    "dif-presentation-exchange",
+    "oid4vc-manager"
 ]
 
 [workspace.package]
@@ -20,8 +22,10 @@ homepage = "https://www.impierce.com/"
 license = "Apache-2.0"
 repository = "https://github.com/impierce/openid4vc"
 
+# TODO: Fix these dependencies once publishing to crates.io is automated.
 [dependencies]
 oid4vci = { path = "oid4vci" }
 oid4vp = { path = "oid4vp" }
 siopv2 = { path = "siopv2" }
+oid4vc-manager = { path = "oid4vc-manager" }
 dif-presentation-exchange = { path = "dif-presentation-exchange" }
