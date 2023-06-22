@@ -2,6 +2,7 @@ pub mod authentication;
 pub mod claims;
 pub mod client_metadata;
 pub mod collection;
+pub mod credential;
 pub mod decoder;
 pub mod jwt;
 pub mod provider;
@@ -21,6 +22,7 @@ pub use authentication::{
 pub use claims::{ClaimRequests, StandardClaimsRequests, StandardClaimsValues};
 pub use client_metadata::ClientMetadata;
 pub use collection::Collection;
+pub use credential::VerifiableCredentialJwt;
 pub use decoder::Decoder;
 pub use jwt::JsonWebToken;
 pub use provider::Provider;

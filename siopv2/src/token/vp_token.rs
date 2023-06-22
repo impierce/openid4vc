@@ -13,6 +13,7 @@ pub struct VpToken {
     #[getset(get = "pub")]
     pub(super) rfc7519_claims: RFC7519Claims,
     #[serde(rename = "vp")]
+    #[getset(get = "pub")]
     pub(super) verifiable_presentation: JwtPresentation,
     pub(super) nonce: Option<String>,
 }

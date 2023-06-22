@@ -1,13 +1,15 @@
 // TODO: move this to oid4vci crate
+use crate::{builder_fn, token::id_token::RFC7519Claims};
 use anyhow::{anyhow, Result};
+use getset::Getters;
 use serde::{Deserialize, Serialize};
-use siopv2::{builder_fn, token::id_token::RFC7519Claims};
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, Getters)]
 pub struct VerifiableCredentialJwt {
     #[serde(flatten)]
     pub rfc7519_claims: RFC7519Claims,
     #[serde(rename = "vc")]
+    #[getset(get = "pub")]
     pub verifiable_credential: serde_json::Value,
 }
 

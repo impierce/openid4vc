@@ -3,12 +3,11 @@ use identity_core::common::{Object, Url};
 use identity_credential::{credential::Jwt, presentation::JwtPresentation};
 use lazy_static::lazy_static;
 use oid4vc_manager::{
-    managers::{credential::VerifiableCredentialJwt, presentation::create_presentation_submission},
-    methods::key_method::KeySubject,
-    ProviderManager, RelyingPartyManager,
+    managers::presentation::create_presentation_submission, methods::key_method::KeySubject, ProviderManager,
+    RelyingPartyManager,
 };
 use oid4vp::PresentationDefinition;
-use siopv2::{jwt, request::ResponseType, AuthorizationRequest, RequestUrl, Scope, Subject};
+use siopv2::{jwt, request::ResponseType, AuthorizationRequest, RequestUrl, Scope, Subject, VerifiableCredentialJwt};
 use std::sync::Arc;
 
 lazy_static! {

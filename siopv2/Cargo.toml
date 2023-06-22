@@ -27,6 +27,7 @@ is_empty = "0.2.0"
 serde_urlencoded = "0.7.1"
 derive_more = "0.99.16"
 identity_credential = { git = "https://git@github.com/iotaledger/identity.rs", rev = "4f27434" } 
+futures = "0.3"
 
 [dev-dependencies]
 ed25519-dalek = "1.0.1"
