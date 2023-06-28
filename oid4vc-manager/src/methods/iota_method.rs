@@ -8,7 +8,7 @@ use identity_iota::{
     iota_core::{IotaDID, IotaDIDUrl},
     prelude::*,
 };
-use siopv2::{Sign, Subject, Verify};
+use oid4vc_core::{Sign, Subject, Verify};
 use std::sync::Arc;
 
 pub struct IotaSubject<C = Arc<Client>>
@@ -173,8 +173,9 @@ mod tests {
     use crate::{ProviderManager, RelyingPartyManager};
     use chrono::{Duration, Utc};
     use identity_iota::{account::MethodContent, did::MethodRelationship};
+    use oid4vc_core::DidMethod;
     use siopv2::{
-        request::ResponseType, scope::ScopeValue, subject_syntax_type::DidMethod, AuthorizationRequest, ClientMetadata,
+        relying_party::ResponseItems, request::ResponseType, scope::ScopeValue, AuthorizationRequest, ClientMetadata,
         RequestUrl, Scope, StandardClaimsValues,
     };
     use std::str::FromStr;
@@ -233,7 +234,7 @@ mod tests {
 
         // Let the relying party manager validate the response.
         let relying_party_manager = RelyingPartyManager::new([Arc::new(IotaSubject::new().await.unwrap())]).unwrap();
-        let id_token = relying_party_manager.validate_response(&response).await.unwrap();
+        let ResponseItems { id_token, .. } = relying_party_manager.validate_response(&response).await.unwrap();
         println!("Validated SIOP response: {:#?}", id_token);
     }
 }

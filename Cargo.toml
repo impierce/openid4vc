@@ -10,6 +10,7 @@ repository = "https://github.com/impierce/openid4vc"
 
 [workspace]
 members = [
+    "oid4vc-core",
     "oid4vci",
     "oid4vp",
     "siopv2",

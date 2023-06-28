@@ -4,8 +4,9 @@ use async_trait::async_trait;
 use derivative::{self, Derivative};
 use ed25519_dalek::{Keypair, Signature, Signer};
 use lazy_static::lazy_static;
+use oid4vc_core::{Sign, Subject, Verify};
 use rand::rngs::OsRng;
-use siopv2::{Sign, StandardClaimsRequests, StandardClaimsValues, Subject, Verify};
+use siopv2::{StandardClaimsRequests, StandardClaimsValues};
 
 // Keypair for mocking purposes.
 lazy_static! {

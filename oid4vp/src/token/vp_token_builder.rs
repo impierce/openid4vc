@@ -1,8 +1,7 @@
-// TODO: Move this to the OID4vp crate
-use super::id_token::RFC7519Claims;
-use crate::{builder_fn, token::vp_token::VpToken};
+use crate::token::vp_token::VpToken;
 use anyhow::{anyhow, Result};
 use identity_credential::presentation::JwtPresentation;
+use oid4vc_core::{builder_fn, RFC7519Claims};
 
 #[derive(Default)]
 pub struct VpTokenBuilder {

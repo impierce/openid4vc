@@ -9,8 +9,15 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-serde.workspace = true
 # Fix these dependencies once the crates arre automatically published to crates.io.
+oid4vc-core = { path = "../oid4vc-core" }
 dif-presentation-exchange = { path = "../dif-presentation-exchange" }
+oid4vci = { path = "../oid4vci" }
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_with.workspace = true
+getset.workspace = true
 identity_credential = { git = "https://git@github.com/iotaledger/identity.rs", rev = "4f27434" } 
-
+anyhow = "1.0"
+futures = "0.3"

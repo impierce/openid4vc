@@ -1,23 +1,9 @@
-use crate::builder_fn;
 use anyhow::{anyhow, Result};
 use getset::Getters;
-use oid4vp::PresentationSubmission;
+use oid4vc_core::builder_fn;
+use oid4vp::{Oid4vpParams, PresentationSubmission};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
-
-/// Represents the parameters of an OpenID4VP response. It can hold a Verifiable Presentation Token and a Presentation
-/// Submission, or a JWT containing them.
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(untagged)]
-pub enum Oid4vpParams {
-    Jwt {
-        response: String,
-    },
-    Params {
-        vp_token: String,
-        presentation_submission: PresentationSubmission,
-    },
-}
 
 /// Represents an Authorization AuthorizationResponse. It can hold an ID Token, a Verifiable Presentation Token, a Presentation
 /// Submission, or a combination of them.

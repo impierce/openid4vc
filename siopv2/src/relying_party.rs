@@ -1,9 +1,7 @@
-use crate::{
-    jwt, provider::SigningSubject, response::Oid4vpParams, token::vp_token::VpToken, AuthorizationRequest,
-    AuthorizationResponse, Decoder, IdToken, VerifiableCredentialJwt,
-};
+use crate::{provider::SigningSubject, AuthorizationRequest, AuthorizationResponse, IdToken};
 use anyhow::Result;
-use futures::{executor::block_on, future::join_all};
+use oid4vc_core::{jwt, Decoder};
+use oid4vci::VerifiableCredentialJwt;
 
 pub struct RelyingParty {
     // TODO: Strictly speaking a relying party doesn't need to have a [`Subject`]. It just needs methods to
@@ -28,45 +26,29 @@ impl RelyingParty {
     // TODO: Needs a lot of refactoring. id_token validation and vp_token validation should be separate (moved to
     // seperate crates). Also in general vp_token needs proper validation (regarding presentation_submission) instead of
     // just validating the jwt. See: https://openid.bitbucket.io/connect/openid-4-verifiable-presentations-1_0.html#name-vp-token-validation
-    pub async fn validate_response(
-        &self,
-        response: &AuthorizationResponse,
-        decoder: Decoder,
-    ) -> Result<(IdToken, Option<Vec<VerifiableCredentialJwt>>)> {
+    pub async fn validate_response(&self, response: &AuthorizationResponse, decoder: Decoder) -> Result<ResponseItems> {
         let token = response
             .id_token()
             .to_owned()
             .ok_or(anyhow::anyhow!("No id_token parameter in response"))?;
         let id_token = decoder.decode(token).await?;
 
-        // Validat the vp_token if present.
-        let vp_token: Option<VpToken> = if let Some(oid4vp_response) = response.oid4vp_response() {
-            match oid4vp_response {
-                Oid4vpParams::Jwt { .. } => todo!(),
-                Oid4vpParams::Params { vp_token, .. } => Some(decoder.decode(vp_token.to_owned()).await?),
-            }
-        } else {
-            None
-        };
+        // Validate the vp_token if present.
+        let credentials: Option<Vec<VerifiableCredentialJwt>> =
+            if let Some(oid4vp_response) = response.oid4vp_response() {
+                Some(oid4vp_response.decode(&decoder).await?)
+            } else {
+                None
+            };
 
-        // Decode the verifiable credentials in the vp_token.
-        let credentials = vp_token
-            .map(|vp_token| {
-                block_on(async move {
-                    join_all(
-                        vp_token
-                            .verifiable_presentation()
-                            .verifiable_credential
-                            .iter()
-                            .map(|vc| async { decoder.decode(vc.as_str().to_owned()).await }),
-                    )
-                    .await
-                    .into_iter()
-                    .collect::<Result<Vec<VerifiableCredentialJwt>>>()
-                })
-            })
-            .transpose()?;
-
-        Ok((id_token, credentials))
+        Ok(ResponseItems {
+            id_token,
+            verifiable_credentials: credentials,
+        })
     }
+}
+
+pub struct ResponseItems {
+    pub id_token: IdToken,
+    pub verifiable_credentials: Option<Vec<VerifiableCredentialJwt>>,
 }

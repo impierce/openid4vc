@@ -1,9 +1,10 @@
-use crate::{Sign, StandardClaimsRequests, StandardClaimsValues, Subject, Verify};
+use crate::{StandardClaimsRequests, StandardClaimsValues};
 use anyhow::Result;
 use async_trait::async_trait;
 use derivative::{self, Derivative};
 use ed25519_dalek::{Keypair, Signature, Signer};
 use lazy_static::lazy_static;
+use oid4vc_core::{Sign, Subject, Verify};
 use rand::rngs::OsRng;
 
 // Keypair for mocking purposes.

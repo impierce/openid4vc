@@ -1,12 +1,11 @@
 use crate::{
-    builder_fn,
     claims::ClaimRequests,
     request::{AuthorizationRequest, RequestUrl, ResponseType},
-    token::id_token::RFC7519Claims,
     ClientMetadata, Scope,
 };
 use anyhow::{anyhow, Result};
 use is_empty::IsEmpty;
+use oid4vc_core::{builder_fn, RFC7519Claims};
 use oid4vp::PresentationDefinition;
 
 #[derive(Default, IsEmpty)]

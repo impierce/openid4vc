@@ -5,8 +5,10 @@ edition = "2021"
 
 [dependencies]
 # Fix these dependencies once the crates arre automatically published to crates.io.
+oid4vc-core = { path = "../oid4vc-core" }
 siopv2 = { path = "../siopv2" }
 oid4vp = { path = "../oid4vp" }
+oid4vci = { path = "../oid4vci" }
 tokio.workspace = true
 serde.workspace = true
 serde_json.workspace = true

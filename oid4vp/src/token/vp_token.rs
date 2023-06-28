@@ -1,10 +1,9 @@
-// TODO: Move this to the OID4vp crate
+use super::vp_token_builder::VpTokenBuilder;
 use getset::Getters;
 use identity_credential::presentation::JwtPresentation;
+use oid4vc_core::RFC7519Claims;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
-
-use super::{id_token::RFC7519Claims, vp_token_builder::VpTokenBuilder};
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Getters, PartialEq)]

@@ -1,5 +1,5 @@
-use crate::SubjectSyntaxType;
 use getset::Getters;
+use oid4vc_core::SubjectSyntaxType;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 

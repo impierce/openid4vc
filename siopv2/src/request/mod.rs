@@ -1,9 +1,8 @@
-use crate::token::id_token::RFC7519Claims;
-use crate::SubjectSyntaxType;
 use crate::{claims::ClaimRequests, ClientMetadata, RequestUrlBuilder, Scope, StandardClaimsRequests};
 use anyhow::{anyhow, Result};
 use derive_more::Display;
 use getset::Getters;
+use oid4vc_core::{RFC7519Claims, SubjectSyntaxType};
 use oid4vp::PresentationDefinition;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -112,8 +111,10 @@ impl std::fmt::Display for RequestUrl {
             .ok_or(std::fmt::Error)?
             .iter()
             .filter_map(|(k, v)| match v {
-                Value::Object(_) | Value::Array(_) => Some((k.clone(), Value::String(serde_json::to_string(v).ok()?))),
-                Value::String(_) => Some((k.clone(), v.clone())),
+                Value::Object(_) | Value::Array(_) => {
+                    Some((k.to_owned(), Value::String(serde_json::to_string(v).ok()?)))
+                }
+                Value::String(_) => Some((k.to_owned(), v.to_owned())),
                 _ => None,
             })
             .collect();
@@ -190,7 +191,7 @@ impl AuthorizationRequest {
 
 #[cfg(test)]
 mod tests {
-    use crate::subject_syntax_type::DidMethod;
+    use oid4vc_core::DidMethod;
 
     use super::*;
 

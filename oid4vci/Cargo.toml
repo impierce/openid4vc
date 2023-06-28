@@ -7,3 +7,10 @@ homepage.workspace = true
 keywords = ["oid4vc", "openid4vc", "oid4vci", "OpenID"]
 license.workspace = true
 repository.workspace = true
+
+[dependencies]
+oid4vc-core = { path = "../oid4vc-core" }
+getset.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow = "1.0"

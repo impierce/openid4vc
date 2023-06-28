@@ -2,12 +2,14 @@ use did_key::{generate, Ed25519KeyPair};
 use identity_core::common::{Object, Url};
 use identity_credential::{credential::Jwt, presentation::JwtPresentation};
 use lazy_static::lazy_static;
+use oid4vc_core::{jwt, Subject};
 use oid4vc_manager::{
     managers::presentation::create_presentation_submission, methods::key_method::KeySubject, ProviderManager,
     RelyingPartyManager,
 };
+use oid4vci::VerifiableCredentialJwt;
 use oid4vp::PresentationDefinition;
-use siopv2::{jwt, request::ResponseType, AuthorizationRequest, RequestUrl, Scope, Subject, VerifiableCredentialJwt};
+use siopv2::{request::ResponseType, AuthorizationRequest, RequestUrl, Scope};
 use std::sync::Arc;
 
 lazy_static! {

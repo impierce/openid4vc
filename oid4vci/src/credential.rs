@@ -1,7 +1,6 @@
-// TODO: move this to oid4vci crate
-use crate::{builder_fn, token::id_token::RFC7519Claims};
 use anyhow::{anyhow, Result};
 use getset::Getters;
+use oid4vc_core::{builder_fn, RFC7519Claims};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize, Getters)]

@@ -1,10 +1,8 @@
 use anyhow::Result;
 use identity_credential::presentation::JwtPresentation;
+use oid4vc_core::{Decoder, Subject, SubjectSyntaxType, Subjects};
 use oid4vp::PresentationSubmission;
-use siopv2::{
-    AuthorizationRequest, AuthorizationResponse, Decoder, Provider, RequestUrl, StandardClaimsValues, Subject,
-    SubjectSyntaxType, Subjects,
-};
+use siopv2::{AuthorizationRequest, AuthorizationResponse, Provider, RequestUrl, StandardClaimsValues};
 use std::sync::Arc;
 
 /// Manager struct for [`siopv2::Provider`].

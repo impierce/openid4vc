@@ -1,11 +1,11 @@
 use crate::{
-    jwt, request::ResponseType, token::vp_token::VpToken, AuthorizationRequest, AuthorizationResponse, Decoder,
-    IdToken, RequestUrl, StandardClaimsValues, Subject,
+    request::ResponseType, AuthorizationRequest, AuthorizationResponse, IdToken, RequestUrl, StandardClaimsValues,
 };
 use anyhow::Result;
 use chrono::{Duration, Utc};
 use identity_credential::presentation::JwtPresentation;
-use oid4vp::PresentationSubmission;
+use oid4vc_core::{jwt, Decoder, Subject};
+use oid4vp::{token::vp_token::VpToken, PresentationSubmission};
 use std::sync::Arc;
 
 pub type SigningSubject = Arc<dyn Subject>;
@@ -130,7 +130,8 @@ impl Provider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{test_utils::MockSubject, SubjectSyntaxType, Validator, Validators};
+    use crate::test_utils::MockSubject;
+    use oid4vc_core::{SubjectSyntaxType, Validator, Validators};
     use std::str::FromStr;
 
     #[tokio::test]
