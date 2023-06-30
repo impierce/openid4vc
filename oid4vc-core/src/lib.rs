@@ -16,6 +16,9 @@ pub use decoder::Decoder;
 pub use rfc7519_claims::RFC7519Claims;
 pub use subject_syntax_type::{DidMethod, SubjectSyntaxType};
 
+#[cfg(test)]
+pub mod test_utils;
+
 #[macro_export]
 macro_rules! builder_fn {
     ($name:ident, $ty:ty) => {
