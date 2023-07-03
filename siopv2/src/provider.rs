@@ -128,14 +128,14 @@ impl Provider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::TestSubject;
-    use oid4vc_core::{Subject, SubjectSyntaxType, Validator, Validators};
-    use std::{str::FromStr, sync::Arc};
+    use crate::test_utils::MockSubject;
+    use oid4vc_core::{SubjectSyntaxType, Validator, Validators};
+    use std::str::FromStr;
 
     #[tokio::test]
     async fn test_provider() {
         // Create a new subject and validator.
-        let subject = TestSubject::new("did:test:123".to_string(), "key_id".to_string()).unwrap();
+        let subject = MockSubject::new("did:mock:123".to_string(), "key_id".to_string()).unwrap();
 
         // Create a new provider.
         let provider = Provider::new(Arc::new(subject)).unwrap();
@@ -149,7 +149,7 @@ mod tests {
                 &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
                 &response_mode=post\
                 &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
-                %5B%22did%3Atest%22%5D%2C%0A%20%20%20%20\
+                %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
                 %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\
             ";
@@ -160,8 +160,8 @@ mod tests {
                 request_url.parse().unwrap(),
                 Decoder {
                     validators: Validators::from([(
-                        SubjectSyntaxType::from_str("did:test").unwrap(),
-                        Arc::new(Validator::Subject(Arc::new(TestSubject::default()) as Arc<dyn Subject>)),
+                        SubjectSyntaxType::from_str("did:mock").unwrap(),
+                        Arc::new(Validator::Subject(Arc::new(MockSubject::default()) as Arc<dyn Subject>)),
                     )]),
                 },
             )

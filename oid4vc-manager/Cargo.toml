@@ -25,11 +25,8 @@ identity_core = { git = "https://git@github.com/iotaledger/identity.rs", rev = "
 identity_credential.workspace = true
 futures = "0.3"
 axum = "0.6"
-axum-auth = "0.4"
-reqwest.workspace = true
-jsonwebtoken = "8.3"
-paste = "1.0"
-tower-http = { version = "0.4", features = ["cors"]}
+reqwest = "0.11"
+rand = "0.8"
 
 [dev-dependencies]
 ed25519-dalek = "1.0.1"
