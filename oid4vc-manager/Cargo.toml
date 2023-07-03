@@ -4,17 +4,25 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+# Fix these dependencies once the crates arre automatically published to crates.io.
+oid4vc-core = { path = "../oid4vc-core" }
 siopv2 = { path = "../siopv2" }
-tokio = { version = "1.26.0", features = ["rt", "macros", "rt-multi-thread"] }
+oid4vp = { path = "../oid4vp" }
+oid4vci = { path = "../oid4vci" }
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_with.workspace = true
+getset.workspace = true
 anyhow = "1.0"
 async-trait = "0.1"
 did_url = "0.1"
 chrono = "0.4"
-serde_json = "1.0"
 serde_urlencoded = "0.7"
 did-key = "0.2"
 identity_iota = "0.6"
-identity_core = "0.6"
+identity_core = { git = "https://git@github.com/iotaledger/identity.rs", rev = "4f27434" }
+identity_credential = { git = "https://git@github.com/iotaledger/identity.rs", rev = "4f27434" }
 
 [dev-dependencies]
 ed25519-dalek = "1.0.1"

@@ -88,7 +88,6 @@ impl Display for DidMethod {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ClientMetadata;
 
     #[test]
     fn test_did_method() {
@@ -96,30 +95,12 @@ mod tests {
         assert!(DidMethod::from_str("did").is_err());
         assert!(DidMethod::from_str("did:").is_err());
         assert!(DidMethod::from_str("invalid:").is_err());
-        // assert!(DidMethod::from_str("did:example:").is_err());
         assert!(DidMethod::from_str("did:example_").is_err());
         assert!(DidMethod::from_str("did:example").is_ok());
     }
 
     #[test]
     fn test_subject_syntax_type_serde() {
-        let client_metadata: ClientMetadata = serde_json::from_value(serde_json::json!(
-            {
-                "subject_syntax_types_supported": [
-                    "did:example",
-                    "urn:ietf:params:oauth:jwk-thumbprint"
-                ]
-            }
-        ))
-        .unwrap();
-        assert_eq!(
-            client_metadata,
-            ClientMetadata::default().with_subject_syntax_types_supported(vec![
-                SubjectSyntaxType::Did(DidMethod::from_str("did:example").unwrap()),
-                SubjectSyntaxType::JwkThumbprint,
-            ])
-        );
-
         assert_eq!(
             SubjectSyntaxType::JwkThumbprint,
             serde_json::from_str::<SubjectSyntaxType>(r#""urn:ietf:params:oauth:jwk-thumbprint""#).unwrap()

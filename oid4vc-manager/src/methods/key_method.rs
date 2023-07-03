@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use did_key::{generate, resolve, Config, CoreSign, DIDCore, Document, Ed25519KeyPair, KeyMaterial, PatchedKeyPair};
-use siopv2::{Sign, Subject, Verify};
+use oid4vc_core::{Sign, Subject, Verify};
 
 /// This [`KeySubject`] implements the [`Subject`] trait and can be used as a subject for a [`Provider`]. It uses the
 /// 'key' DID method.
@@ -125,7 +125,7 @@ mod tests {
 
         // Test whether the provider manager can generate a response for the request succesfully.
         let response = provider_manager
-            .generate_response(request, Default::default())
+            .generate_response(request, Default::default(), None, None)
             .await
             .unwrap();
 

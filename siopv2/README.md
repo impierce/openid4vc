@@ -42,7 +42,7 @@ use wiremock::{
 };
 
 lazy_static! {
-    pub static ref MOCK_KEYPAIR: Keypair = Keypair::generate(&mut OsRng);
+    pub static ref TEST_KEYPAIR: Keypair = Keypair::generate(&mut OsRng);
 }
 
 // A Subject type that can be ingested by a Provider
@@ -66,7 +66,7 @@ impl Subject for MySubject {
     }
 
     async fn sign<'a>(&self, message: &'a str) -> Result<Vec<u8>> {
-        let signature: Signature = MOCK_KEYPAIR.sign(message.as_bytes());
+        let signature: Signature = TEST_KEYPAIR.sign(message.as_bytes());
         Ok(signature.to_bytes().to_vec())
     }
 }
@@ -74,7 +74,7 @@ impl Subject for MySubject {
 #[async_trait]
 impl Validator for MySubject {
     async fn public_key<'a>(&self, _kid: &'a str) -> Result<Vec<u8>> {
-        Ok(MOCK_KEYPAIR.public.to_bytes().to_vec())
+        Ok(TEST_KEYPAIR.public.to_bytes().to_vec())
     }
 }
 
@@ -85,7 +85,7 @@ pub struct MyValidator;
 #[async_trait]
 impl Validator for MyValidator {
     async fn public_key<'a>(&self, _kid: &'a str) -> Result<Vec<u8>> {
-        Ok(MOCK_KEYPAIR.public.to_bytes().to_vec())
+        Ok(TEST_KEYPAIR.public.to_bytes().to_vec())
     }
 }
 

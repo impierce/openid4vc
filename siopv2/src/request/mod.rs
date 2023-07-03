@@ -1,9 +1,9 @@
-use crate::token::id_token::RFC7519Claims;
-use crate::SubjectSyntaxType;
 use crate::{claims::ClaimRequests, ClientMetadata, RequestUrlBuilder, Scope, StandardClaimsRequests};
 use anyhow::{anyhow, Result};
 use derive_more::Display;
 use getset::Getters;
+use oid4vc_core::{RFC7519Claims, SubjectSyntaxType};
+use oid4vp::PresentationDefinition;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::convert::TryInto;
@@ -41,7 +41,7 @@ pub mod request_builder;
 ///             &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
 ///             &response_mode=post\
 ///             &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
-///             %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
+///             %5B%22did%3Atest%22%5D%2C%0A%20%20%20%20\
 ///             %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
 ///             &nonce=n-0S6_WzA2Mj\
 ///     ",
@@ -111,8 +111,10 @@ impl std::fmt::Display for RequestUrl {
             .ok_or(std::fmt::Error)?
             .iter()
             .filter_map(|(k, v)| match v {
-                Value::Object(_) | Value::Array(_) => Some((k.clone(), Value::String(serde_json::to_string(v).ok()?))),
-                Value::String(_) => Some((k.clone(), v.clone())),
+                Value::Object(_) | Value::Array(_) => {
+                    Some((k.to_owned(), Value::String(serde_json::to_string(v).ok()?)))
+                }
+                Value::String(_) => Some((k.to_owned(), v.to_owned())),
                 _ => None,
             })
             .collect();
@@ -128,6 +130,11 @@ pub enum ResponseType {
     #[default]
     #[display(fmt = "id_token")]
     IdToken,
+    //TODO: Is this possible in SIOP?
+    // #[display(fmt = "vp_token")]
+    // VpToken,
+    #[display(fmt = "id_token vp_token")]
+    IdTokenVpToken,
 }
 
 /// [`AuthorizationRequest`] is a request from a [crate::relying_party::RelyingParty] (RP) to a [crate::provider::Provider] (SIOP).
@@ -138,6 +145,7 @@ pub struct AuthorizationRequest {
     #[serde(flatten)]
     #[getset(get = "pub")]
     pub(super) rfc7519_claims: RFC7519Claims,
+    #[getset(get = "pub")]
     pub(crate) response_type: ResponseType,
     pub(crate) response_mode: Option<String>,
     #[getset(get = "pub")]
@@ -146,6 +154,8 @@ pub struct AuthorizationRequest {
     pub(crate) scope: Scope,
     #[getset(get = "pub")]
     pub(crate) claims: Option<ClaimRequests>,
+    #[getset(get = "pub")]
+    pub(crate) presentation_definition: Option<PresentationDefinition>,
     #[getset(get = "pub")]
     pub(crate) redirect_uri: String,
     #[getset(get = "pub")]
@@ -181,7 +191,7 @@ impl AuthorizationRequest {
 
 #[cfg(test)]
 mod tests {
-    use crate::subject_syntax_type::DidMethod;
+    use oid4vc_core::DidMethod;
 
     use super::*;
 
@@ -210,7 +220,7 @@ mod tests {
                 &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
                 &response_mode=post\
                 &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
-                %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
+                %5B%22did%3Atest%22%5D%2C%0A%20%20%20%20\
                 %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\
             ",
@@ -227,12 +237,13 @@ mod tests {
                     .to_string(),
                 scope: Scope::openid(),
                 claims: None,
+                presentation_definition: None,
                 redirect_uri: "https://client.example.org/cb".to_string(),
                 nonce: "n-0S6_WzA2Mj".to_string(),
                 client_metadata: Some(
                     ClientMetadata::default()
                         .with_subject_syntax_types_supported(vec![SubjectSyntaxType::Did(
-                            DidMethod::from_str("did:mock").unwrap()
+                            DidMethod::from_str("did:test").unwrap()
                         )])
                         .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
                 ),
@@ -275,7 +286,7 @@ mod tests {
                 &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
                 &response_mode=post\
                 &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
-                %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
+                %5B%22did%3Atest%22%5D%2C%0A%20%20%20%20\
                 %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\
                 &request_uri=https://example.com/request_uri\

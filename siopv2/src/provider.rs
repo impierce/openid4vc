@@ -1,8 +1,11 @@
 use crate::{
-    jwt, AuthorizationRequest, AuthorizationResponse, Decoder, IdToken, RequestUrl, StandardClaimsValues, Subject,
+    request::ResponseType, AuthorizationRequest, AuthorizationResponse, IdToken, RequestUrl, StandardClaimsValues,
 };
 use anyhow::Result;
 use chrono::{Duration, Utc};
+use identity_credential::presentation::JwtPresentation;
+use oid4vc_core::{jwt, Decoder, Subject};
+use oid4vp::{token::vp_token::VpToken, PresentationSubmission};
 use std::sync::Arc;
 
 pub type SigningSubject = Arc<dyn Subject>;
@@ -53,24 +56,64 @@ impl Provider {
         &self,
         request: AuthorizationRequest,
         user_claims: StandardClaimsValues,
+        verifiable_presentation: Option<JwtPresentation>,
+        presentation_submission: Option<PresentationSubmission>,
     ) -> Result<AuthorizationResponse> {
         let subject_identifier = self.subject.identifier()?;
 
-        let id_token = IdToken::builder()
-            .iss(subject_identifier.clone())
-            .sub(subject_identifier)
-            .aud(request.client_id().to_owned())
-            .nonce(request.nonce().to_owned())
-            .exp((Utc::now() + Duration::minutes(10)).timestamp())
-            .iat((Utc::now()).timestamp())
-            .claims(user_claims)
-            .build()?;
+        let mut builder = AuthorizationResponse::builder().redirect_uri(request.redirect_uri().to_owned());
 
-        let jwt = jwt::encode(self.subject.clone(), id_token).await?;
+        // TODO: Clean this up!!
+        match *request.response_type() {
+            ResponseType::IdToken => {
+                let id_token = IdToken::builder()
+                    .iss(subject_identifier.clone())
+                    .sub(subject_identifier)
+                    .aud(request.client_id().to_owned())
+                    .nonce(request.nonce().to_owned())
+                    .exp((Utc::now() + Duration::minutes(10)).timestamp())
+                    .iat((Utc::now()).timestamp())
+                    .claims(user_claims)
+                    .build()?;
 
-        let mut builder = AuthorizationResponse::builder()
-            .redirect_uri(request.redirect_uri().to_owned())
-            .id_token(jwt);
+                let jwt = jwt::encode(self.subject.clone(), id_token).await?;
+                builder = builder.id_token(jwt);
+            }
+            ResponseType::IdTokenVpToken => {
+                let id_token = IdToken::builder()
+                    .iss(subject_identifier.clone())
+                    .sub(subject_identifier.clone())
+                    .aud(request.client_id().to_owned())
+                    .nonce(request.nonce().to_owned())
+                    .exp((Utc::now() + Duration::minutes(10)).timestamp())
+                    .iat((Utc::now()).timestamp())
+                    .claims(user_claims)
+                    .build()?;
+
+                let jwt = jwt::encode(self.subject.clone(), id_token).await?;
+                builder = builder.id_token(jwt);
+
+                if let (Some(verifiable_presentation), Some(presentation_submission)) =
+                    (verifiable_presentation, presentation_submission)
+                {
+                    let vp_token = VpToken::builder()
+                        .iss(subject_identifier.clone())
+                        .sub(subject_identifier)
+                        .aud(request.client_id().to_owned())
+                        .nonce(request.nonce().to_owned())
+                        .exp((Utc::now() + Duration::minutes(10)).timestamp())
+                        .iat((Utc::now()).timestamp())
+                        .verifiable_presentation(verifiable_presentation)
+                        .build()?;
+
+                    let jwt = jwt::encode(self.subject.clone(), vp_token).await?;
+                    builder = builder.vp_token(jwt).presentation_submission(presentation_submission);
+                } else {
+                    anyhow::bail!("Verifiable presentation is required for this response type.");
+                }
+            }
+        }
+
         if let Some(state) = request.state() {
             builder = builder.state(state.clone());
         }
@@ -87,13 +130,14 @@ impl Provider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{test_utils::MockSubject, SubjectSyntaxType, Validator, Validators};
+    use crate::test_utils::TestSubject;
+    use oid4vc_core::{SubjectSyntaxType, Validator, Validators};
     use std::str::FromStr;
 
     #[tokio::test]
     async fn test_provider() {
         // Create a new subject and validator.
-        let subject = MockSubject::new("did:mock:123".to_string(), "key_id".to_string()).unwrap();
+        let subject = TestSubject::new("did:test:123".to_string(), "key_id".to_string()).unwrap();
 
         // Create a new provider.
         let provider = Provider::new(Arc::new(subject)).unwrap();
@@ -107,7 +151,7 @@ mod tests {
                 &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
                 &response_mode=post\
                 &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
-                %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
+                %5B%22did%3Atest%22%5D%2C%0A%20%20%20%20\
                 %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\
             ";
@@ -118,8 +162,8 @@ mod tests {
                 request_url.parse().unwrap(),
                 Decoder {
                     validators: Validators::from([(
-                        SubjectSyntaxType::from_str("did:mock").unwrap(),
-                        Arc::new(Validator::Subject(Arc::new(MockSubject::default()) as Arc<dyn Subject>)),
+                        SubjectSyntaxType::from_str("did:test").unwrap(),
+                        Arc::new(Validator::Subject(Arc::new(TestSubject::default()) as Arc<dyn Subject>)),
                     )]),
                 },
             )
@@ -127,6 +171,9 @@ mod tests {
             .unwrap();
 
         // Test whether the provider can generate a response for the request succesfully.
-        assert!(provider.generate_response(request, Default::default()).await.is_ok());
+        assert!(provider
+            .generate_response(request, Default::default(), None, None)
+            .await
+            .is_ok());
     }
 }

@@ -1,5 +1,6 @@
-use super::id_token::{RFC7519Claims, SubJwk};
-use crate::{builder_fn, IdToken, StandardClaimsValues};
+use super::id_token::SubJwk;
+use crate::{IdToken, StandardClaimsValues};
+use oid4vc_core::{builder_fn, RFC7519Claims};
 
 #[derive(Default)]
 pub struct IdTokenBuilder {

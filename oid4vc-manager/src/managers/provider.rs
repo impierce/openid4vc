@@ -1,8 +1,8 @@
 use anyhow::Result;
-use siopv2::{
-    AuthorizationRequest, AuthorizationResponse, Decoder, Provider, RequestUrl, StandardClaimsValues, Subject,
-    SubjectSyntaxType, Subjects,
-};
+use identity_credential::presentation::JwtPresentation;
+use oid4vc_core::{Decoder, Subject, SubjectSyntaxType, Subjects};
+use oid4vp::PresentationSubmission;
+use siopv2::{AuthorizationRequest, AuthorizationResponse, Provider, RequestUrl, StandardClaimsValues};
 use std::sync::Arc;
 
 /// Manager struct for [`siopv2::Provider`].
@@ -29,8 +29,12 @@ impl ProviderManager {
         &self,
         request: AuthorizationRequest,
         user_claims: StandardClaimsValues,
+        verifiable_presentation: Option<JwtPresentation>,
+        presentation_submission: Option<PresentationSubmission>,
     ) -> Result<AuthorizationResponse> {
-        self.provider.generate_response(request, user_claims).await
+        self.provider
+            .generate_response(request, user_claims, verifiable_presentation, presentation_submission)
+            .await
     }
 
     pub async fn send_response(&self, response: AuthorizationResponse) -> Result<()> {
