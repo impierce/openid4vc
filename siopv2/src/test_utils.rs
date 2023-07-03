@@ -9,20 +9,20 @@ use rand::rngs::OsRng;
 
 // Keypair for mocking purposes.
 lazy_static! {
-    pub static ref TEST_KEYPAIR: Keypair = Keypair::generate(&mut OsRng);
+    pub static ref MOCK_KEYPAIR: Keypair = Keypair::generate(&mut OsRng);
 }
 
 #[derive(Derivative)]
 #[derivative(Default)]
-pub struct TestSubject {
-    #[derivative(Default(value = "did_url::DID::parse(\"did:test:123\").unwrap()"))]
+pub struct MockSubject {
+    #[derivative(Default(value = "did_url::DID::parse(\"did:mock:123\").unwrap()"))]
     pub did: did_url::DID,
     pub key_id: String,
 }
 
-impl TestSubject {
+impl MockSubject {
     pub fn new(did: String, key_id: String) -> Result<Self> {
-        Ok(TestSubject {
+        Ok(MockSubject {
             did: did_url::DID::parse(did)?,
             key_id,
         })
@@ -41,13 +41,13 @@ impl Sign for TestSubject {
 }
 
 #[async_trait]
-impl Verify for TestSubject {
+impl Verify for MockSubject {
     async fn public_key(&self, _kid: &str) -> Result<Vec<u8>> {
-        Ok(TEST_KEYPAIR.public.to_bytes().to_vec())
+        Ok(MOCK_KEYPAIR.public.to_bytes().to_vec())
     }
 }
 
-impl Subject for TestSubject {
+impl Subject for MockSubject {
     fn identifier(&self) -> Result<String> {
         Ok(self.did.to_string())
     }
@@ -64,7 +64,7 @@ impl MockVerifier {
 #[async_trait]
 impl Verify for MockVerifier {
     async fn public_key(&self, _kid: &str) -> Result<Vec<u8>> {
-        Ok(TEST_KEYPAIR.public.to_bytes().to_vec())
+        Ok(MOCK_KEYPAIR.public.to_bytes().to_vec())
     }
 }
 

@@ -24,6 +24,9 @@ identity_iota = "0.6"
 identity_core = { git = "https://git@github.com/iotaledger/identity.rs", rev = "4f27434" }
 identity_credential.workspace = true
 futures = "0.3"
+axum = "0.6"
+reqwest = "0.11"
+rand = "0.8"
 
 [dev-dependencies]
 ed25519-dalek = "1.0.1"
