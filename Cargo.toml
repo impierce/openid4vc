@@ -33,6 +33,7 @@ getset = "0.1"
 
 # TODO: Fix these dependencies once publishing to crates.io is automated.
 [dependencies]
+oid4vc-core = { path = "oid4vc-core" }
 oid4vci = { path = "oid4vci" }
 oid4vp = { path = "oid4vp" }
 siopv2 = { path = "siopv2" }

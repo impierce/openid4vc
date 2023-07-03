@@ -79,7 +79,7 @@ where
 mod tests {
     use super::*;
     use crate::{
-        test_utils::{MockSubject, MockVerifier},
+        test_utils::{MockVerifier, TestSubject},
         Verify,
     };
     use serde_json::{json, Value};
@@ -94,7 +94,7 @@ mod tests {
             "iat": 1593436422,
             "nonce": "nonce",
         });
-        let subject = MockSubject::new("did:mock:123".to_string(), "key_id".to_string()).unwrap();
+        let subject = TestSubject::new("did:test:123".to_string(), "key_id".to_string()).unwrap();
         let encoded = encode(Arc::new(subject), claims).await.unwrap();
 
         let verifier = MockVerifier::new();

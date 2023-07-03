@@ -4,7 +4,8 @@ use oid4vp::{
     PresentationSubmission,
 };
 
-/// Takes a [`PresentationDefinition`] and a credential and creates a [`PresentationSubmission`] from it if the credential .
+/// Takes a [`PresentationDefinition`] and a credential and creates a [`PresentationSubmission`] from it if the
+/// credential meets the requirements.
 // TODO: make VP/VC fromat agnostic. In current form only jwt_vp_json + jwt_vc_json are supported.
 pub fn create_presentation_submission(
     presentation_definition: &PresentationDefinition,
