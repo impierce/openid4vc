@@ -6,6 +6,7 @@ use oid4vc_core::{RFC7519Claims, SubjectSyntaxType};
 use oid4vp::PresentationDefinition;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::convert::TryInto;
 use std::str::FromStr;
 
@@ -124,8 +125,7 @@ impl std::fmt::Display for RequestUrl {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq, Clone, Serialize, Default, Display)]
-#[serde(rename_all = "snake_case")]
+#[derive(DeserializeFromStr, Debug, PartialEq, Clone, SerializeDisplay, Default, Display)]
 pub enum ResponseType {
     #[default]
     #[display(fmt = "id_token")]
@@ -135,6 +135,18 @@ pub enum ResponseType {
     // VpToken,
     #[display(fmt = "id_token vp_token")]
     IdTokenVpToken,
+}
+
+impl FromStr for ResponseType {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "id_token" => Ok(ResponseType::IdToken),
+            "id_token vp_token" => Ok(ResponseType::IdTokenVpToken),
+            _ => Err(anyhow!("Invalid response type.")),
+        }
+    }
 }
 
 /// [`AuthorizationRequest`] is a request from a [crate::relying_party::RelyingParty] (RP) to a [crate::provider::Provider] (SIOP).
@@ -301,5 +313,13 @@ mod tests {
         let request_url =
             RequestUrl::from_str("siopv2://idtoken?request_uri=https://example.com/request_uri&scope=openid");
         assert!(request_url.is_err(),);
+    }
+
+    #[test]
+    fn test_response_type_serde() {
+        let response_type = ResponseType::IdTokenVpToken;
+        let response_type_string = response_type.to_string();
+        assert_eq!(&response_type_string, "id_token vp_token");
+        assert_eq!(response_type, ResponseType::from_str(&response_type_string).unwrap());
     }
 }
