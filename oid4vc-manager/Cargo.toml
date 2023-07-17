@@ -21,8 +21,9 @@ chrono = "0.4"
 serde_urlencoded = "0.7"
 did-key = "0.2"
 identity_iota = "0.6"
-identity_core = { git = "https://git@github.com/iotaledger/identity.rs", rev = "4f27434" }
-identity_credential = { git = "https://git@github.com/iotaledger/identity.rs", rev = "4f27434" }
+# identity_core = { git = "https://git@github.com/iotaledger/identity.rs", rev = "4f27434" }
+# identity_credential = { git = "https://git@github.com/iotaledger/identity.rs", rev = "4f27434" }
+identity_credential = { git = "https://git@github.com/iotaledger/identity.rs", rev = "4f27434", default-features = false, features = ["credential"] }
 
 [dev-dependencies]
 ed25519-dalek = "1.0.1"
