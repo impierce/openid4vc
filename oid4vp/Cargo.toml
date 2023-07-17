@@ -19,6 +19,6 @@ serde_json.workspace = true
 serde_with.workspace = true
 getset.workspace = true
 # identity_credential = { git = "https://git@github.com/iotaledger/identity.rs", rev = "4f27434" } 
-identity_credential = { git = "https://git@github.com/iotaledger/identity.rs", rev = "4f27434", default-features = false, features = ["credential"] }
+identity_credential = { git = "https://git@github.com/iotaledger/identity.rs", rev = "4f27434", default-features = false, features = ["validator", "credential", "presentation"] }
 anyhow = "1.0"
 futures = "0.3"
