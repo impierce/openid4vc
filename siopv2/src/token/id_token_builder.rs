@@ -2,7 +2,7 @@ use super::id_token::SubJwk;
 use crate::{IdToken, StandardClaimsValues};
 use oid4vc_core::{builder_fn, RFC7519Claims};
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct IdTokenBuilder {
     rfc7519_claims: RFC7519Claims,
     standard_claims: StandardClaimsValues,
