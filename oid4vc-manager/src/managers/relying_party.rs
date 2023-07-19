@@ -17,8 +17,8 @@ impl RelyingPartyManager {
         })
     }
 
-    pub async fn encode(&self, request: &AuthorizationRequest) -> Result<String> {
-        self.relying_party.encode(request).await
+    pub fn encode(&self, request: &AuthorizationRequest) -> Result<String> {
+        self.relying_party.encode(request)
     }
 
     pub async fn validate_response(&self, response: &AuthorizationResponse) -> Result<ResponseItems> {

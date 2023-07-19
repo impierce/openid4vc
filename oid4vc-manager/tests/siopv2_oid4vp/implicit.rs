@@ -136,7 +136,7 @@ async fn test_implicit_flow() {
     .unwrap();
 
     // Encode the verifiable credential as a JWT.
-    let jwt = jwt::encode(Arc::new(issuer), &verifiable_credential).await.unwrap();
+    let jwt = jwt::encode(Arc::new(issuer), &verifiable_credential).unwrap();
 
     // Create a verifiable presentation using the JWT.
     let verifiable_presentation = JwtPresentation::builder(Url::parse(subject_did).unwrap(), Object::new())

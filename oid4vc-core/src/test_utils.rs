@@ -28,13 +28,12 @@ impl TestSubject {
     }
 }
 
-#[async_trait]
 impl Sign for TestSubject {
     fn key_id(&self) -> Option<String> {
         Some(self.key_id.clone())
     }
 
-    async fn sign(&self, message: &str) -> Result<Vec<u8>> {
+    fn sign(&self, message: &str) -> Result<Vec<u8>> {
         let signature: Signature = TEST_KEYPAIR.sign(message.as_bytes());
         Ok(signature.to_bytes().to_vec())
     }

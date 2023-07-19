@@ -4,8 +4,12 @@ use crate::{
 use anyhow::Result;
 use chrono::{Duration, Utc};
 use identity_credential::presentation::JwtPresentation;
-use oid4vc_core::{jwt, Decoder, Subject};
+use oid4vc_core::{
+    jwt::{self, JsonWebToken},
+    Decoder, Subject,
+};
 use oid4vp::{token::vp_token::VpToken, PresentationSubmission};
+use serde::Serialize;
 use std::sync::Arc;
 
 pub type SigningSubject = Arc<dyn Subject>;
@@ -16,6 +20,13 @@ pub type SigningSubject = Arc<dyn Subject>;
 pub struct Provider {
     pub subject: SigningSubject,
     client: reqwest::Client,
+}
+
+fn base64_url_encode<T>(value: &T) -> Result<String>
+where
+    T: ?Sized + Serialize,
+{
+    Ok(base64_url::encode(serde_json::to_vec(value)?.as_slice()))
 }
 
 impl Provider {
@@ -76,7 +87,7 @@ impl Provider {
                     .claims(user_claims)
                     .build()?;
 
-                let jwt = jwt::encode(self.subject.clone(), id_token).await?;
+                let jwt = jwt::encode(self.subject.clone(), id_token)?;
                 builder = builder.id_token(jwt);
             }
             ResponseType::IdTokenVpToken => {
@@ -90,7 +101,7 @@ impl Provider {
                     .claims(user_claims)
                     .build()?;
 
-                let jwt = jwt::encode(self.subject.clone(), id_token).await?;
+                let jwt = jwt::encode(self.subject.clone(), id_token)?;
                 builder = builder.id_token(jwt);
 
                 if let (Some(verifiable_presentation), Some(presentation_submission)) =
@@ -106,7 +117,7 @@ impl Provider {
                         .verifiable_presentation(verifiable_presentation)
                         .build()?;
 
-                    let jwt = jwt::encode(self.subject.clone(), vp_token).await?;
+                    let jwt = jwt::encode(self.subject.clone(), vp_token)?;
                     builder = builder.vp_token(jwt).presentation_submission(presentation_submission);
                 } else {
                     anyhow::bail!("Verifiable presentation is required for this response type.");

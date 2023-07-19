@@ -40,7 +40,7 @@ impl Sign for KeySubject {
             .and_then(|authentication_methods| authentication_methods.get(0).cloned())
     }
 
-    async fn sign(&self, message: &str) -> Result<Vec<u8>> {
+    fn sign(&self, message: &str) -> Result<Vec<u8>> {
         Ok(self.keypair.sign(message.as_bytes()).to_vec())
     }
 }
