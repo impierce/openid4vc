@@ -152,7 +152,6 @@ async fn test_implicit_flow() {
             Some(verifiable_presentation),
             Some(presentation_submission),
         )
-        .await
         .unwrap();
 
     // Validate the response.

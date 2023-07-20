@@ -228,7 +228,6 @@ mod tests {
         // The provider generates a signed SIOP response from the new SIOP request.
         let response = provider_manager
             .generate_response(request, StandardClaimsValues::default(), None, None)
-            .await
             .unwrap();
         println!("Generated SIOP response based on the SIOP request: {:#?}", response);
 

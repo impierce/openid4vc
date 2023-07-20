@@ -173,7 +173,6 @@ mod tests {
         // Test whether the provider can generate a response for the request succesfully.
         assert!(provider
             .generate_response(request, Default::default(), None, None)
-            .await
             .is_ok());
     }
 }

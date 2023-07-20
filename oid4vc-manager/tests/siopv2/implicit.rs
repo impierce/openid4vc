@@ -155,7 +155,6 @@ async fn test_implicit_flow() {
     // encoded as a JWT.
     let response = provider_manager
         .generate_response(request, response_claims, None, None)
-        .await
         .unwrap();
 
     // The provider manager sends it's response to the mock server's `redirect_uri` endpoint.
