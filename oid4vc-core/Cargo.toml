@@ -20,7 +20,7 @@ url = { version = "2.3.1", features = ["serde"] }
 is_empty = "0.2.0"
 serde_urlencoded = "0.7.1"
 derive_more = "0.99.16"
-identity_credential = { git = "https://git@github.com/iotaledger/identity.rs", rev = "4f27434" } 
+identity_credential.workspace = true
 futures = "0.3"
 
 [dev-dependencies]

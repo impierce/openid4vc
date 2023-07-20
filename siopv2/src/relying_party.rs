@@ -20,8 +20,8 @@ impl RelyingParty {
         })
     }
 
-    pub async fn encode(&self, request: &AuthorizationRequest) -> Result<String> {
-        jwt::encode(self.subject.clone(), request).await
+    pub fn encode(&self, request: &AuthorizationRequest) -> Result<String> {
+        jwt::encode(self.subject.clone(), request)
     }
 
     /// Validates a [`AuthorizationResponse`] by decoding the header of the id_token, fetching the public key corresponding to

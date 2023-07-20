@@ -52,7 +52,7 @@ impl Provider {
 
     /// Generates a [`AuthorizationResponse`] in response to a [`AuthorizationRequest`] and the user's claims. The [`AuthorizationResponse`]
     /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
-    pub async fn generate_response(
+    pub fn generate_response(
         &self,
         request: AuthorizationRequest,
         user_claims: StandardClaimsValues,
@@ -76,7 +76,7 @@ impl Provider {
                     .claims(user_claims)
                     .build()?;
 
-                let jwt = jwt::encode(self.subject.clone(), id_token).await?;
+                let jwt = jwt::encode(self.subject.clone(), id_token)?;
                 builder = builder.id_token(jwt);
             }
             ResponseType::IdTokenVpToken => {
@@ -90,7 +90,7 @@ impl Provider {
                     .claims(user_claims)
                     .build()?;
 
-                let jwt = jwt::encode(self.subject.clone(), id_token).await?;
+                let jwt = jwt::encode(self.subject.clone(), id_token)?;
                 builder = builder.id_token(jwt);
 
                 if let (Some(verifiable_presentation), Some(presentation_submission)) =
@@ -106,7 +106,7 @@ impl Provider {
                         .verifiable_presentation(verifiable_presentation)
                         .build()?;
 
-                    let jwt = jwt::encode(self.subject.clone(), vp_token).await?;
+                    let jwt = jwt::encode(self.subject.clone(), vp_token)?;
                     builder = builder.vp_token(jwt).presentation_submission(presentation_submission);
                 } else {
                     anyhow::bail!("Verifiable presentation is required for this response type.");
@@ -173,7 +173,6 @@ mod tests {
         // Test whether the provider can generate a response for the request succesfully.
         assert!(provider
             .generate_response(request, Default::default(), None, None)
-            .await
             .is_ok());
     }
 }

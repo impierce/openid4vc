@@ -51,7 +51,7 @@ where
     Ok(jsonwebtoken::decode::<T>(jwt, &key, &Validation::new(algorithm))?.claims)
 }
 
-pub async fn encode<C, S>(signer: Arc<S>, claims: C) -> Result<String>
+pub fn encode<C, S>(signer: Arc<S>, claims: C) -> Result<String>
 where
     C: Serialize + Send,
     S: Sign + ?Sized,
@@ -62,7 +62,7 @@ where
 
     let message = [base64_url_encode(&jwt.header)?, base64_url_encode(&jwt.payload)?].join(".");
 
-    let proof_value = signer.sign(&message).await?;
+    let proof_value = signer.sign(&message)?;
     let signature = base64_url::encode(proof_value.as_slice());
     let message = [message, signature].join(".");
     Ok(message)
@@ -95,7 +95,7 @@ mod tests {
             "nonce": "nonce",
         });
         let subject = TestSubject::new("did:test:123".to_string(), "key_id".to_string()).unwrap();
-        let encoded = encode(Arc::new(subject), claims).await.unwrap();
+        let encoded = encode(Arc::new(subject), claims).unwrap();
 
         let verifier = MockVerifier::new();
         let (kid, algorithm) = extract_header(&encoded).unwrap();

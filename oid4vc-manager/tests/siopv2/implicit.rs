@@ -96,7 +96,7 @@ async fn test_implicit_flow() {
     // Create a new `request_uri` endpoint on the mock server and load it with the JWT encoded `AuthorizationRequest`.
     Mock::given(method("GET"))
         .and(path("/request_uri"))
-        .respond_with(ResponseTemplate::new(200).set_body_string(relying_party_manager.encode(&request).await.unwrap()))
+        .respond_with(ResponseTemplate::new(200).set_body_string(relying_party_manager.encode(&request).unwrap()))
         .mount(&mock_server)
         .await;
 
@@ -155,7 +155,6 @@ async fn test_implicit_flow() {
     // encoded as a JWT.
     let response = provider_manager
         .generate_response(request, response_claims, None, None)
-        .await
         .unwrap();
 
     // The provider manager sends it's response to the mock server's `redirect_uri` endpoint.

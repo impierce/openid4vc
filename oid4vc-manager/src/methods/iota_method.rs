@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use futures::executor::block_on;
 use identity_iota::{
     account::{Account, IdentitySetup, MethodContent},
     account_storage::KeyLocation,
@@ -18,9 +19,8 @@ where
     pub account: Account<C>,
 }
 
-#[async_trait]
 impl Sign for IotaSubject {
-    async fn sign(&self, message: &str) -> Result<Vec<u8>> {
+    fn sign(&self, message: &str) -> Result<Vec<u8>> {
         // Get the verification method for authentication from the DID document.
         let method = self
             .authentication_method()
@@ -28,11 +28,11 @@ impl Sign for IotaSubject {
 
         let key_location = KeyLocation::from_verification_method(method)?;
 
-        let proof_value = self
-            .account
-            .storage()
-            .key_sign(self.account.did(), &key_location, message.as_bytes().to_vec())
-            .await?;
+        let proof_value = block_on(self.account.storage().key_sign(
+            self.account.did(),
+            &key_location,
+            message.as_bytes().to_vec(),
+        ))?;
 
         Ok(proof_value.as_bytes().to_vec())
     }
@@ -228,7 +228,6 @@ mod tests {
         // The provider generates a signed SIOP response from the new SIOP request.
         let response = provider_manager
             .generate_response(request, StandardClaimsValues::default(), None, None)
-            .await
             .unwrap();
         println!("Generated SIOP response based on the SIOP request: {:#?}", response);
 

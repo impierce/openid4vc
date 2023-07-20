@@ -36,7 +36,7 @@ impl Sign for TestSubject {
         Some(self.key_id.clone())
     }
 
-    async fn sign(&self, message: &str) -> Result<Vec<u8>> {
+    fn sign(&self, message: &str) -> Result<Vec<u8>> {
         let signature: Signature = TEST_KEYPAIR.sign(message.as_bytes());
         Ok(signature.to_bytes().to_vec())
     }
