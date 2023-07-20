@@ -25,7 +25,7 @@ impl ProviderManager {
             .await
     }
 
-    pub async fn generate_response(
+    pub fn generate_response(
         &self,
         request: AuthorizationRequest,
         user_claims: StandardClaimsValues,
@@ -34,7 +34,6 @@ impl ProviderManager {
     ) -> Result<AuthorizationResponse> {
         self.provider
             .generate_response(request, user_claims, verifiable_presentation, presentation_submission)
-            .await
     }
 
     pub async fn send_response(&self, response: AuthorizationResponse) -> Result<()> {

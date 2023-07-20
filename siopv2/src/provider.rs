@@ -52,7 +52,7 @@ impl Provider {
 
     /// Generates a [`AuthorizationResponse`] in response to a [`AuthorizationRequest`] and the user's claims. The [`AuthorizationResponse`]
     /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
-    pub async fn generate_response(
+    pub fn generate_response(
         &self,
         request: AuthorizationRequest,
         user_claims: StandardClaimsValues,
