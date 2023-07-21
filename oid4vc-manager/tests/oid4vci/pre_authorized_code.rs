@@ -1,18 +1,16 @@
+use std::collections::HashSet;
+
 use lazy_static::lazy_static;
-use oid4vc_manager::routers::credential_issuer::Server;
+use oid4vc_manager::{generate_authorization_code, routers::credential_issuer::Server};
 use oid4vci::{
-    credential_definition::CredentialDefinition,
-    credential_issuer_metadata::CredentialsSupportedObject,
-    credential_offer::CredentialOfferQuery,
-    credential_request::{CredentialRequest, Proof},
-    credential_response::CredentialResponse,
-    token_request::TokenRequest,
-    token_response::TokenResponse,
+    credential_issuer::{MemStorage, Storage},
+    credential_issuer_metadata::CredentialIssuerMetadata,
+    credential_offer::{CredentialOfferQuery, PreAuthorizedCode},
+    CredentialsSupportedJson, CredentialsSupportedObject, JwtVcJson, Wallet,
 };
-use oid4vp::ClaimFormatDesignation;
 
 lazy_static! {
-    static ref CREDENTIALS_SUPPORTED: CredentialsSupportedObject = serde_json::from_str(
+    static ref CREDENTIALS_SUPPORTED: CredentialsSupportedObject<JwtVcJson> = serde_json::from_str(
         r##"{
             "format": "jwt_vc_json",
                        "id": "UniversityDegree_JWT",
@@ -77,10 +75,23 @@ lazy_static! {
 
 #[tokio::test]
 async fn test_pre_authorized_code_flow() {
-    let credential_issuer_server = Server::new(CREDENTIALS_SUPPORTED.clone(), None).unwrap();
+    let storage = MemStorage;
+
+    let credential_issuer_server = Server::new(
+        CredentialIssuerMetadata {
+            credential_issuer: "http://tbd".parse().unwrap(),
+            authorization_server: None,
+            credential_endpoint: "http://tbd".parse().unwrap(),
+            batch_credential_endpoint: None,
+            deferred_credential_endpoint: None,
+            credentials_supported: vec![CREDENTIALS_SUPPORTED.clone().into()],
+            display: None,
+        },
+        None,
+        storage,
+    )
+    .unwrap();
     credential_issuer_server.start().await;
-    let credential_issuer_url = credential_issuer_server.uri();
-    dbg!(&credential_issuer_url);
 
     // Get the credential offer url.
     let credential_offer_url = credential_issuer_server.credential_offer_uri();
@@ -91,64 +102,31 @@ async fn test_pre_authorized_code_flow() {
         _ => unreachable!(),
     };
 
-    let credential_issuer = credential_offer.credential_issuer;
+    let credential_issuer_url = credential_offer.credential_issuer;
 
-    let client = reqwest::Client::new();
-    let credential_supported_object = client
-        .get(&format!("{}/.well-known/openid-credential-issuer", credential_issuer))
-        .send()
-        .await
-        .unwrap()
-        .json::<CredentialsSupportedObject>()
+    let wallet = Wallet::new();
+
+    let authorization_server_metadata = wallet
+        .get_authorization_server_metadata(credential_issuer_url.clone())
         .await
         .unwrap();
-    dbg!(&credential_supported_object);
 
-    let token_response = client
-        .post(&format!("{}/token", credential_issuer))
-        .form(&TokenRequest {
-            grant_type: "urn:ietf:params:oauth:grant-type:pre-authorized_code".to_string(),
-            pre_authorized_code: credential_offer
-                .grants
-                .unwrap()
-                .pre_authorized_code
-                .unwrap()
-                .pre_authorized_code,
-            user_pin: Some("493536".to_string()),
-        })
-        .send()
-        .await
-        .unwrap()
-        .json::<TokenResponse>()
+    let credential_issuer_metadata = wallet
+        .get_credential_issuer_metadata(credential_issuer_url.clone())
         .await
         .unwrap();
-    dbg!(&token_response);
 
-    let credential_response = client
-        .post(&format!("{}/credential", credential_issuer))
-        .json(&CredentialRequest {
-            format: ClaimFormatDesignation::JwtVcJson,
-            credential_definition: CredentialDefinition {
-                type_: vec![
-                    "VerifiableCredential".to_string(),
-                    "UniversityDegreeCredential".to_string(),
-                ],
-                credential_subject: None,
-            },
-            proof: Some(Proof {
-                proof_type: "jwt".to_string(),
-                jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8/
-                xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJzNkJoZFJrcXQzIiwiYXVkIjoiaHR/
-                0cHM6Ly9zZXJ2ZXIuZXhhbXBsZS5jb20iLCJpYXQiOiIyMDE4LTA5LTE0VDIxOjE5OjEwWiIsIm5vbm/
-                NlIjoidFppZ25zbkZicCJ9.ewdkIkPV50iOeBUqMXCC_aZKPxgihac0aW9EkL1nOzM"
-                    .to_string(),
-            }),
-        })
-        .send()
-        .await
-        .unwrap()
-        .json::<CredentialResponse>()
+    let token_response = wallet
+        .get_access_token(
+            authorization_server_metadata.token_endpoint,
+            credential_offer.grants.unwrap(),
+            Some("493536".to_string()),
+        )
         .await
         .unwrap();
-    dbg!(&credential_response);
+
+    let credential_response = wallet
+        .get_credential(credential_issuer_metadata.credential_endpoint, &token_response)
+        .await
+        .unwrap();
 }

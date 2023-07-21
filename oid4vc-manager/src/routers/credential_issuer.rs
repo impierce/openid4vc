@@ -7,53 +7,74 @@ use axum::{
     routing::{get, post},
     Form, Json, Router,
 };
+use identity_credential::credential::Credential;
 use oid4vci::{
-    credential_issuer_metadata::CredentialsSupportedObject,
+    authorization_server_metadata::AuthorizationServerMetadata,
+    credential_definition::CredentialDefinition,
+    credential_issuer::{self, CredentialIssuer, MemStorage, Storage},
+    credential_issuer_metadata::CredentialIssuerMetadata,
     credential_offer::{AuthorizationCode, CredentialOffer, CredentialOfferQuery, Grants, PreAuthorizedCode},
     credential_request::CredentialRequest,
     credential_response::CredentialResponse,
     token_request::TokenRequest,
     token_response::TokenResponse,
+    CredentialFormat, JwtVcJson, JwtVcJsonParameters,
 };
-use oid4vp::ClaimFormatDesignation;
+use oid4vp::{token, ClaimFormatDesignation};
+use reqwest::Url;
 use std::{
     net::TcpListener,
     sync::{Arc, Mutex},
 };
 
-pub struct Server {
+pub struct Server<S: Storage> {
     pub listener: TcpListener,
-    pub credential_types: Arc<Mutex<Vec<String>>>,
-    pub credentials_supported: Arc<Mutex<CredentialsSupportedObject>>,
-    pub authorization_code: Arc<Mutex<Option<AuthorizationCode>>>,
-    pub pre_authorized_code: Arc<Mutex<Option<PreAuthorizedCode>>>,
+    pub credential_issuer: Arc<Mutex<CredentialIssuer<S>>>,
+    pub credential_types: Arc<Mutex<Vec<serde_json::Value>>>,
     pub nonce: Arc<Mutex<Option<String>>>,
     pub access_token: Arc<Mutex<Option<String>>>,
 }
 
 #[derive(Debug, Clone)]
-pub struct ServerState {
-    pub credential_types: Arc<Mutex<Vec<String>>>,
-    pub credentials_supported: Arc<Mutex<CredentialsSupportedObject>>,
-    pub authorization_code: Arc<Mutex<Option<AuthorizationCode>>>,
-    pub pre_authorized_code: Arc<Mutex<Option<PreAuthorizedCode>>>,
+pub struct ServerState<S: Storage> {
+    pub credential_issuer: Arc<Mutex<CredentialIssuer<S>>>,
+    pub credential_types: Arc<Mutex<Vec<serde_json::Value>>>,
     pub nonce: Arc<Mutex<Option<String>>>,
     pub access_token: Arc<Mutex<Option<String>>>,
 }
 
-impl Server {
-    pub fn new(credentials_supported: CredentialsSupportedObject, listener: Option<TcpListener>) -> Result<Self> {
-        let listener = listener.unwrap_or_else(|| TcpListener::bind("0.0.0.0:0").unwrap());
+impl<S: Storage + Clone> Server<S> {
+    pub fn new(
+        mut credential_issuer_metadata: CredentialIssuerMetadata,
+        listener: Option<TcpListener>,
+        storage: S,
+    ) -> Result<Self> {
+        let listener = listener.unwrap_or_else(|| TcpListener::bind("127.0.0.1:0").unwrap());
+        let issuer_url: Url = format!("http://{:?}", listener.local_addr()?).parse()?;
+        credential_issuer_metadata.credential_issuer = issuer_url.clone();
+        credential_issuer_metadata.credential_endpoint = format!("{issuer_url}credential").parse()?;
         Ok(Self {
             listener,
-            credential_types: Arc::new(Mutex::new(vec!["UniversityDegree_JWT".to_string()])),
-            credentials_supported: Arc::new(Mutex::new(credentials_supported)),
-            authorization_code: Arc::new(Mutex::new(None)),
-            pre_authorized_code: Arc::new(Mutex::new(Some(PreAuthorizedCode {
-                pre_authorized_code: generate_authorization_code(10),
-                user_pin_required: true,
-                interval: 5,
-            }))),
+            credential_issuer: Arc::new(Mutex::new(CredentialIssuer {
+                metadata: credential_issuer_metadata.clone(),
+                authorization_server_metadata: AuthorizationServerMetadata {
+                    issuer: issuer_url.clone(),
+                    authorization_endpoint: format!("{issuer_url}authorize").parse()?,
+                    token_endpoint: format!("{issuer_url}token").parse()?,
+                    ..Default::default()
+                },
+                storage,
+            })),
+            credential_types: Arc::new(Mutex::new(vec![serde_json::to_value(CredentialFormat {
+                format: JwtVcJson,
+                parameters: JwtVcJsonParameters {
+                    credential_definition: CredentialDefinition {
+                        type_: vec!["VerifiableCredential".into(), "UniversityDegreeCredential".into()],
+                        credential_subject: None,
+                    },
+                },
+            })
+            .unwrap()])),
             nonce: Arc::new(Mutex::new(None)),
             access_token: Arc::new(Mutex::new(None)),
         })
@@ -61,10 +82,8 @@ impl Server {
 
     pub async fn start(&self) {
         let router = self.router(ServerState {
+            credential_issuer: self.credential_issuer.clone(),
             credential_types: self.credential_types.clone(),
-            credentials_supported: self.credentials_supported.clone(),
-            authorization_code: self.authorization_code.clone(),
-            pre_authorized_code: self.pre_authorized_code.clone(),
             nonce: self.nonce.clone(),
             access_token: self.access_token.clone(),
         });
@@ -79,58 +98,77 @@ impl Server {
         });
     }
 
-    pub fn uri(&self) -> String {
-        format!("http://{}", self.listener.local_addr().unwrap())
-    }
-
     pub fn credential_offer_uri(&self) -> String {
+        let credential_issuer = self
+            .credential_issuer
+            .lock()
+            .unwrap()
+            .metadata
+            .credential_issuer
+            .clone();
+
+        let credentials = self.credential_types.lock().unwrap().clone();
+        let authorization_code = self.credential_issuer.lock().unwrap().storage.get_authorization_code();
+        let pre_authorized_code = self.credential_issuer.lock().unwrap().storage.get_pre_authorized_code();
+
         // TODO: dynamically create this.
         CredentialOfferQuery::CredentialOffer(CredentialOffer {
-            credential_issuer: self.uri(),
-            credentials: self.credential_types.lock().unwrap().clone(),
+            credential_issuer,
+            credentials,
             grants: Some(Grants {
-                authorization_code: self.authorization_code.lock().unwrap().clone(),
-                pre_authorized_code: self.pre_authorized_code.lock().unwrap().clone(),
+                authorization_code,
+                pre_authorized_code,
             }),
         })
         .to_string()
     }
 
-    fn router(&self, server_state: ServerState) -> Router {
+    fn router(&self, server_state: ServerState<S>) -> Router {
         Router::new()
             .route(
-                "/.well-known/openid-credential-issuer",
-                get(|State(server_state): State<ServerState>| async move {
+                "/.well-known/oauth-authorization-server",
+                get(|State(server_state): State<ServerState<S>>| async move {
                     (
                         StatusCode::OK,
-                        Json(server_state.credentials_supported.lock().unwrap().clone()),
+                        Json(
+                            server_state
+                                .credential_issuer
+                                .lock()
+                                .unwrap()
+                                .authorization_server_metadata
+                                .clone(),
+                        ),
+                    )
+                }),
+            )
+            .route(
+                "/.well-known/openid-credential-issuer",
+                get(|State(server_state): State<ServerState<S>>| async move {
+                    (
+                        StatusCode::OK,
+                        Json(server_state.credential_issuer.lock().unwrap().metadata.clone()),
                     )
                 }),
             )
             .route(
                 "/token",
                 post(
-                    |State(server_state): State<ServerState>, Form(token_request): Form<TokenRequest>| async move {
-                        match server_state.pre_authorized_code.lock().unwrap().take() {
-                            Some(pre_authorized_code)
-                                if pre_authorized_code.pre_authorized_code == token_request.pre_authorized_code =>
-                            {
-                                (
-                                    StatusCode::OK,
-                                    AppendHeaders([("Cache-Control", "no-store")]),
-                                    Json(TokenResponse {
-                                        // TODO: dynamically create this.
-                                        access_token: "eyJhbGciOiJSUzI1NiIsInR5cCI6Ikp..sHQ".to_string(),
-                                        token_type: "bearer".to_string(),
-                                        expires_in: Some(86400),
-                                        refresh_token: None,
-                                        scope: None,
-                                        c_nonce: Some(generate_nonce(16)),
-                                        c_nonce_expires_in: Some(86400),
-                                    }),
-                                )
-                                    .into_response()
-                            }
+                    |State(server_state): State<ServerState<S>>, Form(token_request): Form<TokenRequest>| async move {
+                        match server_state
+                            .credential_issuer
+                            .lock()
+                            .unwrap()
+                            .storage
+                            .get_token_response(token_request.pre_authorized_code)
+                            .take()
+                        {
+                            Some(token_response) => (
+                                StatusCode::OK,
+                                AppendHeaders([("Cache-Control", "no-store")]),
+                                Json(token_response),
+                            )
+                                .into_response(),
+
                             // TODO: handle error response
                             _ => (
                                 StatusCode::BAD_REQUEST,
@@ -144,19 +182,24 @@ impl Server {
             )
             .route(
                 "/credential",
-                post(|Json(_credential_request): Json<CredentialRequest>| async move {
-                    (
-                        StatusCode::OK,
-                        AppendHeaders([("Cache-Control", "no-store")]),
-                        Json(CredentialResponse {
-                            format: ClaimFormatDesignation::JwtVcJson,
-                            credential: Some(serde_json::json!("\"LUpixVCWJk0eOt4CXQe1NXK....WZwmhmn9OQp6YxX0a2L\"")),
-                            transaction_id: None,
-                            c_nonce: Some(generate_nonce(16)),
-                            c_nonce_expires_in: Some(86400),
-                        }),
-                    )
-                }),
+                post(
+                    |Json(credential_request): Json<CredentialRequest<JwtVcJson>>| async move {
+                        dbg!(&credential_request);
+                        (
+                            StatusCode::OK,
+                            AppendHeaders([("Cache-Control", "no-store")]),
+                            Json(CredentialResponse {
+                                format: ClaimFormatDesignation::JwtVcJson,
+                                credential: Some(serde_json::json!(
+                                    "\"LUpixVCWJk0eOt4CXQe1NXK....WZwmhmn9OQp6YxX0a2L\""
+                                )),
+                                transaction_id: None,
+                                c_nonce: Some(generate_nonce(16)),
+                                c_nonce_expires_in: Some(86400),
+                            }),
+                        )
+                    },
+                ),
             )
             .with_state(server_state)
     }

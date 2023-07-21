@@ -1,15 +1,17 @@
 use anyhow::Result;
+use oid4vc_core::to_query_value;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use serde_with::skip_serializing_none;
+use std::hash::{Hash, Hasher};
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct AuthorizationCode {
     pub issuer_state: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
 pub struct PreAuthorizedCode {
     #[serde(rename = "pre-authorized_code")]
     pub pre_authorized_code: String,
@@ -19,6 +21,12 @@ pub struct PreAuthorizedCode {
     pub interval: i64,
 }
 
+impl Hash for PreAuthorizedCode {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.pre_authorized_code.hash(state);
+    }
+}
+
 fn default_interval() -> i64 {
     5
 }
@@ -26,9 +34,8 @@ fn default_interval() -> i64 {
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq)]
 pub struct CredentialOffer {
-    // TODO: URL?
-    pub credential_issuer: String,
-    pub credentials: Vec<String>,
+    pub credential_issuer: Url,
+    pub credentials: Vec<serde_json::Value>,
     pub grants: Option<Grants>,
 }
 
@@ -60,9 +67,9 @@ impl std::fmt::Display for CredentialOfferQuery {
         match self {
             CredentialOfferQuery::CredentialOfferUri(url) => write!(f, "{}", url),
             CredentialOfferQuery::CredentialOffer(offer) => {
-                let mut url = Url::parse("openid-credential-offer://").unwrap();
+                let mut url = Url::parse("openid-credential-offer://").map_err(|_| std::fmt::Error)?;
                 url.query_pairs_mut()
-                    .append_pair("credential_offer", &serde_json::to_string(offer).unwrap());
+                    .append_pair("credential_offer", &to_query_value(offer).map_err(|_| std::fmt::Error)?);
                 write!(f, "{}", url)
             }
         }
@@ -70,7 +77,7 @@ impl std::fmt::Display for CredentialOfferQuery {
 }
 
 #[skip_serializing_none]
-#[derive(Deserialize, Serialize, Debug, Eq, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 pub struct Grants {
     pub authorization_code: Option<AuthorizationCode>,
     #[serde(rename = "urn:ietf:params:oauth:grant-type:pre-authorized_code")]

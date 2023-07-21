@@ -1,33 +1,26 @@
-use crate::authorization_details::AuthorizationDetailsObject;
-use crate::authorization_request::AuthorizationRequest;
-use crate::authorization_response::AuthorizationResponse;
-use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats};
-use crate::credential_issuer::{
-    authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
+use crate::proof::{Cwt, Jwt, Proof, ProofType};
+use crate::{
+    authorization_server_metadata::AuthorizationServerMetadata,
+    credential_definition::CredentialDefinition,
+    credential_issuer_metadata::CredentialIssuerMetadata,
+    credential_offer::Grants,
+    credential_response::CredentialResponse,
+    token_request::{GrantTypeIdentifier, TokenRequest},
+    token_response::TokenResponse,
 };
-use crate::credential_request::CredentialRequest;
-use crate::proof::{Proof, ProofType};
-use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
+use crate::{credential_request::CredentialRequest, CredentialFormat, JwtVcJson, JwtVcJsonParameters};
 use anyhow::Result;
-use oid4vc_core::authentication::subject::SigningSubject;
+use dif_presentation_exchange::ClaimFormatDesignation;
 use reqwest::Url;
-use serde::de::DeserializeOwned;
 
-pub struct Wallet<CFC = CredentialFormats>
-where
-    CFC: CredentialFormatCollection + DeserializeOwned,
-{
-    pub subject: SigningSubject,
+pub struct Wallet {
     pub client: reqwest::Client,
-    phantom: std::marker::PhantomData<CFC>,
 }
 
-impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
-    pub fn new(subject: SigningSubject) -> Self {
+impl Wallet {
+    pub fn new() -> Self {
         Self {
-            subject,
             client: reqwest::Client::new(),
-            phantom: std::marker::PhantomData,
         }
     }
 
@@ -44,46 +37,30 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .map_err(|_| anyhow::anyhow!("Failed to get authorization server metadata"))
     }
 
-    pub async fn get_credential_issuer_metadata(
-        &self,
-        credential_issuer_url: Url,
-    ) -> Result<CredentialIssuerMetadata<CFC>> {
+    pub async fn get_credential_issuer_metadata(&self, credential_issuer_url: Url) -> Result<CredentialIssuerMetadata> {
         self.client
             .get(credential_issuer_url.join(".well-known/openid-credential-issuer")?)
             .send()
             .await?
-            .json::<CredentialIssuerMetadata<CFC>>()
+            .json::<CredentialIssuerMetadata>()
             .await
             .map_err(|_| anyhow::anyhow!("Failed to get credential issuer metadata"))
     }
 
-    pub async fn get_authorization_code(
+    pub async fn get_access_token(
         &self,
-        authorization_endpoint: Url,
-        authorization_details: Vec<AuthorizationDetailsObject<CFC>>,
-    ) -> Result<AuthorizationResponse> {
-        self.client
-            .get(authorization_endpoint)
-            // TODO: must be `form`, but `AuthorizationRequest needs to be able to serilalize properly.
-            .json(&AuthorizationRequest {
-                response_type: "code".to_string(),
-                client_id: self.subject.identifier()?,
-                redirect_uri: None,
-                scope: None,
-                state: None,
-                authorization_details,
-            })
-            .send()
-            .await?
-            .json::<AuthorizationResponse>()
-            .await
-            .map_err(|_| anyhow::anyhow!("Failed to get authorization code"))
-    }
-
-    pub async fn get_access_token(&self, token_endpoint: Url, token_request: TokenRequest) -> Result<TokenResponse> {
+        token_endpoint: Url,
+        grants: Grants,
+        user_pin: Option<String>,
+    ) -> Result<TokenResponse> {
+        dbg!(grants.pre_authorized_code.clone().unwrap().pre_authorized_code);
         self.client
             .post(token_endpoint)
-            .form(&token_request)
+            .form(&TokenRequest {
+                grant_type: GrantTypeIdentifier::PreAuthorizedCode,
+                pre_authorized_code: grants.pre_authorized_code.unwrap().pre_authorized_code,
+                user_pin,
+            })
             .send()
             .await?
             .json()
@@ -93,36 +70,25 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
 
     pub async fn get_credential(
         &self,
-        credential_issuer_metadata: CredentialIssuerMetadata<CFC>,
+        credential_endpoint: Url,
         token_response: &TokenResponse,
-        credential_format: CFC,
     ) -> Result<CredentialResponse> {
-        let credential_request = CredentialRequest {
-            credential_format,
-            proof: Some(
-                Proof::builder()
-                    .proof_type(ProofType::Jwt)
-                    .signer(self.subject.clone())
-                    .iss(self.subject.identifier()?)
-                    .aud(credential_issuer_metadata.credential_issuer)
-                    .iat(1571324800)
-                    .exp(9999999999i64)
-                    // TODO: so is this REQUIRED or OPTIONAL?
-                    .nonce(
-                        token_response
-                            .c_nonce
-                            .as_ref()
-                            .ok_or(anyhow::anyhow!("No c_nonce found."))?
-                            .clone(),
-                    )
-                    .build()?,
-            ),
-        };
-
         self.client
-            .post(credential_issuer_metadata.credential_endpoint)
+            .post(credential_endpoint)
             .bearer_auth(token_response.access_token.clone())
-            .json(&credential_request)
+            .json(&CredentialRequest {
+                credential_format: CredentialFormat {
+                    format: JwtVcJson,
+                    parameters: JwtVcJsonParameters {
+                        credential_definition: CredentialDefinition {
+                            type_: vec!["VerifiableCredential".into(), "UniversityDegreeCredential".into()],
+                            credential_subject: None,
+                        },
+                    },
+                },
+                proof: Some(Proof::Jwt { proof_type: Jwt, jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJzNkJoZFJrcXQzIiwiYXVkIjoiaHR0cHM6Ly9zZXJ2ZXIuZXhhbXBsZS5jb20iLCJpYXQiOiIyMDE4LTA5LTE0VDIxOjE5OjEwWiIsIm5vbmNlIjoidFppZ25zbkZicCJ9.ewdkIkPV50iOeBUqMXCC_aZKPxgihac0aW9EkL1nOzM".to_string() }),
+
+            })
             .send()
             .await?
             .json()
