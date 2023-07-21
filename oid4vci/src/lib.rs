@@ -7,6 +7,7 @@ pub mod credential_issuer_metadata;
 pub mod credential_offer;
 pub mod credential_request;
 pub mod credential_response;
+pub mod credentials_supported;
 pub mod proof;
 pub mod token_request;
 pub mod token_response;
@@ -14,8 +15,9 @@ pub mod wallet;
 
 pub use credential::{VerifiableCredentialJwt, VerifiableCredentialJwtBuilder};
 use credential_definition::CredentialDefinition;
+use paste::paste;
 pub use proof::{Cwt, Jwt, Proof, ProofType};
-use serde_with::skip_serializing_none;
+use serde::{Deserialize, Serialize};
 pub use wallet::Wallet;
 
 ////////////////////
@@ -69,9 +71,6 @@ macro_rules! serialize_unit_struct {
 
 ////////////////////
 
-use paste::paste;
-use serde::{Deserialize, Serialize};
-
 pub trait Format: std::fmt::Debug + Serialize {
     type Parameters: std::fmt::Debug + Serialize + for<'de> Deserialize<'de> + Clone;
 }
@@ -88,6 +87,15 @@ macro_rules! impl_format {
             #[derive(Debug, Serialize, Deserialize, Clone)]
             pub struct [< $name Parameters >] {
                 $(pub $field_name: $field_type),*
+            }
+
+            #[allow(unused_parens)]
+            impl From<($($field_type),*)> for [< $name Parameters >] {
+                fn from(($($field_name),*): ($($field_type),*)) -> Self {
+                    Self {
+                        $($field_name),*
+                    }
+                }
             }
 
             serialize_unit_struct!($format, $name);
@@ -115,93 +123,29 @@ impl_format!("mso_doc", MsoDoc, {
 
 ////////////////////
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum CredentialFormatEnum {
     JwtVcJson(CredentialFormat<JwtVcJson>),
     MsoDoc(CredentialFormat<MsoDoc>),
 }
 
-////////////////////
-/// https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-request-issuance-of-a-certa
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AuthorizationDetails<F>
-where
-    F: Format,
-{
-    #[serde(rename = "type")]
-    type_: String,
-    #[serde(flatten)]
-    credential_format: CredentialFormat<F>,
-}
-
-#[test]
-fn test_authorization_details() {
-    let jwt_vc_json = CredentialFormat {
-        format: JwtVcJson,
-        parameters: JwtVcJsonParameters {
-            credential_definition: CredentialDefinition {
-                type_: vec!["VerifiableCredential".into(), "UniversityDegreeCredential".into()],
-                credential_subject: None,
-            },
-        },
-    };
-
-    let authorization_details = AuthorizationDetails {
-        type_: "openid_credential".to_string(),
-        credential_format: jwt_vc_json,
-    };
-
-    println!("{}", serde_json::to_string_pretty(&authorization_details).unwrap());
-}
-
-////////////////////
-/// https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-objects-comprising-credenti
-
-#[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct CredentialsSupportedObject<F>
-where
-    F: Format,
-{
-    id: Option<String>,
-    #[serde(flatten)]
-    credential_format: CredentialFormat<F>,
-    scope: Option<String>,
-    cryptographic_binding_methods_supported: Option<Vec<String>>,
-    cryptographic_suites_supported: Option<Vec<String>>,
-    proof_types_supported: Option<Vec<ProofType>>,
-    // TODO: fix this
-    display: Option<Vec<serde_json::Value>>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct CredentialsSupportedJson(serde_json::Value);
-
-impl<F: Format> From<CredentialsSupportedObject<F>> for CredentialsSupportedJson {
-    fn from(value: CredentialsSupportedObject<F>) -> Self {
-        CredentialsSupportedJson(serde_json::to_value(value).unwrap())
-    }
-}
-
 #[test]
 fn test() {
     let jwt_vc_json = CredentialFormat {
         format: JwtVcJson,
-        parameters: JwtVcJsonParameters {
-            credential_definition: CredentialDefinition {
-                type_: vec!["VerifiableCredential".into(), "UniversityDegreeCredential".into()],
-                credential_subject: None,
-            },
-        },
+        parameters: CredentialDefinition {
+            type_: vec!["VerifiableCredential".into(), "UniversityDegreeCredential".into()],
+            credential_subject: None,
+        }
+        .into(),
     };
 
     let mso_doc = CredentialFormat {
         format: MsoDoc,
-        parameters: MsoDocParameters {
-            doctype: "org.iso.18013.5.1.mDL".to_string(),
-            claims: serde_json::json!({
+        parameters: (
+            "org.iso.18013.5.1.mDL".to_string(),
+            serde_json::json!({
                 "org.iso.18013.5.1": {
                     "given_name": {},
                     "last_name": {},
@@ -211,7 +155,8 @@ fn test() {
                     "organ_donor": {}
                 }
             }),
-        },
+        )
+            .into(),
     };
 
     // let vec = vec![

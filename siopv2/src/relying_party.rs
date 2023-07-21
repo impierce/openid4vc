@@ -1,5 +1,6 @@
 use crate::{provider::SigningSubject, AuthorizationRequest, AuthorizationResponse, IdToken};
 use anyhow::Result;
+use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::{jwt, Decoder};
 use oid4vci::VerifiableCredentialJwt;
 use std::collections::HashMap;
@@ -21,7 +22,7 @@ impl RelyingParty {
     }
 
     pub fn encode(&self, request: &AuthorizationRequest) -> Result<String> {
-        jwt::encode(self.subject.clone(), request)
+        jwt::encode(self.subject.clone(), Header::new(Algorithm::EdDSA), request)
     }
 
     /// Validates a [`AuthorizationResponse`] by decoding the header of the id_token, fetching the public key corresponding to

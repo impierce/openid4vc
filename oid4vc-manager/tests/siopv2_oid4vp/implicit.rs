@@ -1,6 +1,7 @@
 use did_key::{generate, Ed25519KeyPair};
 use identity_core::common::{Object, Url};
 use identity_credential::{credential::Jwt, presentation::JwtPresentation};
+use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
 use oid4vc_core::{jwt, Subject};
 use oid4vc_manager::{
@@ -136,7 +137,15 @@ async fn test_implicit_flow() {
     .unwrap();
 
     // Encode the verifiable credential as a JWT.
-    let jwt = jwt::encode(Arc::new(issuer), &verifiable_credential).unwrap();
+    let jwt = jwt::encode(
+        Arc::new(issuer),
+        Header {
+            alg: Algorithm::EdDSA,
+            ..Default::default()
+        },
+        &verifiable_credential,
+    )
+    .unwrap();
 
     // Create a verifiable presentation using the JWT.
     let verifiable_presentation = JwtPresentation::builder(Url::parse(subject_did).unwrap(), Object::new())

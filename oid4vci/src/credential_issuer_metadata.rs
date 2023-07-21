@@ -1,4 +1,4 @@
-use crate::CredentialsSupportedJson;
+use crate::credentials_supported::CredentialsSupportedJson;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};

@@ -2,9 +2,6 @@ use crate::{proof::Proof, CredentialFormat, Format};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-////////////////////
-/// https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request
-
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CredentialRequest<F>
@@ -22,19 +19,18 @@ mod tests {
     use crate::{
         credential_definition::CredentialDefinition,
         proof::{Jwt, Proof},
-        JwtVcJson, JwtVcJsonParameters,
+        JwtVcJson,
     };
 
     #[test]
     fn test_credential_request() {
         let jwt_vc_json = CredentialFormat {
             format: JwtVcJson,
-            parameters: JwtVcJsonParameters {
-                credential_definition: CredentialDefinition {
-                    type_: vec!["VerifiableCredential".into(), "UniversityDegreeCredential".into()],
-                    credential_subject: None,
-                },
-            },
+            parameters: CredentialDefinition {
+                type_: vec!["VerifiableCredential".into(), "UniversityDegreeCredential".into()],
+                credential_subject: None,
+            }
+            .into(),
         };
 
         let credential_request = CredentialRequest {
