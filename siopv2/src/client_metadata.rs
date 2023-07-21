@@ -36,11 +36,30 @@ impl ClientMetadata {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::RequestUrl;
+    use oid4vc_core::DidMethod;
     use std::str::FromStr;
 
     #[test]
-    fn test_registration() {
+    fn test_client_metadata() {
+        let client_metadata: ClientMetadata = serde_json::from_value(serde_json::json!(
+            {
+                "subject_syntax_types_supported": [
+                    "did:example",
+                    "urn:ietf:params:oauth:jwk-thumbprint"
+                ]
+            }
+        ))
+        .unwrap();
+        assert_eq!(
+            client_metadata,
+            ClientMetadata::default().with_subject_syntax_types_supported(vec![
+                SubjectSyntaxType::Did(DidMethod::from_str("did:example").unwrap()),
+                SubjectSyntaxType::JwkThumbprint,
+            ])
+        );
+
         let request_url = RequestUrl::from_str(
             "\
             siopv2://idtoken?\
@@ -50,7 +69,7 @@ mod tests {
                 &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
                 &response_mode=post\
                 &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
-                %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
+                %5B%22did%3Atest%22%5D%2C%0A%20%20%20%20\
                 %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\
             ",
