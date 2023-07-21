@@ -21,7 +21,11 @@ where
     C: Serialize,
 {
     pub fn new(header: Header, payload: C) -> Self {
-        JsonWebToken { header, payload }
+        JsonWebToken {
+            // TODO: Undo hardcoding and consider not using the jsonwebtoken crate.
+            header,
+            payload,
+        }
     }
 
     pub fn kid(mut self, kid: String) -> Self {

@@ -1,22 +1,26 @@
-use dif_presentation_exchange::ClaimFormatDesignation;
+use crate::{serialize_unit_struct, CredentialFormat, Format};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct OpenidCredential;
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct AuthorizationDetails {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthorizationDetails<F>
+where
+    F: Format,
+{
     #[serde(rename = "type")]
     type_: OpenidCredential,
-    locations: Vec<String>,
-    format: ClaimFormatDesignation,
     #[serde(flatten)]
-    format_parameters: Option<serde_json::Map<String, serde_json::Value>>,
+    credential_format: CredentialFormat<F>,
 }
+
+#[derive(Debug)]
+pub struct OpenidCredential;
+
+serialize_unit_struct!("openid_credential", OpenidCredential);
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{credential_definition::CredentialDefinition, JwtVcJson};
     use serde_json::json;
 
     #[test]
@@ -37,7 +41,26 @@ mod tests {
             }
         });
 
-        let _authorization_details: AuthorizationDetails = serde_json::from_value(json).unwrap();
+        let _authorization_details: AuthorizationDetails<JwtVcJson> = serde_json::from_value(json).unwrap();
         dbg!(&_authorization_details);
+    }
+
+    #[test]
+    fn test_authorization_details() {
+        let jwt_vc_json = CredentialFormat {
+            format: JwtVcJson,
+            parameters: CredentialDefinition {
+                type_: vec!["VerifiableCredential".into(), "UniversityDegreeCredential".into()],
+                credential_subject: None,
+            }
+            .into(),
+        };
+
+        let authorization_details = AuthorizationDetails {
+            type_: OpenidCredential,
+            credential_format: jwt_vc_json,
+        };
+
+        println!("{}", serde_json::to_string_pretty(&authorization_details).unwrap());
     }
 }

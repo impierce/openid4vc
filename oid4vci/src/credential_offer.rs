@@ -4,7 +4,6 @@ use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use serde_with::skip_serializing_none;
-use std::hash::{Hash, Hasher};
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct AuthorizationCode {
@@ -19,12 +18,6 @@ pub struct PreAuthorizedCode {
     pub user_pin_required: bool,
     #[serde(default = "default_interval")]
     pub interval: i64,
-}
-
-impl Hash for PreAuthorizedCode {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.pre_authorized_code.hash(state);
-    }
 }
 
 fn default_interval() -> i64 {
@@ -84,67 +77,67 @@ pub struct Grants {
     pub pre_authorized_code: Option<PreAuthorizedCode>,
 }
 
-#[cfg(test)]
-mod tests {
-    use reqwest::header::HeaderName;
-    use wiremock::{
-        http::HeaderValue,
-        matchers::{method, path},
-        Mock, MockServer, Request, ResponseTemplate,
-    };
+// #[cfg(test)]
+// mod tests {
+//     use reqwest::header::HeaderName;
+//     use wiremock::{
+//         http::HeaderValue,
+//         matchers::{method, path},
+//         Mock, MockServer, Request, ResponseTemplate,
+//     };
 
-    use super::*;
-    use std::str::FromStr;
+//     use super::*;
+//     use std::str::FromStr;
 
-    #[tokio::test]
-    async fn temp() {
-        #[derive(Deserialize, Serialize, Debug, Eq, PartialEq)]
-        struct Claims {
-            response_type: String,
-            client_id: String,
-            redirect_uri: Url,
-        }
+//     #[tokio::test]
+//     async fn temp() {
+//         #[derive(Deserialize, Serialize, Debug, Eq, PartialEq)]
+//         struct Claims {
+//             response_type: String,
+//             client_id: String,
+//             redirect_uri: Url,
+//         }
 
-        let client = reqwest::Client::new();
+//         let client = reqwest::Client::new();
 
-        let issuer = MockServer::start().await;
-        let wallet = MockServer::start().await;
+//         let issuer = MockServer::start().await;
+//         let wallet = MockServer::start().await;
 
-        let issuer_url = issuer.uri();
+//         let issuer_url = issuer.uri();
 
-        Mock::given(method("GET"))
-            .and(path("/authorize"))
-            .respond_with(move |req: &Request| {
-                let claims: Claims = serde_urlencoded::from_bytes(req.body.as_slice()).unwrap();
-                ResponseTemplate::new(302).append_header(
-                    HeaderName::from_str("Location").unwrap(),
-                    HeaderValue::from_str(&format!("{}?code=SplxlOBeZQQYbYS6WxSbIA", claims.redirect_uri.as_str()))
-                        .unwrap(),
-                )
-            })
-            .mount(&issuer)
-            .await;
-        let wallet_url = wallet.uri();
+//         Mock::given(method("GET"))
+//             .and(path("/authorize"))
+//             .respond_with(move |req: &Request| {
+//                 let claims: Claims = serde_urlencoded::from_bytes(req.body.as_slice()).unwrap();
+//                 ResponseTemplate::new(302).append_header(
+//                     HeaderName::from_str("Location").unwrap(),
+//                     HeaderValue::from_str(&format!("{}?code=SplxlOBeZQQYbYS6WxSbIA", claims.redirect_uri.as_str()))
+//                         .unwrap(),
+//                 )
+//             })
+//             .mount(&issuer)
+//             .await;
+//         let wallet_url = wallet.uri();
 
-        Mock::given(method("GET"))
-            .and(path("/cb"))
-            .respond_with(|req: &Request| {
-                dbg!(req);
-                ResponseTemplate::new(200)
-            })
-            .mount(&wallet)
-            .await;
+//         Mock::given(method("GET"))
+//             .and(path("/cb"))
+//             .respond_with(|req: &Request| {
+//                 dbg!(req);
+//                 ResponseTemplate::new(200)
+//             })
+//             .mount(&wallet)
+//             .await;
 
-        let response = client
-            .get(&format!("{}/authorize", issuer_url))
-            .form(&Claims {
-                response_type: "code".to_string(),
-                client_id: "CLIENT1234".to_string(),
-                redirect_uri: Url::from_str(&format!("{}/cb", wallet_url)).unwrap(),
-            })
-            .send()
-            .await
-            .unwrap();
-        dbg!(&response);
-    }
-}
+//         let response = client
+//             .get(&format!("{}/authorize", issuer_url))
+//             .form(&Claims {
+//                 response_type: "code".to_string(),
+//                 client_id: "CLIENT1234".to_string(),
+//                 redirect_uri: Url::from_str(&format!("{}/cb", wallet_url)).unwrap(),
+//             })
+//             .send()
+//             .await
+//             .unwrap();
+//         dbg!(&response);
+//     }
+// }

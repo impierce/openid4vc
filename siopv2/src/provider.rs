@@ -5,7 +5,7 @@ use anyhow::Result;
 use chrono::{Duration, Utc};
 use identity_credential::presentation::JwtPresentation;
 use jsonwebtoken::{Algorithm, Header};
-use oid4vc_core::{authentication::subject::SigningSubject, jwt, Decoder};
+use oid4vc_core::{jwt, Decoder, Subject};
 use oid4vp::{token::vp_token::VpToken, PresentationSubmission};
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to

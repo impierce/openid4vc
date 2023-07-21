@@ -1,5 +1,5 @@
 // Move this to the mock repo.
-pub mod memory_storage;
+pub mod memstorage;
 
 use anyhow::Result;
 use async_trait::async_trait;
