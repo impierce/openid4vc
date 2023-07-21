@@ -14,6 +14,7 @@ pub use authentication::{
 pub use collection::Collection;
 pub use decoder::Decoder;
 pub use rfc7519_claims::RFC7519Claims;
+use serde::Serialize;
 pub use subject_syntax_type::{DidMethod, SubjectSyntaxType};
 
 #[macro_export]
@@ -32,4 +33,11 @@ macro_rules! builder_fn {
             self
         }
     };
+}
+
+// Helper function that allows to serialize custom structs into a query string.
+pub fn to_query_value<T: Serialize>(value: &T) -> anyhow::Result<String> {
+    serde_json::to_string(value)
+        .map(|s| s.chars().filter(|c| !c.is_whitespace()).collect::<String>())
+        .map_err(|e| e.into())
 }
