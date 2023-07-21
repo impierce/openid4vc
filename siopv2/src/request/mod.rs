@@ -9,7 +9,6 @@ use serde_json::{Map, Value};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::convert::TryInto;
 use std::str::FromStr;
-use url::Url;
 
 pub mod request_builder;
 
@@ -43,7 +42,7 @@ pub mod request_builder;
 ///             &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
 ///             &response_mode=post\
 ///             &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
-///             %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
+///             %5B%22did%3Atest%22%5D%2C%0A%20%20%20%20\
 ///             %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
 ///             &nonce=n-0S6_WzA2Mj\
 ///     ",
@@ -86,16 +85,18 @@ impl TryInto<AuthorizationRequest> for RequestUrl {
 impl FromStr for RequestUrl {
     type Err = anyhow::Error;
 
-    fn from_str(s: &str) -> Result<Self> {
-        let map: Map<String, Value> = s
-            .parse::<Url>()?
-            .query_pairs()
-            .map(|(key, value)| {
-                let value = serde_json::from_str::<Value>(&value).unwrap_or(Value::String(value.into_owned()));
-                Ok((key.into_owned(), value))
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let url = url::Url::parse(s)?;
+        let query = url.query().ok_or_else(|| anyhow!("No query found."))?;
+        let map = serde_urlencoded::from_str::<Map<String, Value>>(query)?
+            .into_iter()
+            .filter_map(|(k, v)| match v {
+                Value::String(s) => Some(Ok((k, serde_json::from_str(&s).unwrap_or(Value::String(s))))),
+                _ => None,
             })
-            .collect::<Result<_>>()?;
-        serde_json::from_value(Value::Object(map)).map_err(Into::into)
+            .collect::<Result<_, anyhow::Error>>()?;
+        let request: RequestUrl = serde_json::from_value(Value::Object(map))?;
+        Ok(request)
     }
 }
 
@@ -231,7 +232,7 @@ mod tests {
                 &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
                 &response_mode=post\
                 &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
-                %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
+                %5B%22did%3Atest%22%5D%2C%0A%20%20%20%20\
                 %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\
             ",
@@ -254,7 +255,7 @@ mod tests {
                 client_metadata: Some(
                     ClientMetadata::default()
                         .with_subject_syntax_types_supported(vec![SubjectSyntaxType::Did(
-                            DidMethod::from_str("did:mock").unwrap()
+                            DidMethod::from_str("did:test").unwrap()
                         )])
                         .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
                 ),
@@ -297,7 +298,7 @@ mod tests {
                 &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
                 &response_mode=post\
                 &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
-                %5B%22did%3Amock%22%5D%2C%0A%20%20%20%20\
+                %5B%22did%3Atest%22%5D%2C%0A%20%20%20%20\
                 %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\
                 &request_uri=https://example.com/request_uri\

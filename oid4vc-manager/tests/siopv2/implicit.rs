@@ -1,4 +1,4 @@
-use crate::common::{MemoryStorage, MockSubject, Storage};
+use crate::common::{MemoryStorage, Storage, TestSubject};
 use chrono::{Duration, Utc};
 use lazy_static::lazy_static;
 use oid4vc_core::{DidMethod, SubjectSyntaxType};
@@ -52,9 +52,9 @@ async fn test_implicit_flow() {
     let server_url = mock_server.uri();
 
     // Create a new subject.
-    let subject = MockSubject::new(
-        "did:mock:relying_party".to_string(),
-        "did:mock:relying_party#key_id".to_string(),
+    let subject = TestSubject::new(
+        "did:test:relying_party".to_string(),
+        "did:test:relying_party#key_id".to_string(),
     )
     .unwrap();
 
@@ -64,14 +64,14 @@ async fn test_implicit_flow() {
     // Create a new RequestUrl with response mode `post` for cross-device communication.
     let request: AuthorizationRequest = RequestUrl::builder()
         .response_type(ResponseType::IdToken)
-        .client_id("did:mock:relyingparty".to_string())
+        .client_id("did:test:relyingparty".to_string())
         .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
         .redirect_uri(format!("{server_url}/redirect_uri"))
         .response_mode("post".to_string())
         .client_metadata(
             ClientMetadata::default()
                 .with_subject_syntax_types_supported(vec![SubjectSyntaxType::Did(
-                    DidMethod::from_str("did:mock").unwrap(),
+                    DidMethod::from_str("did:test").unwrap(),
                 )])
                 .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
         )
@@ -111,14 +111,14 @@ async fn test_implicit_flow() {
     let storage = MemoryStorage::new(serde_json::from_value(USER_CLAIMS.clone()).unwrap());
 
     // Create a new subject and validator.
-    let subject = MockSubject::new("did:mock:subject".to_string(), "did:mock:subject#key_id".to_string()).unwrap();
+    let subject = TestSubject::new("did:test:subject".to_string(), "did:test:subject#key_id".to_string()).unwrap();
 
     // Create a new provider manager.
     let provider_manager = ProviderManager::new([Arc::new(subject)]).unwrap();
 
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
     let request_url = RequestUrl::builder()
-        .client_id("did:mock:relyingparty".to_string())
+        .client_id("did:test:relyingparty".to_string())
         .request_uri(format!("{server_url}/request_uri"))
         .build()
         .unwrap();
