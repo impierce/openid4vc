@@ -1,11 +1,16 @@
+use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
+use oid4vc_core::jwt;
 use oid4vci::{
     credential_issuer::Storage,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
     credential_response::CredentialResponse,
     token_response::TokenResponse,
+    wallet::SigningSubject,
+    VerifiableCredentialJwt,
 };
 use oid4vp::ClaimFormatDesignation;
+use reqwest::Url;
 use serde::{Deserialize, Serialize};
 
 lazy_static! {
@@ -43,10 +48,51 @@ impl Storage for MemStorage {
         })
     }
 
-    fn get_credential_response(&self, access_token: String) -> Option<CredentialResponse> {
+    fn get_credential_response(
+        &self,
+        access_token: String,
+        subject_did: Url,
+        issuer_did: Url,
+        signer: SigningSubject,
+    ) -> Option<CredentialResponse> {
         (access_token == ACCESS_TOKEN.clone()).then_some(CredentialResponse {
             format: ClaimFormatDesignation::JwtVcJson,
-            credential: Some(serde_json::json!("\"CREDENTIAL\"")),
+            credential: Some(
+                serde_json::to_value(
+                    jwt::encode(
+                        signer.clone(),
+                        Header::new(Algorithm::EdDSA),
+                        VerifiableCredentialJwt::builder()
+                            .sub(subject_did.clone())
+                            .iss(issuer_did.clone())
+                            .iat(0)
+                            .exp(9999999999i64)
+                            .verifiable_credential(serde_json::json!({
+                                "@context": [
+                                    "https://www.w3.org/2018/credentials/v1",
+                                    "https://www.w3.org/2018/credentials/examples/v1"
+                                ],
+                                "type": [
+                                    "VerifiableCredential",
+                                    "PersonalInformation"
+                                ],
+                                "issuanceDate": "2022-01-01T00:00:00Z",
+                                "issuer": issuer_did,
+                                "credentialSubject": {
+                                "id": subject_did,
+                                "givenName": "Ferris",
+                                "familyName": "Crabman",
+                                "email": "ferris.crabman@crabmail.com",
+                                "birthdate": "1985-05-21"
+                                }
+                            }))
+                            .build()
+                            .unwrap(),
+                    )
+                    .unwrap(),
+                )
+                .unwrap(),
+            ),
             transaction_id: None,
             c_nonce: Some(C_NONCE.clone()),
             c_nonce_expires_in: Some(86400),

@@ -1,6 +1,6 @@
 pub mod managers;
 pub mod methods;
-pub mod routers;
+pub mod servers;
 
 pub use managers::{provider::ProviderManager, relying_party::RelyingPartyManager};
 

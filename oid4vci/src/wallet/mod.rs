@@ -1,19 +1,18 @@
-use std::sync::Arc;
-
+use crate::credential_issuer::authorization_server_metadata::AuthorizationServerMetadata;
+use crate::credential_issuer::credential_issuer_metadata::CredentialIssuerMetadata;
 use crate::proof::{Proof, ProofType};
 use crate::Format;
 use crate::{
-    authorization_server_metadata::AuthorizationServerMetadata,
-    credential_issuer_metadata::CredentialIssuerMetadata,
     credential_offer::Grants,
     credential_response::CredentialResponse,
     token_request::{GrantTypeIdentifier, TokenRequest},
     token_response::TokenResponse,
 };
-use crate::{credential_request::CredentialRequest, CredentialFormat, JwtVcJson};
+use crate::{credential_request::CredentialRequest, CredentialFormat};
 use anyhow::Result;
 use oid4vc_core::Subject;
 use reqwest::Url;
+use std::sync::Arc;
 
 pub type SigningSubject = Arc<dyn Subject>;
 
@@ -59,7 +58,6 @@ impl Wallet {
         grants: Grants,
         user_pin: Option<String>,
     ) -> Result<TokenResponse> {
-        dbg!(grants.pre_authorized_code.clone().unwrap().pre_authorized_code);
         self.client
             .post(token_endpoint)
             .form(&TokenRequest {
@@ -80,7 +78,7 @@ impl Wallet {
         token_response: &TokenResponse,
         credential_format: CredentialFormat<F>,
     ) -> Result<CredentialResponse> {
-        let temp = CredentialRequest {
+        let credential_request = CredentialRequest {
             credential_format,
             proof: Some(
                 Proof::builder()
@@ -96,13 +94,10 @@ impl Wallet {
             ),
         };
 
-        let temp2 = serde_json::to_string(&temp)?;
-        let temp: CredentialRequest<JwtVcJson> = serde_json::from_str(&temp2)?;
-
         self.client
             .post(credential_issuer_metadata.credential_endpoint)
             .bearer_auth(token_response.access_token.clone())
-            .json(&temp)
+            .json(&credential_request)
             .send()
             .await?
             .json()
