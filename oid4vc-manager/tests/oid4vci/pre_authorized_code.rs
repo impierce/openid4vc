@@ -1,9 +1,14 @@
 use crate::common::memstorage::MemStorage;
+use did_key::{generate, Ed25519KeyPair};
 use lazy_static::lazy_static;
-use oid4vc_manager::{methods::key_method::KeySubject, routers::credential_issuer::CredentialIssuerManager};
+use oid4vc_manager::{
+    methods::key_method::KeySubject,
+    servers::credential_issuer::{CredentialIssuerManager, Server},
+};
 use oid4vci::{
-    credential_offer::CredentialOfferQuery, credentials_supported::CredentialsSupportedObject, CredentialFormat,
-    JwtVcJson, Wallet,
+    credential_format::CredentialFormat,
+    credential_format_profiles::w3c_verifiable_credentials::jwt_vc_json::JwtVcJson,
+    credential_offer::CredentialOfferQuery, credentials_supported::CredentialsSupportedObject, Wallet,
 };
 use std::sync::Arc;
 
@@ -73,13 +78,26 @@ lazy_static! {
 
 #[tokio::test]
 async fn test_pre_authorized_code_flow() {
-    let storage = MemStorage;
+    let mut credential_issuer = Server::setup(
+        CredentialIssuerManager::new(
+            vec![CREDENTIALS_SUPPORTED.clone().into()],
+            None,
+            MemStorage,
+            [Arc::new(KeySubject::from_keypair(generate::<Ed25519KeyPair>(Some(
+                "this-is-a-very-UNSAFE-issuer-secret-key".as_bytes().try_into().unwrap(),
+            ))))],
+        )
+        .unwrap(),
+    )
+    .unwrap();
 
-    let credential_issuer_server =
-        CredentialIssuerManager::run(vec![CREDENTIALS_SUPPORTED.clone().into()], None, storage).unwrap();
+    credential_issuer.start_server().unwrap();
 
     // Get the credential offer url.
-    let credential_offer_url = credential_issuer_server.credential_offer_uri().unwrap();
+    let credential_offer_url = credential_issuer
+        .credential_issuer_manager
+        .credential_offer_uri()
+        .unwrap();
 
     // Parse the credential offer url.
     let credential_offer = match credential_offer_url.parse().unwrap() {
@@ -118,5 +136,5 @@ async fn test_pre_authorized_code_flow() {
         .await
         .unwrap();
 
-    dbg!(credential_response);
+    dbg!(&credential_response);
 }

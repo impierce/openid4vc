@@ -42,9 +42,8 @@ pub struct ProofBuilder {
     signer: Option<Arc<dyn Subject>>,
 }
 
-// #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize)]
-struct Spook {
+pub struct ProofOfPossession {
     #[serde(flatten)]
     pub rfc7519_claims: RFC7519Claims,
     pub nonce: String,
@@ -67,7 +66,7 @@ impl ProofBuilder {
                         typ: Some("openid4vci-proof+jwt".to_string()),
                         ..Default::default()
                     },
-                    Spook {
+                    ProofOfPossession {
                         rfc7519_claims: self.rfc7519_claims,
                         nonce: self.nonce.unwrap(),
                     },
