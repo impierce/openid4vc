@@ -33,13 +33,12 @@ impl<S: Storage + Clone> Server<S> {
     }
 
     pub fn start_server(&mut self) -> Result<()> {
-        // TODO: fix this
         let credential_issuer_manager = self.credential_issuer_manager.clone();
         let listener = credential_issuer_manager.listener.try_clone()?;
 
         self.server.replace(tokio::spawn(async move {
             axum::Server::from_tcp(listener)
-                .unwrap()
+                .expect("Failed to start server.")
                 .serve(
                     Router::new()
                         .route(
@@ -54,7 +53,7 @@ impl<S: Storage + Clone> Server<S> {
                         .into_make_service(),
                 )
                 .await
-                .unwrap()
+                .expect("Failed to start server.")
         }));
         Ok(())
     }
@@ -95,7 +94,7 @@ async fn authorize<S: Storage>(
     Json(_authorization_request): Json<AuthorizationRequest<JwtVcJson>>,
 ) -> impl IntoResponse {
     (
-        // TODO: should be 302 Found
+        // TODO: should be 302 Found + implement proper error response.
         StatusCode::OK,
         Json(credential_issuer_manager.storage.get_authorization_response().unwrap()),
     )
@@ -131,6 +130,7 @@ async fn credential<S: Storage>(
     AuthBearer(access_token): AuthBearer,
     Json(credential_request): Json<CredentialRequest<JwtVcJson>>,
 ) -> impl IntoResponse {
+    // TODO: The bunch of unwrap's here should be replaced with error responses as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-error-response
     let proof = credential_issuer_manager
         .credential_issuer
         .validate_proof(
@@ -139,7 +139,6 @@ async fn credential<S: Storage>(
         )
         .await
         .unwrap();
-    // TODO: validate credential request
     (
         StatusCode::OK,
         AppendHeaders([("Cache-Control", "no-store")]),

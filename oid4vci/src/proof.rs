@@ -57,9 +57,8 @@ impl ProofBuilder {
         match self.proof_type {
             Some(ProofType::Jwt) => Ok(Proof::Jwt {
                 proof_type: Jwt,
-                // TODO: fix unwrap()
                 jwt: jwt::encode(
-                    self.signer.unwrap().clone(),
+                    self.signer.ok_or(anyhow::anyhow!("No subject found"))?.clone(),
                     Header {
                         alg: Algorithm::EdDSA,
                         typ: Some("openid4vci-proof+jwt".to_string()),
@@ -67,7 +66,7 @@ impl ProofBuilder {
                     },
                     ProofOfPossession {
                         rfc7519_claims: self.rfc7519_claims,
-                        nonce: self.nonce.unwrap(),
+                        nonce: self.nonce.ok_or(anyhow::anyhow!("No nonce found"))?,
                     },
                 )?,
             }),

@@ -58,7 +58,7 @@ impl Wallet {
             // TODO: must be `form`, but `AuthorizationRequest needs to be able to serilalize properly.
             .json(&AuthorizationRequest::<JwtVcJson> {
                 response_type: "code".to_string(),
-                client_id: self.subject.identifier().unwrap(),
+                client_id: self.subject.identifier()?,
                 redirect_uri: None,
                 scope: None,
                 state: None,
@@ -99,7 +99,13 @@ impl Wallet {
                     .iat(1571324800)
                     .exp(9999999999i64)
                     // TODO: so is this REQUIRED or OPTIONAL?
-                    .nonce(token_response.c_nonce.clone().unwrap())
+                    .nonce(
+                        token_response
+                            .c_nonce
+                            .as_ref()
+                            .ok_or(anyhow::anyhow!("No c_nonce found."))?
+                            .clone(),
+                    )
                     .build()?,
             ),
         };

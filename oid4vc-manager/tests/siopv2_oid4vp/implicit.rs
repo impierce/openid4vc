@@ -62,7 +62,6 @@ lazy_static! {
     .unwrap();
 }
 
-// TODO: Refactor this once the mock crate is created.
 #[tokio::test]
 async fn test_implicit_flow() {
     // Create a new issuer.

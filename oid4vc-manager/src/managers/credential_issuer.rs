@@ -64,12 +64,14 @@ impl<S: Storage + Clone> CredentialIssuerManager<S> {
     }
 
     pub fn credential_offer_uri(&self) -> Result<String> {
-        // TODO: fix this
-        let credentials: CredentialFormat<JwtVcJson> = serde_json::from_value(
-            serde_json::to_value(self.credential_issuer.metadata.credentials_supported.get(0).unwrap()).unwrap(),
-        )
-        .unwrap();
-
+        let credentials: CredentialFormat<JwtVcJson> = self
+            .credential_issuer
+            .metadata
+            .credentials_supported
+            .get(0)
+            .ok_or_else(|| anyhow::anyhow!("No credentials supported."))?
+            .clone()
+            .try_into()?;
         Ok(CredentialOfferQuery::CredentialOffer(CredentialOffer {
             credential_issuer: self.credential_issuer.metadata.credential_issuer.clone(),
             credentials: vec![serde_json::to_value(credentials)?],

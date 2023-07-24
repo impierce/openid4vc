@@ -30,8 +30,8 @@ impl<const N: usize> TryFrom<[Arc<dyn Subject>; N]> for Subjects {
         Ok(Self::from(
             subjects
                 .iter()
-                .map(|subject| (subject.type_().unwrap(), subject.clone()))
-                .collect::<Vec<_>>(),
+                .map(|subject| subject.type_().map(|subject_type| (subject_type, subject.clone())))
+                .collect::<Result<Vec<_>>>()?,
         ))
     }
 }
