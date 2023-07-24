@@ -1,3 +1,4 @@
+use crate::{managers::credential_issuer::CredentialIssuerManager, storage::Storage};
 use anyhow::Result;
 use axum::{
     extract::State,
@@ -7,21 +8,12 @@ use axum::{
     Form, Json, Router,
 };
 use axum_auth::AuthBearer;
-use oid4vc_core::{Decoder, Subject, Subjects};
+use oid4vc_core::{Decoder, Subjects};
 use oid4vci::{
     authorization_request::AuthorizationRequest,
-    credential_format::CredentialFormat,
     credential_format_profiles::w3c_verifiable_credentials::jwt_vc_json::JwtVcJson,
-    credential_issuer::{
-        authorization_server_metadata::AuthorizationServerMetadata,
-        credential_issuer_metadata::CredentialIssuerMetadata, CredentialIssuer, Storage,
-    },
-    credential_offer::{CredentialOffer, CredentialOfferQuery, Grants},
-    credential_request::CredentialRequest,
-    credentials_supported::CredentialsSupportedJson, token_request::TokenRequest,
+    credential_request::CredentialRequest, token_request::TokenRequest,
 };
-use reqwest::Url;
-use std::{net::TcpListener, sync::Arc};
 use tokio::task::JoinHandle;
 
 pub struct Server<S>
@@ -47,94 +39,22 @@ impl<S: Storage + Clone> Server<S> {
 
         self.server.replace(tokio::spawn(async move {
             axum::Server::from_tcp(listener)
-                    .unwrap()
-                    .serve(Router::new()
-                    .route(
-                        "/.well-known/oauth-authorization-server",
-                        get(|State(credential_issuer_manager): State<CredentialIssuerManager<S>>| async move {
-                            (
-                                StatusCode::OK,
-                                Json(
-                                    credential_issuer_manager.credential_issuer
-                                        .authorization_server_metadata
-                                        .clone(),
-                                ),
-                            )
-                        }),
-                    )
-                    .route(
-                        "/.well-known/openid-credential-issuer",
-                        get(|State(credential_issuer_manager): State<CredentialIssuerManager<S>>| async move {
-                            (
-                                StatusCode::OK,
-                                Json(credential_issuer_manager.credential_issuer.metadata.clone()),
-                            )
-                        }),
-                    )
-                    .route(
-                        "/authorize",
-                        get(|State(credential_issuer_manager): State<CredentialIssuerManager<S>>, Json(_authorization_request): Json<AuthorizationRequest<JwtVcJson>>| async move {
-                            
-                            dbg!(_authorization_request);
-                            (
-                                // TODO: should be 302 Found
-                                StatusCode::OK,
-                                Json(credential_issuer_manager.storage.get_authorization_response().unwrap()),
-                            )
-                        }),
-                    )
-                    .route(
-                        "/token",
-                        post(
-                            |State(credential_issuer_manager): State<CredentialIssuerManager<S>>, Form(token_request): Form<TokenRequest>| async move {
-                                    match
-                                    credential_issuer_manager
-                                        .storage
-                                        .get_token_response(token_request)
-                                        .take()
-                                    {
-                                        Some(token_response) => (
-                                            StatusCode::OK,
-                                            AppendHeaders([("Cache-Control", "no-store")]),
-                                            Json(token_response),
-                                        )
-                                            .into_response(),
-                                        // TODO: handle error response
-                                        _ => (
-                                            StatusCode::BAD_REQUEST,
-                                            AppendHeaders([("Cache-Control", "no-store")]),
-                                            Json("Pre-authorized code not found"),
-                                        )
-                                            .into_response(),
-                                    }
-                            },
-                        ),
-                    )
-                    .route(
-                        "/credential",
-                        post(
-                            |State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
-                             AuthBearer(access_token): AuthBearer,
-                             Json(credential_request): Json<CredentialRequest<JwtVcJson>>| async move {
-                                let proof = credential_issuer_manager
-                                    .credential_issuer.validate_proof(credential_request.proof.unwrap(), Decoder::from(&Subjects::try_from([credential_issuer_manager.credential_issuer.subject.clone()]).unwrap()))
-                                    .await
-                                    .unwrap();
-                                // TODO: validate credential request
-                                (
-                                    StatusCode::OK,
-                                    AppendHeaders([("Cache-Control", "no-store")]),
-                                    Json(
-                                        credential_issuer_manager
-                                            .storage.get_credential_response(access_token, proof.rfc7519_claims.iss().as_ref().unwrap().parse().unwrap(), credential_issuer_manager.credential_issuer.metadata.credential_issuer.clone(), credential_issuer_manager.credential_issuer.subject.clone())
-                                            .unwrap(),
-                                    ),
-                                )
-                            },
-                        ),
-                    )
-                    .with_state(credential_issuer_manager).into_make_service())
-                    .await.unwrap()
+                .unwrap()
+                .serve(
+                    Router::new()
+                        .route(
+                            "/.well-known/oauth-authorization-server",
+                            get(oauth_authorization_server),
+                        )
+                        .route("/.well-known/openid-credential-issuer", get(openid_credential_issuer))
+                        .route("/authorize", get(authorize))
+                        .route("/token", post(token))
+                        .route("/credential", post(credential))
+                        .with_state(credential_issuer_manager)
+                        .into_make_service(),
+                )
+                .await
+                .unwrap()
         }));
         Ok(())
     }
@@ -148,70 +68,95 @@ impl<S: Storage + Clone> Server<S> {
     }
 }
 
-#[derive(Clone)]
-pub struct CredentialIssuerManager<S: Storage> {
-    pub credential_issuer: CredentialIssuer,
-    pub subjects: Arc<Subjects>,
-    pub storage: S,
-    pub listener: Arc<TcpListener>,
+async fn oauth_authorization_server<S: Storage>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
+) -> impl IntoResponse {
+    (
+        StatusCode::OK,
+        Json(
+            credential_issuer_manager
+                .credential_issuer
+                .authorization_server_metadata,
+        ),
+    )
 }
 
-impl<S: Storage + Clone> CredentialIssuerManager<S> {
-    pub fn new<const N: usize>(
-        credentials_supported: Vec<CredentialsSupportedJson>,
-        listener: Option<TcpListener>,
-        storage: S,
-        subjects: [Arc<dyn Subject>; N],
-    ) -> Result<Self> {
-        let listener = listener.unwrap_or_else(|| TcpListener::bind("127.0.0.1:0").unwrap());
-        let issuer_url: Url = format!("http://{:?}", listener.local_addr()?).parse()?;
-        Ok(Self {
-            credential_issuer: CredentialIssuer {
-                subject: subjects
-                    .get(0)
-                    .ok_or_else(|| anyhow::anyhow!("No subjects found."))?
-                    .clone(),
-                metadata: CredentialIssuerMetadata {
-                    credential_issuer: issuer_url.clone(),
-                    authorization_server: None,
-                    credential_endpoint: format!("{issuer_url}credential").parse()?,
-                    batch_credential_endpoint: None,
-                    deferred_credential_endpoint: None,
-                    credentials_supported,
-                    display: None,
-                },
-                authorization_server_metadata: AuthorizationServerMetadata {
-                    issuer: issuer_url.clone(),
-                    authorization_endpoint: format!("{issuer_url}authorize").parse()?,
-                    token_endpoint: format!("{issuer_url}token").parse()?,
-                    ..Default::default()
-                },
-            },
-            subjects: Arc::new(Subjects::try_from(subjects)?),
-            storage,
-            listener: Arc::new(listener),
-        })
-    }
+async fn openid_credential_issuer<S: Storage>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
+) -> impl IntoResponse {
+    (
+        StatusCode::OK,
+        Json(credential_issuer_manager.credential_issuer.metadata),
+    )
+}
 
-    pub fn credential_issuer_url(&self) -> Result<Url> {
-        Ok(self.credential_issuer.metadata.credential_issuer.clone())
-    }
+async fn authorize<S: Storage>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
+    Json(_authorization_request): Json<AuthorizationRequest<JwtVcJson>>,
+) -> impl IntoResponse {
+    (
+        // TODO: should be 302 Found
+        StatusCode::OK,
+        Json(credential_issuer_manager.storage.get_authorization_response().unwrap()),
+    )
+}
 
-    pub fn credential_offer_uri(&self) -> Result<String> {
-        // TODO: fix this
-        let credentials: CredentialFormat<JwtVcJson> = serde_json::from_value(
-            serde_json::to_value(self.credential_issuer.metadata.credentials_supported.get(0).unwrap()).unwrap(),
+async fn token<S: Storage>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
+    Form(token_request): Form<TokenRequest>,
+) -> impl IntoResponse {
+    match credential_issuer_manager
+        .storage
+        .get_token_response(token_request)
+        .take()
+    {
+        Some(token_response) => (
+            StatusCode::OK,
+            AppendHeaders([("Cache-Control", "no-store")]),
+            Json(token_response),
         )
-        .unwrap();
-
-        Ok(CredentialOfferQuery::CredentialOffer(CredentialOffer {
-            credential_issuer: self.credential_issuer.metadata.credential_issuer.clone(),
-            credentials: vec![serde_json::to_value(credentials)?],
-            grants: Some(Grants {
-                authorization_code: self.storage.get_authorization_code(),
-                pre_authorized_code: self.storage.get_pre_authorized_code(),
-            }),
-        })
-        .to_string())
+            .into_response(),
+        // TODO: handle error response
+        _ => (
+            StatusCode::BAD_REQUEST,
+            AppendHeaders([("Cache-Control", "no-store")]),
+            Json("Pre-authorized code not found"),
+        )
+            .into_response(),
     }
+}
+
+async fn credential<S: Storage>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
+    AuthBearer(access_token): AuthBearer,
+    Json(credential_request): Json<CredentialRequest<JwtVcJson>>,
+) -> impl IntoResponse {
+    let proof = credential_issuer_manager
+        .credential_issuer
+        .validate_proof(
+            credential_request.proof.unwrap(),
+            Decoder::from(&Subjects::try_from([credential_issuer_manager.credential_issuer.subject.clone()]).unwrap()),
+        )
+        .await
+        .unwrap();
+    // TODO: validate credential request
+    (
+        StatusCode::OK,
+        AppendHeaders([("Cache-Control", "no-store")]),
+        Json(
+            credential_issuer_manager
+                .storage
+                .get_credential_response(
+                    access_token,
+                    proof.rfc7519_claims.iss().as_ref().unwrap().parse().unwrap(),
+                    credential_issuer_manager
+                        .credential_issuer
+                        .metadata
+                        .credential_issuer
+                        .clone(),
+                    credential_issuer_manager.credential_issuer.subject.clone(),
+                )
+                .unwrap(),
+        ),
+    )
 }

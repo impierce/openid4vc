@@ -29,15 +29,3 @@ pub enum TokenRequest {
         user_pin: Option<String>,
     },
 }
-
-#[test]
-fn test() {
-    let test = TokenRequest::AuthorizationCode {
-        grant_type: AuthorizationCode,
-        code: "code".into(),
-        code_verifier: None,
-        redirect_uri: None,
-    };
-
-    println!("{}", serde_json::to_string_pretty(&test).unwrap());
-}

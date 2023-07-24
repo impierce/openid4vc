@@ -1,22 +1,17 @@
-use std::fs::File;
-
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
 use oid4vc_core::{authentication::subject::SigningSubject, generate_authorization_code, jwt};
 use oid4vc_manager::storage::Storage;
 use oid4vci::{
-    authorization_response::AuthorizationResponse,
-    credential_format_profiles::CredentialFormatCollection,
-    credential_issuer::credentials_supported::CredentialsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
     credential_response::CredentialResponse,
     token_request::TokenRequest,
     token_response::TokenResponse,
-    VerifiableCredentialJwt,
+    AuthorizationResponse, VerifiableCredentialJwt,
 };
 use oid4vp::ClaimFormatDesignation;
 use reqwest::Url;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 lazy_static! {
     pub static ref CODE: String = generate_authorization_code(16);
@@ -32,13 +27,7 @@ lazy_static! {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MemoryStorage;
 
-impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for MemoryStorage {
-    fn get_credentials_supported(&self) -> Vec<CredentialsSupportedObject<CFC>> {
-        let credentials_supported_object =
-            File::open("./tests/common/credentials_supported_objects/university_degree.json").unwrap();
-        vec![serde_json::from_reader(credentials_supported_object).unwrap()]
-    }
-
+impl Storage for MemoryStorage {
     fn get_authorization_code(&self) -> Option<AuthorizationCode> {
         None
     }
@@ -56,21 +45,33 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
 
     fn get_token_response(&self, token_request: TokenRequest) -> Option<TokenResponse> {
         match token_request {
-            TokenRequest::AuthorizationCode { code, .. } => code == CODE.clone(),
+            TokenRequest::AuthorizationCode { code, .. } => {
+                (code == CODE.clone()).then_some(TokenResponse {
+                    // TODO: dynamically create this.
+                    access_token: ACCESS_TOKEN.clone(),
+                    token_type: "bearer".to_string(),
+                    expires_in: Some(86400),
+                    refresh_token: None,
+                    scope: None,
+                    c_nonce: Some(C_NONCE.clone()),
+                    c_nonce_expires_in: Some(86400),
+                })
+            }
             TokenRequest::PreAuthorizedCode {
                 pre_authorized_code, ..
-            } => pre_authorized_code == PRE_AUTHORIZED_CODE.pre_authorized_code,
+            } => {
+                (pre_authorized_code == PRE_AUTHORIZED_CODE.pre_authorized_code).then_some(TokenResponse {
+                    // TODO: dynamically create this.
+                    access_token: ACCESS_TOKEN.clone(),
+                    token_type: "bearer".to_string(),
+                    expires_in: Some(86400),
+                    refresh_token: None,
+                    scope: None,
+                    c_nonce: Some(C_NONCE.clone()),
+                    c_nonce_expires_in: Some(86400),
+                })
+            }
         }
-        .then_some(TokenResponse {
-            // TODO: dynamically create this.
-            access_token: ACCESS_TOKEN.clone(),
-            token_type: "bearer".to_string(),
-            expires_in: Some(86400),
-            refresh_token: None,
-            scope: None,
-            c_nonce: Some(C_NONCE.clone()),
-            c_nonce_expires_in: Some(86400),
-        })
     }
 
     fn get_credential_response(
@@ -80,38 +81,47 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
         issuer_did: Url,
         signer: SigningSubject,
     ) -> Option<CredentialResponse> {
-        let credential = File::open("./tests/common/credentials/university_degree.json").unwrap();
-        let mut verifiable_credential: serde_json::Value = serde_json::from_reader(credential).unwrap();
-        verifiable_credential["issuer"] = serde_json::json!(issuer_did);
-        verifiable_credential["credentialSubject"]["id"] = serde_json::json!(subject_did);
-
         (access_token == ACCESS_TOKEN.clone()).then_some(CredentialResponse {
             format: ClaimFormatDesignation::JwtVcJson,
-            credential: serde_json::to_value(
-                jwt::encode(
-                    signer.clone(),
-                    Header::new(Algorithm::EdDSA),
-                    VerifiableCredentialJwt::builder()
-                        .sub(subject_did.clone())
-                        .iss(issuer_did.clone())
-                        .iat(0)
-                        .exp(9999999999i64)
-                        .verifiable_credential(verifiable_credential)
-                        .build()
-                        .ok(),
+            credential: Some(
+                serde_json::to_value(
+                    jwt::encode(
+                        signer.clone(),
+                        Header::new(Algorithm::EdDSA),
+                        VerifiableCredentialJwt::builder()
+                            .sub(subject_did.clone())
+                            .iss(issuer_did.clone())
+                            .iat(0)
+                            .exp(9999999999i64)
+                            .verifiable_credential(serde_json::json!({
+                                "@context": [
+                                    "https://www.w3.org/2018/credentials/v1",
+                                    "https://www.w3.org/2018/credentials/examples/v1"
+                                ],
+                                "type": [
+                                    "VerifiableCredential",
+                                    "PersonalInformation"
+                                ],
+                                "issuanceDate": "2022-01-01T00:00:00Z",
+                                "issuer": issuer_did,
+                                "credentialSubject": {
+                                "id": subject_did,
+                                "givenName": "Ferris",
+                                "familyName": "Crabman",
+                                "email": "ferris.crabman@crabmail.com",
+                                "birthdate": "1985-05-21"
+                                }
+                            }))
+                            .build()
+                            .unwrap(),
+                    )
+                    .unwrap(),
                 )
-                .ok(),
-            )
-            .ok(),
+                .unwrap(),
+            ),
             transaction_id: None,
             c_nonce: Some(C_NONCE.clone()),
             c_nonce_expires_in: Some(86400),
         })
     }
-
-    fn get_state(&self) -> Option<String> {
-        None
-    }
-
-    fn set_state(&mut self, _state: String) {}
 }

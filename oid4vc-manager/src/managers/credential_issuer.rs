@@ -2,31 +2,33 @@ use crate::storage::Storage;
 use anyhow::Result;
 use oid4vc_core::{Subject, Subjects};
 use oid4vci::{
-    credential_format_profiles::CredentialFormatCollection,
+    credential_format::CredentialFormat,
+    credential_format_profiles::w3c_verifiable_credentials::jwt_vc_json::JwtVcJson,
     credential_issuer::{
         authorization_server_metadata::AuthorizationServerMetadata,
         credential_issuer_metadata::CredentialIssuerMetadata, CredentialIssuer,
     },
-    credential_offer::{CredentialOffer, CredentialOfferQuery, CredentialsObject, Grants},
+    credential_offer::{CredentialOffer, CredentialOfferQuery, Grants},
+    credentials_supported::CredentialsSupportedJson,
 };
 use reqwest::Url;
 use std::{net::TcpListener, sync::Arc};
 
 #[derive(Clone)]
-pub struct CredentialIssuerManager<S: Storage<CFC>, CFC: CredentialFormatCollection> {
-    pub credential_issuer: CredentialIssuer<CFC>,
+pub struct CredentialIssuerManager<S: Storage> {
+    pub credential_issuer: CredentialIssuer,
     pub subjects: Arc<Subjects>,
     pub storage: S,
     pub listener: Arc<TcpListener>,
 }
 
-impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection> CredentialIssuerManager<S, CFC> {
+impl<S: Storage + Clone> CredentialIssuerManager<S> {
     pub fn new<const N: usize>(
+        credentials_supported: Vec<CredentialsSupportedJson>,
         listener: Option<TcpListener>,
         storage: S,
         subjects: [Arc<dyn Subject>; N],
     ) -> Result<Self> {
-        // `TcpListener::bind("127.0.0.1:0")` will bind to a random port.
         let listener = listener.unwrap_or_else(|| TcpListener::bind("127.0.0.1:0").unwrap());
         let issuer_url: Url = format!("http://{:?}", listener.local_addr()?).parse()?;
         Ok(Self {
@@ -38,16 +40,16 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection> CredentialIssuerM
                 metadata: CredentialIssuerMetadata {
                     credential_issuer: issuer_url.clone(),
                     authorization_server: None,
-                    credential_endpoint: issuer_url.join("/credential")?,
+                    credential_endpoint: format!("{issuer_url}credential").parse()?,
                     batch_credential_endpoint: None,
                     deferred_credential_endpoint: None,
-                    credentials_supported: storage.get_credentials_supported(),
+                    credentials_supported,
                     display: None,
                 },
                 authorization_server_metadata: AuthorizationServerMetadata {
                     issuer: issuer_url.clone(),
-                    authorization_endpoint: issuer_url.join("/authorize")?,
-                    token_endpoint: issuer_url.join("/token")?,
+                    authorization_endpoint: format!("{issuer_url}authorize").parse()?,
+                    token_endpoint: format!("{issuer_url}token").parse()?,
                     ..Default::default()
                 },
             },
@@ -62,17 +64,15 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection> CredentialIssuerM
     }
 
     pub fn credential_offer_uri(&self) -> Result<String> {
-        let credential = self
-            .credential_issuer
-            .metadata
-            .credentials_supported
-            .get(0)
-            .ok_or_else(|| anyhow::anyhow!("No credentials supported."))?
-            .credential_format
-            .clone();
+        // TODO: fix this
+        let credentials: CredentialFormat<JwtVcJson> = serde_json::from_value(
+            serde_json::to_value(self.credential_issuer.metadata.credentials_supported.get(0).unwrap()).unwrap(),
+        )
+        .unwrap();
+
         Ok(CredentialOfferQuery::CredentialOffer(CredentialOffer {
             credential_issuer: self.credential_issuer.metadata.credential_issuer.clone(),
-            credentials: vec![CredentialsObject::ByValue(credential)],
+            credentials: vec![serde_json::to_value(credentials)?],
             grants: Some(Grants {
                 authorization_code: self.storage.get_authorization_code(),
                 pre_authorized_code: self.storage.get_pre_authorized_code(),

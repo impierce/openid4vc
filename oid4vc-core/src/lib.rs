@@ -45,3 +45,19 @@ pub fn to_query_value<T: Serialize>(value: &T) -> anyhow::Result<String> {
         .map(|s| s.chars().filter(|c| !c.is_whitespace()).collect::<String>())
         .map_err(|e| e.into())
 }
+
+pub fn generate_authorization_code(length: usize) -> String {
+    rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(length)
+        .map(char::from)
+        .collect()
+}
+
+pub fn generate_nonce(length: usize) -> String {
+    rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(length)
+        .map(char::from)
+        .collect()
+}

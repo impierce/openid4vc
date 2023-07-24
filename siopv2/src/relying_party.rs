@@ -1,7 +1,7 @@
 use crate::{AuthorizationRequest, AuthorizationResponse, IdToken};
 use anyhow::Result;
 use jsonwebtoken::{Algorithm, Header};
-use oid4vc_core::{jwt, Decoder};
+use oid4vc_core::{authentication::subject::SigningSubject, jwt, Decoder};
 use oid4vci::VerifiableCredentialJwt;
 use std::collections::HashMap;
 
