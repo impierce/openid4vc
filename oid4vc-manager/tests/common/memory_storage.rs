@@ -1,13 +1,12 @@
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
-use oid4vc_core::jwt;
+use oid4vc_core::{authentication::subject::SigningSubject, generate_authorization_code, jwt};
+use oid4vc_manager::storage::Storage;
 use oid4vci::{
-    credential_issuer::Storage,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
     credential_response::CredentialResponse,
     token_request::TokenRequest,
     token_response::TokenResponse,
-    wallet::SigningSubject,
     AuthorizationResponse, VerifiableCredentialJwt,
 };
 use oid4vp::ClaimFormatDesignation;
@@ -15,9 +14,9 @@ use reqwest::Url;
 use serde::{Deserialize, Serialize};
 
 lazy_static! {
-    pub static ref CODE: String = "SplxlOBeZQQYbYS6WxSbIA".to_string();
+    pub static ref CODE: String = generate_authorization_code(16);
     pub static ref PRE_AUTHORIZED_CODE: PreAuthorizedCode = PreAuthorizedCode {
-        pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
+        pre_authorized_code: generate_authorization_code(16),
         ..Default::default()
     };
     pub static ref USER_PIN: String = "493536".to_string();
@@ -26,9 +25,9 @@ lazy_static! {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MemStorage;
+pub struct MemoryStorage;
 
-impl Storage for MemStorage {
+impl Storage for MemoryStorage {
     fn get_authorization_code(&self) -> Option<AuthorizationCode> {
         None
     }

@@ -8,11 +8,8 @@ use crate::{credential_request::CredentialRequest, CredentialFormat};
 use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
 use crate::{AuthorizationResponse, Format};
 use anyhow::Result;
-use oid4vc_core::Subject;
+use oid4vc_core::authentication::subject::SigningSubject;
 use reqwest::Url;
-use std::sync::Arc;
-
-pub type SigningSubject = Arc<dyn Subject>;
 
 pub struct Wallet {
     pub subject: SigningSubject,

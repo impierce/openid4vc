@@ -4,17 +4,8 @@ pub mod credential_issuer_metadata;
 use self::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
 };
-use crate::{
-    credential_offer::{AuthorizationCode, PreAuthorizedCode},
-    credential_response::CredentialResponse,
-    proof::ProofOfPossession,
-    token_request::TokenRequest,
-    token_response::TokenResponse,
-    wallet::SigningSubject,
-    AuthorizationResponse, Proof,
-};
-use oid4vc_core::Decoder;
-use reqwest::Url;
+use crate::{proof::ProofOfPossession, Proof};
+use oid4vc_core::{authentication::subject::SigningSubject, Decoder};
 
 #[derive(Clone)]
 pub struct CredentialIssuer {
@@ -30,18 +21,4 @@ impl CredentialIssuer {
             Proof::Cwt { .. } => unimplemented!("CWT is not supported yet"),
         }
     }
-}
-
-pub trait Storage: Send + Sync + 'static {
-    fn get_authorization_response(&self) -> Option<AuthorizationResponse>;
-    fn get_authorization_code(&self) -> Option<AuthorizationCode>;
-    fn get_pre_authorized_code(&self) -> Option<PreAuthorizedCode>;
-    fn get_token_response(&self, token_request: TokenRequest) -> Option<TokenResponse>;
-    fn get_credential_response(
-        &self,
-        access_token: String,
-        subject_did: Url,
-        issuer_did: Url,
-        subject: SigningSubject,
-    ) -> Option<CredentialResponse>;
 }

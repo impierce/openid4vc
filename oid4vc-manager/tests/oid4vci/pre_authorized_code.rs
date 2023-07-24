@@ -1,91 +1,28 @@
-use crate::common::memstorage::MemStorage;
+use crate::common::memory_storage::MemoryStorage;
 use did_key::{generate, Ed25519KeyPair};
-use lazy_static::lazy_static;
 use oid4vc_manager::{
-    methods::key_method::KeySubject,
-    servers::credential_issuer::{CredentialIssuerManager, Server},
+    managers::credential_issuer::CredentialIssuerManager, methods::key_method::KeySubject,
+    servers::credential_issuer::Server,
 };
 use oid4vci::{
     credential_format::CredentialFormat,
     credential_format_profiles::w3c_verifiable_credentials::jwt_vc_json::JwtVcJson,
     credential_offer::CredentialOfferQuery,
-    credentials_supported::CredentialsSupportedObject,
     token_request::{PreAuthorizedCode, TokenRequest},
     Wallet,
 };
-use std::sync::Arc;
-
-lazy_static! {
-    static ref CREDENTIALS_SUPPORTED: CredentialsSupportedObject<JwtVcJson> = serde_json::from_str(
-        r##"{
-            "format": "jwt_vc_json",
-            "id": "UniversityDegree_JWT",
-            "cryptographic_binding_methods_supported": [
-                "did:key",
-                "did:iota"
-            ],
-            "cryptographic_suites_supported": [
-                "EdDSA"
-            ],
-            "credential_definition":{
-                "type": [
-                    "VerifiableCredential",
-                    "UniversityDegreeCredential"
-                ],
-                "credentialSubject": {
-                    "given_name": {
-                        "display": [
-                            {
-                                "name": "Given Name",
-                                "locale": "en-US"
-                            }
-                        ]
-                    },
-                    "last_name": {
-                        "display": [
-                            {
-                                "name": "Surname",
-                                "locale": "en-US"
-                            }
-                        ]
-                    },
-                    "degree": {},
-                    "gpa": {
-                        "display": [
-                            {
-                                "name": "GPA"
-                            }
-                        ]
-                    }
-                }
-            },
-            "proof_types_supported": [
-                "jwt"
-            ],
-            "display": [
-                {
-                    "name": "University Credential",
-                    "locale": "en-US",
-                    "logo": {
-                        "url": "https://exampleuniversity.com/public/logo.png",
-                        "alt_text": "a square logo of a university"
-                    },
-                    "background_color": "#12107c",
-                    "text_color": "#FFFFFF"
-                }
-            ]
-        }"##
-    )
-    .unwrap();
-}
+use std::{fs::File, io::BufReader, sync::Arc};
 
 #[tokio::test]
 async fn test_pre_authorized_code_flow() {
+    let file = File::open("./tests/common/credentials_supported_objects/university_degree.json").unwrap();
+    let reader = BufReader::new(file);
+
     let mut credential_issuer = Server::setup(
         CredentialIssuerManager::new(
-            vec![CREDENTIALS_SUPPORTED.clone().into()],
+            vec![serde_json::from_reader(reader).unwrap()],
             None,
-            MemStorage,
+            MemoryStorage,
             [Arc::new(KeySubject::from_keypair(generate::<Ed25519KeyPair>(Some(
                 "this-is-a-very-UNSAFE-issuer-secret-key".as_bytes().try_into().unwrap(),
             ))))],

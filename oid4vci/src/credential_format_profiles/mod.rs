@@ -5,13 +5,14 @@ pub mod w3c_verifiable_credentials;
 macro_rules! credential_format {
     ($format:literal, $name:ty, {$($field_name:ident: $field_type:ty),*}) => {
         paste::paste! {
-            #[derive(Debug, Clone)]
+            #[derive(Debug, Clone, Eq, PartialEq)]
             pub struct $name;
             impl credential_format::Format for $name {
                 type Parameters = [< $name Parameters >];
             }
 
-            #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+            #[serde_with::skip_serializing_none]
+            #[derive(Debug, serde::Serialize, serde::Deserialize, Eq, PartialEq, Clone)]
             pub struct [< $name Parameters >] {
                 $(pub $field_name: $field_type),*
             }

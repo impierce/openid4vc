@@ -1,1 +1,1 @@
-pub mod mso_doc;
+pub mod mso_mdoc;

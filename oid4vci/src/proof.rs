@@ -1,20 +1,19 @@
-use std::sync::Arc;
-
 use crate::serialize_unit_struct;
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::{builder_fn, jwt, RFC7519Claims, Subject};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Jwt;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Cwt;
 
 serialize_unit_struct!("jwt", Jwt);
 serialize_unit_struct!("cwt", Cwt);
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum Proof {
     Jwt { proof_type: Jwt, jwt: String },

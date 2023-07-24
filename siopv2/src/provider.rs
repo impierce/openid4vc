@@ -5,11 +5,8 @@ use anyhow::Result;
 use chrono::{Duration, Utc};
 use identity_credential::presentation::JwtPresentation;
 use jsonwebtoken::{Algorithm, Header};
-use oid4vc_core::{jwt, Decoder, Subject};
+use oid4vc_core::{authentication::subject::SigningSubject, jwt, Decoder};
 use oid4vp::{token::vp_token::VpToken, PresentationSubmission};
-use std::sync::Arc;
-
-pub type SigningSubject = Arc<dyn Subject>;
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
 /// [`AuthorizationRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
@@ -132,8 +129,8 @@ impl Provider {
 mod tests {
     use super::*;
     use crate::test_utils::TestSubject;
-    use oid4vc_core::{SubjectSyntaxType, Validator, Validators};
-    use std::str::FromStr;
+    use oid4vc_core::{Subject, SubjectSyntaxType, Validator, Validators};
+    use std::{str::FromStr, sync::Arc};
 
     #[tokio::test]
     async fn test_provider() {
