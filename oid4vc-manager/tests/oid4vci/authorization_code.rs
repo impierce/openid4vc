@@ -6,11 +6,11 @@ use oid4vc_manager::{
     servers::credential_issuer::{CredentialIssuerManager, Server},
 };
 use oid4vci::{
+    authorization_details::{AuthorizationDetails, OpenIDCredential},
     credential_format::CredentialFormat,
     credential_format_profiles::w3c_verifiable_credentials::jwt_vc_json::JwtVcJson,
-    credential_offer::CredentialOfferQuery,
     credentials_supported::CredentialsSupportedObject,
-    token_request::{PreAuthorizedCode, TokenRequest},
+    token_request::{AuthorizationCode, TokenRequest},
     Wallet,
 };
 use std::sync::Arc;
@@ -80,7 +80,7 @@ lazy_static! {
 }
 
 #[tokio::test]
-async fn test_pre_authorized_code_flow() {
+async fn test_authorization_code_flow() {
     let mut credential_issuer = Server::setup(
         CredentialIssuerManager::new(
             vec![CREDENTIALS_SUPPORTED.clone().into()],
@@ -96,24 +96,12 @@ async fn test_pre_authorized_code_flow() {
 
     credential_issuer.start_server().unwrap();
 
-    // Get the credential offer url.
-    let credential_offer_url = credential_issuer
-        .credential_issuer_manager
-        .credential_offer_uri()
-        .unwrap();
-
-    // Parse the credential offer url.
-    let credential_offer = match credential_offer_url.parse().unwrap() {
-        CredentialOfferQuery::CredentialOffer(credential_offer) => credential_offer,
-        _ => unreachable!(),
-    };
-
-    let university_degree: CredentialFormat<JwtVcJson> =
-        serde_json::from_value(credential_offer.credentials.get(0).unwrap().clone()).unwrap();
-
-    let credential_issuer_url = credential_offer.credential_issuer;
-
     let wallet = Wallet::new(Arc::new(KeySubject::new()));
+
+    let credential_issuer_url = credential_issuer
+        .credential_issuer_manager
+        .credential_issuer_url()
+        .unwrap();
 
     let authorization_server_metadata = wallet
         .get_authorization_server_metadata(credential_issuer_url.clone())
@@ -125,15 +113,35 @@ async fn test_pre_authorized_code_flow() {
         .await
         .unwrap();
 
-    let token_request = TokenRequest::PreAuthorizedCode {
-        grant_type: PreAuthorizedCode,
-        pre_authorized_code: credential_offer
-            .grants
+    let university_degree_credential_format = serde_json::from_value::<CredentialFormat<JwtVcJson>>(
+        credential_issuer_metadata
+            .credentials_supported
+            .get(0)
             .unwrap()
-            .pre_authorized_code
-            .unwrap()
-            .pre_authorized_code,
-        user_pin: Some("493536".to_string()),
+            .0
+            .clone(),
+    )
+    .unwrap();
+
+    let authorization_response = wallet
+        .get_authorization_code(
+            authorization_server_metadata.authorization_endpoint,
+            AuthorizationDetails {
+                type_: OpenIDCredential,
+                locations: None,
+                credential_format: university_degree_credential_format.clone(),
+            },
+        )
+        .await
+        .unwrap();
+
+    dbg!(&authorization_response);
+
+    let token_request = TokenRequest::AuthorizationCode {
+        grant_type: AuthorizationCode,
+        code: authorization_response.code,
+        code_verifier: None,
+        redirect_uri: None,
     };
 
     let token_response = wallet
@@ -142,7 +150,11 @@ async fn test_pre_authorized_code_flow() {
         .unwrap();
 
     let credential_response = wallet
-        .get_credential(credential_issuer_metadata, &token_response, university_degree)
+        .get_credential(
+            credential_issuer_metadata,
+            &token_response,
+            university_degree_credential_format,
+        )
         .await
         .unwrap();
 

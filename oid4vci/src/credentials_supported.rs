@@ -20,7 +20,7 @@ where
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct CredentialsSupportedJson(serde_json::Value);
+pub struct CredentialsSupportedJson(pub serde_json::Value);
 
 impl<F: Format> From<CredentialsSupportedObject<F>> for CredentialsSupportedJson {
     fn from(value: CredentialsSupportedObject<F>) -> Self {

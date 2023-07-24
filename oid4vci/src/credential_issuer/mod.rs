@@ -8,9 +8,10 @@ use crate::{
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
     credential_response::CredentialResponse,
     proof::ProofOfPossession,
+    token_request::TokenRequest,
     token_response::TokenResponse,
     wallet::SigningSubject,
-    Proof,
+    AuthorizationResponse, Proof,
 };
 use oid4vc_core::Decoder;
 use reqwest::Url;
@@ -32,9 +33,10 @@ impl CredentialIssuer {
 }
 
 pub trait Storage: Send + Sync + 'static {
+    fn get_authorization_response(&self) -> Option<AuthorizationResponse>;
     fn get_authorization_code(&self) -> Option<AuthorizationCode>;
     fn get_pre_authorized_code(&self) -> Option<PreAuthorizedCode>;
-    fn get_token_response(&self, code: String) -> Option<TokenResponse>;
+    fn get_token_response(&self, token_request: TokenRequest) -> Option<TokenResponse>;
     fn get_credential_response(
         &self,
         access_token: String,

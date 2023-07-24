@@ -5,15 +5,17 @@ use oid4vci::{
     credential_issuer::Storage,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
     credential_response::CredentialResponse,
+    token_request::TokenRequest,
     token_response::TokenResponse,
     wallet::SigningSubject,
-    VerifiableCredentialJwt,
+    AuthorizationResponse, VerifiableCredentialJwt,
 };
 use oid4vp::ClaimFormatDesignation;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 
 lazy_static! {
+    pub static ref CODE: String = "SplxlOBeZQQYbYS6WxSbIA".to_string();
     pub static ref PRE_AUTHORIZED_CODE: PreAuthorizedCode = PreAuthorizedCode {
         pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
         ..Default::default()
@@ -31,21 +33,46 @@ impl Storage for MemStorage {
         None
     }
 
+    fn get_authorization_response(&self) -> Option<AuthorizationResponse> {
+        Some(AuthorizationResponse {
+            code: CODE.clone(),
+            state: None,
+        })
+    }
+
     fn get_pre_authorized_code(&self) -> Option<PreAuthorizedCode> {
         Some(PRE_AUTHORIZED_CODE.clone())
     }
 
-    fn get_token_response(&self, code: String) -> Option<TokenResponse> {
-        (code == PRE_AUTHORIZED_CODE.pre_authorized_code).then_some(TokenResponse {
-            // TODO: dynamically create this.
-            access_token: ACCESS_TOKEN.clone(),
-            token_type: "bearer".to_string(),
-            expires_in: Some(86400),
-            refresh_token: None,
-            scope: None,
-            c_nonce: Some(C_NONCE.clone()),
-            c_nonce_expires_in: Some(86400),
-        })
+    fn get_token_response(&self, token_request: TokenRequest) -> Option<TokenResponse> {
+        match token_request {
+            TokenRequest::AuthorizationCode { code, .. } => {
+                (code == CODE.clone()).then_some(TokenResponse {
+                    // TODO: dynamically create this.
+                    access_token: ACCESS_TOKEN.clone(),
+                    token_type: "bearer".to_string(),
+                    expires_in: Some(86400),
+                    refresh_token: None,
+                    scope: None,
+                    c_nonce: Some(C_NONCE.clone()),
+                    c_nonce_expires_in: Some(86400),
+                })
+            }
+            TokenRequest::PreAuthorizedCode {
+                pre_authorized_code, ..
+            } => {
+                (pre_authorized_code == PRE_AUTHORIZED_CODE.pre_authorized_code).then_some(TokenResponse {
+                    // TODO: dynamically create this.
+                    access_token: ACCESS_TOKEN.clone(),
+                    token_type: "bearer".to_string(),
+                    expires_in: Some(86400),
+                    refresh_token: None,
+                    scope: None,
+                    c_nonce: Some(C_NONCE.clone()),
+                    c_nonce_expires_in: Some(86400),
+                })
+            }
+        }
     }
 
     fn get_credential_response(
