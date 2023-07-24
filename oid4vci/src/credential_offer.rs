@@ -70,7 +70,7 @@ impl std::fmt::Display for CredentialOfferQuery {
 }
 
 #[skip_serializing_none]
-#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
+#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 pub struct Grants {
     pub authorization_code: Option<AuthorizationCode>,
     #[serde(rename = "urn:ietf:params:oauth:grant-type:pre-authorized_code")]
