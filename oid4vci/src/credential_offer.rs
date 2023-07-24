@@ -10,22 +10,19 @@ pub struct AuthorizationCode {
     pub issuer_state: Option<String>,
 }
 
+#[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
 pub struct PreAuthorizedCode {
     #[serde(rename = "pre-authorized_code")]
     pub pre_authorized_code: String,
     #[serde(default)]
     pub user_pin_required: bool,
-    #[serde(default = "default_interval")]
-    pub interval: i64,
+    pub interval: Option<i64>,
 }
 
-fn default_interval() -> i64 {
-    5
-}
-
+/// Credential Offer as described in https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer.
 #[skip_serializing_none]
-#[derive(Deserialize, Serialize, Debug, Eq, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 pub struct CredentialOffer {
     pub credential_issuer: Url,
     pub credentials: Vec<serde_json::Value>,
@@ -69,10 +66,72 @@ impl std::fmt::Display for CredentialOfferQuery {
     }
 }
 
+/// Grants as described in https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer-parameters.
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 pub struct Grants {
     pub authorization_code: Option<AuthorizationCode>,
     #[serde(rename = "urn:ietf:params:oauth:grant-type:pre-authorized_code")]
     pub pre_authorized_code: Option<PreAuthorizedCode>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::credential_format_profiles::{iso_mdl::mso_mdoc::MsoMdoc, CredentialFormat};
+    use serde_json::json;
+
+    #[test]
+    fn test_credential_offer_serde() {
+        let json = json!({
+           "credential_issuer": "https://credential-issuer.example.com/",
+           "credentials": [
+              "UniversityDegree_JWT",
+              {
+                 "format": "mso_mdoc",
+                 "doctype": "org.iso.18013.5.1.mDL"
+              }
+           ],
+           "grants": {
+              "authorization_code": {
+                 "issuer_state": "eyJhbGciOiJSU0Et...FYUaBy"
+              },
+              "urn:ietf:params:oauth:grant-type:pre-authorized_code": {
+                 "pre-authorized_code": "adhjhdjajkdkhjhdj",
+                 "user_pin_required": true
+              }
+           }
+        });
+
+        let credential_offer: CredentialOffer = serde_json::from_value(json.clone()).unwrap();
+
+        // Assert that the json Value is deserialized into the correct type.
+        assert_eq!(
+            credential_offer,
+            CredentialOffer {
+                credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
+                credentials: vec![
+                    serde_json::Value::String("UniversityDegree_JWT".into()),
+                    serde_json::to_value(CredentialFormat {
+                        format: MsoMdoc,
+                        parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
+                    })
+                    .unwrap()
+                ],
+                grants: Some(Grants {
+                    pre_authorized_code: Some(PreAuthorizedCode {
+                        pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
+                        user_pin_required: true,
+                        ..Default::default()
+                    }),
+                    authorization_code: Some(AuthorizationCode {
+                        issuer_state: Some("eyJhbGciOiJSU0Et...FYUaBy".to_string())
+                    })
+                })
+            }
+        );
+
+        // Assert that the `CredentialOffer` can be serialized back into the original json Value.
+        assert_eq!(serde_json::to_value(credential_offer).unwrap(), json);
+    }
 }

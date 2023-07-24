@@ -1,7 +1,11 @@
-use crate::{proof::Proof, CredentialFormat, Format};
+use crate::{
+    credential_format_profiles::{CredentialFormat, Format},
+    proof::Proof,
+};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
+/// Credential Request as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CredentialRequest<F>
@@ -17,8 +21,10 @@ where
 mod tests {
     use super::*;
     use crate::{
-        credential_definition::CredentialDefinition,
-        credential_format_profiles::{iso_mdl::mso_mdoc::MsoMdoc, w3c_verifiable_credentials::jwt_vc_json::JwtVcJson},
+        credential_format_profiles::{
+            iso_mdl::mso_mdoc::MsoMdoc,
+            w3c_verifiable_credentials::jwt_vc_json::{CredentialDefinition, JwtVcJson},
+        },
         Jwt,
     };
     use serde_json::json;

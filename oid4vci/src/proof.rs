@@ -13,6 +13,7 @@ pub struct Cwt;
 serialize_unit_struct!("jwt", Jwt);
 serialize_unit_struct!("cwt", Cwt);
 
+/// Key Proof Type (JWT or CWT) and the proof itself, as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-key-proof-types.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum Proof {

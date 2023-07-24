@@ -1,5 +1,6 @@
 pub mod authorization_server_metadata;
 pub mod credential_issuer_metadata;
+pub mod credentials_supported;
 
 use self::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,

@@ -7,8 +7,7 @@ use oid4vc_manager::{
 };
 use oid4vci::{
     authorization_details::{AuthorizationDetails, OpenIDCredential},
-    credential_format::CredentialFormat,
-    credential_format_profiles::w3c_verifiable_credentials::jwt_vc_json::JwtVcJson,
+    credential_format_profiles::{w3c_verifiable_credentials::jwt_vc_json::JwtVcJson, CredentialFormat},
     token_request::{AuthorizationCode, TokenRequest},
     Wallet,
 };

@@ -2,8 +2,7 @@ use crate::storage::Storage;
 use anyhow::Result;
 use oid4vc_core::{Subject, Subjects};
 use oid4vci::{
-    credential_format::CredentialFormat,
-    credential_format_profiles::w3c_verifiable_credentials::jwt_vc_json::JwtVcJson,
+    credential_format_profiles::{w3c_verifiable_credentials::jwt_vc_json::JwtVcJson, CredentialFormat},
     credential_issuer::{
         authorization_server_metadata::AuthorizationServerMetadata,
         credential_issuer_metadata::CredentialIssuerMetadata, CredentialIssuer,
