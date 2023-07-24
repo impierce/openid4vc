@@ -9,7 +9,6 @@ use oid4vci::{
         credential_issuer_metadata::CredentialIssuerMetadata, CredentialIssuer,
     },
     credential_offer::{CredentialOffer, CredentialOfferQuery, Grants},
-    credentials_supported::CredentialsSupportedJson,
 };
 use reqwest::Url;
 use std::{net::TcpListener, sync::Arc};
@@ -24,7 +23,6 @@ pub struct CredentialIssuerManager<S: Storage> {
 
 impl<S: Storage + Clone> CredentialIssuerManager<S> {
     pub fn new<const N: usize>(
-        credentials_supported: Vec<CredentialsSupportedJson>,
         listener: Option<TcpListener>,
         storage: S,
         subjects: [Arc<dyn Subject>; N],
@@ -43,7 +41,7 @@ impl<S: Storage + Clone> CredentialIssuerManager<S> {
                     credential_endpoint: format!("{issuer_url}credential").parse()?,
                     batch_credential_endpoint: None,
                     deferred_credential_endpoint: None,
-                    credentials_supported,
+                    credentials_supported: storage.get_credentials_supported(),
                     display: None,
                 },
                 authorization_server_metadata: AuthorizationServerMetadata {

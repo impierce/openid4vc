@@ -1,3 +1,5 @@
+use std::fs::File;
+
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
 use oid4vc_core::{authentication::subject::SigningSubject, generate_authorization_code, jwt};
@@ -5,6 +7,7 @@ use oid4vc_manager::storage::Storage;
 use oid4vci::{
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
     credential_response::CredentialResponse,
+    credentials_supported::CredentialsSupportedJson,
     token_request::TokenRequest,
     token_response::TokenResponse,
     AuthorizationResponse, VerifiableCredentialJwt,
@@ -28,6 +31,12 @@ lazy_static! {
 pub struct MemoryStorage;
 
 impl Storage for MemoryStorage {
+    fn get_credentials_supported(&self) -> Vec<CredentialsSupportedJson> {
+        let credentials_supported_object =
+            File::open("./tests/common/credentials_supported_objects/university_degree.json").unwrap();
+        vec![serde_json::from_reader(credentials_supported_object).unwrap()]
+    }
+
     fn get_authorization_code(&self) -> Option<AuthorizationCode> {
         None
     }
@@ -69,6 +78,11 @@ impl Storage for MemoryStorage {
         issuer_did: Url,
         signer: SigningSubject,
     ) -> Option<CredentialResponse> {
+        let credential = File::open("./tests/common/credentials/university_degree.json").unwrap();
+        let mut verifiable_credential: serde_json::Value = serde_json::from_reader(credential).unwrap();
+        verifiable_credential["issuer"] = serde_json::json!(issuer_did);
+        verifiable_credential["credentialSubject"]["id"] = serde_json::json!(subject_did);
+
         (access_token == ACCESS_TOKEN.clone()).then_some(CredentialResponse {
             format: ClaimFormatDesignation::JwtVcJson,
             credential: serde_json::to_value(
@@ -80,25 +94,7 @@ impl Storage for MemoryStorage {
                         .iss(issuer_did.clone())
                         .iat(0)
                         .exp(9999999999i64)
-                        .verifiable_credential(serde_json::json!({
-                            "@context": [
-                                "https://www.w3.org/2018/credentials/v1",
-                                "https://www.w3.org/2018/credentials/examples/v1"
-                            ],
-                            "type": [
-                                "VerifiableCredential",
-                                "PersonalInformation"
-                            ],
-                            "issuanceDate": "2022-01-01T00:00:00Z",
-                            "issuer": issuer_did,
-                            "credentialSubject": {
-                            "id": subject_did,
-                            "givenName": "Ferris",
-                            "familyName": "Crabman",
-                            "email": "ferris.crabman@crabmail.com",
-                            "birthdate": "1985-05-21"
-                            }
-                        }))
+                        .verifiable_credential(verifiable_credential)
                         .build()
                         .ok(),
                 )

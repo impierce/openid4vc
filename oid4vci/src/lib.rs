@@ -1,5 +1,6 @@
 pub mod authorization_details;
 pub mod authorization_request;
+pub mod authorization_response;
 pub mod credential;
 pub mod credential_definition;
 pub mod credential_format;
@@ -64,12 +65,4 @@ macro_rules! serialize_unit_struct {
             }
         }
     };
-}
-
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct AuthorizationResponse {
-    pub code: String,
-    pub state: Option<String>,
 }

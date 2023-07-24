@@ -122,3 +122,10 @@ impl Storage for MemoryStorage {
         present
     }
 }
+
+// Get the claims from a JWT without performing validation.
+pub fn get_jwt_claims(jwt: serde_json::Value) -> serde_json::Value {
+    let decoded_token: jwt::Token<serde_json::Value, serde_json::Value, _> =
+        jwt::Token::parse_unverified(jwt.as_str().unwrap()).unwrap();
+    decoded_token.claims().clone()
+}
