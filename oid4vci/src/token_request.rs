@@ -1,18 +1,43 @@
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
+use crate::serialize_unit_struct;
+
+#[derive(Debug, PartialEq)]
+pub struct PreAuthorizedCode;
+serialize_unit_struct!("pre_authorized_code", PreAuthorizedCode);
+
+#[derive(Debug, PartialEq)]
+pub struct AuthorizationCode;
+serialize_unit_struct!("authorization_code", AuthorizationCode);
+
+#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub enum GrantTypeIdentifier {
-    #[serde(rename = "urn:ietf:params:oauth:grant-type:pre-authorized_code")]
-    PreAuthorizedCode,
+#[serde(untagged)]
+pub enum TokenRequest {
+    AuthorizationCode {
+        grant_type: AuthorizationCode,
+        code: String,
+        code_verifier: Option<String>,
+        redirect_uri: Option<String>,
+    },
     #[serde(rename = "authorization_code")]
-    AuthorizationCode,
+    PreAuthorizedCode {
+        grant_type: PreAuthorizedCode,
+        #[serde(rename = "pre-authorized_code")]
+        pre_authorized_code: String,
+        user_pin: Option<String>,
+    },
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub struct TokenRequest {
-    // TODO: now is only for pre-authorize code flow
-    pub grant_type: GrantTypeIdentifier,
-    #[serde(rename = "pre-authorized_code")]
-    pub pre_authorized_code: String,
-    pub user_pin: Option<String>,
+#[test]
+fn test() {
+    let test = TokenRequest::AuthorizationCode {
+        grant_type: AuthorizationCode,
+        code: "code".into(),
+        code_verifier: None,
+        redirect_uri: None,
+    };
+
+    println!("{}", serde_json::to_string_pretty(&test).unwrap());
 }

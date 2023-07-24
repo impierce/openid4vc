@@ -8,7 +8,10 @@ use oid4vc_manager::{
 use oid4vci::{
     credential_format::CredentialFormat,
     credential_format_profiles::w3c_verifiable_credentials::jwt_vc_json::JwtVcJson,
-    credential_offer::CredentialOfferQuery, credentials_supported::CredentialsSupportedObject, Wallet,
+    credential_offer::CredentialOfferQuery,
+    credentials_supported::CredentialsSupportedObject,
+    token_request::{PreAuthorizedCode, TokenRequest},
+    Wallet,
 };
 use std::sync::Arc;
 
@@ -122,12 +125,19 @@ async fn test_pre_authorized_code_flow() {
         .await
         .unwrap();
 
+    let token_request = TokenRequest::PreAuthorizedCode {
+        grant_type: PreAuthorizedCode,
+        pre_authorized_code: credential_offer
+            .grants
+            .unwrap()
+            .pre_authorized_code
+            .unwrap()
+            .pre_authorized_code,
+        user_pin: Some("493536".to_string()),
+    };
+
     let token_response = wallet
-        .get_access_token(
-            authorization_server_metadata.token_endpoint,
-            credential_offer.grants.unwrap(),
-            Some("493536".to_string()),
-        )
+        .get_access_token(authorization_server_metadata.token_endpoint, token_request)
         .await
         .unwrap();
 

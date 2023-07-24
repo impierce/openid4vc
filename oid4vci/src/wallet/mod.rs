@@ -1,14 +1,12 @@
+use crate::authorization_details::AuthorizationDetails;
+use crate::authorization_request::AuthorizationRequest;
+use crate::credential_format_profiles::w3c_verifiable_credentials::jwt_vc_json::JwtVcJson;
 use crate::credential_issuer::authorization_server_metadata::AuthorizationServerMetadata;
 use crate::credential_issuer::credential_issuer_metadata::CredentialIssuerMetadata;
 use crate::proof::{Proof, ProofType};
-use crate::Format;
-use crate::{
-    credential_offer::Grants,
-    credential_response::CredentialResponse,
-    token_request::{GrantTypeIdentifier, TokenRequest},
-    token_response::TokenResponse,
-};
 use crate::{credential_request::CredentialRequest, CredentialFormat};
+use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
+use crate::{AuthorizationResponse, Format};
 use anyhow::Result;
 use oid4vc_core::Subject;
 use reqwest::Url;
@@ -52,19 +50,34 @@ impl Wallet {
             .map_err(|_| anyhow::anyhow!("Failed to get credential issuer metadata"))
     }
 
-    pub async fn get_access_token(
+    pub async fn get_authorization_code(
         &self,
-        token_endpoint: Url,
-        grants: Grants,
-        user_pin: Option<String>,
-    ) -> Result<TokenResponse> {
+        authorization_endpoint: Url,
+        authorization_details: AuthorizationDetails<JwtVcJson>,
+    ) -> Result<AuthorizationResponse> {
+        dbg!(&authorization_endpoint);
+        self.client
+            .get(authorization_endpoint)
+            // TODO: must be `form`, but `AuthorizationRequest needs to be able to serilalize properly.
+            .json(&AuthorizationRequest::<JwtVcJson> {
+                response_type: "code".to_string(),
+                client_id: self.subject.identifier().unwrap(),
+                redirect_uri: None,
+                scope: None,
+                state: None,
+                authorization_details,
+            })
+            .send()
+            .await?
+            .json::<AuthorizationResponse>()
+            .await
+            .map_err(|_| anyhow::anyhow!("Failed to get authorization code"))
+    }
+
+    pub async fn get_access_token(&self, token_endpoint: Url, token_request: TokenRequest) -> Result<TokenResponse> {
         self.client
             .post(token_endpoint)
-            .form(&TokenRequest {
-                grant_type: GrantTypeIdentifier::PreAuthorizedCode,
-                pre_authorized_code: grants.pre_authorized_code.unwrap().pre_authorized_code,
-                user_pin,
-            })
+            .form(&token_request)
             .send()
             .await?
             .json()

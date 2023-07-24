@@ -9,6 +9,7 @@ use axum::{
 use axum_auth::AuthBearer;
 use oid4vc_core::{Decoder, Subject, Subjects};
 use oid4vci::{
+    authorization_request::AuthorizationRequest,
     credential_format::CredentialFormat,
     credential_format_profiles::w3c_verifiable_credentials::jwt_vc_json::JwtVcJson,
     credential_issuer::{
@@ -17,8 +18,7 @@ use oid4vci::{
     },
     credential_offer::{CredentialOffer, CredentialOfferQuery, Grants},
     credential_request::CredentialRequest,
-    credentials_supported::CredentialsSupportedJson,
-    token_request::TokenRequest,
+    credentials_supported::CredentialsSupportedJson, token_request::TokenRequest,
 };
 use reqwest::Url;
 use std::{net::TcpListener, sync::Arc};
@@ -72,29 +72,41 @@ impl<S: Storage + Clone> Server<S> {
                         }),
                     )
                     .route(
+                        "/authorize",
+                        get(|State(credential_issuer_manager): State<CredentialIssuerManager<S>>, Json(_authorization_request): Json<AuthorizationRequest<JwtVcJson>>| async move {
+                            
+                            dbg!(_authorization_request);
+                            (
+                                // TODO: should be 302 Found
+                                StatusCode::OK,
+                                Json(credential_issuer_manager.storage.get_authorization_response().unwrap()),
+                            )
+                        }),
+                    )
+                    .route(
                         "/token",
                         post(
                             |State(credential_issuer_manager): State<CredentialIssuerManager<S>>, Form(token_request): Form<TokenRequest>| async move {
-                                match
-                                credential_issuer_manager
-                                    .storage
-                                    .get_token_response(token_request.pre_authorized_code)
-                                    .take()
-                                {
-                                    Some(token_response) => (
-                                        StatusCode::OK,
-                                        AppendHeaders([("Cache-Control", "no-store")]),
-                                        Json(token_response),
-                                    )
-                                        .into_response(),
-                                    // TODO: handle error response
-                                    _ => (
-                                        StatusCode::BAD_REQUEST,
-                                        AppendHeaders([("Cache-Control", "no-store")]),
-                                        Json("Pre-authorized code not found"),
-                                    )
-                                        .into_response(),
-                                }
+                                    match
+                                    credential_issuer_manager
+                                        .storage
+                                        .get_token_response(token_request)
+                                        .take()
+                                    {
+                                        Some(token_response) => (
+                                            StatusCode::OK,
+                                            AppendHeaders([("Cache-Control", "no-store")]),
+                                            Json(token_response),
+                                        )
+                                            .into_response(),
+                                        // TODO: handle error response
+                                        _ => (
+                                            StatusCode::BAD_REQUEST,
+                                            AppendHeaders([("Cache-Control", "no-store")]),
+                                            Json("Pre-authorized code not found"),
+                                        )
+                                            .into_response(),
+                                    }
                             },
                         ),
                     )
@@ -179,6 +191,10 @@ impl<S: Storage + Clone> CredentialIssuerManager<S> {
             storage,
             listener: Arc::new(listener),
         })
+    }
+
+    pub fn credential_issuer_url(&self) -> Result<Url> {
+        Ok(self.credential_issuer.metadata.credential_issuer.clone())
     }
 
     pub fn credential_offer_uri(&self) -> Result<String> {

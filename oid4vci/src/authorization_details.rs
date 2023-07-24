@@ -10,10 +10,10 @@ where
     F: Format,
 {
     #[serde(rename = "type")]
-    type_: OpenIDCredential,
-    locations: Option<Vec<Url>>,
+    pub type_: OpenIDCredential,
+    pub locations: Option<Vec<Url>>,
     #[serde(flatten)]
-    credential_format: CredentialFormat<F>,
+    pub credential_format: CredentialFormat<F>,
 }
 
 #[derive(Debug)]
