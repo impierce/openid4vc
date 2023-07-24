@@ -6,8 +6,7 @@ use oid4vc_manager::{
     servers::credential_issuer::Server,
 };
 use oid4vci::{
-    credential_format::CredentialFormat,
-    credential_format_profiles::w3c_verifiable_credentials::jwt_vc_json::JwtVcJson,
+    credential_format_profiles::{w3c_verifiable_credentials::jwt_vc_json::JwtVcJson, CredentialFormat},
     credential_offer::{CredentialOfferQuery, Grants},
     token_request::{PreAuthorizedCode, TokenRequest},
     Wallet,

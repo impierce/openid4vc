@@ -1,8 +1,13 @@
-use crate::{serialize_unit_struct, CredentialFormat, Format};
+use crate::{
+    credential_format_profiles::{CredentialFormat, Format},
+    serialize_unit_struct,
+};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
+/// Represents the `authorization_details` field of the `AuthorizationRequest` object in the Authorization Code Flow as
+/// described in [OpenID4VCI](https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-request-issuance-of-a-certa)
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct AuthorizationDetails<F>
@@ -24,9 +29,9 @@ serialize_unit_struct!("openid_credential", OpenIDCredential);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        credential_definition::CredentialDefinition,
-        credential_format_profiles::{iso_mdl::mso_mdoc::MsoMdoc, w3c_verifiable_credentials::jwt_vc_json::JwtVcJson},
+    use crate::credential_format_profiles::{
+        iso_mdl::mso_mdoc::MsoMdoc,
+        w3c_verifiable_credentials::jwt_vc_json::{CredentialDefinition, JwtVcJson},
     };
     use serde_json::json;
 

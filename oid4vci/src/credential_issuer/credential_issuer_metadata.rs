@@ -1,8 +1,10 @@
-use crate::credentials_supported::CredentialsSupportedJson;
+use super::credentials_supported::CredentialsSupportedJson;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
+/// Credential Issuer Metadata as described here:
+/// https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-issuer-metadata.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CredentialIssuerMetadata {
     pub credential_issuer: Url,

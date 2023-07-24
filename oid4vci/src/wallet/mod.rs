@@ -2,12 +2,12 @@ use crate::authorization_details::AuthorizationDetails;
 use crate::authorization_request::AuthorizationRequest;
 use crate::authorization_response::AuthorizationResponse;
 use crate::credential_format_profiles::w3c_verifiable_credentials::jwt_vc_json::JwtVcJson;
+use crate::credential_format_profiles::{CredentialFormat, Format};
 use crate::credential_issuer::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
 };
+use crate::credential_request::CredentialRequest;
 use crate::proof::{Proof, ProofType};
-use crate::Format;
-use crate::{credential_request::CredentialRequest, CredentialFormat};
 use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
 use anyhow::Result;
 use oid4vc_core::authentication::subject::SigningSubject;
