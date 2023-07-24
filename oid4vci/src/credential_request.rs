@@ -53,15 +53,18 @@ mod tests {
             CredentialRequest {
                 credential_format: CredentialFormat {
                     format: JwtVcJson,
-                    parameters: CredentialDefinition {
-                        type_: vec!["VerifiableCredential".into(), "UniversityDegreeCredential".into()],
-                        credential_subject: Some(json!({
-                            "given_name": {},
-                            "family_name": {},
-                            "degree": {}
-                        })),
-                    }
-                    .into()
+                    parameters: (
+                        CredentialDefinition {
+                            type_: vec!["VerifiableCredential".into(), "UniversityDegreeCredential".into()],
+                            credential_subject: Some(json!({
+                                "given_name": {},
+                                "family_name": {},
+                                "degree": {}
+                            })),
+                        },
+                        None
+                    )
+                        .into()
                 },
                 proof: Some(Proof::Jwt {
                     proof_type: Jwt,
