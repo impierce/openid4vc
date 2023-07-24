@@ -9,7 +9,7 @@ macro_rules! credential_format {
         paste::paste! {
             #[derive(Debug, Clone, Eq, PartialEq)]
             pub struct $name;
-            impl crate::credential_format_profiles::Format for $name {
+            impl $crate::credential_format_profiles::Format for $name {
                 type Parameters = [< $name Parameters >];
             }
 
