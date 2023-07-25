@@ -91,7 +91,7 @@ async fn openid_credential_issuer<S: Storage>(
 
 async fn authorize<S: Storage>(
     State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
-    Json(_authorization_request): Json<AuthorizationRequest<JwtVcJson>>,
+    Json(_authorization_request): Json<AuthorizationRequest>,
 ) -> impl IntoResponse {
     (
         // TODO: should be 302 Found + implement proper error response.

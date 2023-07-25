@@ -6,7 +6,7 @@ use oid4vc_manager::{
     servers::credential_issuer::Server,
 };
 use oid4vci::{
-    authorization_details::{AuthorizationDetails, OpenIDCredential},
+    authorization_details::{AuthorizationDetails, AuthorizationDetailsObject, OpenIDCredential},
     credential_format_profiles::{w3c_verifiable_credentials::jwt_vc_json::JwtVcJson, CredentialFormat},
     token_request::{AuthorizationCode, TokenRequest},
     Wallet,
@@ -70,11 +70,12 @@ async fn test_authorization_code_flow() {
     let authorization_response = wallet
         .get_authorization_code(
             authorization_server_metadata.authorization_endpoint,
-            AuthorizationDetails {
+            AuthorizationDetails(vec![AuthorizationDetailsObject {
                 type_: OpenIDCredential,
                 locations: None,
                 credential_format: university_degree_credential_format.clone(),
-            },
+            }
+            .into()]),
         )
         .await
         .unwrap();
