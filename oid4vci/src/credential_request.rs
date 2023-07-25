@@ -1,19 +1,16 @@
-use crate::{
-    credential_format_profiles::{CredentialFormat, Format},
-    proof::Proof,
-};
+use crate::{credential_format_profiles::CredentialFormatCollection, proof::Proof};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
 /// Credential Request as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct CredentialRequest<F>
+pub struct CredentialRequest<CFC>
 where
-    F: Format,
+    CFC: CredentialFormatCollection,
 {
     #[serde(flatten)]
-    pub credential_format: CredentialFormat<F>,
+    pub credential_format: CFC,
     pub proof: Option<Proof>,
 }
 
@@ -24,6 +21,7 @@ mod tests {
         credential_format_profiles::{
             iso_mdl::mso_mdoc::MsoMdoc,
             w3c_verifiable_credentials::jwt_vc_json::{CredentialDefinition, JwtVcJson},
+            CredentialFormat, CredentialFormats,
         },
         Jwt,
     };
@@ -50,14 +48,14 @@ mod tests {
             }
         });
 
-        let credential_request_jwt_vc_json: CredentialRequest<JwtVcJson> =
+        let credential_request_jwt_vc_json: CredentialRequest<CredentialFormats> =
             serde_json::from_value(jwt_vc_json.clone()).unwrap();
 
         // Assert that the json Value is deserialized into the correct type.
         assert_eq!(
             credential_request_jwt_vc_json,
             CredentialRequest {
-                credential_format: CredentialFormat {
+                credential_format: CredentialFormats::JwtVcJson(CredentialFormat {
                     format: JwtVcJson,
                     parameters: (
                         CredentialDefinition {
@@ -71,7 +69,7 @@ mod tests {
                         None
                     )
                         .into()
-                },
+                }),
                 proof: Some(Proof::Jwt {
                     proof_type: Jwt,
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".into()
@@ -107,13 +105,14 @@ mod tests {
             }
         });
 
-        let credential_request_mso_mdoc: CredentialRequest<MsoMdoc> = serde_json::from_value(mso_mdoc.clone()).unwrap();
+        let credential_request_mso_mdoc: CredentialRequest<CredentialFormats> =
+            serde_json::from_value(mso_mdoc.clone()).unwrap();
 
         // Assert that the json Value is deserialized into the correct type.
         assert_eq!(
             credential_request_mso_mdoc,
             CredentialRequest {
-                credential_format: CredentialFormat {
+                credential_format: CredentialFormats::MsoMdoc(CredentialFormat {
                     format: MsoMdoc,
                     parameters: (
                         "org.iso.18013.5.1.mDL".to_string(),
@@ -130,7 +129,7 @@ mod tests {
                         None
                     )
                         .into()
-                },
+                }),
                 proof: Some(Proof::Jwt {
                     proof_type: Jwt,
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".into()

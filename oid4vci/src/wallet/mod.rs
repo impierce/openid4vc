@@ -1,7 +1,7 @@
-use crate::authorization_details::AuthorizationDetails;
+use crate::authorization_details::AuthorizationDetailsObject;
 use crate::authorization_request::AuthorizationRequest;
 use crate::authorization_response::AuthorizationResponse;
-use crate::credential_format_profiles::{CredentialFormat, Format};
+use crate::credential_format_profiles::CredentialFormatCollection;
 use crate::credential_issuer::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
 };
@@ -11,17 +11,23 @@ use crate::{credential_response::CredentialResponse, token_request::TokenRequest
 use anyhow::Result;
 use oid4vc_core::authentication::subject::SigningSubject;
 use reqwest::Url;
+use serde::de::DeserializeOwned;
 
-pub struct Wallet {
+pub struct Wallet<CFC>
+where
+    CFC: CredentialFormatCollection + DeserializeOwned,
+{
     pub subject: SigningSubject,
     pub client: reqwest::Client,
+    phantom: std::marker::PhantomData<CFC>,
 }
 
-impl Wallet {
+impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
     pub fn new(subject: SigningSubject) -> Self {
         Self {
             subject,
             client: reqwest::Client::new(),
+            phantom: std::marker::PhantomData,
         }
     }
 
@@ -38,12 +44,15 @@ impl Wallet {
             .map_err(|_| anyhow::anyhow!("Failed to get authorization server metadata"))
     }
 
-    pub async fn get_credential_issuer_metadata(&self, credential_issuer_url: Url) -> Result<CredentialIssuerMetadata> {
+    pub async fn get_credential_issuer_metadata(
+        &self,
+        credential_issuer_url: Url,
+    ) -> Result<CredentialIssuerMetadata<CFC>> {
         self.client
             .get(credential_issuer_url.join(".well-known/openid-credential-issuer")?)
             .send()
             .await?
-            .json::<CredentialIssuerMetadata>()
+            .json::<CredentialIssuerMetadata<CFC>>()
             .await
             .map_err(|_| anyhow::anyhow!("Failed to get credential issuer metadata"))
     }
@@ -51,7 +60,7 @@ impl Wallet {
     pub async fn get_authorization_code(
         &self,
         authorization_endpoint: Url,
-        authorization_details: AuthorizationDetails,
+        authorization_details: Vec<AuthorizationDetailsObject<CFC>>,
     ) -> Result<AuthorizationResponse> {
         self.client
             .get(authorization_endpoint)
@@ -82,11 +91,11 @@ impl Wallet {
             .map_err(|e| e.into())
     }
 
-    pub async fn get_credential<F: Format>(
+    pub async fn get_credential(
         &self,
-        credential_issuer_metadata: CredentialIssuerMetadata,
+        credential_issuer_metadata: CredentialIssuerMetadata<CFC>,
         token_response: &TokenResponse,
-        credential_format: CredentialFormat<F>,
+        credential_format: CFC,
     ) -> Result<CredentialResponse> {
         let credential_request = CredentialRequest {
             credential_format,

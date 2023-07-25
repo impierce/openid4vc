@@ -6,7 +6,8 @@ use oid4vc_core::{authentication::subject::SigningSubject, generate_authorizatio
 use oid4vc_manager::storage::Storage;
 use oid4vci::{
     authorization_response::AuthorizationResponse,
-    credential_issuer::credentials_supported::CredentialsSupportedJson,
+    credential_format_profiles::CredentialFormatCollection,
+    credential_issuer::credentials_supported::CredentialsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
     credential_response::CredentialResponse,
     token_request::TokenRequest,
@@ -15,7 +16,7 @@ use oid4vci::{
 };
 use oid4vp::ClaimFormatDesignation;
 use reqwest::Url;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 lazy_static! {
     pub static ref CODE: String = generate_authorization_code(16);
@@ -31,8 +32,8 @@ lazy_static! {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MemoryStorage;
 
-impl Storage for MemoryStorage {
-    fn get_credentials_supported(&self) -> Vec<CredentialsSupportedJson> {
+impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for MemoryStorage {
+    fn get_credentials_supported(&self) -> Vec<CredentialsSupportedObject<CFC>> {
         let credentials_supported_object =
             File::open("./tests/common/credentials_supported_objects/university_degree.json").unwrap();
         vec![serde_json::from_reader(credentials_supported_object).unwrap()]

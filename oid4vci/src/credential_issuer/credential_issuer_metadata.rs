@@ -1,4 +1,5 @@
-use super::credentials_supported::CredentialsSupportedJson;
+use super::credentials_supported::CredentialsSupportedObject;
+use crate::credential_format_profiles::CredentialFormatCollection;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -6,13 +7,16 @@ use serde_json::{Map, Value};
 /// Credential Issuer Metadata as described here:
 /// https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-issuer-metadata.
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct CredentialIssuerMetadata {
+pub struct CredentialIssuerMetadata<CFC>
+where
+    CFC: CredentialFormatCollection,
+{
     pub credential_issuer: Url,
     pub authorization_server: Option<Url>,
     pub credential_endpoint: Url,
     pub batch_credential_endpoint: Option<Url>,
     pub deferred_credential_endpoint: Option<Url>,
-    pub credentials_supported: Vec<CredentialsSupportedJson>,
+    pub credentials_supported: Vec<CredentialsSupportedObject<CFC>>,
     pub display: Option<Vec<serde_json::Value>>,
 }
 

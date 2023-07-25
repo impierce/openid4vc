@@ -1,7 +1,8 @@
 use oid4vc_core::authentication::subject::SigningSubject;
 use oid4vci::{
     authorization_response::AuthorizationResponse,
-    credential_issuer::credentials_supported::CredentialsSupportedJson,
+    credential_format_profiles::CredentialFormatCollection,
+    credential_issuer::credentials_supported::CredentialsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
     credential_response::CredentialResponse,
     token_request::TokenRequest,
@@ -10,8 +11,11 @@ use oid4vci::{
 use reqwest::Url;
 
 // Represents the Credential Issuer's server logic.
-pub trait Storage: Send + Sync + 'static {
-    fn get_credentials_supported(&self) -> Vec<CredentialsSupportedJson>;
+pub trait Storage<CFC>: Send + Sync + 'static
+where
+    CFC: CredentialFormatCollection,
+{
+    fn get_credentials_supported(&self) -> Vec<CredentialsSupportedObject<CFC>>;
     fn get_authorization_response(&self) -> Option<AuthorizationResponse>;
     fn get_authorization_code(&self) -> Option<AuthorizationCode>;
     fn get_pre_authorized_code(&self) -> Option<PreAuthorizedCode>;
