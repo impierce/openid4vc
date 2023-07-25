@@ -1,46 +1,22 @@
-use crate::{
-    credential_format_profiles::{CredentialFormat, Format},
-    ProofType,
-};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use crate::{credential_format_profiles::CredentialFormatCollection, ProofType};
+use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
 /// Credentials Supported object as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-objects-comprising-credenti.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct CredentialsSupportedObject<F>
+pub struct CredentialsSupportedObject<CFC>
 where
-    F: Format,
+    CFC: CredentialFormatCollection,
 {
     id: Option<String>,
     #[serde(flatten)]
-    credential_format: CredentialFormat<F>,
+    pub credential_format: CFC,
     scope: Option<String>,
     cryptographic_binding_methods_supported: Option<Vec<String>>,
     cryptographic_suites_supported: Option<Vec<String>>,
     proof_types_supported: Option<Vec<ProofType>>,
     display: Option<Vec<serde_json::Value>>,
-}
-
-/// Credentials Supported object as a json Value, needed in order to be able to deserialize the object into the correct type.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct CredentialsSupportedJson(pub serde_json::Value);
-
-impl<F: Format> From<CredentialsSupportedObject<F>> for CredentialsSupportedJson {
-    fn from(value: CredentialsSupportedObject<F>) -> Self {
-        CredentialsSupportedJson(serde_json::to_value(value).unwrap())
-    }
-}
-
-impl<'de, F: Format + DeserializeOwned> TryInto<CredentialFormat<F>> for CredentialsSupportedJson
-where
-    CredentialFormat<F>: Deserialize<'de>,
-{
-    type Error = serde_json::Error;
-
-    fn try_into(self) -> Result<CredentialFormat<F>, Self::Error> {
-        serde_json::from_value(self.0)
-    }
 }
 
 #[cfg(test)]
@@ -52,19 +28,11 @@ mod tests {
             jwt_vc_json::{self, JwtVcJson},
             ldp_vc::{self, LdpVc},
         },
+        CredentialFormat, CredentialFormats,
     };
     use serde::de::DeserializeOwned;
     use serde_json::json;
     use std::{fs::File, path::Path};
-
-    #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
-    #[serde(untagged)]
-    enum CredentialsSupportedObjectEnum {
-        JwtVcJson(CredentialsSupportedObject<JwtVcJson>),
-        LdpVc(CredentialsSupportedObject<LdpVc>),
-        MsoMdoc(CredentialsSupportedObject<MsoMdoc>),
-        Other(serde_json::Value),
-    }
 
     fn json_example<T>(path: &str) -> T
     where
@@ -81,9 +49,9 @@ mod tests {
         // https://bitbucket.org/openid/connect/src/master/openid-4-verifiable-credential-issuance/examples/.
 
         assert_eq!(
-            CredentialsSupportedObjectEnum::JwtVcJson(CredentialsSupportedObject {
+            CredentialsSupportedObject {
                 id: Some("UniversityDegree_JWT".to_string()),
-                credential_format: CredentialFormat {
+                credential_format: CredentialFormats::JwtVcJson(CredentialFormat {
                     format: JwtVcJson,
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
@@ -121,7 +89,7 @@ mod tests {
                         None
                     )
                         .into()
-                },
+                }),
                 scope: None,
                 cryptographic_binding_methods_supported: Some(vec!["did:example".to_string()]),
                 cryptographic_suites_supported: Some(vec!["ES256K".to_string()]),
@@ -136,14 +104,16 @@ mod tests {
                     "background_color": "#12107c",
                     "text_color": "#FFFFFF"
                 })])
-            }),
-            json_example::<CredentialsSupportedObjectEnum>("tests/examples/credential_metadata_jwt_vc_json.json")
+            },
+            json_example::<CredentialsSupportedObject<CredentialFormats>>(
+                "tests/examples/credential_metadata_jwt_vc_json.json"
+            )
         );
 
         assert_eq!(
-            CredentialsSupportedObjectEnum::LdpVc(CredentialsSupportedObject {
+            CredentialsSupportedObject {
                 id: None,
-                credential_format: CredentialFormat {
+                credential_format: CredentialFormats::LdpVc(CredentialFormat {
                     format: LdpVc,
                     parameters: (
                         ldp_vc::CredentialDefinition {
@@ -185,7 +155,7 @@ mod tests {
                         None
                     )
                         .into()
-                },
+                }),
                 scope: None,
                 cryptographic_binding_methods_supported: Some(vec!["did:example".to_string()]),
                 cryptographic_suites_supported: Some(vec!["Ed25519Signature2018".to_string()]),
@@ -200,14 +170,16 @@ mod tests {
                     "background_color": "#12107c",
                     "text_color": "#FFFFFF"
                 })])
-            }),
-            json_example::<CredentialsSupportedObjectEnum>("tests/examples/credential_metadata_ldp_vc.json")
+            },
+            json_example::<CredentialsSupportedObject<CredentialFormats>>(
+                "tests/examples/credential_metadata_ldp_vc.json"
+            )
         );
 
         assert_eq!(
-            CredentialsSupportedObjectEnum::MsoMdoc(CredentialsSupportedObject {
+            CredentialsSupportedObject {
                 id: None,
-                credential_format: CredentialFormat {
+                credential_format: CredentialFormats::MsoMdoc(CredentialFormat {
                     format: MsoMdoc,
                     parameters: (
                         "org.iso.18013.5.1.mDL".to_string(),
@@ -242,7 +214,7 @@ mod tests {
                         None
                     )
                         .into()
-                },
+                }),
                 scope: None,
                 cryptographic_binding_methods_supported: Some(vec!["mso".to_string()]),
                 cryptographic_suites_supported: Some(vec![
@@ -273,8 +245,10 @@ mod tests {
                         "text_color": "#FFFFFF"
                     })
                 ])
-            }),
-            json_example::<CredentialsSupportedObjectEnum>("tests/examples/credential_metadata_mso_mdoc.json")
+            },
+            json_example::<CredentialsSupportedObject<CredentialFormats>>(
+                "tests/examples/credential_metadata_mso_mdoc.json"
+            )
         );
     }
 }

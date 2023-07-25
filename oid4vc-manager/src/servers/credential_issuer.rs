@@ -10,22 +10,23 @@ use axum::{
 use axum_auth::AuthBearer;
 use oid4vc_core::{Decoder, Subjects};
 use oid4vci::{
-    authorization_request::AuthorizationRequest,
-    credential_format_profiles::w3c_verifiable_credentials::jwt_vc_json::JwtVcJson,
+    authorization_request::AuthorizationRequest, credential_format_profiles::CredentialFormatCollection,
     credential_request::CredentialRequest, token_request::TokenRequest,
 };
+use serde::de::DeserializeOwned;
 use tokio::task::JoinHandle;
 
-pub struct Server<S>
+pub struct Server<S, CFC>
 where
-    S: Storage,
+    S: Storage<CFC>,
+    CFC: CredentialFormatCollection,
 {
-    pub credential_issuer_manager: CredentialIssuerManager<S>,
+    pub credential_issuer_manager: CredentialIssuerManager<S, CFC>,
     pub server: Option<JoinHandle<()>>,
 }
 
-impl<S: Storage + Clone> Server<S> {
-    pub fn setup(credential_issuer_manager: CredentialIssuerManager<S>) -> Result<Self> {
+impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection + Clone + DeserializeOwned + 'static> Server<S, CFC> {
+    pub fn setup(credential_issuer_manager: CredentialIssuerManager<S, CFC>) -> Result<Self> {
         Ok(Self {
             credential_issuer_manager,
             server: None,
@@ -67,8 +68,8 @@ impl<S: Storage + Clone> Server<S> {
     }
 }
 
-async fn oauth_authorization_server<S: Storage>(
-    State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
+async fn oauth_authorization_server<S: Storage<CFC>, CFC: CredentialFormatCollection>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
 ) -> impl IntoResponse {
     (
         StatusCode::OK,
@@ -80,8 +81,8 @@ async fn oauth_authorization_server<S: Storage>(
     )
 }
 
-async fn openid_credential_issuer<S: Storage>(
-    State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
+async fn openid_credential_issuer<S: Storage<CFC>, CFC: CredentialFormatCollection>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
 ) -> impl IntoResponse {
     (
         StatusCode::OK,
@@ -89,9 +90,9 @@ async fn openid_credential_issuer<S: Storage>(
     )
 }
 
-async fn authorize<S: Storage>(
-    State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
-    Json(_authorization_request): Json<AuthorizationRequest>,
+async fn authorize<S: Storage<CFC>, CFC: CredentialFormatCollection>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
+    Json(_authorization_request): Json<AuthorizationRequest<CFC>>,
 ) -> impl IntoResponse {
     (
         // TODO: should be 302 Found + implement proper error response.
@@ -100,8 +101,8 @@ async fn authorize<S: Storage>(
     )
 }
 
-async fn token<S: Storage>(
-    State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
+async fn token<S: Storage<CFC>, CFC: CredentialFormatCollection>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
     Form(token_request): Form<TokenRequest>,
 ) -> impl IntoResponse {
     match credential_issuer_manager
@@ -125,10 +126,10 @@ async fn token<S: Storage>(
     }
 }
 
-async fn credential<S: Storage>(
-    State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
+async fn credential<S: Storage<CFC>, CFC: CredentialFormatCollection>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
     AuthBearer(access_token): AuthBearer,
-    Json(credential_request): Json<CredentialRequest<JwtVcJson>>,
+    Json(credential_request): Json<CredentialRequest<CFC>>,
 ) -> impl IntoResponse {
     // TODO: The bunch of unwrap's here should be replaced with error responses as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-error-response
     let proof = credential_issuer_manager

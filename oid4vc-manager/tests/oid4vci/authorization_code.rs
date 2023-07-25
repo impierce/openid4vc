@@ -6,8 +6,8 @@ use oid4vc_manager::{
     servers::credential_issuer::Server,
 };
 use oid4vci::{
-    authorization_details::{AuthorizationDetails, AuthorizationDetailsObject, OpenIDCredential},
-    credential_format_profiles::{w3c_verifiable_credentials::jwt_vc_json::JwtVcJson, CredentialFormat},
+    authorization_details::{AuthorizationDetailsObject, OpenIDCredential},
+    credential_format_profiles::CredentialFormats,
     token_request::{AuthorizationCode, TokenRequest},
     Wallet,
 };
@@ -18,7 +18,7 @@ use std::sync::Arc;
 async fn test_authorization_code_flow() {
     // Setup the credential issuer.
     let mut credential_issuer = Server::setup(
-        CredentialIssuerManager::new(
+        CredentialIssuerManager::<_, CredentialFormats>::new(
             None,
             MemoryStorage,
             [Arc::new(KeySubject::from_keypair(generate::<Ed25519KeyPair>(Some(
@@ -35,7 +35,7 @@ async fn test_authorization_code_flow() {
     let subject_did = subject.identifier().unwrap();
 
     // Create a new wallet.
-    let wallet = Wallet::new(Arc::new(subject));
+    let wallet = Wallet::<CredentialFormats>::new(Arc::new(subject));
 
     // Get the credential issuer url.
     let credential_issuer_url = credential_issuer
@@ -56,26 +56,23 @@ async fn test_authorization_code_flow() {
         .unwrap();
 
     // Get the credential format for a university degree.
-    let university_degree_credential_format = serde_json::from_value::<CredentialFormat<JwtVcJson>>(
-        credential_issuer_metadata
-            .credentials_supported
-            .get(0)
-            .unwrap()
-            .0
-            .clone(),
-    )
-    .unwrap();
+    let university_degree_credential_format = credential_issuer_metadata
+        .credentials_supported
+        .get(0)
+        .unwrap()
+        .clone()
+        .credential_format;
 
     // Get the authorization code.
     let authorization_response = wallet
         .get_authorization_code(
             authorization_server_metadata.authorization_endpoint,
-            AuthorizationDetails(vec![AuthorizationDetailsObject {
+            vec![AuthorizationDetailsObject {
                 type_: OpenIDCredential,
                 locations: None,
                 credential_format: university_degree_credential_format.clone(),
             }
-            .into()]),
+            .into()],
         )
         .await
         .unwrap();

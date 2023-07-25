@@ -6,8 +6,8 @@ use oid4vc_manager::{
     servers::credential_issuer::Server,
 };
 use oid4vci::{
-    credential_format_profiles::{w3c_verifiable_credentials::jwt_vc_json::JwtVcJson, CredentialFormat},
-    credential_offer::{CredentialOfferQuery, Grants},
+    credential_format_profiles::CredentialFormats,
+    credential_offer::{CredentialOffer, CredentialOfferQuery, CredentialsObject, Grants},
     token_request::{PreAuthorizedCode, TokenRequest},
     Wallet,
 };
@@ -16,7 +16,7 @@ use std::sync::Arc;
 #[tokio::test]
 async fn test_pre_authorized_code_flow() {
     // Setup the credential issuer.
-    let mut credential_issuer = Server::setup(
+    let mut credential_issuer = Server::<_, CredentialFormats>::setup(
         CredentialIssuerManager::new(
             None,
             MemoryStorage,
@@ -36,14 +36,16 @@ async fn test_pre_authorized_code_flow() {
         .unwrap();
 
     // Parse the credential offer url.
-    let credential_offer = match credential_offer_url.parse().unwrap() {
+    let credential_offer: CredentialOffer<CredentialFormats> = match credential_offer_url.parse().unwrap() {
         CredentialOfferQuery::CredentialOffer(credential_offer) => credential_offer,
         _ => unreachable!(),
     };
 
     // The credential offer contains a credential format for a university degree.
-    let university_degree_credential_format: CredentialFormat<JwtVcJson> =
-        serde_json::from_value(credential_offer.credentials.get(0).unwrap().clone()).unwrap();
+    let university_degree_credential_format = match credential_offer.credentials.get(0).unwrap().clone() {
+        CredentialsObject::ByValue(credential_format) => credential_format,
+        _ => unreachable!(),
+    };
 
     // The credential offer contains a credential issuer url.
     let credential_issuer_url = credential_offer.credential_issuer;

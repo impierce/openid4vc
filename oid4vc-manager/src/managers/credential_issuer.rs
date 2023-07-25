@@ -2,25 +2,25 @@ use crate::storage::Storage;
 use anyhow::Result;
 use oid4vc_core::{Subject, Subjects};
 use oid4vci::{
-    credential_format_profiles::{w3c_verifiable_credentials::jwt_vc_json::JwtVcJson, CredentialFormat},
+    credential_format_profiles::CredentialFormatCollection,
     credential_issuer::{
         authorization_server_metadata::AuthorizationServerMetadata,
         credential_issuer_metadata::CredentialIssuerMetadata, CredentialIssuer,
     },
-    credential_offer::{CredentialOffer, CredentialOfferQuery, Grants},
+    credential_offer::{CredentialOffer, CredentialOfferQuery, CredentialsObject, Grants},
 };
 use reqwest::Url;
 use std::{net::TcpListener, sync::Arc};
 
 #[derive(Clone)]
-pub struct CredentialIssuerManager<S: Storage> {
-    pub credential_issuer: CredentialIssuer,
+pub struct CredentialIssuerManager<S: Storage<CFC>, CFC: CredentialFormatCollection> {
+    pub credential_issuer: CredentialIssuer<CFC>,
     pub subjects: Arc<Subjects>,
     pub storage: S,
     pub listener: Arc<TcpListener>,
 }
 
-impl<S: Storage + Clone> CredentialIssuerManager<S> {
+impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection> CredentialIssuerManager<S, CFC> {
     pub fn new<const N: usize>(
         listener: Option<TcpListener>,
         storage: S,
@@ -61,17 +61,17 @@ impl<S: Storage + Clone> CredentialIssuerManager<S> {
     }
 
     pub fn credential_offer_uri(&self) -> Result<String> {
-        let credentials: CredentialFormat<JwtVcJson> = self
+        let credential = self
             .credential_issuer
             .metadata
             .credentials_supported
             .get(0)
             .ok_or_else(|| anyhow::anyhow!("No credentials supported."))?
-            .clone()
-            .try_into()?;
+            .credential_format
+            .clone();
         Ok(CredentialOfferQuery::CredentialOffer(CredentialOffer {
             credential_issuer: self.credential_issuer.metadata.credential_issuer.clone(),
-            credentials: vec![serde_json::to_value(credentials)?],
+            credentials: vec![CredentialsObject::ByValue(credential)],
             grants: Some(Grants {
                 authorization_code: self.storage.get_authorization_code(),
                 pre_authorized_code: self.storage.get_pre_authorized_code(),

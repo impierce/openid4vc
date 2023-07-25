@@ -1,6 +1,10 @@
 pub mod iso_mdl;
 pub mod w3c_verifiable_credentials;
 
+use self::{
+    iso_mdl::mso_mdoc::MsoMdoc,
+    w3c_verifiable_credentials::{jwt_vc_json::JwtVcJson, ldp_vc::LdpVc},
+};
 use serde::{Deserialize, Serialize};
 
 #[macro_export]
@@ -46,3 +50,15 @@ where
     #[serde(flatten)]
     pub parameters: F::Parameters,
 }
+
+pub trait CredentialFormatCollection: Serialize + Send + Sync + Clone {}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
+#[serde(untagged)]
+pub enum CredentialFormats {
+    JwtVcJson(CredentialFormat<JwtVcJson>),
+    LdpVc(CredentialFormat<LdpVc>),
+    MsoMdoc(CredentialFormat<MsoMdoc>),
+    Other(serde_json::Value),
+}
+impl CredentialFormatCollection for CredentialFormats {}
