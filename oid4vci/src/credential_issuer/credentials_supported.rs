@@ -9,14 +9,14 @@ pub struct CredentialsSupportedObject<CFC>
 where
     CFC: CredentialFormatCollection,
 {
-    id: Option<String>,
+    pub id: Option<String>,
     #[serde(flatten)]
     pub credential_format: CFC,
-    scope: Option<String>,
-    cryptographic_binding_methods_supported: Option<Vec<String>>,
-    cryptographic_suites_supported: Option<Vec<String>>,
-    proof_types_supported: Option<Vec<ProofType>>,
-    display: Option<Vec<serde_json::Value>>,
+    pub scope: Option<String>,
+    pub cryptographic_binding_methods_supported: Option<Vec<String>>,
+    pub cryptographic_suites_supported: Option<Vec<String>>,
+    pub proof_types_supported: Option<Vec<ProofType>>,
+    pub display: Option<Vec<serde_json::Value>>,
 }
 
 #[cfg(test)]
