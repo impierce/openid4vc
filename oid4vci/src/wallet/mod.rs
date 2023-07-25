@@ -1,7 +1,6 @@
 use crate::authorization_details::AuthorizationDetails;
 use crate::authorization_request::AuthorizationRequest;
 use crate::authorization_response::AuthorizationResponse;
-use crate::credential_format_profiles::w3c_verifiable_credentials::jwt_vc_json::JwtVcJson;
 use crate::credential_format_profiles::{CredentialFormat, Format};
 use crate::credential_issuer::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
@@ -52,12 +51,12 @@ impl Wallet {
     pub async fn get_authorization_code(
         &self,
         authorization_endpoint: Url,
-        authorization_details: AuthorizationDetails<JwtVcJson>,
+        authorization_details: AuthorizationDetails,
     ) -> Result<AuthorizationResponse> {
         self.client
             .get(authorization_endpoint)
             // TODO: must be `form`, but `AuthorizationRequest needs to be able to serilalize properly.
-            .json(&AuthorizationRequest::<JwtVcJson> {
+            .json(&AuthorizationRequest {
                 response_type: "code".to_string(),
                 client_id: self.subject.identifier()?,
                 redirect_uri: None,
