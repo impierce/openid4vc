@@ -27,4 +27,6 @@ where
         issuer_did: Url,
         subject: SigningSubject,
     ) -> Option<CredentialResponse>;
+    fn get_state(&self) -> Option<String>;
+    fn set_state(&mut self, state: String);
 }

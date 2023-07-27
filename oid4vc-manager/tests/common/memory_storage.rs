@@ -108,4 +108,10 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
             c_nonce_expires_in: Some(86400),
         })
     }
+
+    fn get_state(&self) -> Option<String> {
+        None
+    }
+
+    fn set_state(&mut self, _state: String) {}
 }

@@ -26,9 +26,11 @@ async fn test_authorization_code_flow() {
             ))))],
         )
         .unwrap(),
+        None,
     )
-    .unwrap();
-    credential_issuer.start_server().unwrap();
+    .unwrap()
+    .detached(true);
+    credential_issuer.start_server().await.unwrap();
 
     // Create a new subject.
     let subject = KeySubject::new();
