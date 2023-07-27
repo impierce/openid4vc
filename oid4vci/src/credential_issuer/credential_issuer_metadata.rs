@@ -3,9 +3,11 @@ use crate::credential_format_profiles::CredentialFormatCollection;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use serde_with::skip_serializing_none;
 
 /// Credential Issuer Metadata as described here:
 /// https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-issuer-metadata.
+#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct CredentialIssuerMetadata<CFC>
 where
@@ -20,6 +22,7 @@ where
     pub display: Option<Vec<serde_json::Value>>,
 }
 
+#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CredentialsSupportedDisplay {
     name: String,
@@ -32,6 +35,7 @@ pub struct CredentialsSupportedDisplay {
     other: Option<Map<String, Value>>,
 }
 
+#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Logo {
     url: Option<Url>,

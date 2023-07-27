@@ -23,39 +23,57 @@ where
 {
     pub credential_issuer_manager: CredentialIssuerManager<S, CFC>,
     pub server: Option<JoinHandle<()>>,
+    pub extension: Option<Router<CredentialIssuerManager<S, CFC>>>,
+    pub detached: bool,
 }
 
 impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection + Clone + DeserializeOwned + 'static> Server<S, CFC> {
-    pub fn setup(credential_issuer_manager: CredentialIssuerManager<S, CFC>) -> Result<Self> {
+    pub fn setup(
+        credential_issuer_manager: CredentialIssuerManager<S, CFC>,
+        extension: Option<Router<CredentialIssuerManager<S, CFC>>>,
+    ) -> Result<Self> {
         Ok(Self {
             credential_issuer_manager,
             server: None,
+            extension,
+            detached: false,
         })
     }
 
-    pub fn start_server(&mut self) -> Result<()> {
+    pub fn detached(mut self, detached: bool) -> Self {
+        self.detached = detached;
+        self
+    }
+
+    pub async fn start_server(&mut self) -> Result<()> {
         let credential_issuer_manager = self.credential_issuer_manager.clone();
         let listener = credential_issuer_manager.listener.try_clone()?;
+        let extension = self.extension.take();
 
-        self.server.replace(tokio::spawn(async move {
-            axum::Server::from_tcp(listener)
-                .expect("Failed to start server.")
-                .serve(
-                    Router::new()
-                        .route(
-                            "/.well-known/oauth-authorization-server",
-                            get(oauth_authorization_server),
-                        )
-                        .route("/.well-known/openid-credential-issuer", get(openid_credential_issuer))
-                        .route("/authorize", get(authorize))
-                        .route("/token", post(token))
-                        .route("/credential", post(credential))
-                        .with_state(credential_issuer_manager)
-                        .into_make_service(),
-                )
-                .await
-                .expect("Failed to start server.")
-        }));
+        let server = axum::Server::from_tcp(listener)
+            .expect("Failed to start server.")
+            .serve(
+                Router::new()
+                    .route(
+                        "/.well-known/oauth-authorization-server",
+                        get(oauth_authorization_server),
+                    )
+                    .route("/.well-known/openid-credential-issuer", get(openid_credential_issuer))
+                    .route("/authorize", get(authorize))
+                    .route("/token", post(token))
+                    .route("/credential", post(credential))
+                    .merge(extension.unwrap_or_default())
+                    .with_state(credential_issuer_manager)
+                    .into_make_service(),
+            );
+
+        if self.detached {
+            self.server.replace(tokio::spawn(
+                async move { server.await.expect("Failed to start server.") },
+            ));
+        } else {
+            server.await.expect("Failed to start server.")
+        }
         Ok(())
     }
 

@@ -25,9 +25,11 @@ async fn test_pre_authorized_code_flow() {
             ))))],
         )
         .unwrap(),
+        None,
     )
-    .unwrap();
-    credential_issuer.start_server().unwrap();
+    .unwrap()
+    .detached(true);
+    credential_issuer.start_server().await.unwrap();
 
     // Get the credential offer url.
     let credential_offer_url = credential_issuer
