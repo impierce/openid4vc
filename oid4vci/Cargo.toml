@@ -17,7 +17,7 @@ serde_json.workspace = true
 serde_with.workspace = true
 tokio.workspace = true
 anyhow = "1.0"
-reqwest = { version = "0.11", features = ["json"] }
+reqwest.workspace = true
 serde_urlencoded = "0.7"
 derivative = "2.2.0"
 paste = "1.0"
