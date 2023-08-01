@@ -1,11 +1,14 @@
-use crate::{credential_format_profiles::CredentialFormatCollection, proof::Proof};
+use crate::{
+    credential_format_profiles::{CredentialFormatCollection, CredentialFormats},
+    proof::Proof,
+};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
 /// Credential Request as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct CredentialRequest<CFC>
+pub struct CredentialRequest<CFC = CredentialFormats>
 where
     CFC: CredentialFormatCollection,
 {
@@ -63,8 +66,7 @@ mod tests {
             }
         });
 
-        let credential_request_jwt_vc_json: CredentialRequest<CredentialFormats> =
-            serde_json::from_value(jwt_vc_json.clone()).unwrap();
+        let credential_request_jwt_vc_json: CredentialRequest = serde_json::from_value(jwt_vc_json.clone()).unwrap();
 
         // Assert that the json Value is deserialized into the correct type.
         assert_eq!(
@@ -123,8 +125,7 @@ mod tests {
             }
         });
 
-        let credential_request_mso_mdoc: CredentialRequest<CredentialFormats> =
-            serde_json::from_value(mso_mdoc.clone()).unwrap();
+        let credential_request_mso_mdoc: CredentialRequest = serde_json::from_value(mso_mdoc.clone()).unwrap();
 
         // Assert that the json Value is deserialized into the correct type.
         assert_eq!(
@@ -175,7 +176,7 @@ mod tests {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
-            json_example::<CredentialRequest<CredentialFormats>>("tests/examples/credential_request_iso_mdl.json")
+            json_example::<CredentialRequest>("tests/examples/credential_request_iso_mdl.json")
         );
 
         assert_eq!(
@@ -203,9 +204,7 @@ mod tests {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
-            json_example::<CredentialRequest<CredentialFormats>>(
-                "tests/examples/credential_request_iso_mdl_with_claims.json"
-            )
+            json_example::<CredentialRequest>("tests/examples/credential_request_iso_mdl_with_claims.json")
         );
 
         assert_eq!(
@@ -237,9 +236,7 @@ mod tests {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
-            json_example::<CredentialRequest<CredentialFormats>>(
-                "tests/examples/credential_request_jwt_vc_json-ld.json"
-            )
+            json_example::<CredentialRequest>("tests/examples/credential_request_jwt_vc_json-ld.json")
         );
 
         assert_eq!(
@@ -263,7 +260,7 @@ mod tests {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJzNkJoZFJrcXQzIiwiYXVkIjoiaHR0cHM6Ly9zZXJ2ZXIuZXhhbXBsZS5jb20iLCJpYXQiOiIyMDE4LTA5LTE0VDIxOjE5OjEwWiIsIm5vbmNlIjoidFppZ25zbkZicCJ9.ewdkIkPV50iOeBUqMXCC_aZKPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
-            json_example::<CredentialRequest<CredentialFormats>>(
+            json_example::<CredentialRequest>(
                 "tests/examples/credential_request_jwt_vc_json.json"
             )
         );
@@ -293,7 +290,7 @@ mod tests {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJzNkJoZFJrcXQzIiwiYXVkIjoiaHR0cHM6Ly9zZXJ2ZXIuZXhhbXBsZS5jb20iLCJpYXQiOiIyMDE4LTA5LTE0VDIxOjE5OjEwWiIsIm5vbmNlIjoidFppZ25zbkZicCJ9.ewdkIkPV50iOeBUqMXCC_aZKPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
-            json_example::<CredentialRequest<CredentialFormats>>(
+            json_example::<CredentialRequest>(
                 "tests/examples/credential_request_jwt_vc_json_with_claims.json"
             )
         );
@@ -327,7 +324,7 @@ mod tests {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
-            json_example::<CredentialRequest<CredentialFormats>>("tests/examples/credential_request_ldp_vc.json")
+            json_example::<CredentialRequest>("tests/examples/credential_request_ldp_vc.json")
         );
     }
 }

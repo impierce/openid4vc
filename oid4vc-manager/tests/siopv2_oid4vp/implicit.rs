@@ -148,6 +148,8 @@ async fn test_implicit_flow() {
     )
     .unwrap();
 
+    dbg!(&jwt);
+
     // Create a verifiable presentation using the JWT.
     let verifiable_presentation = JwtPresentation::builder(Url::parse(subject_did).unwrap(), Object::new())
         .credential(Jwt::from(jwt))
