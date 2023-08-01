@@ -1,4 +1,4 @@
-use crate::credential_format_profiles::CredentialFormatCollection;
+use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats};
 use anyhow::Result;
 use oid4vc_core::to_query_value;
 use reqwest::Url;
@@ -24,7 +24,7 @@ pub struct PreAuthorizedCode {
 /// Credential Offer as described in https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer.
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
-pub struct CredentialOffer<CFC>
+pub struct CredentialOffer<CFC = CredentialFormats>
 where
     CFC: CredentialFormatCollection,
 {
@@ -35,7 +35,7 @@ where
 
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
-pub enum CredentialOfferQuery<CFC>
+pub enum CredentialOfferQuery<CFC = CredentialFormats>
 where
     CFC: CredentialFormatCollection,
 {
@@ -75,7 +75,7 @@ impl<CFC: CredentialFormatCollection> std::fmt::Display for CredentialOfferQuery
 
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 #[serde(untagged)]
-pub enum CredentialsObject<CFC>
+pub enum CredentialsObject<CFC = CredentialFormats>
 where
     CFC: CredentialFormatCollection,
 {
@@ -138,7 +138,7 @@ mod tests {
            }
         });
 
-        let credential_offer: CredentialOffer<CredentialFormats> = serde_json::from_value(json.clone()).unwrap();
+        let credential_offer: CredentialOffer = serde_json::from_value(json.clone()).unwrap();
 
         // Assert that the json Value is deserialized into the correct type.
         assert_eq!(
@@ -187,7 +187,7 @@ mod tests {
                     })
                 })
             },
-            json_example::<CredentialOffer<CredentialFormats>>("tests/examples/credential_offer_by_reference.json")
+            json_example::<CredentialOffer>("tests/examples/credential_offer_by_reference.json")
         );
 
         assert_eq!(
@@ -216,7 +216,7 @@ mod tests {
                     pre_authorized_code: None
                 })
             },
-            json_example::<CredentialOffer<CredentialFormats>>("tests/examples/credential_offer_jwt_vc_json.json")
+            json_example::<CredentialOffer>("tests/examples/credential_offer_jwt_vc_json.json")
         );
 
         assert_eq!(
@@ -242,7 +242,7 @@ mod tests {
                 })),],
                 grants: None
             },
-            json_example::<CredentialOffer<CredentialFormats>>("tests/examples/credential_offer_ldp_vc.json")
+            json_example::<CredentialOffer>("tests/examples/credential_offer_ldp_vc.json")
         );
 
         assert_eq!(
@@ -263,7 +263,7 @@ mod tests {
                     })
                 })
             },
-            json_example::<CredentialOffer<CredentialFormats>>("tests/examples/credential_offer_mso_mdoc.json")
+            json_example::<CredentialOffer>("tests/examples/credential_offer_mso_mdoc.json")
         );
 
         assert_eq!(
@@ -287,9 +287,7 @@ mod tests {
                     })
                 })
             },
-            json_example::<CredentialOffer<CredentialFormats>>(
-                "tests/examples/credential_offer_multiple_credentials.json"
-            )
+            json_example::<CredentialOffer>("tests/examples/credential_offer_multiple_credentials.json")
         );
 
         assert_eq!(
@@ -320,7 +318,7 @@ mod tests {
                     })
                 })
             },
-            json_example::<CredentialOffer<CredentialFormats>>("tests/examples/credential_offer_pre-authz_code.json")
+            json_example::<CredentialOffer>("tests/examples/credential_offer_pre-authz_code.json")
         );
     }
 }

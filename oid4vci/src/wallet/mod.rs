@@ -1,7 +1,7 @@
 use crate::authorization_details::AuthorizationDetailsObject;
 use crate::authorization_request::AuthorizationRequest;
 use crate::authorization_response::AuthorizationResponse;
-use crate::credential_format_profiles::CredentialFormatCollection;
+use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats};
 use crate::credential_issuer::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
 };
@@ -13,7 +13,7 @@ use oid4vc_core::authentication::subject::SigningSubject;
 use reqwest::Url;
 use serde::de::DeserializeOwned;
 
-pub struct Wallet<CFC>
+pub struct Wallet<CFC = CredentialFormats>
 where
     CFC: CredentialFormatCollection + DeserializeOwned,
 {

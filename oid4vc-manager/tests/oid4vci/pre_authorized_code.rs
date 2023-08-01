@@ -38,7 +38,7 @@ async fn test_pre_authorized_code_flow() {
         .unwrap();
 
     // Parse the credential offer url.
-    let credential_offer: CredentialOffer<CredentialFormats> = match credential_offer_url.parse().unwrap() {
+    let credential_offer: CredentialOffer = match credential_offer_url.parse().unwrap() {
         CredentialOfferQuery::CredentialOffer(credential_offer) => credential_offer,
         _ => unreachable!(),
     };

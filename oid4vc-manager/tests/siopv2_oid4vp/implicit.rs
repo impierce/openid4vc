@@ -93,6 +93,8 @@ async fn test_implicit_flow() {
         .and_then(TryInto::try_into)
         .unwrap();
 
+    dbg!(RequestUrl::Request(Box::new(authorization_request.clone())).to_string());
+
     // Create a provider manager and validate the authorization request.
     let provider_manager = ProviderManager::new([subject]).unwrap();
     let authorization_request = provider_manager
@@ -145,6 +147,8 @@ async fn test_implicit_flow() {
         &verifiable_credential,
     )
     .unwrap();
+
+    dbg!(&jwt);
 
     // Create a verifiable presentation using the JWT.
     let verifiable_presentation = JwtPresentation::builder(Url::parse(subject_did).unwrap(), Object::new())

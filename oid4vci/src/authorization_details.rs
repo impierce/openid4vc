@@ -1,4 +1,7 @@
-use crate::{credential_format_profiles::CredentialFormatCollection, serialize_unit_struct};
+use crate::{
+    credential_format_profiles::{CredentialFormatCollection, CredentialFormats},
+    serialize_unit_struct,
+};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -7,7 +10,7 @@ use serde_with::skip_serializing_none;
 /// described in [OpenID4VCI](https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-request-issuance-of-a-certa)
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
-pub struct AuthorizationDetailsObject<CFC>
+pub struct AuthorizationDetailsObject<CFC = CredentialFormats>
 where
     CFC: CredentialFormatCollection,
 {
@@ -65,7 +68,7 @@ mod tests {
             }
         });
 
-        let authorization_details_mso_mdoc: AuthorizationDetailsObject<CredentialFormats> =
+        let authorization_details_mso_mdoc: AuthorizationDetailsObject =
             serde_json::from_value(jwt_vc_json.clone()).unwrap();
 
         // Assert that the json Value is deserialized into the correct type.
@@ -117,7 +120,7 @@ mod tests {
             }
         });
 
-        let authorization_details_mso_mdoc: AuthorizationDetailsObject<CredentialFormats> =
+        let authorization_details_mso_mdoc: AuthorizationDetailsObject =
             serde_json::from_value(mso_mdoc.clone()).unwrap();
 
         // Assert that the json Value is deserialized into the correct type.
@@ -176,9 +179,7 @@ mod tests {
                         .into()
                 }),
             }],
-            json_example::<Vec<AuthorizationDetailsObject<CredentialFormats>>>(
-                "tests/examples/authorization_details_jwt_vc_json.json"
-            )
+            json_example::<Vec<AuthorizationDetailsObject>>("tests/examples/authorization_details_jwt_vc_json.json")
         );
 
         assert_eq!(
@@ -205,9 +206,7 @@ mod tests {
                         .into()
                 }),
             }],
-            json_example::<Vec<AuthorizationDetailsObject<CredentialFormats>>>(
-                "tests/examples/authorization_details_ldp_vc.json"
-            )
+            json_example::<Vec<AuthorizationDetailsObject>>("tests/examples/authorization_details_ldp_vc.json")
         );
 
         assert_eq!(
@@ -233,9 +232,7 @@ mod tests {
                         .into()
                 }),
             }],
-            json_example::<Vec<AuthorizationDetailsObject<CredentialFormats>>>(
-                "tests/examples/authorization_details_mso_mdoc.json"
-            )
+            json_example::<Vec<AuthorizationDetailsObject>>("tests/examples/authorization_details_mso_mdoc.json")
         );
 
         assert_eq!(
@@ -268,7 +265,7 @@ mod tests {
                     }),
                 }
             ],
-            json_example::<Vec<AuthorizationDetailsObject<CredentialFormats>>>(
+            json_example::<Vec<AuthorizationDetailsObject>>(
                 "tests/examples/authorization_details_multiple_credentials.json"
             )
         );
@@ -289,9 +286,7 @@ mod tests {
                         .into()
                 }),
             }],
-            json_example::<Vec<AuthorizationDetailsObject<CredentialFormats>>>(
-                "tests/examples/authorization_details_with_as.json"
-            )
+            json_example::<Vec<AuthorizationDetailsObject>>("tests/examples/authorization_details_with_as.json")
         );
 
         assert_eq!(
@@ -310,9 +305,7 @@ mod tests {
                         .into()
                 }),
             }],
-            json_example::<Vec<AuthorizationDetailsObject<CredentialFormats>>>(
-                "tests/examples/authorization_details.json"
-            )
+            json_example::<Vec<AuthorizationDetailsObject>>("tests/examples/authorization_details.json")
         );
     }
 }

@@ -1,11 +1,14 @@
-use crate::{credential_format_profiles::CredentialFormatCollection, ProofType};
+use crate::{
+    credential_format_profiles::{CredentialFormatCollection, CredentialFormats},
+    ProofType,
+};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
 /// Credentials Supported object as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-objects-comprising-credenti.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct CredentialsSupportedObject<CFC>
+pub struct CredentialsSupportedObject<CFC = CredentialFormats>
 where
     CFC: CredentialFormatCollection,
 {
@@ -105,9 +108,7 @@ mod tests {
                     "text_color": "#FFFFFF"
                 })])
             },
-            json_example::<CredentialsSupportedObject<CredentialFormats>>(
-                "tests/examples/credential_metadata_jwt_vc_json.json"
-            )
+            json_example::<CredentialsSupportedObject>("tests/examples/credential_metadata_jwt_vc_json.json")
         );
 
         assert_eq!(
@@ -171,9 +172,7 @@ mod tests {
                     "text_color": "#FFFFFF"
                 })])
             },
-            json_example::<CredentialsSupportedObject<CredentialFormats>>(
-                "tests/examples/credential_metadata_ldp_vc.json"
-            )
+            json_example::<CredentialsSupportedObject>("tests/examples/credential_metadata_ldp_vc.json")
         );
 
         assert_eq!(
@@ -246,9 +245,7 @@ mod tests {
                     })
                 ])
             },
-            json_example::<CredentialsSupportedObject<CredentialFormats>>(
-                "tests/examples/credential_metadata_mso_mdoc.json"
-            )
+            json_example::<CredentialsSupportedObject>("tests/examples/credential_metadata_mso_mdoc.json")
         );
     }
 }
