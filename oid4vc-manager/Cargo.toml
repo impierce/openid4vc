@@ -29,6 +29,7 @@ axum-auth = "0.4"
 reqwest.workspace = true
 jsonwebtoken = "8.3"
 paste = "1.0"
+tower-http = { version = "0.4", features = ["cors"]}
 
 [dev-dependencies]
 ed25519-dalek = "1.0.1"

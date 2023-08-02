@@ -1,8 +1,10 @@
+use std::time::Duration;
+
 use crate::{managers::credential_issuer::CredentialIssuerManager, storage::Storage};
 use anyhow::Result;
 use axum::{
     extract::State,
-    http::StatusCode,
+    http::{header::CONTENT_TYPE, Method, StatusCode},
     response::{AppendHeaders, IntoResponse},
     routing::{get, post},
     Form, Json, Router,
@@ -15,6 +17,7 @@ use oid4vci::{
 };
 use serde::de::DeserializeOwned;
 use tokio::task::JoinHandle;
+use tower_http::cors::AllowOrigin;
 
 pub struct Server<S, CFC>
 where
@@ -63,7 +66,13 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection + Clone + Deserial
                     .route("/token", post(token))
                     .route("/credential", post(credential))
                     .merge(extension.unwrap_or_default())
-                    .with_state(credential_issuer_manager)
+                    .layer(
+                        tower_http::cors::CorsLayer::new()
+                            .allow_methods([Method::GET, Method::POST])
+                            .allow_origin(AllowOrigin::any())
+                            .allow_headers([CONTENT_TYPE])
+                            .max_age(Duration::from_secs(3600)),
+                    )
                     .into_make_service(),
             );
 
