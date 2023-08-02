@@ -73,6 +73,7 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection + Clone + Deserial
                             .allow_headers([CONTENT_TYPE])
                             .max_age(Duration::from_secs(3600)),
                     )
+                    .with_state(credential_issuer_manager)
                     .into_make_service(),
             );
 
