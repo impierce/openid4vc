@@ -17,6 +17,14 @@ where
     pub proof: Option<Proof>,
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct BatchCredentialRequest<CFC = CredentialFormats>
+where
+    CFC: CredentialFormatCollection,
+{
+    pub credential_requests: Vec<CredentialRequest<CFC>>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

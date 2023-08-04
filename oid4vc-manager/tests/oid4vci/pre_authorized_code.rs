@@ -6,8 +6,9 @@ use oid4vc_manager::{
     servers::credential_issuer::Server,
 };
 use oid4vci::{
-    credential_format_profiles::CredentialFormats,
+    credential_format_profiles::{w3c_verifiable_credentials::jwt_vc_json::JwtVcJson, CredentialFormats},
     credential_offer::{CredentialOffer, CredentialOfferQuery, CredentialsObject, Grants},
+    credential_response::{CredentialResponse, CredentialResponseType},
     token_request::{PreAuthorizedCode, TokenRequest},
     Wallet,
 };
@@ -42,6 +43,8 @@ async fn test_pre_authorized_code_flow() {
         CredentialOfferQuery::CredentialOffer(credential_offer) => credential_offer,
         _ => unreachable!(),
     };
+
+    println!("{}", serde_json::to_string_pretty(&credential_offer.clone()).unwrap());
 
     // The credential offer contains a credential format for a university degree.
     let university_degree_credential_format = match credential_offer.credentials.get(0).unwrap().clone() {
@@ -90,7 +93,7 @@ async fn test_pre_authorized_code_flow() {
         .unwrap();
 
     // Get the credential.
-    let credential_response = wallet
+    let credential_response: CredentialResponse = wallet
         .get_credential(
             credential_issuer_metadata,
             &token_response,
@@ -99,8 +102,15 @@ async fn test_pre_authorized_code_flow() {
         .await
         .unwrap();
 
+    let credential = match credential_response.credential {
+        CredentialResponseType::Immediate { credential, .. } => credential,
+        CredentialResponseType::Deferred { .. } => {
+            panic!("Credential was deferred.")
+        }
+    };
+
     // Decode the JWT without performing validation
-    let claims = get_jwt_claims(credential_response.credential.unwrap().clone());
+    let claims = get_jwt_claims(credential.unwrap().clone());
 
     // Check the credential.
     assert_eq!(

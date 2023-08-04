@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 macro_rules! credential_format {
     ($format:literal, $name:ty, {$($field_name:ident: $field_type:ty),*}) => {
         paste::paste! {
-            #[derive(Debug, Clone, Eq, PartialEq)]
+            #[derive(Debug, Clone, Eq, PartialEq, Default)]
             pub struct $name;
             impl $crate::credential_format_profiles::Format for $name {
                 type Parameters = [< $name Parameters >];
@@ -37,7 +37,7 @@ macro_rules! credential_format {
     };
 }
 
-pub trait Format: std::fmt::Debug + Serialize + Eq + PartialEq {
+pub trait Format: std::fmt::Debug + Serialize + Eq + PartialEq + Default {
     type Parameters: std::fmt::Debug + Serialize + for<'de> Deserialize<'de> + Eq + PartialEq + Clone;
 }
 

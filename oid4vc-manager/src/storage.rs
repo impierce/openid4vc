@@ -1,7 +1,7 @@
 use oid4vc_core::authentication::subject::SigningSubject;
 use oid4vci::{
     authorization_response::AuthorizationResponse,
-    credential_format_profiles::CredentialFormatCollection,
+    credential_format_profiles::{CredentialFormatCollection, Format},
     credential_issuer::credentials_supported::CredentialsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
     credential_response::CredentialResponse,

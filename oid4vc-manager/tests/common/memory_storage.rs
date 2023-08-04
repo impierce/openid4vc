@@ -6,17 +6,20 @@ use oid4vc_core::{authentication::subject::SigningSubject, generate_authorizatio
 use oid4vc_manager::storage::Storage;
 use oid4vci::{
     authorization_response::AuthorizationResponse,
-    credential_format_profiles::CredentialFormatCollection,
+    credential_format_profiles::{
+        w3c_verifiable_credentials::jwt_vc_json::{CredentialDefinition, JwtVcJson},
+        CredentialFormat, CredentialFormatCollection, CredentialFormats, Format,
+    },
     credential_issuer::credentials_supported::CredentialsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
-    credential_response::CredentialResponse,
+    credential_response::{CredentialResponse, CredentialResponseType},
     token_request::TokenRequest,
     token_response::TokenResponse,
     VerifiableCredentialJwt,
 };
-use oid4vp::ClaimFormatDesignation;
 use reqwest::Url;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde_json::json;
 
 lazy_static! {
     pub static ref CODE: String = generate_authorization_code(16);
@@ -82,28 +85,40 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
     ) -> Option<CredentialResponse> {
         let credential = File::open("./tests/common/credentials/university_degree.json").unwrap();
         let mut verifiable_credential: serde_json::Value = serde_json::from_reader(credential).unwrap();
-        verifiable_credential["issuer"] = serde_json::json!(issuer_did);
-        verifiable_credential["credentialSubject"]["id"] = serde_json::json!(subject_did);
+        verifiable_credential["issuer"] = json!(issuer_did);
+        verifiable_credential["credentialSubject"]["id"] = json!(subject_did);
 
         (access_token == ACCESS_TOKEN.clone()).then_some(CredentialResponse {
-            format: ClaimFormatDesignation::JwtVcJson,
-            credential: serde_json::to_value(
-                jwt::encode(
-                    signer.clone(),
-                    Header::new(Algorithm::EdDSA),
-                    VerifiableCredentialJwt::builder()
-                        .sub(subject_did.clone())
-                        .iss(issuer_did.clone())
-                        .iat(0)
-                        .exp(9999999999i64)
-                        .verifiable_credential(verifiable_credential)
-                        .build()
-                        .ok(),
+            credential: CredentialResponseType::Immediate {
+                // format: CredentialFormats2::JwtVcJson(JwtVcJson),
+                temp: CredentialFormats::JwtVcJson(CredentialFormat {
+                    format: JwtVcJson,
+                    parameters: (
+                        CredentialDefinition {
+                            type_: vec!["VerifiableCredential".into(), "UniversityDegreeCredential".into()],
+                            credential_subject: None,
+                        },
+                        None,
+                    )
+                        .into(),
+                }),
+                credential: serde_json::to_value(
+                    jwt::encode(
+                        signer.clone(),
+                        Header::new(Algorithm::EdDSA),
+                        VerifiableCredentialJwt::builder()
+                            .sub(subject_did.clone())
+                            .iss(issuer_did.clone())
+                            .iat(0)
+                            .exp(9999999999i64)
+                            .verifiable_credential(verifiable_credential)
+                            .build()
+                            .ok(),
+                    )
+                    .ok(),
                 )
                 .ok(),
-            )
-            .ok(),
-            transaction_id: None,
+            },
             c_nonce: Some(C_NONCE.clone()),
             c_nonce_expires_in: Some(86400),
         })

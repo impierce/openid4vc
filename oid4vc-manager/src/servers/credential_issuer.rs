@@ -12,8 +12,10 @@ use axum::{
 use axum_auth::AuthBearer;
 use oid4vc_core::{Decoder, Subjects};
 use oid4vci::{
-    authorization_request::AuthorizationRequest, credential_format_profiles::CredentialFormatCollection,
-    credential_request::CredentialRequest, token_request::TokenRequest,
+    authorization_request::AuthorizationRequest,
+    credential_format_profiles::{w3c_verifiable_credentials::jwt_vc_json::JwtVcJson, CredentialFormatCollection},
+    credential_request::CredentialRequest,
+    token_request::TokenRequest,
 };
 use serde::de::DeserializeOwned;
 use tokio::task::JoinHandle;
@@ -64,7 +66,7 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection + Clone + Deserial
                     .route("/.well-known/openid-credential-issuer", get(openid_credential_issuer))
                     .route("/authorize", get(authorize))
                     .route("/token", post(token))
-                    .route("/credential", post(credential))
+                    .route("/credential", post(credential::<S, CFC>))
                     .merge(extension.unwrap_or_default())
                     .layer(
                         tower_http::cors::CorsLayer::new()

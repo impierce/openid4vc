@@ -1,17 +1,18 @@
-use did_key::{generate, Ed25519KeyPair};
+use did_key::{from_existing_key, generate, Ed25519KeyPair, PatchedKeyPair};
 use identity_core::common::{Object, Url};
 use identity_credential::{credential::Jwt, presentation::JwtPresentation};
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
-use oid4vc_core::{jwt, Subject};
+use oid4vc_core::{jwt, Subject, SubjectSyntaxType};
 use oid4vc_manager::{
     managers::presentation::create_presentation_submission, methods::key_method::KeySubject, ProviderManager,
     RelyingPartyManager,
 };
 use oid4vci::VerifiableCredentialJwt;
 use oid4vp::PresentationDefinition;
-use siopv2::{request::ResponseType, AuthorizationRequest, RequestUrl, Scope};
-use std::sync::Arc;
+use reqwest::Request;
+use siopv2::{request::ResponseType, AuthorizationRequest, ClientMetadata, RequestUrl, Scope};
+use std::{str::FromStr, sync::Arc};
 
 lazy_static! {
     pub static ref PRESENTATION_DEFINITION: PresentationDefinition = serde_json::from_value(serde_json::json!(
