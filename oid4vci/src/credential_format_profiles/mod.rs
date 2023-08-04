@@ -45,37 +45,21 @@ macro_rules! credential_format {
     };
 }
 
-pub trait Format: std::fmt::Debug + Serialize + Eq + PartialEq + Default + Send + Sync {
-    type Parameters: std::fmt::Debug + Serialize + DeserializeOwned + Eq + PartialEq + Clone + Send + Sync;
-    type Credential: std::fmt::Debug + Serialize + DeserializeOwned + Eq + PartialEq + Clone + Send + Sync;
+pub trait Format: std::fmt::Debug + Serialize + Sync + Send + Clone {
+    type Parameters: std::fmt::Debug + Serialize + DeserializeOwned + Clone + Send + Sync;
+    type Credential: std::fmt::Debug + Serialize + DeserializeOwned + Clone + Send + Sync;
 }
-
-pub trait CredentialFormatCollection: Serialize + Send + Sync + Clone {}
-
-#[derive(Debug, Serialize, Clone, Eq, PartialEq, Deserialize)]
-#[serde(untagged)]
-pub enum CredentialFormats<C = WithParameters>
-where
-    C: FormatExtension + DeserializeOwned,
-{
-    JwtVcJson(C::Container<JwtVcJson>),
-    JwtVcJsonLd(C::Container<JwtVcJsonLd>),
-    LdpVc(C::Container<LdpVc>),
-    MsoMdoc(C::Container<MsoMdoc>),
-    Other(serde_json::Value),
-}
-impl<C> CredentialFormatCollection for CredentialFormats<C> where C: FormatExtension {}
 
 mod sealed {
     use super::Format;
-    use serde::{de::DeserializeOwned, Deserialize, Serialize};
+    use serde::{de::DeserializeOwned, Serialize};
 
-    pub trait FormatExtension: Serialize + Clone + Sync + Send + DeserializeOwned {
-        type Container<F: Format + Clone + Sync + Send + for<'de> Deserialize<'de>>: Serialize
+    pub trait FormatExtension: Serialize + Clone + DeserializeOwned + std::fmt::Debug {
+        type Container<F: Format + Clone + DeserializeOwned>: Serialize
+            + std::fmt::Debug
             + Clone
             + Sync
             + Send
-            + for<'de> Deserialize<'de>
             + DeserializeOwned;
     }
 }
@@ -83,7 +67,7 @@ mod sealed {
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct WithParameters;
 impl FormatExtension for WithParameters {
-    type Container<F: Format + Clone + Sync + Send + for<'de> Deserialize<'de>> = Parameters<F>;
+    type Container<F: Format + DeserializeOwned> = Parameters<F>;
 }
 #[derive(Debug, Serialize, Clone, Eq, PartialEq, Deserialize)]
 pub struct Parameters<F>
@@ -98,7 +82,7 @@ where
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct WithCredential;
 impl FormatExtension for WithCredential {
-    type Container<F: Format + Clone + Sync + Send + for<'de> Deserialize<'de>> = Credential<F>;
+    type Container<F: Format + DeserializeOwned> = Credential<F>;
 }
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct Credential<F>
@@ -108,3 +92,19 @@ where
     pub format: F,
     pub credential: F::Credential,
 }
+
+pub trait CredentialFormatCollection: Serialize + Send + Sync + Clone + std::fmt::Debug {}
+
+#[derive(Debug, Serialize, Clone, Eq, PartialEq, Deserialize)]
+#[serde(untagged)]
+pub enum CredentialFormats<C = WithParameters>
+where
+    C: FormatExtension + DeserializeOwned,
+{
+    JwtVcJson(C::Container<JwtVcJson>),
+    JwtVcJsonLd(C::Container<JwtVcJsonLd>),
+    LdpVc(C::Container<LdpVc>),
+    MsoMdoc(C::Container<MsoMdoc>),
+    Other(serde_json::Value),
+}
+impl<C> CredentialFormatCollection for CredentialFormats<C> where C: FormatExtension {}

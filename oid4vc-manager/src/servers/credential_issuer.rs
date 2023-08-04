@@ -12,8 +12,11 @@ use axum::{
 use axum_auth::AuthBearer;
 use oid4vc_core::{Decoder, Subjects};
 use oid4vci::{
-    authorization_request::AuthorizationRequest, credential_format_profiles::CredentialFormatCollection,
-    credential_request::CredentialRequest, token_request::TokenRequest,
+    authorization_request::AuthorizationRequest,
+    credential_format_profiles::CredentialFormatCollection,
+    credential_request::{BatchCredentialRequest, CredentialRequest},
+    credential_response::BatchCredentialResponse,
+    token_request::TokenRequest,
 };
 use serde::de::DeserializeOwned;
 use tokio::task::JoinHandle;
@@ -64,7 +67,8 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection + Clone + Deserial
                     .route("/.well-known/openid-credential-issuer", get(openid_credential_issuer))
                     .route("/authorize", get(authorize))
                     .route("/token", post(token))
-                    .route("/credential", post(credential::<S, CFC>))
+                    .route("/credential", post(credential))
+                    .route("/batch_credential", post(batch_credential))
                     .merge(extension.unwrap_or_default())
                     .layer(
                         tower_http::cors::CorsLayer::new()
@@ -182,9 +186,59 @@ async fn credential<S: Storage<CFC>, CFC: CredentialFormatCollection>(
                         .metadata
                         .credential_issuer
                         .clone(),
+                    credential_request.credential_format.clone(),
                     credential_issuer_manager.credential_issuer.subject.clone(),
                 )
                 .unwrap(),
         ),
+    )
+}
+
+async fn batch_credential<S: Storage<CFC>, CFC: CredentialFormatCollection>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
+    AuthBearer(access_token): AuthBearer,
+    Json(batch_credential_request): Json<BatchCredentialRequest<CFC>>,
+) -> impl IntoResponse {
+    let mut credential_responses = vec![];
+    for credential_request in batch_credential_request.credential_requests {
+        // TODO: The bunch of unwrap's here should be replaced with error responses as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-error-response
+        let proof = credential_issuer_manager
+            .credential_issuer
+            .validate_proof(
+                credential_request.proof.unwrap(),
+                Decoder::from(
+                    &Subjects::try_from([credential_issuer_manager.credential_issuer.subject.clone()]).unwrap(),
+                ),
+            )
+            .await
+            .unwrap();
+
+        credential_responses.push(
+            credential_issuer_manager
+                .storage
+                .get_credential_response(
+                    access_token.clone(),
+                    proof.rfc7519_claims.iss().as_ref().unwrap().parse().unwrap(),
+                    credential_issuer_manager
+                        .credential_issuer
+                        .metadata
+                        .credential_issuer
+                        .clone(),
+                    credential_request.credential_format.clone(),
+                    credential_issuer_manager.credential_issuer.subject.clone(),
+                )
+                .unwrap()
+                .credential,
+        );
+    }
+
+    (
+        StatusCode::OK,
+        AppendHeaders([("Cache-Control", "no-store")]),
+        Json(BatchCredentialResponse {
+            credential_responses,
+            c_nonce: None,
+            c_nonce_expires_in: None,
+        }),
     )
 }

@@ -1,5 +1,5 @@
 use super::credentials_supported::CredentialsSupportedObject;
-use crate::credential_format_profiles::CredentialFormatCollection;
+use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -9,7 +9,7 @@ use serde_with::skip_serializing_none;
 /// https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-issuer-metadata.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct CredentialIssuerMetadata<CFC>
+pub struct CredentialIssuerMetadata<CFC = CredentialFormats>
 where
     CFC: CredentialFormatCollection,
 {
@@ -46,6 +46,7 @@ pub struct Logo {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::credential_format_profiles::{
         iso_mdl::mso_mdoc::MsoMdoc,
         w3c_verifiable_credentials::{
@@ -54,8 +55,6 @@ mod tests {
         },
         CredentialFormats, Parameters,
     };
-
-    use super::*;
     use serde::de::DeserializeOwned;
     use serde_json::json;
     use std::{fs::File, path::Path};

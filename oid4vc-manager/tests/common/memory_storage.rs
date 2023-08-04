@@ -36,9 +36,16 @@ pub struct MemoryStorage;
 
 impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for MemoryStorage {
     fn get_credentials_supported(&self) -> Vec<CredentialsSupportedObject<CFC>> {
-        let credentials_supported_object =
-            File::open("./tests/common/credentials_supported_objects/university_degree.json").unwrap();
-        vec![serde_json::from_reader(credentials_supported_object).unwrap()]
+        vec![
+            serde_json::from_reader(
+                File::open("./tests/common/credentials_supported_objects/university_degree.json").unwrap(),
+            )
+            .unwrap(),
+            serde_json::from_reader(
+                File::open("./tests/common/credentials_supported_objects/driver_license.json").unwrap(),
+            )
+            .unwrap(),
+        ]
     }
 
     fn get_authorization_code(&self) -> Option<AuthorizationCode> {
@@ -80,10 +87,27 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
         access_token: String,
         subject_did: Url,
         issuer_did: Url,
+        credential_format: CFC,
         signer: SigningSubject,
     ) -> Option<CredentialResponse> {
-        let credential = File::open("./tests/common/credentials/university_degree.json").unwrap();
-        let mut verifiable_credential: serde_json::Value = serde_json::from_reader(credential).unwrap();
+        let type_ = match serde_json::from_value::<CredentialFormats>(serde_json::to_value(credential_format).unwrap())
+            .unwrap()
+        {
+            CredentialFormats::JwtVcJson(credential) => credential.parameters.credential_definition.type_,
+            _ => unreachable!("Credential format not supported"),
+        };
+
+        let credential_json = match &type_[..] {
+            [_, b] if b == "UniversityDegreeCredential" => {
+                File::open("./tests/common/credentials/university_degree.json").unwrap()
+            }
+            [_, b] if b == "DriverLicenseCredential" => {
+                File::open("./tests/common/credentials/driver_license.json").unwrap()
+            }
+            _ => unreachable!(),
+        };
+
+        let mut verifiable_credential: serde_json::Value = serde_json::from_reader(credential_json).unwrap();
         verifiable_credential["issuer"] = json!(issuer_did);
         verifiable_credential["credentialSubject"]["id"] = json!(subject_did);
 

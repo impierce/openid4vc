@@ -38,7 +38,7 @@ async fn test_authorization_code_flow() {
     let subject_did = subject.identifier().unwrap();
 
     // Create a new wallet.
-    let wallet = Wallet::<CredentialFormats>::new(Arc::new(subject));
+    let wallet = Wallet::new(Arc::new(subject));
 
     // Get the credential issuer url.
     let credential_issuer_url = credential_issuer
@@ -59,7 +59,7 @@ async fn test_authorization_code_flow() {
         .unwrap();
 
     // Get the credential format for a university degree.
-    let university_degree_credential_format = credential_issuer_metadata
+    let university_degree_credential_format: CredentialFormats = credential_issuer_metadata
         .credentials_supported
         .get(0)
         .unwrap()
@@ -119,6 +119,7 @@ async fn test_authorization_code_flow() {
                 "https://www.w3.org/2018/credentials/v1",
                 "https://www.w3.org/2018/credentials/examples/v1"
             ],
+            "id": "UniversityDegree_JWT",
             "type": [
                 "VerifiableCredential",
                 "PersonalInformation"

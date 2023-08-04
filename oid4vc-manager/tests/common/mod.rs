@@ -5,6 +5,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use derivative::{self, Derivative};
 use ed25519_dalek::{Keypair, Signature, Signer};
+use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use lazy_static::lazy_static;
 use oid4vc_core::{Sign, Subject, Verify};
 use rand::rngs::OsRng;
@@ -125,7 +126,8 @@ impl Storage for MemoryStorage {
 
 // Get the claims from a JWT without performing validation.
 pub fn get_jwt_claims(jwt: serde_json::Value) -> serde_json::Value {
-    let decoded_token: jwt::Token<serde_json::Value, serde_json::Value, _> =
-        jwt::Token::parse_unverified(jwt.as_str().unwrap()).unwrap();
-    decoded_token.claims().clone()
+    let key = DecodingKey::from_secret(&[]);
+    let mut validation = Validation::new(Algorithm::EdDSA);
+    validation.insecure_disable_signature_validation();
+    decode(&jwt.as_str().unwrap(), &key, &validation).unwrap().claims
 }

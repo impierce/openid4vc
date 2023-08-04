@@ -6,6 +6,7 @@ use crate::credential_issuer::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
 };
 use crate::credential_request::{BatchCredentialRequest, CredentialRequest};
+use crate::credential_response::BatchCredentialResponse;
 use crate::proof::{Proof, ProofType};
 use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
 use anyhow::Result;
@@ -135,7 +136,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         credential_issuer_metadata: CredentialIssuerMetadata<CFC>,
         token_response: &TokenResponse,
         credential_formats: Vec<CFC>,
-    ) -> Result<CredentialResponse> {
+    ) -> Result<BatchCredentialResponse> {
         let proof = Some(
             Proof::builder()
                 .proof_type(ProofType::Jwt)
@@ -166,7 +167,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         };
 
         self.client
-            .post(credential_issuer_metadata.credential_endpoint)
+            .post(credential_issuer_metadata.batch_credential_endpoint.unwrap())
             .bearer_auth(token_response.access_token.clone())
             .json(&batch_credential_request)
             .send()
