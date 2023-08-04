@@ -6,7 +6,7 @@ use oid4vc_manager::{
     servers::credential_issuer::Server,
 };
 use oid4vci::{
-    credential_format_profiles::{w3c_verifiable_credentials::jwt_vc_json::JwtVcJson, CredentialFormats},
+    credential_format_profiles::CredentialFormats,
     credential_offer::{CredentialOffer, CredentialOfferQuery, CredentialsObject, Grants},
     credential_response::{CredentialResponse, CredentialResponseType},
     token_request::{PreAuthorizedCode, TokenRequest},
@@ -103,14 +103,12 @@ async fn test_pre_authorized_code_flow() {
         .unwrap();
 
     let credential = match credential_response.credential {
-        CredentialResponseType::Immediate { credential, .. } => credential,
-        CredentialResponseType::Deferred { .. } => {
-            panic!("Credential was deferred.")
-        }
+        CredentialResponseType::Immediate(CredentialFormats::JwtVcJson(credential)) => credential.credential,
+        _ => panic!("Credential was not a JWT VC JSON."),
     };
 
     // Decode the JWT without performing validation
-    let claims = get_jwt_claims(credential.unwrap().clone());
+    let claims = get_jwt_claims(credential);
 
     // Check the credential.
     assert_eq!(

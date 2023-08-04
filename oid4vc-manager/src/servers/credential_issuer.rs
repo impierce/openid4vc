@@ -12,10 +12,8 @@ use axum::{
 use axum_auth::AuthBearer;
 use oid4vc_core::{Decoder, Subjects};
 use oid4vci::{
-    authorization_request::AuthorizationRequest,
-    credential_format_profiles::{w3c_verifiable_credentials::jwt_vc_json::JwtVcJson, CredentialFormatCollection},
-    credential_request::CredentialRequest,
-    token_request::TokenRequest,
+    authorization_request::AuthorizationRequest, credential_format_profiles::CredentialFormatCollection,
+    credential_request::CredentialRequest, token_request::TokenRequest,
 };
 use serde::de::DeserializeOwned;
 use tokio::task::JoinHandle;

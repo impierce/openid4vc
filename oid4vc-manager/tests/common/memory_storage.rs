@@ -7,8 +7,7 @@ use oid4vc_manager::storage::Storage;
 use oid4vci::{
     authorization_response::AuthorizationResponse,
     credential_format_profiles::{
-        w3c_verifiable_credentials::jwt_vc_json::{CredentialDefinition, JwtVcJson},
-        CredentialFormat, CredentialFormatCollection, CredentialFormats, Format,
+        w3c_verifiable_credentials::jwt_vc_json::JwtVcJson, Credential, CredentialFormatCollection, CredentialFormats,
     },
     credential_issuer::credentials_supported::CredentialsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
@@ -89,19 +88,8 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
         verifiable_credential["credentialSubject"]["id"] = json!(subject_did);
 
         (access_token == ACCESS_TOKEN.clone()).then_some(CredentialResponse {
-            credential: CredentialResponseType::Immediate {
-                // format: CredentialFormats2::JwtVcJson(JwtVcJson),
-                temp: CredentialFormats::JwtVcJson(CredentialFormat {
-                    format: JwtVcJson,
-                    parameters: (
-                        CredentialDefinition {
-                            type_: vec!["VerifiableCredential".into(), "UniversityDegreeCredential".into()],
-                            credential_subject: None,
-                        },
-                        None,
-                    )
-                        .into(),
-                }),
+            credential: CredentialResponseType::Immediate(CredentialFormats::JwtVcJson(Credential {
+                format: JwtVcJson,
                 credential: serde_json::to_value(
                     jwt::encode(
                         signer.clone(),
@@ -117,8 +105,8 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
                     )
                     .ok(),
                 )
-                .ok(),
-            },
+                .unwrap(),
+            })),
             c_nonce: Some(C_NONCE.clone()),
             c_nonce_expires_in: Some(86400),
         })

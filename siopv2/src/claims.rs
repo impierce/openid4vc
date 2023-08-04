@@ -36,17 +36,17 @@ mod sealed {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ClaimValue<T>(pub T);
+pub struct ClaimValue;
 
-impl<T> sealed::Claim for ClaimValue<T> {
-    type Container<U> = U;
+impl sealed::Claim for ClaimValue {
+    type Container<T> = T;
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ClaimRequest<T>(IndividualClaimRequest<T>);
+pub struct ClaimRequest;
 
-impl<T> sealed::Claim for ClaimRequest<T> {
-    type Container<U> = IndividualClaimRequest<U>;
+impl sealed::Claim for ClaimRequest {
+    type Container<T> = IndividualClaimRequest<T>;
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -127,9 +127,9 @@ impl<T> IndividualClaimRequest<T> {
 /// }}));
 /// assert!(claims.is_ok());
 /// ```
-pub type StandardClaimsRequests = StandardClaims<ClaimRequest<()>>;
+pub type StandardClaimsRequests = StandardClaims<ClaimRequest>;
 
-pub type StandardClaimsValues = StandardClaims<ClaimValue<()>>;
+pub type StandardClaimsValues = StandardClaims<ClaimValue>;
 
 /// This struct represents the standard claims as defined in the
 /// [OpenID Connect Core 1.0 Specification](https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims)

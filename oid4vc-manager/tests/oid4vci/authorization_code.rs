@@ -7,7 +7,7 @@ use oid4vc_manager::{
 };
 use oid4vci::{
     authorization_details::{AuthorizationDetailsObject, OpenIDCredential},
-    credential_format_profiles::{w3c_verifiable_credentials::jwt_vc_json::JwtVcJson, CredentialFormats},
+    credential_format_profiles::CredentialFormats,
     credential_response::{CredentialResponse, CredentialResponseType},
     token_request::{AuthorizationCode, TokenRequest},
     Wallet,
@@ -104,14 +104,12 @@ async fn test_authorization_code_flow() {
         .unwrap();
 
     let credential = match credential_response.credential {
-        CredentialResponseType::Immediate { credential, .. } => credential,
-        CredentialResponseType::Deferred { .. } => {
-            panic!("Credential was deferred.")
-        }
+        CredentialResponseType::Immediate(CredentialFormats::JwtVcJson(credential)) => credential.credential,
+        _ => panic!("Credential was not a JWT VC JSON."),
     };
 
     // Decode the JWT without performing validation
-    let claims = get_jwt_claims(credential.unwrap().clone());
+    let claims = get_jwt_claims(credential);
 
     // Check the credential.
     assert_eq!(
