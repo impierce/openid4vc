@@ -125,9 +125,9 @@ impl Storage for MemoryStorage {
 }
 
 // Get the claims from a JWT without performing validation.
-pub fn get_jwt_claims(jwt: serde_json::Value) -> serde_json::Value {
+pub fn get_jwt_claims(jwt: &serde_json::Value) -> serde_json::Value {
     let key = DecodingKey::from_secret(&[]);
     let mut validation = Validation::new(Algorithm::EdDSA);
     validation.insecure_disable_signature_validation();
-    decode(&jwt.as_str().unwrap(), &key, &validation).unwrap().claims
+    decode(jwt.as_str().unwrap(), &key, &validation).unwrap().claims
 }

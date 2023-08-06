@@ -105,14 +105,12 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool) {
             .unwrap();
 
         let credential = match credential_response.credential {
-            CredentialResponseType::Immediate(CredentialFormats::JwtVcJson(credential)) => {
-                credential.credential.clone()
-            }
+            CredentialResponseType::Immediate(CredentialFormats::JwtVcJson(credential)) => credential.credential,
             _ => panic!("Credential was not a JWT VC JSON."),
         };
 
         // Decode the JWT without performing validation
-        let claims = get_jwt_claims(credential);
+        let claims = get_jwt_claims(&credential);
 
         // Check the credential.
         assert_eq!(
@@ -161,13 +159,13 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool) {
             .map(|credential_response| {
                 let credential = match credential_response {
                     CredentialResponseType::Immediate(CredentialFormats::JwtVcJson(credential)) => {
-                        credential.credential.clone()
+                        credential.credential
                     }
                     _ => panic!("Credential was not a JWT VC JSON."),
                 };
 
                 // Decode the JWT without performing validation
-                let claims = get_jwt_claims(credential);
+                let claims = get_jwt_claims(&credential);
                 claims
             })
             .collect();

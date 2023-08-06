@@ -109,7 +109,7 @@ async fn test_authorization_code_flow() {
     };
 
     // Decode the JWT without performing validation
-    let claims = get_jwt_claims(credential);
+    let claims = get_jwt_claims(&credential);
 
     // Check the credential.
     assert_eq!(
