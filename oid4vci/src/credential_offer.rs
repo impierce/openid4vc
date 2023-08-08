@@ -62,7 +62,14 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> std::str::FromStr for C
 impl<CFC: CredentialFormatCollection> std::fmt::Display for CredentialOfferQuery<CFC> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CredentialOfferQuery::CredentialOfferUri(url) => write!(f, "{}", url),
+            CredentialOfferQuery::CredentialOfferUri(uri) => {
+                let mut url = Url::parse("openid-credential-offer://").map_err(|_| std::fmt::Error)?;
+                url.query_pairs_mut().append_pair(
+                    "credential_offer_uri",
+                    &to_query_value(uri).map_err(|_| std::fmt::Error)?,
+                );
+                write!(f, "{}", url)
+            }
             CredentialOfferQuery::CredentialOffer(offer) => {
                 let mut url = Url::parse("openid-credential-offer://").map_err(|_| std::fmt::Error)?;
                 url.query_pairs_mut()

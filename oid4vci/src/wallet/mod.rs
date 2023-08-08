@@ -5,6 +5,7 @@ use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFo
 use crate::credential_issuer::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
 };
+use crate::credential_offer::CredentialOffer;
 use crate::credential_request::{BatchCredentialRequest, CredentialRequest};
 use crate::credential_response::BatchCredentialResponse;
 use crate::proof::{Proof, ProofType};
@@ -30,6 +31,16 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             client: reqwest::Client::new(),
             phantom: std::marker::PhantomData,
         }
+    }
+
+    pub async fn get_credential_offer(&self, credential_offer_uri: Url) -> Result<CredentialOffer> {
+        self.client
+            .get(credential_offer_uri)
+            .send()
+            .await?
+            .json::<CredentialOffer>()
+            .await
+            .map_err(|_| anyhow::anyhow!("Failed to get credential offer"))
     }
 
     pub async fn get_authorization_server_metadata(

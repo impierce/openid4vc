@@ -15,10 +15,12 @@ use oid4vci::{
 use std::sync::Arc;
 
 #[rstest::rstest]
-#[case(false)]
-#[case(true)]
+#[case(false, false)]
+#[case(false, true)]
+#[case(true, false)]
+#[case(true, true)]
 #[tokio::test]
-async fn test_pre_authorized_code_flow(#[case] batch: bool) {
+async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference: bool) {
     // Setup the credential issuer.
     let mut credential_issuer = Server::<_, CredentialFormats>::setup(
         CredentialIssuerManager::new(
@@ -35,27 +37,29 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool) {
     .detached(true);
     credential_issuer.start_server().await.unwrap();
 
-    // Get the credential offer url.
-    let credential_offer_url = credential_issuer
-        .credential_issuer_manager
-        .credential_offer_uri()
-        .unwrap();
-
-    // Parse the credential offer url.
-    let credential_offer: CredentialOffer = match credential_offer_url.parse().unwrap() {
-        CredentialOfferQuery::CredentialOffer(credential_offer) => credential_offer,
-        _ => unreachable!(),
-    };
-
-    // The credential offer contains a credential issuer url.
-    let credential_issuer_url = credential_offer.credential_issuer;
-
     // Create a new subject.
     let subject = KeySubject::new();
     let subject_did = subject.identifier().unwrap();
 
     // Create a new wallet.
     let wallet = Wallet::new(Arc::new(subject));
+
+    // Get the credential offer url.
+    let credential_offer_query = credential_issuer
+        .credential_issuer_manager
+        .credential_offer_query(by_reference)
+        .unwrap();
+
+    // Parse the credential offer url.
+    let credential_offer: CredentialOffer = match credential_offer_query.parse().unwrap() {
+        CredentialOfferQuery::CredentialOffer(credential_offer) => credential_offer,
+        CredentialOfferQuery::CredentialOfferUri(credential_offer_uri) => {
+            wallet.get_credential_offer(credential_offer_uri).await.unwrap()
+        }
+    };
+
+    // The credential offer contains a credential issuer url.
+    let credential_issuer_url = credential_offer.credential_issuer;
 
     // Get the authorization server metadata.
     let authorization_server_metadata = wallet
