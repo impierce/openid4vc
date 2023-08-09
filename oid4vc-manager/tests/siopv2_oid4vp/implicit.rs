@@ -1,6 +1,7 @@
 use did_key::{generate, Ed25519KeyPair};
 use identity_core::common::{Object, Url};
 use identity_credential::{credential::Jwt, presentation::JwtPresentation};
+use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
 use oid4vc_core::{jwt, Subject};
 use oid4vc_manager::{
@@ -61,7 +62,6 @@ lazy_static! {
     .unwrap();
 }
 
-// TODO: Refactor this once the mock crate is created.
 #[tokio::test]
 async fn test_implicit_flow() {
     // Create a new issuer.
@@ -92,6 +92,8 @@ async fn test_implicit_flow() {
         .build()
         .and_then(TryInto::try_into)
         .unwrap();
+
+    dbg!(RequestUrl::Request(Box::new(authorization_request.clone())).to_string());
 
     // Create a provider manager and validate the authorization request.
     let provider_manager = ProviderManager::new([subject]).unwrap();
@@ -136,7 +138,17 @@ async fn test_implicit_flow() {
     .unwrap();
 
     // Encode the verifiable credential as a JWT.
-    let jwt = jwt::encode(Arc::new(issuer), &verifiable_credential).unwrap();
+    let jwt = jwt::encode(
+        Arc::new(issuer),
+        Header {
+            alg: Algorithm::EdDSA,
+            ..Default::default()
+        },
+        &verifiable_credential,
+    )
+    .unwrap();
+
+    dbg!(&jwt);
 
     // Create a verifiable presentation using the JWT.
     let verifiable_presentation = JwtPresentation::builder(Url::parse(subject_did).unwrap(), Object::new())

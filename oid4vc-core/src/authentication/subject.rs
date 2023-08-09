@@ -2,6 +2,8 @@ use crate::{Collection, Sign, SubjectSyntaxType, Verify};
 use anyhow::Result;
 use std::{str::FromStr, sync::Arc};
 
+pub type SigningSubject = Arc<dyn Subject>;
+
 // TODO: Use a URI of some sort.
 /// This [`Subject`] trait is used to sign and verify JWTs.
 pub trait Subject: Sign + Verify + Send + Sync {
@@ -28,8 +30,8 @@ impl<const N: usize> TryFrom<[Arc<dyn Subject>; N]> for Subjects {
         Ok(Self::from(
             subjects
                 .iter()
-                .map(|subject| (subject.type_().unwrap(), subject.clone()))
-                .collect::<Vec<_>>(),
+                .map(|subject| subject.type_().map(|subject_type| (subject_type, subject.clone())))
+                .collect::<Result<Vec<_>>>()?,
         ))
     }
 }

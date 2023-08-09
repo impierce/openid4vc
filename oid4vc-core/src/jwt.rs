@@ -20,12 +20,8 @@ impl<C> JsonWebToken<C>
 where
     C: Serialize,
 {
-    pub fn new(payload: C) -> Self {
-        JsonWebToken {
-            // TODO: Undo hardcoding and consider not using the jsonwebtoken crate.
-            header: Header::new(Algorithm::EdDSA),
-            payload,
-        }
+    pub fn new(header: Header, payload: C) -> Self {
+        JsonWebToken { header, payload }
     }
 
     pub fn kid(mut self, kid: String) -> Self {
@@ -51,14 +47,14 @@ where
     Ok(jsonwebtoken::decode::<T>(jwt, &key, &Validation::new(algorithm))?.claims)
 }
 
-pub fn encode<C, S>(signer: Arc<S>, claims: C) -> Result<String>
+pub fn encode<C, S>(signer: Arc<S>, header: Header, claims: C) -> Result<String>
 where
     C: Serialize + Send,
     S: Sign + ?Sized,
 {
     let kid = signer.key_id().ok_or(anyhow!("No key identifier found."))?;
 
-    let jwt = JsonWebToken::new(claims).kid(kid);
+    let jwt = JsonWebToken::new(header, claims).kid(kid);
 
     let message = [base64_url_encode(&jwt.header)?, base64_url_encode(&jwt.payload)?].join(".");
 
@@ -95,7 +91,7 @@ mod tests {
             "nonce": "nonce",
         });
         let subject = TestSubject::new("did:test:123".to_string(), "key_id".to_string()).unwrap();
-        let encoded = encode(Arc::new(subject), claims).unwrap();
+        let encoded = encode(Arc::new(subject), Header::new(Algorithm::EdDSA), claims).unwrap();
 
         let verifier = MockVerifier::new();
         let (kid, algorithm) = extract_header(&encoded).unwrap();

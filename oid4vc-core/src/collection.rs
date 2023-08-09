@@ -1,6 +1,7 @@
 use crate::SubjectSyntaxType;
 use std::{collections::HashMap, sync::Arc};
 
+#[derive(Clone)]
 pub struct Collection<T: ?Sized>(pub HashMap<SubjectSyntaxType, Arc<T>>);
 
 impl<T: ?Sized> Collection<T> {

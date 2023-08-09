@@ -13,11 +13,13 @@ pub use authentication::{
 };
 pub use collection::Collection;
 pub use decoder::Decoder;
+use rand::{distributions::Alphanumeric, Rng};
 pub use rfc7519_claims::RFC7519Claims;
+use serde::Serialize;
 pub use subject_syntax_type::{DidMethod, SubjectSyntaxType};
 
 #[cfg(test)]
-pub mod test_utils;
+mod test_utils;
 
 #[macro_export]
 macro_rules! builder_fn {
@@ -35,4 +37,27 @@ macro_rules! builder_fn {
             self
         }
     };
+}
+
+// Helper function that allows to serialize custom structs into a query string.
+pub fn to_query_value<T: Serialize>(value: &T) -> anyhow::Result<String> {
+    serde_json::to_string(value)
+        .map(|s| s.chars().filter(|c| !c.is_whitespace()).collect::<String>())
+        .map_err(|e| e.into())
+}
+
+pub fn generate_authorization_code(length: usize) -> String {
+    rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(length)
+        .map(char::from)
+        .collect()
+}
+
+pub fn generate_nonce(length: usize) -> String {
+    rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(length)
+        .map(char::from)
+        .collect()
 }
