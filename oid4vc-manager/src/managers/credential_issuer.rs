@@ -26,6 +26,7 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection> CredentialIssuerM
         storage: S,
         subjects: [Arc<dyn Subject>; N],
     ) -> Result<Self> {
+        // `TcpListener::bind("127.0.0.1:0")` will bind to a random port.
         let listener = listener.unwrap_or_else(|| TcpListener::bind("127.0.0.1:0").unwrap());
         let issuer_url: Url = format!("http://{:?}", listener.local_addr()?).parse()?;
         Ok(Self {
@@ -37,7 +38,7 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection> CredentialIssuerM
                 metadata: CredentialIssuerMetadata {
                     credential_issuer: issuer_url.clone(),
                     authorization_server: None,
-                    credential_endpoint: format!("{issuer_url}credential").parse()?,
+                    credential_endpoint: issuer_url.join("/credential")?,
                     batch_credential_endpoint: None,
                     deferred_credential_endpoint: None,
                     credentials_supported: storage.get_credentials_supported(),
@@ -45,8 +46,8 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection> CredentialIssuerM
                 },
                 authorization_server_metadata: AuthorizationServerMetadata {
                     issuer: issuer_url.clone(),
-                    authorization_endpoint: format!("{issuer_url}authorize").parse()?,
-                    token_endpoint: format!("{issuer_url}token").parse()?,
+                    authorization_endpoint: issuer_url.join("/authorize")?,
+                    token_endpoint: issuer_url.join("/token")?,
                     ..Default::default()
                 },
             },
