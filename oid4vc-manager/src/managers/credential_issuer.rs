@@ -37,16 +37,16 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection> CredentialIssuerM
                 metadata: CredentialIssuerMetadata {
                     credential_issuer: issuer_url.clone(),
                     authorization_server: None,
-                    credential_endpoint: format!("{issuer_url}credential").parse()?,
-                    batch_credential_endpoint: Some(format!("{issuer_url}batch_credential").parse()?),
+                    credential_endpoint: issuer_url.join("/credential")?,
+                    batch_credential_endpoint: Some(issuer_url.join("/batch_credential")?),
                     deferred_credential_endpoint: None,
                     credentials_supported: storage.get_credentials_supported(),
                     display: None,
                 },
                 authorization_server_metadata: AuthorizationServerMetadata {
                     issuer: issuer_url.clone(),
-                    authorization_endpoint: format!("{issuer_url}authorize").parse()?,
-                    token_endpoint: format!("{issuer_url}token").parse()?,
+                    authorization_endpoint: issuer_url.join("/authorize")?,
+                    token_endpoint: issuer_url.join("/token")?,
                     ..Default::default()
                 },
             },
