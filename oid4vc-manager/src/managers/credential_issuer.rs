@@ -39,7 +39,7 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection> CredentialIssuerM
                     credential_issuer: issuer_url.clone(),
                     authorization_server: None,
                     credential_endpoint: issuer_url.join("/credential")?,
-                    batch_credential_endpoint: None,
+                    batch_credential_endpoint: Some(issuer_url.join("/batch_credential")?),
                     deferred_credential_endpoint: None,
                     credentials_supported: storage.get_credentials_supported(),
                     display: None,
@@ -62,17 +62,16 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection> CredentialIssuerM
     }
 
     pub fn credential_offer_uri(&self) -> Result<String> {
-        let credential = self
+        let credentials: Vec<_> = self
             .credential_issuer
             .metadata
             .credentials_supported
-            .get(0)
-            .ok_or_else(|| anyhow::anyhow!("No credentials supported."))?
-            .credential_format
-            .clone();
+            .iter()
+            .map(|credential| CredentialsObject::ByValue(credential.credential_format.clone()))
+            .collect();
         Ok(CredentialOfferQuery::CredentialOffer(CredentialOffer {
             credential_issuer: self.credential_issuer.metadata.credential_issuer.clone(),
-            credentials: vec![CredentialsObject::ByValue(credential)],
+            credentials,
             grants: Some(Grants {
                 authorization_code: self.storage.get_authorization_code(),
                 pre_authorized_code: self.storage.get_pre_authorized_code(),

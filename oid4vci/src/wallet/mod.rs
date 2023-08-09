@@ -5,7 +5,8 @@ use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFo
 use crate::credential_issuer::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
 };
-use crate::credential_request::CredentialRequest;
+use crate::credential_request::{BatchCredentialRequest, CredentialRequest};
+use crate::credential_response::BatchCredentialResponse;
 use crate::proof::{Proof, ProofType};
 use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
 use anyhow::Result;
@@ -123,6 +124,52 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .post(credential_issuer_metadata.credential_endpoint)
             .bearer_auth(token_response.access_token.clone())
             .json(&credential_request)
+            .send()
+            .await?
+            .json()
+            .await
+            .map_err(|e| e.into())
+    }
+
+    pub async fn get_batch_credential(
+        &self,
+        credential_issuer_metadata: CredentialIssuerMetadata<CFC>,
+        token_response: &TokenResponse,
+        credential_formats: Vec<CFC>,
+    ) -> Result<BatchCredentialResponse> {
+        let proof = Some(
+            Proof::builder()
+                .proof_type(ProofType::Jwt)
+                .signer(self.subject.clone())
+                .iss(self.subject.identifier()?)
+                .aud(credential_issuer_metadata.credential_issuer)
+                .iat(1571324800)
+                .exp(9999999999i64)
+                // TODO: so is this REQUIRED or OPTIONAL?
+                .nonce(
+                    token_response
+                        .c_nonce
+                        .as_ref()
+                        .ok_or(anyhow::anyhow!("No c_nonce found."))?
+                        .clone(),
+                )
+                .build()?,
+        );
+
+        let batch_credential_request = BatchCredentialRequest {
+            credential_requests: credential_formats
+                .iter()
+                .map(|credential_format| CredentialRequest {
+                    credential_format: credential_format.to_owned(),
+                    proof: proof.clone(),
+                })
+                .collect(),
+        };
+
+        self.client
+            .post(credential_issuer_metadata.batch_credential_endpoint.unwrap())
+            .bearer_auth(token_response.access_token.clone())
+            .json(&batch_credential_request)
             .send()
             .await?
             .json()

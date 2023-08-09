@@ -8,6 +8,7 @@ use oid4vc_manager::{
 use oid4vci::{
     authorization_details::{AuthorizationDetailsObject, OpenIDCredential},
     credential_format_profiles::CredentialFormats,
+    credential_response::{CredentialResponse, CredentialResponseType},
     token_request::{AuthorizationCode, TokenRequest},
     Wallet,
 };
@@ -17,7 +18,7 @@ use std::sync::Arc;
 #[tokio::test]
 async fn test_authorization_code_flow() {
     // Setup the credential issuer.
-    let mut credential_issuer = Server::setup(
+    let mut credential_issuer: Server<_, _> = Server::setup(
         CredentialIssuerManager::<_, CredentialFormats>::new(
             None,
             MemoryStorage,
@@ -37,7 +38,7 @@ async fn test_authorization_code_flow() {
     let subject_did = subject.identifier().unwrap();
 
     // Create a new wallet.
-    let wallet = Wallet::<CredentialFormats>::new(Arc::new(subject));
+    let wallet = Wallet::new(Arc::new(subject));
 
     // Get the credential issuer url.
     let credential_issuer_url = credential_issuer
@@ -58,7 +59,7 @@ async fn test_authorization_code_flow() {
         .unwrap();
 
     // Get the credential format for a university degree.
-    let university_degree_credential_format = credential_issuer_metadata
+    let university_degree_credential_format: CredentialFormats = credential_issuer_metadata
         .credentials_supported
         .get(0)
         .unwrap()
@@ -93,7 +94,7 @@ async fn test_authorization_code_flow() {
         .unwrap();
 
     // Get the credential.
-    let credential_response = wallet
+    let credential_response: CredentialResponse = wallet
         .get_credential(
             credential_issuer_metadata,
             &token_response,
@@ -102,8 +103,13 @@ async fn test_authorization_code_flow() {
         .await
         .unwrap();
 
+    let credential = match credential_response.credential {
+        CredentialResponseType::Immediate(CredentialFormats::JwtVcJson(credential)) => credential.credential,
+        _ => panic!("Credential was not a JWT VC JSON."),
+    };
+
     // Decode the JWT without performing validation
-    let claims = get_jwt_claims(credential_response.credential.unwrap().clone());
+    let claims = get_jwt_claims(&credential);
 
     // Check the credential.
     assert_eq!(
@@ -113,6 +119,7 @@ async fn test_authorization_code_flow() {
                 "https://www.w3.org/2018/credentials/v1",
                 "https://www.w3.org/2018/credentials/examples/v1"
             ],
+            "id": "UniversityDegree_JWT",
             "type": [
                 "VerifiableCredential",
                 "PersonalInformation"

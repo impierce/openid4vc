@@ -103,7 +103,7 @@ mod tests {
             jwt_vc_json::{self, JwtVcJson},
             ldp_vc::{self, LdpVc},
         },
-        CredentialFormat, CredentialFormats,
+        CredentialFormats, Parameters,
     };
     use serde_json::json;
 
@@ -147,7 +147,7 @@ mod tests {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
                 credentials: vec![
                     CredentialsObject::ByReference("UniversityDegree_JWT".to_string()),
-                    CredentialsObject::ByValue(CredentialFormats::MsoMdoc(CredentialFormat {
+                    CredentialsObject::ByValue(CredentialFormats::MsoMdoc(Parameters {
                         format: MsoMdoc,
                         parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
                     }))
@@ -193,22 +193,20 @@ mod tests {
         assert_eq!(
             CredentialOffer {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec![CredentialsObject::ByValue(CredentialFormats::JwtVcJson(
-                    CredentialFormat {
-                        format: JwtVcJson,
-                        parameters: (
-                            jwt_vc_json::CredentialDefinition {
-                                type_: vec![
-                                    "VerifiableCredential".to_string(),
-                                    "UniversityDegreeCredential".to_string()
-                                ],
-                                credential_subject: None
-                            },
-                            None
-                        )
-                            .into()
-                    }
-                )),],
+                credentials: vec![CredentialsObject::ByValue(CredentialFormats::JwtVcJson(Parameters {
+                    format: JwtVcJson,
+                    parameters: (
+                        jwt_vc_json::CredentialDefinition {
+                            type_: vec![
+                                "VerifiableCredential".to_string(),
+                                "UniversityDegreeCredential".to_string()
+                            ],
+                            credential_subject: None
+                        },
+                        None
+                    )
+                        .into()
+                })),],
                 grants: Some(Grants {
                     authorization_code: Some(AuthorizationCode {
                         issuer_state: Some("eyJhbGciOiJSU0Et...FYUaBy".to_string())
@@ -222,7 +220,7 @@ mod tests {
         assert_eq!(
             CredentialOffer {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec![CredentialsObject::ByValue(CredentialFormats::LdpVc(CredentialFormat {
+                credentials: vec![CredentialsObject::ByValue(CredentialFormats::LdpVc(Parameters {
                     format: LdpVc,
                     parameters: (
                         ldp_vc::CredentialDefinition {
@@ -248,12 +246,10 @@ mod tests {
         assert_eq!(
             CredentialOffer {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec![CredentialsObject::ByValue(CredentialFormats::MsoMdoc(
-                    CredentialFormat {
-                        format: MsoMdoc,
-                        parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
-                    }
-                )),],
+                credentials: vec![CredentialsObject::ByValue(CredentialFormats::MsoMdoc(Parameters {
+                    format: MsoMdoc,
+                    parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
+                })),],
                 grants: Some(Grants {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
@@ -271,7 +267,7 @@ mod tests {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
                 credentials: vec![
                     CredentialsObject::ByReference("UniversityDegree_JWT".to_string()),
-                    CredentialsObject::ByValue(CredentialFormats::MsoMdoc(CredentialFormat {
+                    CredentialsObject::ByValue(CredentialFormats::MsoMdoc(Parameters {
                         format: MsoMdoc,
                         parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
                     })),
@@ -293,22 +289,20 @@ mod tests {
         assert_eq!(
             CredentialOffer {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec![CredentialsObject::ByValue(CredentialFormats::JwtVcJson(
-                    CredentialFormat {
-                        format: JwtVcJson,
-                        parameters: (
-                            jwt_vc_json::CredentialDefinition {
-                                type_: vec![
-                                    "VerifiableCredential".to_string(),
-                                    "UniversityDegreeCredential".to_string()
-                                ],
-                                credential_subject: None
-                            },
-                            None
-                        )
-                            .into()
-                    }
-                )),],
+                credentials: vec![CredentialsObject::ByValue(CredentialFormats::JwtVcJson(Parameters {
+                    format: JwtVcJson,
+                    parameters: (
+                        jwt_vc_json::CredentialDefinition {
+                            type_: vec![
+                                "VerifiableCredential".to_string(),
+                                "UniversityDegreeCredential".to_string()
+                            ],
+                            credential_subject: None
+                        },
+                        None
+                    )
+                        .into()
+                })),],
                 grants: Some(Grants {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {

@@ -4,17 +4,17 @@ use oid4vc_core::{builder_fn, jwt, RFC7519Claims, Subject};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Jwt;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Cwt;
 
 serialize_unit_struct!("jwt", Jwt);
 serialize_unit_struct!("cwt", Cwt);
 
 /// Key Proof Type (JWT or CWT) and the proof itself, as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-key-proof-types.
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 #[serde(untagged)]
 pub enum Proof {
     Jwt { proof_type: Jwt, jwt: String },

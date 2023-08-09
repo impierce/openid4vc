@@ -1,5 +1,5 @@
 use super::credentials_supported::CredentialsSupportedObject;
-use crate::credential_format_profiles::CredentialFormatCollection;
+use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -9,7 +9,7 @@ use serde_with::skip_serializing_none;
 /// https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-issuer-metadata.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct CredentialIssuerMetadata<CFC>
+pub struct CredentialIssuerMetadata<CFC = CredentialFormats>
 where
     CFC: CredentialFormatCollection,
 {
@@ -46,16 +46,15 @@ pub struct Logo {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::credential_format_profiles::{
         iso_mdl::mso_mdoc::MsoMdoc,
         w3c_verifiable_credentials::{
             jwt_vc_json::{self, JwtVcJson},
             ldp_vc::{self, LdpVc},
         },
-        CredentialFormat, CredentialFormats,
+        CredentialFormats, Parameters,
     };
-
-    use super::*;
     use serde::de::DeserializeOwned;
     use serde_json::json;
     use std::{fs::File, path::Path};
@@ -80,7 +79,7 @@ mod tests {
                 credentials_supported: vec![
                     CredentialsSupportedObject {
                         id: Some("UniversityDegree_LDP".to_string()),
-                        credential_format: CredentialFormats::LdpVc(CredentialFormat {
+                        credential_format: CredentialFormats::LdpVc(Parameters {
                             format: LdpVc,
                             parameters: (
                                 ldp_vc::CredentialDefinition {
@@ -156,7 +155,7 @@ mod tests {
                     },
                     CredentialsSupportedObject {
                         id: None,
-                        credential_format: CredentialFormats::JwtVcJson(CredentialFormat {
+                        credential_format: CredentialFormats::JwtVcJson(Parameters {
                             format: JwtVcJson,
                             parameters: (
                                 jwt_vc_json::CredentialDefinition {
@@ -228,7 +227,7 @@ mod tests {
                     },
                     CredentialsSupportedObject {
                         id: None,
-                        credential_format: CredentialFormats::MsoMdoc(CredentialFormat {
+                        credential_format: CredentialFormats::MsoMdoc(Parameters {
                             format: MsoMdoc,
                             parameters: (
                                 "org.iso.18013.5.1.mDL".to_string(),

@@ -31,7 +31,7 @@ mod tests {
             jwt_vc_json::{self, JwtVcJson},
             ldp_vc::{self, LdpVc},
         },
-        CredentialFormat, CredentialFormats,
+        CredentialFormats, Parameters,
     };
     use serde::de::DeserializeOwned;
     use serde_json::json;
@@ -54,7 +54,7 @@ mod tests {
         assert_eq!(
             CredentialsSupportedObject {
                 id: Some("UniversityDegree_JWT".to_string()),
-                credential_format: CredentialFormats::JwtVcJson(CredentialFormat {
+                credential_format: CredentialFormats::JwtVcJson(Parameters {
                     format: JwtVcJson,
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
@@ -114,7 +114,7 @@ mod tests {
         assert_eq!(
             CredentialsSupportedObject {
                 id: None,
-                credential_format: CredentialFormats::LdpVc(CredentialFormat {
+                credential_format: CredentialFormats::LdpVc(Parameters {
                     format: LdpVc,
                     parameters: (
                         ldp_vc::CredentialDefinition {
@@ -178,7 +178,7 @@ mod tests {
         assert_eq!(
             CredentialsSupportedObject {
                 id: None,
-                credential_format: CredentialFormats::MsoMdoc(CredentialFormat {
+                credential_format: CredentialFormats::MsoMdoc(Parameters {
                     format: MsoMdoc,
                     parameters: (
                         "org.iso.18013.5.1.mDL".to_string(),

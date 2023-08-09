@@ -35,7 +35,7 @@ mod tests {
             jwt_vc_json::{self, JwtVcJson},
             ldp_vc::{self, LdpVc},
         },
-        CredentialFormat, CredentialFormats,
+        CredentialFormats, Parameters,
     };
     use serde::de::DeserializeOwned;
     use serde_json::json;
@@ -77,7 +77,7 @@ mod tests {
             AuthorizationDetailsObject {
                 type_: OpenIDCredential,
                 locations: None,
-                credential_format: CredentialFormats::JwtVcJson(CredentialFormat {
+                credential_format: CredentialFormats::JwtVcJson(Parameters {
                     format: JwtVcJson,
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
@@ -129,7 +129,7 @@ mod tests {
             AuthorizationDetailsObject {
                 type_: OpenIDCredential,
                 locations: None,
-                credential_format: CredentialFormats::MsoMdoc(CredentialFormat {
+                credential_format: CredentialFormats::MsoMdoc(Parameters {
                     format: MsoMdoc,
                     parameters: (
                         "org.iso.18013.5.1.mDL".to_string(),
@@ -163,7 +163,7 @@ mod tests {
             vec![AuthorizationDetailsObject {
                 type_: OpenIDCredential,
                 locations: None,
-                credential_format: CredentialFormats::JwtVcJson(CredentialFormat {
+                credential_format: CredentialFormats::JwtVcJson(Parameters {
                     format: JwtVcJson,
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
@@ -186,7 +186,7 @@ mod tests {
             vec![AuthorizationDetailsObject {
                 type_: OpenIDCredential,
                 locations: None,
-                credential_format: CredentialFormats::LdpVc(CredentialFormat {
+                credential_format: CredentialFormats::LdpVc(Parameters {
                     format: LdpVc,
                     parameters: (
                         ldp_vc::CredentialDefinition {
@@ -213,7 +213,7 @@ mod tests {
             vec![AuthorizationDetailsObject {
                 type_: OpenIDCredential,
                 locations: None,
-                credential_format: CredentialFormats::MsoMdoc(CredentialFormat {
+                credential_format: CredentialFormats::MsoMdoc(Parameters {
                     format: MsoMdoc,
                     parameters: (
                         "org.iso.18013.5.1.mDL".to_string(),
@@ -240,7 +240,7 @@ mod tests {
                 AuthorizationDetailsObject {
                     type_: OpenIDCredential,
                     locations: None,
-                    credential_format: CredentialFormats::LdpVc(CredentialFormat {
+                    credential_format: CredentialFormats::LdpVc(Parameters {
                         format: LdpVc,
                         parameters: (
                             ldp_vc::CredentialDefinition {
@@ -259,7 +259,7 @@ mod tests {
                 AuthorizationDetailsObject {
                     type_: OpenIDCredential,
                     locations: None,
-                    credential_format: CredentialFormats::MsoMdoc(CredentialFormat {
+                    credential_format: CredentialFormats::MsoMdoc(Parameters {
                         format: MsoMdoc,
                         parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
                     }),
@@ -274,7 +274,7 @@ mod tests {
             vec![AuthorizationDetailsObject {
                 type_: OpenIDCredential,
                 locations: Some(vec!["https://credential-issuer.example.com".parse().unwrap()]),
-                credential_format: CredentialFormats::JwtVcJson(CredentialFormat {
+                credential_format: CredentialFormats::JwtVcJson(Parameters {
                     format: JwtVcJson,
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
@@ -293,7 +293,7 @@ mod tests {
             vec![AuthorizationDetailsObject {
                 type_: OpenIDCredential,
                 locations: None,
-                credential_format: CredentialFormats::JwtVcJson(CredentialFormat {
+                credential_format: CredentialFormats::JwtVcJson(Parameters {
                     format: JwtVcJson,
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
