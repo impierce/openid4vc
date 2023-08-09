@@ -26,6 +26,7 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection> CredentialIssuerM
         storage: S,
         subjects: [Arc<dyn Subject>; N],
     ) -> Result<Self> {
+        // `TcpListener::bind("127.0.0.1:0")` will bind to a random port.
         let listener = listener.unwrap_or_else(|| TcpListener::bind("127.0.0.1:0").unwrap());
         let issuer_url: Url = format!("http://{:?}", listener.local_addr()?).parse()?;
         Ok(Self {
