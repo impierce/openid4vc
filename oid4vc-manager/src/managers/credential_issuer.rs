@@ -81,7 +81,7 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
 
     pub fn credential_offer_uri(&self) -> Result<Url> {
         let issuer_url = self.credential_issuer.metadata.credential_issuer.clone();
-        Ok(format!("{issuer_url}credential_offer").parse()?)
+        Ok(issuer_url.join("/credential_offer")?)
     }
 
     pub fn credential_offer_query(&self, by_reference: bool) -> Result<String> {
