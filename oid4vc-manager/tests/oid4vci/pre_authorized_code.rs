@@ -67,6 +67,11 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         .await
         .unwrap();
 
+    assert_eq!(
+        authorization_server_metadata.pre_authorized_grant_anonymous_access_supported,
+        Some(true)
+    );
+
     // Get the credential issuer metadata.
     let credential_issuer_metadata = wallet
         .get_credential_issuer_metadata(credential_issuer_url.clone())
