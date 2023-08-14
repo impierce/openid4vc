@@ -20,7 +20,7 @@ pub struct CredentialIssuerManager<S: Storage<CFC>, CFC: CredentialFormatCollect
     pub listener: Arc<TcpListener>,
 }
 
-impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection> CredentialIssuerManager<S, CFC> {
+impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S, CFC> {
     pub fn new<const N: usize>(
         listener: Option<TcpListener>,
         storage: S,
@@ -48,6 +48,7 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection> CredentialIssuerM
                     issuer: issuer_url.clone(),
                     authorization_endpoint: issuer_url.join("/authorize")?,
                     token_endpoint: issuer_url.join("/token")?,
+                    pre_authorized_grant_anonymous_access_supported: Some(true),
                     ..Default::default()
                 },
             },
@@ -61,15 +62,15 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection> CredentialIssuerM
         Ok(self.credential_issuer.metadata.credential_issuer.clone())
     }
 
-    pub fn credential_offer_uri(&self) -> Result<String> {
-        let credentials: Vec<_> = self
+    pub fn credential_offer(&self) -> Result<CredentialOffer<CFC>> {
+        let credentials: Vec<CredentialsObject<CFC>> = self
             .credential_issuer
             .metadata
             .credentials_supported
             .iter()
             .map(|credential| CredentialsObject::ByValue(credential.credential_format.clone()))
             .collect();
-        Ok(CredentialOfferQuery::CredentialOffer(CredentialOffer {
+        Ok(CredentialOffer {
             credential_issuer: self.credential_issuer.metadata.credential_issuer.clone(),
             credentials,
             grants: Some(Grants {
@@ -77,6 +78,18 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection> CredentialIssuerM
                 pre_authorized_code: self.storage.get_pre_authorized_code(),
             }),
         })
-        .to_string())
+    }
+
+    pub fn credential_offer_uri(&self) -> Result<Url> {
+        let issuer_url = self.credential_issuer.metadata.credential_issuer.clone();
+        Ok(issuer_url.join("/credential_offer")?)
+    }
+
+    pub fn credential_offer_query(&self, by_reference: bool) -> Result<String> {
+        if by_reference {
+            Ok(CredentialOfferQuery::<CFC>::CredentialOfferUri(self.credential_offer_uri()?).to_string())
+        } else {
+            Ok(CredentialOfferQuery::CredentialOffer(self.credential_offer()?).to_string())
+        }
     }
 }

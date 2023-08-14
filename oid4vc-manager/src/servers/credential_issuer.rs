@@ -65,6 +65,7 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection + Clone + Deserial
                         get(oauth_authorization_server),
                     )
                     .route("/.well-known/openid-credential-issuer", get(openid_credential_issuer))
+                    .route("/credential_offer", get(credential_offer))
                     .route("/authorize", get(authorize))
                     .route("/token", post(token))
                     .route("/credential", post(credential))
@@ -119,6 +120,15 @@ async fn openid_credential_issuer<S: Storage<CFC>, CFC: CredentialFormatCollecti
     (
         StatusCode::OK,
         Json(credential_issuer_manager.credential_issuer.metadata),
+    )
+}
+
+async fn credential_offer<S: Storage<CFC>, CFC: CredentialFormatCollection>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
+) -> impl IntoResponse {
+    (
+        StatusCode::OK,
+        Json(credential_issuer_manager.credential_offer().unwrap()),
     )
 }
 

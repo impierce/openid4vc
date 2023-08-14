@@ -131,7 +131,7 @@ async fn test_implicit_flow() {
     // Create presentation submission using the presentation definition and the verifiable credential.
     let presentation_submission = create_presentation_submission(
         &PRESENTATION_DEFINITION,
-        &serde_json::to_value(&verifiable_credential).unwrap(),
+        vec![serde_json::to_value(&verifiable_credential).unwrap()],
     )
     .unwrap();
 

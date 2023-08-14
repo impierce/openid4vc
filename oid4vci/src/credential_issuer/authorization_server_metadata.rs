@@ -34,5 +34,7 @@ pub struct AuthorizationServerMetadata {
     pub introspection_endpoint_auth_methods_supported: Option<Vec<String>>,
     pub introspection_endpoint_auth_signing_alg_values_supported: Option<Vec<String>>,
     pub code_challenge_methods_supported: Option<Vec<String>>,
+    #[serde(rename = "pre-authorized_grant_anonymous_access_supported")]
+    pub pre_authorized_grant_anonymous_access_supported: Option<bool>,
     // Additional authorization server metadata parameters MAY also be used.
 }

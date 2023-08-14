@@ -9,31 +9,33 @@ use oid4vp::{
 // TODO: make VP/VC fromat agnostic. In current form only jwt_vp_json + jwt_vc_json are supported.
 pub fn create_presentation_submission(
     presentation_definition: &PresentationDefinition,
-    credential: &serde_json::Value,
+    credentials: Vec<serde_json::Value>,
 ) -> Result<PresentationSubmission> {
     let id = "Submission ID".to_string();
     let definition_id = presentation_definition.id().clone();
     let descriptor_map = presentation_definition
         .input_descriptors()
         .iter()
-        .map(|input_descriptor| {
-            if evaluate_input(input_descriptor, credential) {
-                Ok(InputDescriptorMappingObject {
-                    id: input_descriptor.id().clone(),
-                    format: ClaimFormatDesignation::JwtVpJson,
-                    path: "$".to_string(),
-                    path_nested: Some(PathNested {
-                        id: None,
-                        path: "$.vp.verifiableCredential".to_string(),
-                        format: ClaimFormatDesignation::JwtVcJson,
-                        path_nested: None,
-                    }),
+        .enumerate()
+        .map(|(index, input_descriptor)| {
+            credentials
+                .iter()
+                .find_map(|credential| {
+                    evaluate_input(input_descriptor, credential).then_some(InputDescriptorMappingObject {
+                        id: input_descriptor.id().clone(),
+                        format: ClaimFormatDesignation::JwtVpJson,
+                        path: "$".to_string(),
+                        path_nested: Some(PathNested {
+                            id: None,
+                            path: format!("$.vp.verifiableCredential[{}]", index),
+                            format: ClaimFormatDesignation::JwtVcJson,
+                            path_nested: None,
+                        }),
+                    })
                 })
-            } else {
-                Err(anyhow::anyhow!("Input descriptor evaluation failed"))
-            }
+                .unwrap()
         })
-        .collect::<Result<Vec<_>>>()?;
+        .collect::<Vec<_>>();
     Ok(PresentationSubmission {
         id,
         definition_id,
