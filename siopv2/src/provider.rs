@@ -3,7 +3,7 @@ use crate::{
 };
 use anyhow::Result;
 use chrono::{Duration, Utc};
-use identity_credential::presentation::JwtPresentation;
+use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::{authentication::subject::SigningSubject, jwt, Decoder};
 use oid4vp::{token::vp_token::VpToken, PresentationSubmission};
@@ -54,7 +54,7 @@ impl Provider {
         &self,
         request: AuthorizationRequest,
         user_claims: StandardClaimsValues,
-        verifiable_presentation: Option<JwtPresentation>,
+        verifiable_presentation: Option<Presentation<Jwt>>,
         presentation_submission: Option<PresentationSubmission>,
     ) -> Result<AuthorizationResponse> {
         let subject_identifier = self.subject.identifier()?;

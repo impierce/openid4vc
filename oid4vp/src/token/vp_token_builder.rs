@@ -1,12 +1,12 @@
 use crate::token::vp_token::VpToken;
 use anyhow::{anyhow, Result};
-use identity_credential::presentation::JwtPresentation;
+use identity_credential::{credential::Jwt, presentation::Presentation};
 use oid4vc_core::{builder_fn, RFC7519Claims};
 
 #[derive(Default)]
 pub struct VpTokenBuilder {
     rfc7519_claims: RFC7519Claims,
-    verifiable_presentation: Option<JwtPresentation>,
+    verifiable_presentation: Option<Presentation<Jwt>>,
     // TODO: Is this required?
     nonce: Option<String>,
 }
@@ -47,6 +47,6 @@ impl VpTokenBuilder {
     builder_fn!(rfc7519_claims, nbf, i64);
     builder_fn!(rfc7519_claims, iat, i64);
     builder_fn!(rfc7519_claims, jti, String);
-    builder_fn!(verifiable_presentation, JwtPresentation);
+    builder_fn!(verifiable_presentation, Presentation<Jwt>);
     builder_fn!(nonce, String);
 }
