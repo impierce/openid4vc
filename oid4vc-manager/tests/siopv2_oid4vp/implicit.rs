@@ -1,6 +1,6 @@
 use did_key::{generate, Ed25519KeyPair};
 use identity_core::common::{Object, Url};
-use identity_credential::{credential::Jwt, presentation::JwtPresentation};
+use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
 use oid4vc_core::{jwt, Subject};
@@ -147,7 +147,7 @@ async fn test_implicit_flow() {
     .unwrap();
 
     // Create a verifiable presentation using the JWT.
-    let verifiable_presentation = JwtPresentation::builder(Url::parse(subject_did).unwrap(), Object::new())
+    let verifiable_presentation = Presentation::builder(Url::parse(subject_did).unwrap(), Object::new())
         .credential(Jwt::from(jwt))
         .build()
         .unwrap();
