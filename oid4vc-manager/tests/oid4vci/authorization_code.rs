@@ -22,9 +22,12 @@ async fn test_authorization_code_flow() {
         CredentialIssuerManager::<_, CredentialFormats>::new(
             None,
             MemoryStorage,
-            [Arc::new(KeySubject::from_keypair(generate::<Ed25519KeyPair>(Some(
-                "this-is-a-very-UNSAFE-issuer-secret-key".as_bytes().try_into().unwrap(),
-            ))))],
+            [Arc::new(KeySubject::from_keypair(
+                generate::<Ed25519KeyPair>(Some(
+                    "this-is-a-very-UNSAFE-issuer-secret-key".as_bytes().try_into().unwrap(),
+                )),
+                None,
+            ))],
         )
         .unwrap(),
         None,

@@ -4,8 +4,9 @@ use async_trait::async_trait;
 use derivative::{self, Derivative};
 use ed25519_dalek::{Keypair, Signature, Signer};
 use lazy_static::lazy_static;
-use oid4vc_core::{Sign, Subject, Verify};
+use oid4vc_core::{authentication::sign::ExternalSign, Sign, Subject, Verify};
 use rand::rngs::OsRng;
+use std::sync::Arc;
 
 // Keypair for mocking purposes.
 lazy_static! {
@@ -37,6 +38,10 @@ impl Sign for TestSubject {
     fn sign(&self, message: &str) -> Result<Vec<u8>> {
         let signature: Signature = TEST_KEYPAIR.sign(message.as_bytes());
         Ok(signature.to_bytes().to_vec())
+    }
+
+    fn external_signer(&self) -> Option<Arc<dyn ExternalSign>> {
+        None
     }
 }
 

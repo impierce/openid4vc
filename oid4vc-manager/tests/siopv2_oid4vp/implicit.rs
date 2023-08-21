@@ -65,15 +65,19 @@ lazy_static! {
 #[tokio::test]
 async fn test_implicit_flow() {
     // Create a new issuer.
-    let issuer = KeySubject::from_keypair(generate::<Ed25519KeyPair>(Some(
-        "this-is-a-very-UNSAFE-issuer-secret-key".as_bytes().try_into().unwrap(),
-    )));
+    let issuer = KeySubject::from_keypair(
+        generate::<Ed25519KeyPair>(Some(
+            "this-is-a-very-UNSAFE-issuer-secret-key".as_bytes().try_into().unwrap(),
+        )),
+        None,
+    );
     let issuer_did = issuer.identifier().unwrap();
 
     // Create a new subject.
-    let subject = Arc::new(KeySubject::from_keypair(generate::<Ed25519KeyPair>(Some(
-        "this-is-a-very-UNSAFE-secret-key".as_bytes().try_into().unwrap(),
-    ))));
+    let subject = Arc::new(KeySubject::from_keypair(
+        generate::<Ed25519KeyPair>(Some("this-is-a-very-UNSAFE-secret-key".as_bytes().try_into().unwrap())),
+        None,
+    ));
     let subject_did = subject.identifier().unwrap();
 
     // Create a new relying party.
