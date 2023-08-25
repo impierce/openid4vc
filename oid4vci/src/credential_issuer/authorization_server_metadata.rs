@@ -11,10 +11,8 @@ pub struct AuthorizationServerMetadata {
     // TODO: Temporary solution
     #[derivative(Default(value = "Url::parse(\"https://example.com\").unwrap()"))]
     pub issuer: Url,
-    #[derivative(Default(value = "Url::parse(\"https://example.com\").unwrap()"))]
-    pub authorization_endpoint: Url,
-    #[derivative(Default(value = "Url::parse(\"https://example.com\").unwrap()"))]
-    pub token_endpoint: Url,
+    pub authorization_endpoint: Option<Url>,
+    pub token_endpoint: Option<Url>,
     pub jwks_uri: Option<Url>,
     pub registration_endpoint: Option<Url>,
     pub scopes_supported: Option<Vec<String>>,

@@ -49,17 +49,17 @@ pub mod request_builder;
 /// )
 /// .unwrap();
 /// assert!(match request_url {
-///   RequestUrl::Request(_) => Ok(()),
 ///   RequestUrl::RequestUri { .. } => Err(()),
 ///   RequestUrl::RequestObject { .. } => Err(()),
+///   RequestUrl::Request(_) => Ok(()),
 /// }.is_ok());
 /// ```
 #[derive(Deserialize, Debug, PartialEq, Serialize, Clone)]
-#[serde(untagged, deny_unknown_fields)]
+#[serde(untagged)]
 pub enum RequestUrl {
-    Request(Box<AuthorizationRequest>),
     RequestObject { client_id: String, request: String },
     RequestUri { client_id: String, request_uri: String },
+    Request(Box<AuthorizationRequest>),
 }
 
 impl RequestUrl {
@@ -131,8 +131,8 @@ pub enum ResponseType {
     #[display(fmt = "id_token")]
     IdToken,
     //TODO: Is this possible in SIOP?
-    // #[display(fmt = "vp_token")]
-    // VpToken,
+    #[display(fmt = "vp_token")]
+    VpToken,
     #[display(fmt = "id_token vp_token")]
     IdTokenVpToken,
 }

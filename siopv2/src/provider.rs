@@ -77,6 +77,26 @@ impl Provider {
                 let jwt = jwt::encode(self.subject.clone(), Header::new(Algorithm::EdDSA), id_token)?;
                 builder = builder.id_token(jwt);
             }
+            ResponseType::VpToken => {
+                if let (Some(verifiable_presentation), Some(presentation_submission)) =
+                    (verifiable_presentation, presentation_submission)
+                {
+                    let vp_token = VpToken::builder()
+                        .iss(subject_identifier.clone())
+                        .sub(subject_identifier)
+                        .aud(request.client_id().to_owned())
+                        .nonce(request.nonce().to_owned())
+                        .exp((Utc::now() + Duration::minutes(10)).timestamp())
+                        .iat((Utc::now()).timestamp())
+                        .verifiable_presentation(verifiable_presentation)
+                        .build()?;
+
+                    let jwt = jwt::encode(self.subject.clone(), Header::new(Algorithm::EdDSA), vp_token)?;
+                    builder = builder.vp_token(jwt).presentation_submission(presentation_submission);
+                } else {
+                    anyhow::bail!("Verifiable presentation is required for this response type.");
+                }
+            }
             ResponseType::IdTokenVpToken => {
                 let id_token = IdToken::builder()
                     .iss(subject_identifier.clone())
@@ -173,4 +193,63 @@ mod tests {
             .generate_response(request, Default::default(), None, None)
             .is_ok());
     }
+}
+
+#[test]
+fn temp() {
+    let test: AuthorizationRequest = serde_json::from_value(serde_json::json!(
+        {
+            "iat": 1692720321,
+            "response_type": "id_token vp_token",
+            "presentation_definition": {
+              "id": "32f54163-7166-48f1-93d8-ff217bdb0653",
+              "input_descriptors": [
+                {
+                  "id": "staff-id",
+                  "constraints": {
+                    "fields": [
+                      {
+                        "path": [
+                          "$.type"
+                        ],
+                        "filter": {
+                          "type": "array",
+                          "contains": {
+                            "type": "string",
+                            "pattern": "Staff ID"
+                          }
+                        }
+                      },
+                      {
+                        "path": [
+                          "$.id"
+                        ],
+                        "filter": {
+                          "type": "string",
+                          "pattern": ".*kw1c.*"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "state": "peterLogin::6038beab-adcb-48de-84f0-9f9f26c9e3f4",
+            "client_metadata": {
+              "subject_syntax_types_supported": [
+                "did:iota"
+              ],
+              "id_token_signing_alg_values_supported": [
+                "EdDSA"
+              ]
+            },
+            "redirect_uri": "https://api.ngdil-demo.tanglelabs.io/auth",
+            "scope": "openid",
+            "response_mode": "post",
+            "client_id": "did:iota:2UPUvGJkHuoJwFoFuZYqhmCipERNecdvqXebpfD7mKSB",
+            "nonce": "nonce",
+            "iss": "did:iota:2UPUvGJkHuoJwFoFuZYqhmCipERNecdvqXebpfD7mKSB"
+          }
+    ))
+    .unwrap();
 }

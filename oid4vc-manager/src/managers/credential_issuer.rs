@@ -46,8 +46,8 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
                 },
                 authorization_server_metadata: AuthorizationServerMetadata {
                     issuer: issuer_url.clone(),
-                    authorization_endpoint: issuer_url.join("/authorize")?,
-                    token_endpoint: issuer_url.join("/token")?,
+                    authorization_endpoint: Some(issuer_url.join("/authorize")?),
+                    token_endpoint: Some(issuer_url.join("/token")?),
                     pre_authorized_grant_anonymous_access_supported: Some(true),
                     ..Default::default()
                 },

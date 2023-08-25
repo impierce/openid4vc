@@ -58,7 +58,7 @@ impl Sign for KeySubject {
     }
 
     fn external_signer(&self) -> Option<Arc<dyn ExternalSign>> {
-        None
+        self.external_signer.clone()
     }
 }
 
