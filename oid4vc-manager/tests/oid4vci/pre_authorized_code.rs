@@ -95,7 +95,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
 
     // Get an access token.
     let token_response = wallet
-        .get_access_token(authorization_server_metadata.token_endpoint, token_request)
+        .get_access_token(authorization_server_metadata.token_endpoint.unwrap(), token_request)
         .await
         .unwrap();
 

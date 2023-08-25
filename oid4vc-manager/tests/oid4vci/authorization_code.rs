@@ -72,7 +72,7 @@ async fn test_authorization_code_flow() {
     // Get the authorization code.
     let authorization_response = wallet
         .get_authorization_code(
-            authorization_server_metadata.authorization_endpoint,
+            authorization_server_metadata.authorization_endpoint.unwrap(),
             vec![AuthorizationDetailsObject {
                 type_: OpenIDCredential,
                 locations: None,
@@ -92,7 +92,7 @@ async fn test_authorization_code_flow() {
 
     // Get the access token.
     let token_response = wallet
-        .get_access_token(authorization_server_metadata.token_endpoint, token_request)
+        .get_access_token(authorization_server_metadata.token_endpoint.unwrap(), token_request)
         .await
         .unwrap();
 

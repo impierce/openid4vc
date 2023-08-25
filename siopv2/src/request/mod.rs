@@ -285,6 +285,8 @@ mod tests {
         );
     }
 
+    // This test is currently failing because the serialization rules for RequestUrl have been loosened. This
+    // will be addressed in https://github.com/impierce/openid4vc/issues/19.
     #[test]
     fn test_invalid_request() {
         // A form urlencoded string with an otherwise valid request is invalid when the `request_uri` parameter is also
