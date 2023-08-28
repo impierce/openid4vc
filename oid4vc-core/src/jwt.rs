@@ -47,7 +47,7 @@ where
     let mut validation = Validation::new(algorithm);
     validation.validate_exp = false;
     validation.required_spec_claims.clear();
-    Ok(jsonwebtoken::decode::<T>(jwt, &key, &Validation::new(algorithm))?.claims)
+    Ok(jsonwebtoken::decode::<T>(jwt, &key, &validation)?.claims)
 }
 
 pub fn encode<C, S>(signer: Arc<S>, header: Header, claims: C) -> Result<String>
