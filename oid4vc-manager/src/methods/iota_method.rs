@@ -9,7 +9,7 @@ use identity_iota::{
     iota_core::{IotaDID, IotaDIDUrl},
     prelude::*,
 };
-use oid4vc_core::{Sign, Subject, Verify};
+use oid4vc_core::{authentication::sign::ExternalSign, Sign, Subject, Verify};
 use std::sync::Arc;
 
 pub struct IotaSubject<C = Arc<Client>>
@@ -39,6 +39,11 @@ impl Sign for IotaSubject {
 
     fn key_id(&self) -> Option<String> {
         self.authentication_method().map(|method| method.id().to_string())
+    }
+
+    // TODO: external sign method not supported yet for the IOTA method.
+    fn external_signer(&self) -> Option<Arc<dyn ExternalSign>> {
+        None
     }
 }
 

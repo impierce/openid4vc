@@ -77,6 +77,26 @@ impl Provider {
                 let jwt = jwt::encode(self.subject.clone(), Header::new(Algorithm::EdDSA), id_token)?;
                 builder = builder.id_token(jwt);
             }
+            ResponseType::VpToken => {
+                if let (Some(verifiable_presentation), Some(presentation_submission)) =
+                    (verifiable_presentation, presentation_submission)
+                {
+                    let vp_token = VpToken::builder()
+                        .iss(subject_identifier.clone())
+                        .sub(subject_identifier)
+                        .aud(request.client_id().to_owned())
+                        .nonce(request.nonce().to_owned())
+                        .exp((Utc::now() + Duration::minutes(10)).timestamp())
+                        .iat((Utc::now()).timestamp())
+                        .verifiable_presentation(verifiable_presentation)
+                        .build()?;
+
+                    let jwt = jwt::encode(self.subject.clone(), Header::new(Algorithm::EdDSA), vp_token)?;
+                    builder = builder.vp_token(jwt).presentation_submission(presentation_submission);
+                } else {
+                    anyhow::bail!("Verifiable presentation is required for this response type.");
+                }
+            }
             ResponseType::IdTokenVpToken => {
                 let id_token = IdToken::builder()
                     .iss(subject_identifier.clone())

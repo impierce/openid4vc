@@ -64,6 +64,17 @@ mod sealed {
     }
 }
 
+impl FormatExtension for () {
+    type Container<F: Format + DeserializeOwned> = Profile<F>;
+}
+#[derive(Debug, Serialize, Clone, Eq, PartialEq, Deserialize)]
+pub struct Profile<F>
+where
+    F: Format,
+{
+    pub format: F,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct WithParameters;
 impl FormatExtension for WithParameters {
@@ -108,3 +119,27 @@ where
     Other(serde_json::Value),
 }
 impl<C> CredentialFormatCollection for CredentialFormats<C> where C: FormatExtension {}
+
+impl TryInto<CredentialFormats<()>> for &CredentialFormats<WithCredential> {
+    type Error = anyhow::Error;
+
+    fn try_into(self) -> Result<CredentialFormats<()>, Self::Error> {
+        match self {
+            CredentialFormats::JwtVcJson(credential) => Ok(CredentialFormats::<()>::JwtVcJson(Profile {
+                format: credential.format.clone(),
+            })),
+            CredentialFormats::JwtVcJsonLd(credential) => Ok(CredentialFormats::<()>::JwtVcJsonLd(Profile {
+                format: credential.format.clone(),
+            })),
+            CredentialFormats::LdpVc(credential) => Ok(CredentialFormats::<()>::LdpVc(Profile {
+                format: credential.format.clone(),
+            })),
+            CredentialFormats::MsoMdoc(credential) => Ok(CredentialFormats::<()>::MsoMdoc(Profile {
+                format: credential.format.clone(),
+            })),
+            CredentialFormats::Other(_) => Err(anyhow::anyhow!(
+                "unable to convert CredentialFormats<WithCredential> to CredentialFormats<()>"
+            )),
+        }
+    }
+}

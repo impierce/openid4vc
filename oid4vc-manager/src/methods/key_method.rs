@@ -1,13 +1,15 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use did_key::{generate, resolve, Config, CoreSign, DIDCore, Document, Ed25519KeyPair, KeyMaterial, PatchedKeyPair};
-use oid4vc_core::{Sign, Subject, Verify};
+use oid4vc_core::{authentication::sign::ExternalSign, Sign, Subject, Verify};
+use std::sync::Arc;
 
 /// This [`KeySubject`] implements the [`Subject`] trait and can be used as a subject for a [`Provider`]. It uses the
 /// 'key' DID method.
 pub struct KeySubject {
     keypair: PatchedKeyPair,
     document: Document,
+    external_signer: Option<Arc<dyn ExternalSign>>,
 }
 
 impl KeySubject {
@@ -15,13 +17,21 @@ impl KeySubject {
     pub fn new() -> Self {
         let keypair = generate::<Ed25519KeyPair>(None);
         let document = keypair.get_did_document(Config::default());
-        KeySubject { keypair, document }
+        KeySubject {
+            keypair,
+            document,
+            external_signer: None,
+        }
     }
 
     /// Creates a new [`KeySubject`] from a [`PatchedKeyPair`].
-    pub fn from_keypair(keypair: PatchedKeyPair) -> Self {
+    pub fn from_keypair(keypair: PatchedKeyPair, external_signer: Option<Arc<dyn ExternalSign>>) -> Self {
         let document = keypair.get_did_document(Config::default());
-        KeySubject { keypair, document }
+        KeySubject {
+            keypair,
+            document,
+            external_signer,
+        }
     }
 }
 
@@ -41,7 +51,14 @@ impl Sign for KeySubject {
     }
 
     fn sign(&self, message: &str) -> Result<Vec<u8>> {
-        Ok(self.keypair.sign(message.as_bytes()).to_vec())
+        match self.external_signer() {
+            Some(external_signer) => external_signer.sign(message),
+            None => Ok(self.keypair.sign(message.as_bytes())),
+        }
+    }
+
+    fn external_signer(&self) -> Option<Arc<dyn ExternalSign>> {
+        self.external_signer.clone()
     }
 }
 

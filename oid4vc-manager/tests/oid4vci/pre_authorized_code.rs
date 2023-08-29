@@ -26,9 +26,12 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         CredentialIssuerManager::new(
             None,
             MemoryStorage,
-            [Arc::new(KeySubject::from_keypair(generate::<Ed25519KeyPair>(Some(
-                "this-is-a-very-UNSAFE-issuer-secret-key".as_bytes().try_into().unwrap(),
-            ))))],
+            [Arc::new(KeySubject::from_keypair(
+                generate::<Ed25519KeyPair>(Some(
+                    "this-is-a-very-UNSAFE-issuer-secret-key".as_bytes().try_into().unwrap(),
+                )),
+                None,
+            ))],
         )
         .unwrap(),
         None,
@@ -92,7 +95,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
 
     // Get an access token.
     let token_response = wallet
-        .get_access_token(authorization_server_metadata.token_endpoint, token_request)
+        .get_access_token(authorization_server_metadata.token_endpoint.unwrap(), token_request)
         .await
         .unwrap();
 

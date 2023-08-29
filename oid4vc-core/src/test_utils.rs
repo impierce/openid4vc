@@ -1,4 +1,6 @@
-use crate::{Sign, Subject, Verify};
+use std::sync::Arc;
+
+use crate::{authentication::sign::ExternalSign, Sign, Subject, Verify};
 use anyhow::Result;
 use async_trait::async_trait;
 use derivative::{self, Derivative};
@@ -36,6 +38,10 @@ impl Sign for TestSubject {
     fn sign(&self, message: &str) -> Result<Vec<u8>> {
         let signature: Signature = TEST_KEYPAIR.sign(message.as_bytes());
         Ok(signature.to_bytes().to_vec())
+    }
+
+    fn external_signer(&self) -> Option<Arc<dyn ExternalSign>> {
+        None
     }
 }
 
