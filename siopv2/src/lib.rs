@@ -5,6 +5,7 @@ pub mod relying_party;
 pub mod request;
 pub mod response;
 pub mod scope;
+pub mod temp;
 pub mod token;
 
 pub use claims::{ClaimRequests, StandardClaimsRequests, StandardClaimsValues};
