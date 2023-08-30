@@ -66,7 +66,7 @@ async fn test_implicit_flow() {
         .response_type(ResponseType::IdToken)
         .client_id("did:test:relyingparty".to_string())
         .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
-        .redirect_uri(format!("{server_url}/redirect_uri"))
+        .redirect_uri(format!("{server_url}/redirect_uri").parse::<url::Url>().unwrap())
         .response_mode("post".to_string())
         .client_metadata(
             ClientMetadata::default()
@@ -119,7 +119,7 @@ async fn test_implicit_flow() {
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
     let request_url = RequestUrl::builder()
         .client_id("did:test:relyingparty".to_string())
-        .request_uri(format!("{server_url}/request_uri"))
+        .request_uri(format!("{server_url}/request_uri").parse::<url::Url>().unwrap())
         .build()
         .unwrap();
 

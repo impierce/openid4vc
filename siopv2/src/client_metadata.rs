@@ -2,6 +2,7 @@ use getset::Getters;
 use oid4vc_core::SubjectSyntaxType;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
+use url::Url;
 
 /// [`ClientMetadata`] is a request parameter used by a [`crate::RelyingParty`] to communicate its capabilities to a [`crate::Provider`].
 #[skip_serializing_none]
@@ -9,7 +10,12 @@ use serde_with::skip_serializing_none;
 pub struct ClientMetadata {
     #[getset(get = "pub")]
     subject_syntax_types_supported: Option<Vec<SubjectSyntaxType>>,
+    #[getset(get = "pub")]
     id_token_signing_alg_values_supported: Option<Vec<String>>,
+    #[getset(get = "pub")]
+    client_name: Option<String>,
+    #[getset(get = "pub")]
+    logo_uri: Option<Url>,
 }
 
 impl ClientMetadata {

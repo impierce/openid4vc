@@ -13,13 +13,13 @@ pub struct RequestUrlBuilder {
     rfc7519_claims: RFC7519Claims,
     client_id: Option<String>,
     request: Option<String>,
-    request_uri: Option<String>,
+    request_uri: Option<url::Url>,
     response_type: Option<ResponseType>,
     response_mode: Option<String>,
     scope: Option<Scope>,
     claims: Option<Result<ClaimRequests>>,
     presentation_definition: Option<PresentationDefinition>,
-    redirect_uri: Option<String>,
+    redirect_uri: Option<url::Url>,
     nonce: Option<String>,
     client_metadata: Option<ClientMetadata>,
     state: Option<String>,
@@ -83,13 +83,13 @@ impl RequestUrlBuilder {
     builder_fn!(rfc7519_claims, nbf, i64);
     builder_fn!(rfc7519_claims, iat, i64);
     builder_fn!(rfc7519_claims, jti, String);
-    builder_fn!(request_uri, String);
+    builder_fn!(request_uri, url::Url);
     builder_fn!(response_type, ResponseType);
     builder_fn!(response_mode, String);
     builder_fn!(client_id, String);
     builder_fn!(scope, Scope);
     builder_fn!(presentation_definition, PresentationDefinition);
-    builder_fn!(redirect_uri, String);
+    builder_fn!(redirect_uri, url::Url);
     builder_fn!(nonce, String);
     builder_fn!(client_metadata, ClientMetadata);
     builder_fn!(state, String);
@@ -106,7 +106,7 @@ mod tests {
             .response_type(ResponseType::IdToken)
             .client_id("did:example:123".to_string())
             .scope(Scope::openid())
-            .redirect_uri("https://example.com".to_string())
+            .redirect_uri("https://example.com".parse::<url::Url>().unwrap())
             .nonce("nonce".to_string())
             .claims(
                 r#"{
@@ -134,7 +134,7 @@ mod tests {
                     ..Default::default()
                 }),
                 presentation_definition: None,
-                redirect_uri: "https://example.com".to_string(),
+                redirect_uri: "https://example.com".parse().unwrap(),
                 nonce: "nonce".to_string(),
                 client_metadata: None,
                 state: None,
@@ -149,9 +149,9 @@ mod tests {
             .response_type(ResponseType::IdToken)
             .client_id("did:example:123".to_string())
             .scope(Scope::openid())
-            .redirect_uri("https://example.com".to_string())
+            .redirect_uri("https://example.com".parse::<url::Url>().unwrap())
             .nonce("nonce".to_string())
-            .request_uri("https://example.com/request_uri".to_string())
+            .request_uri("https://example.com/request_uri".parse::<url::Url>().unwrap())
             .build()
             .is_err());
 
@@ -160,7 +160,7 @@ mod tests {
             .response_type(ResponseType::IdToken)
             .client_id("did:example:123".to_string())
             .scope(Scope::openid())
-            .redirect_uri("https://example.com".to_string())
+            .redirect_uri("https://example.com".parse::<url::Url>().unwrap())
             .nonce("nonce".to_string())
             .claims(
                 r#"{
@@ -177,7 +177,7 @@ mod tests {
     fn test_valid_request_uri_builder() {
         let request_url = RequestUrl::builder()
             .client_id("did:example:123".to_string())
-            .request_uri("https://example.com/request_uri".to_string())
+            .request_uri("https://example.com/request_uri".parse::<url::Url>().unwrap())
             .build()
             .unwrap();
 
@@ -185,7 +185,7 @@ mod tests {
             request_url,
             RequestUrl::RequestUri {
                 client_id: "did:example:123".to_string(),
-                request_uri: "https://example.com/request_uri".to_string()
+                request_uri: "https://example.com/request_uri".parse().unwrap()
             }
         );
     }

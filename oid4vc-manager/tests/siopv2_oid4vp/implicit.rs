@@ -89,7 +89,7 @@ async fn test_implicit_flow() {
     let authorization_request: AuthorizationRequest = RequestUrl::builder()
         .response_type(ResponseType::IdTokenVpToken)
         .client_id(relying_party_did)
-        .redirect_uri("https://example.com".to_string())
+        .redirect_uri("https://example.com".parse::<url::Url>().unwrap())
         .scope(Scope::openid())
         .presentation_definition(PRESENTATION_DEFINITION.clone())
         .nonce("nonce".to_string())

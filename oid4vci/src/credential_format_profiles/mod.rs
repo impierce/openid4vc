@@ -118,6 +118,7 @@ where
     MsoMdoc(C::Container<MsoMdoc>),
     Other(serde_json::Value),
 }
+
 impl<C> CredentialFormatCollection for CredentialFormats<C> where C: FormatExtension {}
 
 impl TryInto<CredentialFormats<()>> for &CredentialFormats<WithCredential> {
@@ -137,6 +138,20 @@ impl TryInto<CredentialFormats<()>> for &CredentialFormats<WithCredential> {
             CredentialFormats::MsoMdoc(credential) => Ok(CredentialFormats::<()>::MsoMdoc(Profile {
                 format: credential.format.clone(),
             })),
+            CredentialFormats::Other(_) => Err(anyhow::anyhow!(
+                "unable to convert CredentialFormats<WithCredential> to CredentialFormats<()>"
+            )),
+        }
+    }
+}
+
+impl CredentialFormats<WithCredential> {
+    pub fn credential(&self) -> anyhow::Result<&serde_json::Value> {
+        match self {
+            CredentialFormats::JwtVcJson(credential) => Ok(&credential.credential),
+            CredentialFormats::JwtVcJsonLd(credential) => Ok(&credential.credential),
+            CredentialFormats::LdpVc(credential) => Ok(&credential.credential),
+            CredentialFormats::MsoMdoc(credential) => Ok(&credential.credential),
             CredentialFormats::Other(_) => Err(anyhow::anyhow!(
                 "unable to convert CredentialFormats<WithCredential> to CredentialFormats<()>"
             )),
