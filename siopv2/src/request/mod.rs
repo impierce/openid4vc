@@ -152,7 +152,6 @@ impl FromStr for ResponseType {
 /// [`AuthorizationRequest`] is a request from a [crate::relying_party::RelyingParty] (RP) to a [crate::provider::Provider] (SIOP).
 #[allow(dead_code)]
 #[derive(Debug, Getters, PartialEq, Serialize, Deserialize, Clone)]
-#[serde(deny_unknown_fields)]
 pub struct AuthorizationRequest {
     #[serde(flatten)]
     #[getset(get = "pub")]
