@@ -218,7 +218,11 @@ mod tests {
             .response_type(ResponseType::IdToken)
             .client_id("did:iota:4WfYF3te6X2Mm6aK6xK2hGrDJpVYAAM1NDA6HFgswsvt".to_owned())
             .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
-            .redirect_uri(format!("http://127.0.0.1:4200/redirect_uri"))
+            .redirect_uri(
+                format!("http://127.0.0.1:4200/redirect_uri")
+                    .parse::<url::Url>()
+                    .unwrap(),
+            )
             .response_mode("post".to_owned())
             .client_metadata(
                 ClientMetadata::default()

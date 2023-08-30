@@ -28,7 +28,7 @@ pub mod request_builder;
 ///     request_url,
 ///     RequestUrl::RequestUri {
 ///         client_id: "did:example:EiDrihTRe0GMdc3K16kgJB3Xbl9Hb8oqVHjzm6ufHcYDGA".to_string(),
-///         request_uri: "https://example.com/request_uri".to_string()
+///         request_uri: "https://example.com/request_uri".parse::<url::Url>().unwrap()
 ///     }
 /// );
 ///
@@ -58,7 +58,7 @@ pub mod request_builder;
 #[serde(untagged)]
 pub enum RequestUrl {
     RequestObject { client_id: String, request: String },
-    RequestUri { client_id: String, request_uri: String },
+    RequestUri { client_id: String, request_uri: url::Url },
     Request(Box<AuthorizationRequest>),
 }
 
@@ -151,7 +151,7 @@ impl FromStr for ResponseType {
 
 /// [`AuthorizationRequest`] is a request from a [crate::relying_party::RelyingParty] (RP) to a [crate::provider::Provider] (SIOP).
 #[allow(dead_code)]
-#[derive(Debug, Getters, PartialEq, Default, Serialize, Deserialize, Clone)]
+#[derive(Debug, Getters, PartialEq, Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct AuthorizationRequest {
     #[serde(flatten)]
@@ -169,7 +169,7 @@ pub struct AuthorizationRequest {
     #[getset(get = "pub")]
     pub(crate) presentation_definition: Option<PresentationDefinition>,
     #[getset(get = "pub")]
-    pub(crate) redirect_uri: String,
+    pub(crate) redirect_uri: url::Url,
     #[getset(get = "pub")]
     pub(crate) nonce: String,
     #[getset(get = "pub")]
@@ -215,7 +215,7 @@ mod tests {
             request_url,
             RequestUrl::RequestUri {
                 client_id: "https://client.example.org/cb".to_string(),
-                request_uri: "https://example.com/request_uri".to_string(),
+                request_uri: "https://example.com/request_uri".parse().unwrap(),
             }
         );
     }
@@ -250,7 +250,7 @@ mod tests {
                 scope: Scope::openid(),
                 claims: None,
                 presentation_definition: None,
-                redirect_uri: "https://client.example.org/cb".to_string(),
+                redirect_uri: "https://client.example.org/cb".parse().unwrap(),
                 nonce: "n-0S6_WzA2Mj".to_string(),
                 client_metadata: Some(
                     ClientMetadata::default()
