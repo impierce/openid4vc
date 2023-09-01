@@ -1,5 +1,5 @@
-use super::id_token::SubJwk;
-use crate::{IdToken, StandardClaimsValues};
+use super::id_token::{IdToken, SubJwk};
+use crate::StandardClaimsValues;
 use oid4vc_core::{builder_fn, RFC7519Claims};
 
 #[derive(Default)]

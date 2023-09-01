@@ -19,7 +19,7 @@ anyhow = "1.0"
 async-trait = "0.1"
 did_url = "0.1"
 chrono = "0.4"
-serde_urlencoded = "0.7"
+serde_urlencoded.workspace = true
 did-key = "0.2"
 identity_iota = "0.6"
 identity_core = { version = "=0.7.0-alpha.7" }

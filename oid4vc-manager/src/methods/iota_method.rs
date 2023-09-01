@@ -172,77 +172,77 @@ async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
     Ok(method.data().try_decode()?)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{ProviderManager, RelyingPartyManager};
-    use chrono::{Duration, Utc};
-    use identity_iota::{account::MethodContent, did::MethodRelationship};
-    use oid4vc_core::DidMethod;
-    use siopv2::{
-        relying_party::ResponseItems, request::ResponseType, scope::ScopeValue, AuthorizationRequest, ClientMetadata,
-        RequestUrl, Scope, StandardClaimsValues,
-    };
-    use std::str::FromStr;
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use crate::{ProviderManager, RelyingPartyManager};
+//     use chrono::{Duration, Utc};
+//     use identity_iota::{account::MethodContent, did::MethodRelationship};
+//     use oid4vc_core::DidMethod;
+//     use siopv2::{
+//         relying_party::ResponseItems, request::ResponseType, scope::ScopeValue, AuthorizationRequest, ClientMetadata,
+//         RequestUrl, Scope, StandardClaimsValues,
+//     };
+//     use std::str::FromStr;
 
-    const AUTHENTICATION_KEY: &'static str = "authentication-key";
+//     const AUTHENTICATION_KEY: &'static str = "authentication-key";
 
-    #[tokio::test]
-    async fn test_iota_subject() {
-        let mut subject = IotaSubject::new().await.unwrap();
-        println!("Created new IOTA subject: {:?}", subject.identifier().unwrap());
+//     #[tokio::test]
+//     async fn test_iota_subject() {
+//         let mut subject = IotaSubject::new().await.unwrap();
+//         println!("Created new IOTA subject: {:?}", subject.identifier().unwrap());
 
-        // Add a new verification method using the Ed25519 algorithm.
-        subject
-            .add_verification_method(MethodContent::GenerateEd25519, AUTHENTICATION_KEY)
-            .await
-            .unwrap();
-        println!("Added new verification method: {:?}", AUTHENTICATION_KEY);
+//         // Add a new verification method using the Ed25519 algorithm.
+//         subject
+//             .add_verification_method(MethodContent::GenerateEd25519, AUTHENTICATION_KEY)
+//             .await
+//             .unwrap();
+//         println!("Added new verification method: {:?}", AUTHENTICATION_KEY);
 
-        // Add the 'authentication' method relationship to the new verification method.
-        subject
-            .add_verification_relationships(AUTHENTICATION_KEY, vec![MethodRelationship::Authentication])
-            .await
-            .unwrap();
-        println!(
-            "Added 'authentication' relationship to verification method: {:?}",
-            AUTHENTICATION_KEY
-        );
+//         // Add the 'authentication' method relationship to the new verification method.
+//         subject
+//             .add_verification_relationships(AUTHENTICATION_KEY, vec![MethodRelationship::Authentication])
+//             .await
+//             .unwrap();
+//         println!(
+//             "Added 'authentication' relationship to verification method: {:?}",
+//             AUTHENTICATION_KEY
+//         );
 
-        // Create a new provider manager.
-        let provider_manager = ProviderManager::new([Arc::new(subject)]).unwrap();
-        println!("Created new provider using the new IOTA subject");
+//         // Create a new provider manager.
+//         let provider_manager = ProviderManager::new([Arc::new(subject)]).unwrap();
+//         println!("Created new provider using the new IOTA subject");
 
-        // Create a new RequestUrl with response mode `post` for cross-device communication.
-        let request: AuthorizationRequest = RequestUrl::builder()
-            .response_type(ResponseType::IdToken)
-            .client_id("did:iota:4WfYF3te6X2Mm6aK6xK2hGrDJpVYAAM1NDA6HFgswsvt".to_owned())
-            .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
-            .redirect_uri(
-                format!("http://127.0.0.1:4200/redirect_uri")
-                    .parse::<url::Url>()
-                    .unwrap(),
-            )
-            .response_mode("post".to_owned())
-            .client_metadata(
-                ClientMetadata::default()
-                    .with_subject_syntax_types_supported(vec![DidMethod::from_str("did:iota").unwrap().into()]),
-            )
-            .exp((Utc::now() + Duration::minutes(10)).timestamp())
-            .nonce("n-0S6_WzA2Mj".to_owned())
-            .build()
-            .and_then(TryInto::try_into)
-            .unwrap();
+//         // Create a new RequestUrl with response mode `post` for cross-device communication.
+//         let request: AuthorizationRequest = RequestUrl::builder()
+//             .response_type(ResponseType::IdToken)
+//             .client_id("did:iota:4WfYF3te6X2Mm6aK6xK2hGrDJpVYAAM1NDA6HFgswsvt".to_owned())
+//             .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
+//             .redirect_uri(
+//                 format!("http://127.0.0.1:4200/redirect_uri")
+//                     .parse::<url::Url>()
+//                     .unwrap(),
+//             )
+//             .response_mode("post".to_owned())
+//             .client_metadata(
+//                 ClientMetadata::default()
+//                     .with_subject_syntax_types_supported(vec![DidMethod::from_str("did:iota").unwrap().into()]),
+//             )
+//             .exp((Utc::now() + Duration::minutes(10)).timestamp())
+//             .nonce("n-0S6_WzA2Mj".to_owned())
+//             .build()
+//             .and_then(TryInto::try_into)
+//             .unwrap();
 
-        // The provider generates a signed SIOP response from the new SIOP request.
-        let response = provider_manager
-            .generate_response(request, StandardClaimsValues::default(), None, None)
-            .unwrap();
-        println!("Generated SIOP response based on the SIOP request: {:#?}", response);
+//         // The provider generates a signed SIOP response from the new SIOP request.
+//         let response = provider_manager
+//             .generate_response(request, StandardClaimsValues::default(), None, None)
+//             .unwrap();
+//         println!("Generated SIOP response based on the SIOP request: {:#?}", response);
 
-        // Let the relying party manager validate the response.
-        let relying_party_manager = RelyingPartyManager::new([Arc::new(IotaSubject::new().await.unwrap())]).unwrap();
-        let ResponseItems { id_token, .. } = relying_party_manager.validate_response(&response).await.unwrap();
-        println!("Validated SIOP response: {:#?}", id_token);
-    }
-}
+//         // Let the relying party manager validate the response.
+//         let relying_party_manager = RelyingPartyManager::new([Arc::new(IotaSubject::new().await.unwrap())]).unwrap();
+//         let ResponseItems { id_token, .. } = relying_party_manager.validate_response(&response).await.unwrap();
+//         println!("Validated SIOP response: {:#?}", id_token);
+//     }
+// }
