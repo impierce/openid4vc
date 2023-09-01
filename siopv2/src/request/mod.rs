@@ -202,9 +202,8 @@ impl AuthorizationRequest {
 
 #[cfg(test)]
 mod tests {
-    use oid4vc_core::DidMethod;
-
     use super::*;
+    use oid4vc_core::DidMethod;
 
     #[test]
     fn test_valid_request_uri() {

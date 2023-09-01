@@ -1,8 +1,11 @@
 use anyhow::Result;
 use identity_credential::{credential::Jwt, presentation::Presentation};
-use oid4vc_core::{Decoder, Subject, SubjectSyntaxType, Subjects};
+use oid4vc_core::{
+    authorization_request::{AuthorizationRequest, AuthorizationRequestObject},
+    Decoder, Subject, SubjectSyntaxType, Subjects,
+};
 use oid4vp::PresentationSubmission;
-use siopv2::{AuthorizationRequest, AuthorizationResponse, Provider, RequestUrl, StandardClaimsValues};
+use siopv2::{temp::SIOPv2, AuthorizationResponse, Provider, StandardClaimsValues};
 use std::sync::Arc;
 
 /// Manager struct for [`siopv2::Provider`].
@@ -19,7 +22,10 @@ impl ProviderManager {
         })
     }
 
-    pub async fn validate_request(&self, request: RequestUrl) -> Result<AuthorizationRequest> {
+    pub async fn validate_request(
+        &self,
+        request: AuthorizationRequest<SIOPv2>,
+    ) -> Result<AuthorizationRequestObject<SIOPv2>> {
         self.provider
             .validate_request(request, Decoder::from(&self.subjects))
             .await
@@ -27,7 +33,7 @@ impl ProviderManager {
 
     pub fn generate_response(
         &self,
-        request: AuthorizationRequest,
+        request: AuthorizationRequestObject<SIOPv2>,
         user_claims: StandardClaimsValues,
         verifiable_presentation: Option<Presentation<Jwt>>,
         presentation_submission: Option<PresentationSubmission>,
@@ -58,16 +64,18 @@ impl ProviderManager {
 
     pub fn matching_subject_syntax_types(
         &self,
-        authorization_request: &AuthorizationRequest,
+        authorization_request: &AuthorizationRequestObject<SIOPv2>,
     ) -> Option<Vec<SubjectSyntaxType>> {
-        let supported_types = authorization_request
-            .subject_syntax_types_supported()
-            .map_or(Vec::new(), |types| {
-                types
-                    .iter()
-                    .filter(|sst| self.subject_syntax_types_supported().contains(sst))
-                    .collect()
-            });
+        let supported_types =
+            authorization_request
+                .extension
+                .subject_syntax_types_supported()
+                .map_or(Vec::new(), |types| {
+                    types
+                        .iter()
+                        .filter(|sst| self.subject_syntax_types_supported().contains(sst))
+                        .collect()
+                });
         (!supported_types.is_empty()).then_some(supported_types.iter().map(|&sst| sst.clone()).collect())
     }
 }

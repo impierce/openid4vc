@@ -6,10 +6,8 @@ use oid4vc_manager::{ProviderManager, RelyingPartyManager};
 use siopv2::{
     claims::{Address, IndividualClaimRequest},
     relying_party::ResponseItems,
-    request::ResponseType,
     scope::ScopeValue,
-    AuthorizationRequest, AuthorizationResponse, ClientMetadata, RequestUrl, Scope, StandardClaimsRequests,
-    StandardClaimsValues,
+    AuthorizationResponse, ClientMetadata, Scope, StandardClaimsRequests, StandardClaimsValues,
 };
 use std::{str::FromStr, sync::Arc};
 use wiremock::{
@@ -129,7 +127,7 @@ async fn test_implicit_flow() {
     let request = provider_manager.validate_request(request_url).await.unwrap();
 
     // The provider can now access the claims requested by the relying party.
-    let request_claims = request.id_token_request_claims().unwrap();
+    let request_claims = request.extension.id_token_request_claims().unwrap();
     assert_eq!(
         request_claims,
         StandardClaimsRequests {

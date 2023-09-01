@@ -42,9 +42,10 @@ impl ClientMetadata {
 
 #[cfg(test)]
 mod tests {
+    use crate::SIOPv2;
+
     use super::*;
-    use crate::RequestUrl;
-    use oid4vc_core::DidMethod;
+    use oid4vc_core::{authorization_request::AuthorizationRequest, DidMethod};
     use std::str::FromStr;
 
     #[test]
@@ -66,7 +67,7 @@ mod tests {
             ])
         );
 
-        let request_url = RequestUrl::from_str(
+        let request_url = AuthorizationRequest::<SIOPv2>::from_str(
             "\
             siopv2://idtoken?\
                 scope=openid\
@@ -83,7 +84,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            RequestUrl::from_str(&RequestUrl::to_string(&request_url)).unwrap(),
+            AuthorizationRequest::<SIOPv2>::from_str(&AuthorizationRequest::<SIOPv2>::to_string(&request_url)).unwrap(),
             request_url
         );
     }

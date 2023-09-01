@@ -2,25 +2,39 @@ pub mod claims;
 pub mod client_metadata;
 pub mod provider;
 pub mod relying_party;
-pub mod request;
+// pub mod request;
+pub mod authorization_request;
 pub mod response;
 pub mod scope;
-pub mod temp;
 pub mod token;
 
+use authorization_request::{SIOPv2AuthorizationRequestBuilder, SIOPv2AuthorizationRequestParameters};
 pub use claims::{ClaimRequests, StandardClaimsRequests, StandardClaimsValues};
 pub use client_metadata::ClientMetadata;
+use oid4vc_core::{authorization_request::Extension, serialize_unit_struct};
 pub use provider::Provider;
 pub use relying_party::RelyingParty;
-pub use request::{request_builder::RequestUrlBuilder, AuthorizationRequest, RequestUrl};
+// pub use request::{request_builder::RequestUrlBuilder, AuthorizationRequest, RequestUrl};
 pub use response::AuthorizationResponse;
 pub use scope::Scope;
-pub use token::{id_token::IdToken, id_token_builder::IdTokenBuilder};
+pub use token::id_token_builder::IdTokenBuilder;
 
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 
 #[cfg(test)]
 pub mod test_utils;
+
+#[derive(Debug, PartialEq, Default)]
+pub struct IdToken;
+serialize_unit_struct!("id_token", IdToken);
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct SIOPv2;
+impl Extension for SIOPv2 {
+    type ResponseType = IdToken;
+    type AuthorizationRequest = SIOPv2AuthorizationRequestParameters;
+    type AuthorizationRequestBuilder = SIOPv2AuthorizationRequestBuilder;
+}
 
 // When a struct has fields of type `Option<serde_json::Map<String, serde_json::Value>>`, by default these fields are deserialized as
 // `Some(Object {})` instead of None when the corresponding values are missing.
