@@ -20,7 +20,7 @@ rand = "0.7"
 derive_more = "0.99.16"
 
 [dev-dependencies]
-ed25519-dalek = "1.0.1"
+ed25519-dalek = "2.0"
 lazy_static = "1.4.0"
 derivative = "2.2.0"
 tokio.workspace = true
