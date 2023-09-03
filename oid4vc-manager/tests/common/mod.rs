@@ -6,16 +6,16 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use derivative::{self, Derivative};
-use ed25519_dalek::{Keypair, Signature, Signer};
+use ed25519_dalek::{Signature, Signer, SigningKey};
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 use lazy_static::lazy_static;
 use oid4vc_core::{authentication::sign::ExternalSign, Sign, Subject, Verify};
 use rand::rngs::OsRng;
 use siopv2::{StandardClaimsRequests, StandardClaimsValues};
 
-// Keypair for mocking purposes.
+// SigningKey for mocking purposes.
 lazy_static! {
-    pub static ref TEST_KEYPAIR: Keypair = Keypair::generate(&mut OsRng);
+    pub static ref TEST_KEYPAIR: SigningKey = SigningKey::generate(&mut OsRng);
 }
 
 #[derive(Derivative)]
@@ -54,7 +54,7 @@ impl Sign for TestSubject {
 #[async_trait]
 impl Verify for TestSubject {
     async fn public_key(&self, _kid: &str) -> Result<Vec<u8>> {
-        Ok(TEST_KEYPAIR.public.to_bytes().to_vec())
+        Ok(TEST_KEYPAIR.verifying_key().to_bytes().to_vec())
     }
 }
 
@@ -75,7 +75,7 @@ impl MockVerifier {
 #[async_trait]
 impl Verify for MockVerifier {
     async fn public_key(&self, _kid: &str) -> Result<Vec<u8>> {
-        Ok(TEST_KEYPAIR.public.to_bytes().to_vec())
+        Ok(TEST_KEYPAIR.verifying_key().to_bytes().to_vec())
     }
 }
 
