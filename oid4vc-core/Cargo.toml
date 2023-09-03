@@ -17,6 +17,7 @@ async-trait = "0.1.68"
 did_url = "0.1.0"
 is_empty = "0.2.0"
 rand = "0.7"
+derive_more = "0.99.16"
 
 [dev-dependencies]
 ed25519-dalek = "1.0.1"

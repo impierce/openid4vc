@@ -108,6 +108,8 @@ async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
+    use siopv2::SIOPv2;
+
     use super::*;
     use crate::{ProviderManager, RelyingPartyManager};
     use std::sync::Arc;
@@ -134,16 +136,14 @@ mod tests {
                 &nonce=n-0S6_WzA2Mj\
             ";
 
-        // Let the provider amanger validate the request.
+        // Let the provider manager validate the request.
         let request = provider_manager
-            .validate_request(request_url.parse().unwrap())
+            .validate_request::<SIOPv2>(request_url.parse().unwrap())
             .await
             .unwrap();
 
         // Test whether the provider manager can generate a response for the request succesfully.
-        let response = provider_manager
-            .generate_response(request, Default::default(), None, None)
-            .unwrap();
+        let response = provider_manager.generate_response(request, Default::default()).unwrap();
 
         // Let the relying party validate the response.
         let relying_party_manager = RelyingPartyManager::new([Arc::new(KeySubject::new())]).unwrap();

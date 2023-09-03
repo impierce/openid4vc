@@ -1,25 +1,23 @@
+pub mod authorization_request;
 pub mod claims;
-pub mod client_metadata;
 pub mod provider;
 pub mod relying_party;
-// pub mod request;
-pub mod authorization_request;
-pub mod response;
-pub mod scope;
 pub mod token;
 
 use authorization_request::{SIOPv2AuthorizationRequestBuilder, SIOPv2AuthorizationRequestParameters};
+use chrono::{Duration, Utc};
 pub use claims::{ClaimRequests, StandardClaimsRequests, StandardClaimsValues};
-pub use client_metadata::ClientMetadata;
-use oid4vc_core::{authorization_request::Extension, serialize_unit_struct};
+use futures::executor::block_on;
+use jsonwebtoken::{Algorithm, Header};
+use oid4vc_core::{
+    authorization_response::AuthorizationResponse, jwt, serialize_unit_struct, Decoder, Extension, Subject,
+};
 pub use provider::Provider;
 pub use relying_party::RelyingParty;
-// pub use request::{request_builder::RequestUrlBuilder, AuthorizationRequest, RequestUrl};
-pub use response::AuthorizationResponse;
-pub use scope::Scope;
 pub use token::id_token_builder::IdTokenBuilder;
 
 use serde::{Deserialize, Deserializer, Serialize};
+use std::sync::Arc;
 
 #[cfg(test)]
 pub mod test_utils;
@@ -34,6 +32,62 @@ impl Extension for SIOPv2 {
     type ResponseType = IdToken;
     type AuthorizationRequest = SIOPv2AuthorizationRequestParameters;
     type AuthorizationRequestBuilder = SIOPv2AuthorizationRequestBuilder;
+    type UserClaims = StandardClaimsValues;
+    type AuthorizationResponse = SIOPv2AuthorizationResponseParameters;
+    type ResponseItem = crate::token::id_token::IdToken;
+
+    fn generate_token(
+        subject: Arc<dyn Subject>,
+        client_id: String,
+        extension: Self::AuthorizationRequest,
+        user_input: &Self::UserClaims,
+    ) -> anyhow::Result<Vec<String>> {
+        let subject_identifier = subject.identifier()?;
+
+        let id_token = crate::token::id_token::IdToken::builder()
+            .iss(subject_identifier.clone())
+            .sub(subject_identifier)
+            .aud(client_id)
+            .nonce(extension.nonce.to_owned())
+            .exp((Utc::now() + Duration::minutes(10)).timestamp())
+            .iat((Utc::now()).timestamp())
+            .claims(user_input.clone())
+            .build()?;
+
+        let jwt = jwt::encode(subject.clone(), Header::new(Algorithm::EdDSA), id_token)?;
+
+        Ok(vec![jwt])
+    }
+
+    fn build_authorization_response(
+        jwts: Vec<String>,
+        _user_input: Self::UserClaims,
+        redirect_uri: String,
+        state: Option<String>,
+    ) -> anyhow::Result<AuthorizationResponse<Self>> {
+        let extension = SIOPv2AuthorizationResponseParameters {
+            id_token: jwts[0].to_string(),
+        };
+
+        Ok(AuthorizationResponse::<SIOPv2> {
+            redirect_uri,
+            state,
+            extension,
+        })
+    }
+
+    fn decode_authorization_response(
+        decoder: Decoder,
+        response: &AuthorizationResponse<Self>,
+    ) -> anyhow::Result<Self::ResponseItem> {
+        let token = response.extension.id_token.clone();
+        block_on(async move { decoder.decode(token).await.map_err(|e| e.into()) })
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct SIOPv2AuthorizationResponseParameters {
+    pub id_token: String,
 }
 
 // When a struct has fields of type `Option<serde_json::Map<String, serde_json::Value>>`, by default these fields are deserialized as

@@ -13,6 +13,7 @@ pub fn create_presentation_submission(
 ) -> Result<PresentationSubmission> {
     let id = "Submission ID".to_string();
     let definition_id = presentation_definition.id().clone();
+    let len = presentation_definition.input_descriptors().len();
     let descriptor_map = presentation_definition
         .input_descriptors()
         .iter()
@@ -27,7 +28,11 @@ pub fn create_presentation_submission(
                         path: "$".to_string(),
                         path_nested: Some(PathNested {
                             id: None,
-                            path: format!("$.vp.verifiableCredential[{}]", index),
+                            path: if len == 1 {
+                                format!("$.vp.verifiableCredential")
+                            } else {
+                                format!("$.vp.verifiableCredential[{}]", index)
+                            },
                             format: ClaimFormatDesignation::JwtVcJson,
                             path_nested: None,
                         }),
