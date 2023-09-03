@@ -1,7 +1,5 @@
-use crate::{
-    parse_other,
-    scope::{Scope, ScopeValue},
-};
+use crate::parse_other;
+use oid4vc_core::scope::{Scope, ScopeValue};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_with::skip_serializing_none;
 

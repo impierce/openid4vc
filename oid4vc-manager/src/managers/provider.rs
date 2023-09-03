@@ -1,11 +1,10 @@
 use anyhow::Result;
-use identity_credential::{credential::Jwt, presentation::Presentation};
 use oid4vc_core::{
     authorization_request::{AuthorizationRequest, AuthorizationRequestObject},
-    Decoder, Subject, SubjectSyntaxType, Subjects,
+    authorization_response::AuthorizationResponse,
+    Decoder, Extension, Subject, SubjectSyntaxType, Subjects,
 };
-use oid4vp::PresentationSubmission;
-use siopv2::{temp::SIOPv2, AuthorizationResponse, Provider, StandardClaimsValues};
+use siopv2::{Provider, SIOPv2};
 use std::sync::Arc;
 
 /// Manager struct for [`siopv2::Provider`].
@@ -22,27 +21,24 @@ impl ProviderManager {
         })
     }
 
-    pub async fn validate_request(
+    pub async fn validate_request<E: Extension>(
         &self,
-        request: AuthorizationRequest<SIOPv2>,
-    ) -> Result<AuthorizationRequestObject<SIOPv2>> {
+        request: AuthorizationRequest<E>,
+    ) -> Result<AuthorizationRequestObject<E>> {
         self.provider
             .validate_request(request, Decoder::from(&self.subjects))
             .await
     }
 
-    pub fn generate_response(
+    pub fn generate_response<E: Extension>(
         &self,
-        request: AuthorizationRequestObject<SIOPv2>,
-        user_claims: StandardClaimsValues,
-        verifiable_presentation: Option<Presentation<Jwt>>,
-        presentation_submission: Option<PresentationSubmission>,
-    ) -> Result<AuthorizationResponse> {
-        self.provider
-            .generate_response(request, user_claims, verifiable_presentation, presentation_submission)
+        request: AuthorizationRequestObject<E>,
+        user_claims: E::UserClaims,
+    ) -> Result<AuthorizationResponse<E>> {
+        self.provider.generate_response(request, user_claims)
     }
 
-    pub async fn send_response(&self, response: AuthorizationResponse) -> Result<()> {
+    pub async fn send_response<E: Extension>(&self, response: AuthorizationResponse<E>) -> Result<()> {
         self.provider.send_response(response).await
     }
 

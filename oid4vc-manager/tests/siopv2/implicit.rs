@@ -1,13 +1,17 @@
 use crate::common::{MemoryStorage, Storage, TestSubject};
 use chrono::{Duration, Utc};
 use lazy_static::lazy_static;
-use oid4vc_core::{DidMethod, SubjectSyntaxType};
+use oid4vc_core::{
+    authorization_request::{AuthorizationRequest, AuthorizationRequestObject},
+    authorization_response::AuthorizationResponse,
+    client_metadata::ClientMetadata,
+    scope::{Scope, ScopeValue},
+    DidMethod, SubjectSyntaxType,
+};
 use oid4vc_manager::{ProviderManager, RelyingPartyManager};
 use siopv2::{
     claims::{Address, IndividualClaimRequest},
-    relying_party::ResponseItems,
-    scope::ScopeValue,
-    AuthorizationResponse, ClientMetadata, Scope, StandardClaimsRequests, StandardClaimsValues,
+    SIOPv2, StandardClaimsRequests, StandardClaimsValues,
 };
 use std::{str::FromStr, sync::Arc};
 use wiremock::{
@@ -60,8 +64,7 @@ async fn test_implicit_flow() {
     let relying_party_manager = RelyingPartyManager::new([Arc::new(subject)]).unwrap();
 
     // Create a new RequestUrl with response mode `post` for cross-device communication.
-    let request: AuthorizationRequest = RequestUrl::builder()
-        .response_type(ResponseType::IdToken)
+    let request: AuthorizationRequestObject<SIOPv2> = AuthorizationRequest::<SIOPv2>::builder()
         .client_id("did:test:relyingparty".to_string())
         .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
         .redirect_uri(format!("{server_url}/redirect_uri").parse::<url::Url>().unwrap())
@@ -115,7 +118,7 @@ async fn test_implicit_flow() {
     let provider_manager = ProviderManager::new([Arc::new(subject)]).unwrap();
 
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
-    let request_url = RequestUrl::builder()
+    let request_url = AuthorizationRequest::<SIOPv2>::builder()
         .client_id("did:test:relyingparty".to_string())
         .request_uri(format!("{server_url}/request_uri").parse::<url::Url>().unwrap())
         .build()
@@ -151,9 +154,7 @@ async fn test_implicit_flow() {
 
     // Let the provider generate a response based on the validated request. The response is an `IdToken` which is
     // encoded as a JWT.
-    let response = provider_manager
-        .generate_response(request, response_claims, None, None)
-        .unwrap();
+    let response = provider_manager.generate_response(request, response_claims).unwrap();
 
     // The provider manager sends it's response to the mock server's `redirect_uri` endpoint.
     provider_manager.send_response(response).await.unwrap();
@@ -162,12 +163,12 @@ async fn test_implicit_flow() {
     let post_request = mock_server.received_requests().await.unwrap()[1].clone();
     assert_eq!(post_request.method, Method::Post);
     assert_eq!(post_request.url.path(), "/redirect_uri");
-    let response: AuthorizationResponse = serde_urlencoded::from_bytes(post_request.body.as_slice()).unwrap();
+    let response: AuthorizationResponse<SIOPv2> = serde_urlencoded::from_bytes(post_request.body.as_slice()).unwrap();
 
     // The `RelyingParty` then validates the response by decoding the header of the id_token, by fetching the public
     // key corresponding to the key identifier and finally decoding the id_token using the public key and by
     // validating the signature.
-    let ResponseItems { id_token, .. } = relying_party_manager.validate_response(&response).await.unwrap();
+    let id_token = relying_party_manager.validate_response(&response).await.unwrap();
     assert_eq!(
         id_token.standard_claims().to_owned(),
         StandardClaimsValues {

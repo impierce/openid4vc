@@ -1,7 +1,12 @@
-use crate::{ClaimRequests, ClientMetadata, IdToken, SIOPv2, Scope, StandardClaimsRequests};
+use crate::{ClaimRequests, SIOPv2, StandardClaimsRequests};
+use anyhow::{anyhow, Result};
+use is_empty::IsEmpty;
+use oid4vc_core::builder_fn;
 use oid4vc_core::{
-    authorization_request::{AuthorizationRequest, AuthorizationRequestObject, Extension},
-    serialize_unit_struct, RFC7519Claims, SubjectSyntaxType,
+    authorization_request::{AuthorizationRequest, AuthorizationRequestObject},
+    client_metadata::ClientMetadata,
+    scope::Scope,
+    RFC7519Claims, SubjectSyntaxType,
 };
 use serde::{Deserialize, Serialize};
 
@@ -39,17 +44,12 @@ impl SIOPv2AuthorizationRequestParameters {
     }
 }
 
-use anyhow::{anyhow, Result};
-use is_empty::IsEmpty;
-use oid4vc_core::builder_fn;
-
 #[derive(Debug, Default, IsEmpty)]
 pub struct SIOPv2AuthorizationRequestBuilder {
     rfc7519_claims: RFC7519Claims,
     client_id: Option<String>,
     request: Option<String>,
     request_uri: Option<url::Url>,
-    response_type: Option<IdToken>,
     redirect_uri: Option<url::Url>,
     state: Option<String>,
     scope: Option<Scope>,
@@ -90,10 +90,10 @@ impl SIOPv2AuthorizationRequestBuilder {
         ) {
             (None, _, _, _) => Err(anyhow!("client_id parameter is required.")),
             (Some(client_id), Some(request), None, true) => {
-                Ok(AuthorizationRequest::<SIOPv2>::Value { client_id, request })
+                Ok(AuthorizationRequest::<SIOPv2>::ByValue { client_id, request })
             }
             (Some(client_id), None, Some(request_uri), true) => {
-                Ok(AuthorizationRequest::<SIOPv2>::Reference { client_id, request_uri })
+                Ok(AuthorizationRequest::<SIOPv2>::ByReference { client_id, request_uri })
             }
             (Some(client_id), None, None, false) => {
                 let extension = SIOPv2AuthorizationRequestParameters {
@@ -114,7 +114,7 @@ impl SIOPv2AuthorizationRequestBuilder {
                     AuthorizationRequestObject::<SIOPv2> {
                         rfc7519_claims: self.rfc7519_claims,
                         client_id,
-                        response_type: IdToken,
+                        response_type: Default::default(),
                         redirect_uri: self
                             .redirect_uri
                             .take()
@@ -157,7 +157,7 @@ mod tests {
             request_url,
             AuthorizationRequest::<SIOPv2>::Object(Box::new(AuthorizationRequestObject::<SIOPv2> {
                 rfc7519_claims: RFC7519Claims::default(),
-                response_type: IdToken,
+                response_type: Default::default(),
                 client_id: "did:example:123".to_string(),
                 redirect_uri: "https://example.com".parse().unwrap(),
                 state: None,
@@ -217,7 +217,7 @@ mod tests {
 
         assert_eq!(
             request_url,
-            AuthorizationRequest::<SIOPv2>::Reference {
+            AuthorizationRequest::<SIOPv2>::ByReference {
                 client_id: "did:example:123".to_string(),
                 request_uri: "https://example.com/request_uri".parse().unwrap()
             }

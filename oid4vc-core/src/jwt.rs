@@ -39,7 +39,7 @@ pub fn extract_header(jwt: &str) -> Result<(String, Algorithm)> {
     }
 }
 
-pub fn decode<T>(jwt: &str, public_key: Vec<u8>, algorithm: Algorithm) -> Result<T>
+pub fn decode<T>(jwt: &str, public_key: Vec<u8>, algorithm: Algorithm) -> anyhow::Result<T>
 where
     T: DeserializeOwned,
 {
@@ -52,7 +52,7 @@ where
 
 pub fn encode<C, S>(signer: Arc<S>, header: Header, claims: C) -> Result<String>
 where
-    C: Serialize + Send,
+    C: Serialize,
     S: Sign + ?Sized,
 {
     let kid = signer.key_id().ok_or(anyhow!("No key identifier found."))?;
@@ -81,7 +81,7 @@ mod tests {
         test_utils::{MockVerifier, TestSubject},
         Verify,
     };
-    use serde_json::{json, Value};
+    use serde_json::{json, Value as JsonValue};
 
     #[tokio::test]
     async fn test_encode() {
@@ -99,7 +99,7 @@ mod tests {
         let verifier = MockVerifier::new();
         let (kid, algorithm) = extract_header(&encoded).unwrap();
         let public_key = verifier.public_key(&kid).await.unwrap();
-        let decoded: Value = decode(&encoded, public_key, algorithm).unwrap();
+        let decoded: JsonValue = decode(&encoded, public_key, algorithm).unwrap();
 
         assert_eq!(
             decoded,

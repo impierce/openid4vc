@@ -10,7 +10,6 @@ use oid4vc_manager::{
 };
 use oid4vci::VerifiableCredentialJwt;
 use oid4vp::PresentationDefinition;
-use siopv2::Scope;
 use std::sync::Arc;
 
 lazy_static! {

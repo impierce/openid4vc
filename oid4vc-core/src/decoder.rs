@@ -1,6 +1,5 @@
 use crate::{jwt, subject_syntax_type::DidMethod, Subjects, Validators};
-use anyhow::{anyhow, Result};
-use serde::de::DeserializeOwned;
+use anyhow::anyhow;
 use std::str::FromStr;
 
 pub struct Decoder {
@@ -8,7 +7,7 @@ pub struct Decoder {
 }
 
 impl Decoder {
-    pub async fn decode<T: DeserializeOwned>(&self, jwt: String) -> Result<T> {
+    pub async fn decode<T: serde::de::DeserializeOwned>(&self, jwt: String) -> anyhow::Result<T> {
         let (kid, algorithm) = jwt::extract_header(&jwt)?;
         //  TODO: decode for JWK Thumbprint
         let did_method = DidMethod::from(did_url::DID::from_str(&kid)?);

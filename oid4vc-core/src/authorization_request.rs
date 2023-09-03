@@ -1,14 +1,13 @@
+use crate::{Extension, RFC7519Claims};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use serde_json::{Map, Value};
-
-use crate::RFC7519Claims;
+use serde_json::{json, Map, Value as JsonValue};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 #[serde(untagged)]
 pub enum AuthorizationRequest<E: Extension> {
-    Reference { client_id: String, request_uri: url::Url },
-    Value { client_id: String, request: String },
+    ByReference { client_id: String, request_uri: url::Url },
+    ByValue { client_id: String, request: String },
     Object(Box<AuthorizationRequestObject<E>>),
 }
 
@@ -17,9 +16,9 @@ impl<E: Extension> TryInto<AuthorizationRequestObject<E>> for AuthorizationReque
 
     fn try_into(self) -> Result<AuthorizationRequestObject<E>, Self::Error> {
         match self {
-            AuthorizationRequest::<E>::Reference { .. } => Err(anyhow::anyhow!("Request is a request URI.")),
-            AuthorizationRequest::<E>::Value { .. } => Err(anyhow::anyhow!("Request is a request object.")),
-            AuthorizationRequest::<E>::Object(authorization_request_object) => Ok(*authorization_request_object),
+            AuthorizationRequest::ByReference { .. } => Err(anyhow::anyhow!("Request is a request URI.")),
+            AuthorizationRequest::ByValue { .. } => Err(anyhow::anyhow!("Request is a request object.")),
+            AuthorizationRequest::Object(authorization_request_object) => Ok(*authorization_request_object),
         }
     }
 }
@@ -38,14 +37,14 @@ impl<E: Extension + DeserializeOwned> std::str::FromStr for AuthorizationRequest
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let url = url::Url::parse(s)?;
         let query = url.query().ok_or_else(|| anyhow::anyhow!("No query found."))?;
-        let map = serde_urlencoded::from_str::<Map<String, Value>>(query)?
+        let map = serde_urlencoded::from_str::<Map<String, JsonValue>>(query)?
             .into_iter()
             .filter_map(|(k, v)| match v {
-                Value::String(s) => Some(Ok((k, serde_json::from_str(&s).unwrap_or(Value::String(s))))),
+                JsonValue::String(s) => Some(Ok((k, serde_json::from_str(&s).unwrap_or(JsonValue::String(s))))),
                 _ => None,
             })
             .collect::<Result<_, anyhow::Error>>()?;
-        let request: AuthorizationRequest<E> = serde_json::from_value(Value::Object(map))?;
+        let request: AuthorizationRequest<E> = serde_json::from_value(JsonValue::Object(map))?;
         Ok(request)
     }
 }
@@ -56,16 +55,15 @@ impl<E: Extension + DeserializeOwned> std::str::FromStr for AuthorizationRequest
 // for the `RequestUrl` enum.
 impl<E: Extension> std::fmt::Display for AuthorizationRequest<E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let map: Map<String, Value> = serde_json::to_value(self)
-            .map_err(|_| std::fmt::Error)?
+        let map: Map<String, JsonValue> = json!(self)
             .as_object()
             .ok_or(std::fmt::Error)?
             .iter()
             .filter_map(|(k, v)| match v {
-                Value::Object(_) | Value::Array(_) => {
-                    Some((k.to_owned(), Value::String(serde_json::to_string(v).ok()?)))
+                JsonValue::Object(_) | JsonValue::Array(_) => {
+                    Some((k.to_owned(), JsonValue::String(serde_json::to_string(v).ok()?)))
                 }
-                Value::String(_) => Some((k.to_owned(), v.to_owned())),
+                JsonValue::String(_) => Some((k.to_owned(), v.to_owned())),
                 _ => None,
             })
             .collect();
@@ -78,6 +76,7 @@ impl<E: Extension> std::fmt::Display for AuthorizationRequest<E> {
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct AuthorizationRequestObject<E: Extension> {
     // TODO: Move this outside of this struct.
+    #[serde(flatten)]
     pub rfc7519_claims: RFC7519Claims,
     pub response_type: E::ResponseType,
     pub client_id: String,
@@ -85,10 +84,4 @@ pub struct AuthorizationRequestObject<E: Extension> {
     pub state: Option<String>,
     #[serde(flatten)]
     pub extension: E::AuthorizationRequest,
-}
-
-pub trait Extension: Serialize + PartialEq {
-    type ResponseType: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq + Default;
-    type AuthorizationRequest: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq;
-    type AuthorizationRequestBuilder: Default + std::fmt::Debug;
 }
