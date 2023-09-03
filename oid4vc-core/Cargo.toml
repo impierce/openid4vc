@@ -16,11 +16,11 @@ base64-url = "2.0.0"
 async-trait = "0.1.68"
 did_url = "0.1.0"
 is_empty = "0.2.0"
-rand = "0.7"
+rand = "0.8"
 derive_more = "0.99.16"
 
 [dev-dependencies]
-ed25519-dalek = "2.0.0"
+ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
 lazy_static = "1.4.0"
 derivative = "2.2.0"
 tokio.workspace = true
