@@ -1,4 +1,5 @@
 use anyhow::Result;
+use oid4vc_core::JsonValue;
 use oid4vp::{
     evaluate_input, ClaimFormatDesignation, InputDescriptorMappingObject, PathNested, PresentationDefinition,
     PresentationSubmission,
@@ -9,11 +10,10 @@ use oid4vp::{
 // TODO: make VP/VC fromat agnostic. In current form only jwt_vp_json + jwt_vc_json are supported.
 pub fn create_presentation_submission(
     presentation_definition: &PresentationDefinition,
-    credentials: Vec<serde_json::Value>,
+    credentials: Vec<JsonValue>,
 ) -> Result<PresentationSubmission> {
     let id = "Submission ID".to_string();
     let definition_id = presentation_definition.id().clone();
-    let len = presentation_definition.input_descriptors().len();
     let descriptor_map = presentation_definition
         .input_descriptors()
         .iter()
@@ -28,11 +28,7 @@ pub fn create_presentation_submission(
                         path: "$".to_string(),
                         path_nested: Some(PathNested {
                             id: None,
-                            path: if len == 1 {
-                                format!("$.vp.verifiableCredential")
-                            } else {
-                                format!("$.vp.verifiableCredential[{}]", index)
-                            },
+                            path: format!("$.vp.verifiableCredential[{}]", index),
                             format: ClaimFormatDesignation::JwtVcJson,
                             path_nested: None,
                         }),

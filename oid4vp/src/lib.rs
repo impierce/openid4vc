@@ -9,11 +9,13 @@ pub use dif_presentation_exchange::{
     PresentationDefinition, PresentationSubmission,
 };
 use futures::{executor::block_on, future::join_all};
+use identity_credential::presentation::PresentationBuilder;
 use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::{
     authorization_response::AuthorizationResponse, jwt, serialize_unit_struct, Decoder, Extension, Subject,
 };
+use oid4vc_core::{JsonObject, JsonValue};
 use oid4vci::VerifiableCredentialJwt;
 pub use oid4vp_params::Oid4vpParams;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -105,11 +107,11 @@ pub struct OID4VPAuthorizationResponse {
 
 pub mod serde_oid4vp_response {
     use super::*;
+    use oid4vc_core::JsonValue;
     use serde::{
         de,
         ser::{self, SerializeMap},
     };
-    use serde_json::Value;
 
     pub fn serialize<S>(oid4vp_response: &Oid4vpParams, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -136,10 +138,10 @@ pub mod serde_oid4vp_response {
     where
         D: serde::Deserializer<'de>,
     {
-        let oid4vp_response = serde_json::Value::deserialize(deserializer)?;
+        let oid4vp_response = JsonValue::deserialize(deserializer)?;
         match oid4vp_response {
-            Value::String(response) => Ok(Oid4vpParams::Jwt { response }),
-            Value::Object(map) => {
+            JsonValue::String(response) => Ok(Oid4vpParams::Jwt { response }),
+            JsonValue::Object(map) => {
                 let vp_token = map.get("vp_token").ok_or_else(|| {
                     de::Error::custom(
                         "`vp_token` parameter is required when using `presentation_submission` parameter.",
@@ -169,15 +171,15 @@ pub struct OID4VPUserClaims {
     pub presentation_submission: PresentationSubmission,
 }
 
-// When a struct has fields of type `Option<serde_json::Map<String, serde_json::Value>>`, by default these fields are deserialized as
+// When a struct has fields of type `Option<JsonObject>`, by default these fields are deserialized as
 // `Some(Object {})` instead of None when the corresponding values are missing.
 // The `parse_other()` helper function ensures that these fields are deserialized as `None` when no value is present.
-pub fn parse_other<'de, D>(deserializer: D) -> Result<Option<serde_json::Map<String, serde_json::Value>>, D::Error>
+pub fn parse_other<'de, D>(deserializer: D) -> Result<Option<JsonObject>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    serde_json::Value::deserialize(deserializer).map(|value| match value {
-        serde_json::Value::Object(object) if !object.is_empty() => Some(object),
+    JsonValue::deserialize(deserializer).map(|value| match value {
+        JsonValue::Object(object) if !object.is_empty() => Some(object),
         _ => None,
     })
 }

@@ -1,8 +1,8 @@
 use super::credentials_supported::CredentialsSupportedObject;
 use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats};
+use oid4vc_core::{JsonObject, JsonValue};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
 use serde_with::skip_serializing_none;
 
 /// Credential Issuer Metadata as described here:
@@ -19,7 +19,7 @@ where
     pub batch_credential_endpoint: Option<Url>,
     pub deferred_credential_endpoint: Option<Url>,
     pub credentials_supported: Vec<CredentialsSupportedObject<CFC>>,
-    pub display: Option<Vec<serde_json::Value>>,
+    pub display: Option<Vec<JsonValue>>,
 }
 
 #[skip_serializing_none]
@@ -32,7 +32,7 @@ pub struct CredentialsSupportedDisplay {
     background_color: Option<String>,
     text_color: Option<String>,
     #[serde(flatten)]
-    other: Option<Map<String, Value>>,
+    other: Option<JsonObject>,
 }
 
 #[skip_serializing_none]
@@ -41,7 +41,7 @@ pub struct Logo {
     url: Option<Url>,
     alt_text: Option<String>,
     #[serde(flatten)]
-    other: Option<Map<String, Value>>,
+    other: Option<JsonObject>,
 }
 
 #[cfg(test)]

@@ -25,6 +25,9 @@ pub use rfc7519_claims::RFC7519Claims;
 use serde::{de::DeserializeOwned, Serialize};
 pub use subject_syntax_type::{DidMethod, SubjectSyntaxType};
 
+pub use serde_json::Value as JsonValue;
+pub type JsonObject = serde_json::Map<String, JsonValue>;
+
 #[cfg(test)]
 mod test_utils;
 

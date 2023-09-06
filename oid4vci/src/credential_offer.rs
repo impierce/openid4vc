@@ -1,9 +1,9 @@
 use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats};
 use anyhow::Result;
-use oid4vc_core::to_query_value;
+use oid4vc_core::JsonObject;
+use oid4vc_core::{to_query_value, JsonValue};
 use reqwest::Url;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use serde_json::{Map, Value};
 use serde_with::skip_serializing_none;
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
@@ -47,15 +47,15 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> std::str::FromStr for C
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let map: Map<String, Value> = s
+        let map: JsonObject = s
             .parse::<Url>()?
             .query_pairs()
             .map(|(key, value)| {
-                let value = serde_json::from_str::<Value>(&value).unwrap_or(Value::String(value.into_owned()));
+                let value = serde_json::from_str::<JsonValue>(&value).unwrap_or(JsonValue::String(value.into_owned()));
                 Ok((key.into_owned(), value))
             })
             .collect::<Result<_>>()?;
-        serde_json::from_value(Value::Object(map)).map_err(Into::into)
+        serde_json::from_value(JsonValue::Object(map)).map_err(Into::into)
     }
 }
 

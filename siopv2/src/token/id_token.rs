@@ -1,6 +1,7 @@
 use super::id_token_builder::IdTokenBuilder;
 use crate::{parse_other, StandardClaimsValues};
 use getset::Getters;
+use oid4vc_core::JsonObject;
 use oid4vc_core::RFC7519Claims;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -23,7 +24,7 @@ pub struct IdToken {
     pub(super) azp: Option<String>,
     pub(super) sub_jwk: Option<SubJwk>,
     #[serde(flatten, deserialize_with = "parse_other")]
-    pub(super) other: Option<serde_json::Map<String, serde_json::Value>>,
+    pub(super) other: Option<JsonObject>,
 }
 
 impl IdToken {

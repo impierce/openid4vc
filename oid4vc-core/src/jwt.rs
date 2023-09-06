@@ -79,9 +79,9 @@ mod tests {
     use super::*;
     use crate::{
         test_utils::{MockVerifier, TestSubject},
-        Verify,
+        JsonValue, Verify,
     };
-    use serde_json::{json, Value as JsonValue};
+    use serde_json::json;
 
     #[tokio::test]
     async fn test_encode() {

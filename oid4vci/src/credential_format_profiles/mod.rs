@@ -6,17 +6,19 @@ use self::{
     sealed::FormatExtension,
     w3c_verifiable_credentials::{jwt_vc_json::JwtVcJson, jwt_vc_json_ld::JwtVcJsonLd, ldp_vc::LdpVc},
 };
+use oid4vc_core::JsonValue;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 #[macro_export]
 macro_rules! credential_format {
     ($format:literal, $name:ty, {$($field_name:ident: $field_type:ty),*}) => {
+        use oid4vc_core::JsonValue;
         paste::paste! {
             #[derive(Debug, Clone, Eq, PartialEq, Default)]
             pub struct $name;
             impl $crate::credential_format_profiles::Format for $name {
                 type Parameters = [< $name Parameters >];
-                type Credential = serde_json::Value;
+                type Credential = JsonValue;
             }
 
             #[serde_with::skip_serializing_none]
@@ -116,7 +118,7 @@ where
     JwtVcJsonLd(C::Container<JwtVcJsonLd>),
     LdpVc(C::Container<LdpVc>),
     MsoMdoc(C::Container<MsoMdoc>),
-    Other(serde_json::Value),
+    Other(JsonValue),
 }
 
 impl<C> CredentialFormatCollection for CredentialFormats<C> where C: FormatExtension {}
@@ -146,7 +148,7 @@ impl TryInto<CredentialFormats<()>> for &CredentialFormats<WithCredential> {
 }
 
 impl CredentialFormats<WithCredential> {
-    pub fn credential(&self) -> anyhow::Result<&serde_json::Value> {
+    pub fn credential(&self) -> anyhow::Result<&JsonValue> {
         match self {
             CredentialFormats::JwtVcJson(credential) => Ok(&credential.credential),
             CredentialFormats::JwtVcJsonLd(credential) => Ok(&credential.credential),

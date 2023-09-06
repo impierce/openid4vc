@@ -1,6 +1,6 @@
-use crate::{Extension, RFC7519Claims};
+use crate::{Extension, JsonObject, JsonValue, RFC7519Claims};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use serde_json::{json, Map, Value as JsonValue};
+use serde_json::json;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -37,7 +37,7 @@ impl<E: Extension + DeserializeOwned> std::str::FromStr for AuthorizationRequest
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let url = url::Url::parse(s)?;
         let query = url.query().ok_or_else(|| anyhow::anyhow!("No query found."))?;
-        let map = serde_urlencoded::from_str::<Map<String, JsonValue>>(query)?
+        let map = serde_urlencoded::from_str::<JsonObject>(query)?
             .into_iter()
             .filter_map(|(k, v)| match v {
                 JsonValue::String(s) => Some(Ok((k, serde_json::from_str(&s).unwrap_or(JsonValue::String(s))))),
@@ -55,7 +55,7 @@ impl<E: Extension + DeserializeOwned> std::str::FromStr for AuthorizationRequest
 // for the `RequestUrl` enum.
 impl<E: Extension> std::fmt::Display for AuthorizationRequest<E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let map: Map<String, JsonValue> = json!(self)
+        let map: JsonObject = json!(self)
             .as_object()
             .ok_or(std::fmt::Error)?
             .iter()

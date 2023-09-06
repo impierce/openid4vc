@@ -10,10 +10,11 @@ use oid4vc_manager::{
 };
 use oid4vci::VerifiableCredentialJwt;
 use oid4vp::PresentationDefinition;
+use serde_json::json;
 use std::sync::Arc;
 
 lazy_static! {
-    pub static ref PRESENTATION_DEFINITION: PresentationDefinition = serde_json::from_value(serde_json::json!(
+    pub static ref PRESENTATION_DEFINITION: PresentationDefinition = serde_json::from_value(json!(
         {
             "id":"Verifiable Presentation request for sign-on",
                 "input_descriptors":[

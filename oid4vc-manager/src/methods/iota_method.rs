@@ -213,7 +213,7 @@ async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
 //         let provider_manager = ProviderManager::new([Arc::new(subject)]).unwrap();
 //         println!("Created new provider using the new IOTA subject");
 
-//         // Create a new RequestUrl with response mode `post` for cross-device communication.
+//         // Create a new RequestUrl with response mode `direct_post` for cross-device communication.
 //         let request: AuthorizationRequest = RequestUrl::builder()
 //             .response_type(ResponseType::IdToken)
 //             .client_id("did:iota:4WfYF3te6X2Mm6aK6xK2hGrDJpVYAAM1NDA6HFgswsvt".to_owned())
@@ -223,7 +223,7 @@ async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
 //                     .parse::<url::Url>()
 //                     .unwrap(),
 //             )
-//             .response_mode("post".to_owned())
+//             .response_mode("direct_post".to_owned())
 //             .client_metadata(
 //                 ClientMetadata::default()
 //                     .with_subject_syntax_types_supported(vec![DidMethod::from_str("did:iota").unwrap().into()]),
