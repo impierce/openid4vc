@@ -1,10 +1,10 @@
-use crate::InputDescriptor;
+use crate::{InputDescriptor, JsonValue};
 use jsonpath_lib as jsonpath;
 use jsonschema::JSONSchema;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FieldQueryResult {
-    Some { value: serde_json::Value, path: String },
+    Some { value: JsonValue, path: String },
     None,
     Invalid,
 }
@@ -22,7 +22,7 @@ impl FieldQueryResult {
 /// Input Evaluation as described in section [8. Input
 /// Evaluation](https://identity.foundation/presentation-exchange/spec/v2.0.0/#input-evaluation) of the DIF
 /// Presentation Exchange specification.
-pub fn evaluate_input(input_descriptor: &InputDescriptor, value: &serde_json::Value) -> bool {
+pub fn evaluate_input(input_descriptor: &InputDescriptor, value: &JsonValue) -> bool {
     let selector = &mut jsonpath::selector(value);
 
     input_descriptor
@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn test_constraints() {
-        let credential = json_example::<serde_json::Value>("../oid4vp/tests/examples/credentials/jwt_vc.json");
+        let credential = json_example::<JsonValue>("../oid4vp/tests/examples/credentials/jwt_vc.json");
 
         // Has NO fields.
         assert!(!evaluate_input(&input_descriptor(Constraints::default()), &credential));
@@ -201,7 +201,7 @@ mod tests {
 
     #[test]
     fn test_field() {
-        let credential = json_example::<serde_json::Value>("../oid4vp/tests/examples/credentials/jwt_vc.json");
+        let credential = json_example::<JsonValue>("../oid4vp/tests/examples/credentials/jwt_vc.json");
 
         // Has NO path.
         assert!(!evaluate_input(

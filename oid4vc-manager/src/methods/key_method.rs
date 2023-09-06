@@ -122,14 +122,14 @@ mod tests {
         // Create a new provider manager.
         let provider_manager = ProviderManager::new([Arc::new(subject)]).unwrap();
 
-        // Get a new SIOP request with response mode `post` for cross-device communication.
+        // Get a new SIOP request with response mode `direct_post` for cross-device communication.
         let request_url = "\
             siopv2://idtoken?\
                 scope=openid\
                 &response_type=id_token\
                 &client_id=did:key:z6MkiTcXZ1JxooACo99YcfkugH6Kifzj7ZupSDCmLEABpjpF\
                 &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
-                &response_mode=post\
+                &response_mode=direct_post\
                 &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
                 %5B%22did%3Akey%22%5D%2C%0A%20%20%20%20\
                 %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\

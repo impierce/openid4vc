@@ -1,5 +1,6 @@
 use crate::parse_other;
 use oid4vc_core::scope::{Scope, ScopeValue};
+use oid4vc_core::{JsonObject, JsonValue};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -10,10 +11,10 @@ pub struct ClaimRequests {
     pub id_token: Option<StandardClaimsRequests>,
 }
 
-impl TryFrom<serde_json::Value> for ClaimRequests {
+impl TryFrom<JsonValue> for ClaimRequests {
     type Error = anyhow::Error;
 
-    fn try_from(value: serde_json::Value) -> Result<Self, Self::Error> {
+    fn try_from(value: JsonValue) -> Result<Self, Self::Error> {
         serde_json::from_value(value).map_err(Into::into)
     }
 }
@@ -65,7 +66,7 @@ pub enum IndividualClaimRequest<T> {
         // Other members MAY be defined to provide additional information about the requested Claims. Any members used that
         // are not understood MUST be ignored.
         #[serde(flatten, deserialize_with = "parse_other")]
-        other: Option<serde_json::Map<String, serde_json::Value>>,
+        other: Option<JsonObject>,
     },
 }
 
@@ -96,7 +97,7 @@ impl<T> IndividualClaimRequest<T> {
     object_member!(essential, bool);
     object_member!(value, T);
     object_member!(values, Vec<T>);
-    object_member!(other, serde_json::Map<String, serde_json::Value>);
+    object_member!(other, JsonObject);
 }
 
 /// An individual claim request as defined in [OpenID Connect Core 1.0, section 5.5.1](https://openid.net/specs/openid-connect-core-1_0.html#IndividualClaimsRequests).
@@ -315,10 +316,11 @@ mod tests {
     use super::*;
     use crate::test_utils::{MemoryStorage, Storage};
     use lazy_static::lazy_static;
-    use serde_json::{json, Value};
+    use oid4vc_core::JsonValue;
+    use serde_json::json;
 
     lazy_static! {
-        pub static ref USER_CLAIMS: Value = json!(
+        pub static ref USER_CLAIMS: JsonValue = json!(
             {
                 "name": "Jane Doe",
                 "given_name": "Jane",

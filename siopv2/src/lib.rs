@@ -10,7 +10,8 @@ pub use claims::{ClaimRequests, StandardClaimsRequests, StandardClaimsValues};
 use futures::executor::block_on;
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::{
-    authorization_response::AuthorizationResponse, jwt, serialize_unit_struct, Decoder, Extension, Subject,
+    authorization_response::AuthorizationResponse, jwt, serialize_unit_struct, Decoder, Extension, JsonObject,
+    JsonValue, Subject,
 };
 pub use provider::Provider;
 pub use relying_party::RelyingParty;
@@ -90,15 +91,15 @@ pub struct SIOPv2AuthorizationResponseParameters {
     pub id_token: String,
 }
 
-// When a struct has fields of type `Option<serde_json::Map<String, serde_json::Value>>`, by default these fields are deserialized as
+// When a struct has fields of type `Option<JsonObject>`, by default these fields are deserialized as
 // `Some(Object {})` instead of None when the corresponding values are missing.
 // The `parse_other()` helper function ensures that these fields are deserialized as `None` when no value is present.
-pub fn parse_other<'de, D>(deserializer: D) -> Result<Option<serde_json::Map<String, serde_json::Value>>, D::Error>
+pub fn parse_other<'de, D>(deserializer: D) -> Result<Option<JsonObject>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    serde_json::Value::deserialize(deserializer).map(|value| match value {
-        serde_json::Value::Object(object) if !object.is_empty() => Some(object),
+    JsonValue::deserialize(deserializer).map(|value| match value {
+        JsonValue::Object(object) if !object.is_empty() => Some(object),
         _ => None,
     })
 }

@@ -1,6 +1,6 @@
 use super::id_token::{IdToken, SubJwk};
 use crate::StandardClaimsValues;
-use oid4vc_core::{builder_fn, RFC7519Claims};
+use oid4vc_core::{builder_fn, JsonObject, RFC7519Claims};
 
 #[derive(Default)]
 pub struct IdTokenBuilder {
@@ -12,7 +12,7 @@ pub struct IdTokenBuilder {
     amr: Option<Vec<String>>,
     azp: Option<String>,
     sub_jwk: Option<SubJwk>,
-    other: Option<serde_json::Map<String, serde_json::Value>>,
+    other: Option<JsonObject>,
 }
 
 impl IdTokenBuilder {
@@ -66,7 +66,7 @@ impl IdTokenBuilder {
     builder_fn!(amr, Vec<String>);
     builder_fn!(azp, String);
     builder_fn!(sub_jwk, SubJwk);
-    builder_fn!(other, serde_json::Map<String, serde_json::Value>);
+    builder_fn!(other, JsonObject);
 }
 
 #[cfg(test)]

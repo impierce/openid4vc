@@ -23,11 +23,11 @@ pub struct AuthorizationResponse {
 
 pub mod serde_oid4vp_response {
     use super::*;
+    use oid4vc_core::JsonValue;
     use serde::{
         de,
         ser::{self, SerializeMap},
     };
-    use serde_json::Value;
 
     pub fn serialize<S>(oid4vp_response: &Option<Oid4vpParams>, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -55,12 +55,12 @@ pub mod serde_oid4vp_response {
     where
         D: serde::Deserializer<'de>,
     {
-        let oid4vp_response = Option::<serde_json::Value>::deserialize(deserializer)?;
+        let oid4vp_response = Option::<JsonValue>::deserialize(deserializer)?;
         match oid4vp_response {
             None => Ok(None),
-            Some(Value::Object(map)) if map.is_empty() => Ok(None),
-            Some(Value::String(response)) => Ok(Some(Oid4vpParams::Jwt { response })),
-            Some(Value::Object(map)) => {
+            Some(JsonValue::Object(map)) if map.is_empty() => Ok(None),
+            Some(JsonValue::String(response)) => Ok(Some(Oid4vpParams::Jwt { response })),
+            Some(JsonValue::Object(map)) => {
                 let vp_token = map.get("vp_token").ok_or_else(|| {
                     de::Error::custom(
                         "`vp_token` parameter is required when using `presentation_submission` parameter.",

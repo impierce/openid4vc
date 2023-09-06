@@ -6,9 +6,9 @@ use oid4vc_core::{
     authorization_response::AuthorizationResponse,
     client_metadata::ClientMetadata,
     scope::{Scope, ScopeValue},
-    DidMethod, SubjectSyntaxType,
+    DidMethod, JsonValue, SubjectSyntaxType,
 };
-use oid4vc_manager::{ProviderManager, RelyingPartyManager};
+use oid4vc_manager::{managers::credential_issuer, ProviderManager, RelyingPartyManager};
 use siopv2::{
     claims::{Address, IndividualClaimRequest},
     SIOPv2, StandardClaimsRequests, StandardClaimsValues,
@@ -21,7 +21,7 @@ use wiremock::{
 };
 
 lazy_static! {
-    pub static ref USER_CLAIMS: serde_json::Value = serde_json::json!(
+    pub static ref USER_CLAIMS: JsonValue = serde_json::json!(
         {
             "name": "Jane Doe",
             "given_name": "Jane",
@@ -63,12 +63,12 @@ async fn test_implicit_flow() {
     // Create a new relying party manager.
     let relying_party_manager = RelyingPartyManager::new([Arc::new(subject)]).unwrap();
 
-    // Create a new RequestUrl with response mode `post` for cross-device communication.
+    // Create a new RequestUrl with response mode `direct_post` for cross-device communication.
     let request: AuthorizationRequestObject<SIOPv2> = AuthorizationRequest::<SIOPv2>::builder()
         .client_id("did:test:relyingparty".to_string())
         .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
         .redirect_uri(format!("{server_url}/redirect_uri").parse::<url::Url>().unwrap())
-        .response_mode("post".to_string())
+        .response_mode("direct_post".to_string())
         .client_metadata(
             ClientMetadata::default()
                 .with_subject_syntax_types_supported(vec![SubjectSyntaxType::Did(
