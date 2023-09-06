@@ -3,7 +3,7 @@ This is a library for the [OpenID for Verifiable Presentations](https://openid.b
 Digital Credentials Protocols
 Working Group](https://openid.bitbucket.io/connect/openid-4-verifiable-presentations-1_0.html).
 
-An overview of all the OpenID Digital Credentials Protocols implementation in Rust can be found [here](/README.md).
+An overview of all the OpenID Digital Credentials Protocols implementation in Rust can be found [here](/).
 
 ## Description
 The OpenID for Verifiable Presentations specification establishes a protocol that builds upon OAuth 2.0. Its primary purpose is to facilitate the presentation of Verifiable Credentials in the form of Verifiable Presentations. These Verifiable Credentials and Presentations can take various formats, including but not limited to the W3C Verifiable Credentials Data Model, ISO mdoc, and AnonCreds.
@@ -12,4 +12,4 @@ The choice of OAuth 2.0 as the foundational protocol is strategic, as it provide
 
 Furthermore, this specification serves the purpose of extending OpenID Connect deployments. By doing so, it empowers these deployments with the capability to transport Verifiable Presentations. The inclusion of Verifiable Presentations enhances the capabilities of OpenID Connect deployments and broadens the scope of their applications.
 
-It's worth noting that this specification can also be used in conjunction with [SIOPv2](../siopv2/README.md) when implementers require OpenID Connect functionalities, such as the issuance of Self-Issued ID Tokens. This flexibility allows for the integration of OpenID Connect features into the Verifiable Credentials ecosystem.
+It's worth noting that this specification can also be used in conjunction with [SIOPv2](../siopv2) when implementers require OpenID Connect functionalities, such as the issuance of Self-Issued ID Tokens. This flexibility allows for the integration of OpenID Connect features into the Verifiable Credentials ecosystem.
