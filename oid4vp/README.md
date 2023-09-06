@@ -1,5 +1,5 @@
 # OpenID for Verifiable Presentations
-This is a library for the [OpenID for Verifiable Presentations](https://openid.bitbucket.io/connect/openid-connect-self-issued-v2-1_0.html) (OpenID4VP) specification developed by the [OpenID
+This is a Rust library for the [OpenID for Verifiable Presentations](https://openid.bitbucket.io/connect/openid-connect-self-issued-v2-1_0.html) (OpenID4VP) specification developed by the [OpenID
 Digital Credentials Protocols
 Working Group](https://openid.bitbucket.io/connect/openid-4-verifiable-presentations-1_0.html).
 

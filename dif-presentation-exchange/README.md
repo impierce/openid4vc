@@ -1,5 +1,5 @@
 # DIF Presentation Exchange 2.0.0
-This is a library for the [DIF Presentation Exchange
+This is Rust a library for the [DIF Presentation Exchange
 2.0.0](https://identity.foundation/presentation-exchange/spec/v2.0.0/) specification developed by the [Decentralized
 Identity Foundation](https://identity.foundation/).
 

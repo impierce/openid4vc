@@ -1,5 +1,5 @@
 # Self-Issued OpenID Provider v2
-This is a library for the [Self-Issued OpenID Provider v2](https://openid.bitbucket.io/connect/openid-connect-self-issued-v2-1_0.html) (SIOPv2) specification developed by the [OpenID
+This is a Rust library for the [Self-Issued OpenID Provider v2](https://openid.bitbucket.io/connect/openid-connect-self-issued-v2-1_0.html) (SIOPv2) specification developed by the [OpenID
 Digital Credentials Protocols
 Working Group](https://openid.net/wg/digital-credentials-protocols/).
 
