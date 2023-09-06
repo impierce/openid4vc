@@ -3,7 +3,7 @@ This is a library for the [Self-Issued OpenID Provider v2](https://openid.bitbuc
 Digital Credentials Protocols
 Working Group](https://openid.net/wg/digital-credentials-protocols/).
 
-An overview of all the OpenID Digital Credentials Protocols implementation in Rust can be found [here](../).
+An overview of all the OpenID Digital Credentials Protocols implementation in Rust can be found [here](../README.md).
 
 ## Description
 The Self-Issued OpenID Provider v2 (SIOPv2) specification enhances the capabilities of the OpenID Connect framework. OpenID Connect primarily facilitates the sharing of identity information from an OpenID Provider (OP) to a Relying Party (RP) on behalf of an End-User. In this traditional model, RPs trust identity assertions made by the OP, which acts as the issuer of these assertions.

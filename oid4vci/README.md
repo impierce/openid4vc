@@ -3,7 +3,7 @@ This is a library for the [OpenID for Verifiable Credential Issuance](https://op
 Digital Credentials Protocols
 Working Group](https://openid.bitbucket.io/connect/openid-4-verifiable-presentations-1_0.html).
 
-An overview of all the OpenID Digital Credentials Protocols implementation in Rust can be found [here](../).
+An overview of all the OpenID Digital Credentials Protocols implementation in Rust can be found [here](../README.md).
 
 ## Description
 The OpenID for Verifiable Credential Issuance specification outlines an API that serves the purpose of issuing Verifiable Credentials. It is designed to support a range of formats, including W3C formats as well as other Credential formats like ISO.18013-5.
