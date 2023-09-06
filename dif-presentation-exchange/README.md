@@ -8,6 +8,6 @@ This specification addresses the need for a standardized way to demand and submi
 
 Key Points:
 * The specification is format-agnostic, supporting various Claim formats as long as they can be serialized as JSON.
-* It is also transport-envelope agnostic, allowing the conveyance of data via different methods like [OpenID4VP](../oid4vp) OpenID Connect, DIDComm, or Credential Handler API.
+* It is also transport-envelope agnostic, allowing the conveyance of data via different methods like [OpenID4VP](../oid4vp), OpenID Connect, DIDComm, or Credential Handler API.
 * The goal is to promote unified procedures and reduce redundant code.
 * The specification does not define transport protocols or specific endpoints but encourages their use in other projects that define such mechanisms.
