@@ -22,5 +22,5 @@ On top of that, this workspace also includes a library for the [DIF Presentation
 2.0.0](https://identity.foundation/presentation-exchange/spec/v2.0.0/):
 * [DIF Presentation Exchange](dif-presentation-exchange)
 
-For an easy to use library that combines all the above specifications, please check out:
+For an easy-to-use library that combines all the above specifications, please check out:
 * [OID4VC-Manager](oid4vc-manager)
