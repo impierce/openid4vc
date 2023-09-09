@@ -10,14 +10,14 @@ use url::Url;
 pub struct ClientMetadata {
     // TODO: Move to siopv2 crate.
     #[getset(get = "pub")]
-    subject_syntax_types_supported: Option<Vec<SubjectSyntaxType>>,
+    pub subject_syntax_types_supported: Option<Vec<SubjectSyntaxType>>,
     // TODO: Move to siopv2 crate.
     #[getset(get = "pub")]
-    id_token_signing_alg_values_supported: Option<Vec<String>>,
+    pub id_token_signing_alg_values_supported: Option<Vec<String>>,
     #[getset(get = "pub")]
-    client_name: Option<String>,
+    pub client_name: Option<String>,
     #[getset(get = "pub")]
-    logo_uri: Option<Url>,
+    pub logo_uri: Option<Url>,
 }
 
 impl ClientMetadata {

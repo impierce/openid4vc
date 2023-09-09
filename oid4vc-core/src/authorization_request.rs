@@ -85,3 +85,11 @@ pub struct AuthorizationRequestObject<E: Extension> {
     #[serde(flatten)]
     pub extension: E::AuthorizationRequest,
 }
+
+impl<E: Extension> AuthorizationRequestObject<E> {
+    // TODO: Come up with better solution for this
+    pub fn response_type(&self) -> String {
+        let value = json!(self.response_type).clone();
+        value.as_str().unwrap().to_owned()
+    }
+}

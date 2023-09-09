@@ -15,6 +15,7 @@ use oid4vc_core::{
 };
 pub use provider::Provider;
 pub use relying_party::RelyingParty;
+use serde_json::json;
 pub use token::id_token_builder::IdTokenBuilder;
 
 use serde::{Deserialize, Deserializer, Serialize};

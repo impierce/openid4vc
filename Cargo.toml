@@ -36,7 +36,9 @@ url = { version = "2", features = ["serde"] }
 getset = "0.1"
 is_empty = "0.2"
 # identity_credential = { version = "=0.7.0-alpha.7", default-features = false, features = ["validator", "credential", "presentation"] }
-identity_credential = { path = "../identity.rs/identity_credential", default-features = false, features = ["validator", "credential", "presentation"] }
+# identity_credential = { path = "../identity.rs/identity_credential", default-features = false, features =
+# ["validator", "credential", "presentation"] }
+identity_credential = { git = "https://github.com/iotaledger/identity.rs.git", branch = "fix/verifiable-credential-as-vec", default-features = false, features = ["validator", "credential", "presentation"] }
 
 # TODO: Fix these dependencies once publishing to crates.io is automated.
 [dependencies]
