@@ -12,10 +12,11 @@ use futures::{executor::block_on, future::join_all};
 use identity_credential::presentation::PresentationBuilder;
 use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
+use oid4vc_core::authorization_request::AuthorizationRequestObject;
 use oid4vc_core::{
     authorization_response::AuthorizationResponse, jwt, serialize_unit_struct, Decoder, Extension, Subject,
 };
-use oid4vc_core::{JsonObject, JsonValue};
+use oid4vc_core::{JsonObject, JsonValue, Unresolved};
 use oid4vci::VerifiableCredentialJwt;
 pub use oid4vp_params::Oid4vpParams;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -35,10 +36,16 @@ impl Extension for OID4VP {
     type AuthorizationResponse = OID4VPAuthorizationResponse;
     type ResponseItem = Vec<VerifiableCredentialJwt>;
 
+    fn resolve(
+        authorization_request: AuthorizationRequestObject<Unresolved>,
+    ) -> anyhow::Result<AuthorizationRequestObject<Self>> {
+        todo!()
+    }
+
     fn generate_token(
         subject: Arc<dyn Subject>,
-        client_id: String,
-        extension: Self::AuthorizationRequest,
+        client_id: &String,
+        extension: &Self::AuthorizationRequest,
         user_input: &Self::UserClaims,
     ) -> anyhow::Result<Vec<String>> {
         let subject_identifier = subject.identifier()?;
