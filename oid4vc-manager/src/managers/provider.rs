@@ -29,7 +29,7 @@ impl ProviderManager {
 
     pub async fn validate_request<E: Extension>(
         &self,
-        request: AuthorizationRequest<E>,
+        request: AuthorizationRequest,
     ) -> Result<AuthorizationRequestObject<E>> {
         self.provider
             .validate_request(request, Decoder::from(&self.subjects))
@@ -38,13 +38,13 @@ impl ProviderManager {
 
     pub fn generate_response<E: Extension>(
         &self,
-        request: AuthorizationRequestObject<E>,
+        request: &AuthorizationRequestObject<E>,
         user_claims: E::UserClaims,
     ) -> Result<AuthorizationResponse<E>> {
         self.provider.generate_response(request, user_claims)
     }
 
-    pub async fn send_response<E: Extension>(&self, response: AuthorizationResponse<E>) -> Result<()> {
+    pub async fn send_response<E: Extension>(&self, response: AuthorizationResponse<E>) -> Result<String> {
         self.provider.send_response(response).await
     }
 

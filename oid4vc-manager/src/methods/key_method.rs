@@ -143,7 +143,9 @@ mod tests {
             .unwrap();
 
         // Test whether the provider manager can generate a response for the request succesfully.
-        let response = provider_manager.generate_response(request, Default::default()).unwrap();
+        let response = provider_manager
+            .generate_response(&request, Default::default())
+            .unwrap();
 
         // Let the relying party validate the response.
         let relying_party_manager = RelyingPartyManager::new([Arc::new(KeySubject::new())]).unwrap();

@@ -1,11 +1,11 @@
-use crate::{Extension, JsonObject, JsonValue, RFC7519Claims};
+use crate::{Extension, JsonObject, JsonValue, RFC7519Claims, Unresolved};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 #[serde(untagged)]
-pub enum AuthorizationRequest<E: Extension> {
+pub enum AuthorizationRequest<E: Extension = Unresolved> {
     ByReference { client_id: String, request_uri: url::Url },
     ByValue { client_id: String, request: String },
     Object(Box<AuthorizationRequestObject<E>>),
@@ -21,6 +21,14 @@ impl<E: Extension> TryInto<AuthorizationRequestObject<E>> for AuthorizationReque
             AuthorizationRequest::Object(authorization_request_object) => Ok(*authorization_request_object),
         }
     }
+}
+
+#[test]
+fn test() {
+    let temp = AuthorizationRequest::<Unresolved>::ByReference {
+        client_id: "client_id".to_owned(),
+        request_uri: "request_uri".parse().unwrap(),
+    };
 }
 
 impl<E: Extension> AuthorizationRequest<E> {
@@ -84,12 +92,4 @@ pub struct AuthorizationRequestObject<E: Extension> {
     pub state: Option<String>,
     #[serde(flatten)]
     pub extension: E::AuthorizationRequest,
-}
-
-impl<E: Extension> AuthorizationRequestObject<E> {
-    // TODO: Come up with better solution for this
-    pub fn response_type(&self) -> String {
-        let value = json!(self.response_type).clone();
-        value.as_str().unwrap().to_owned()
-    }
 }

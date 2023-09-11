@@ -29,11 +29,11 @@ impl Provider {
     /// If the request is valid, the request is returned.
     pub async fn validate_request<E: Extension>(
         &self,
-        request: AuthorizationRequest<E>,
+        request: AuthorizationRequest,
         decoder: Decoder,
     ) -> Result<AuthorizationRequestObject<E>> {
         if let AuthorizationRequest::Object(authorization_request) = request {
-            Ok(*authorization_request)
+            E::resolve(*authorization_request)
         } else {
             let (request_object, client_id) = match request {
                 AuthorizationRequest::ByReference { request_uri, client_id } => {
@@ -54,30 +54,31 @@ impl Provider {
     /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
     pub fn generate_response<E: Extension>(
         &self,
-        request: AuthorizationRequestObject<E>,
+        request: &AuthorizationRequestObject<E>,
         user_claims: E::UserClaims,
     ) -> Result<AuthorizationResponse<E>> {
         let redirect_uri = request.redirect_uri.to_string();
         let state = request.state.clone();
 
-        let jwts = E::generate_token(self.subject.clone(), request.client_id, request.extension, &user_claims)?;
+        let jwts = E::generate_token(
+            self.subject.clone(),
+            &request.client_id,
+            &request.extension,
+            &user_claims,
+        )?;
 
         E::build_authorization_response(jwts, user_claims, redirect_uri, state)
     }
 
-    pub async fn send_response<E: Extension>(&self, response: AuthorizationResponse<E>) -> Result<()> {
-        let builder = self.client.post(response.redirect_uri.clone()).form(&response);
-
-        let temp = builder.build()?;
-        let temp = std::str::from_utf8(temp.body().unwrap().as_bytes().unwrap()).unwrap();
-
-        dbg!("HELLLLOOOO", temp);
-
-        let builder = self.client.post(response.redirect_uri.clone()).form(&response);
-
-        let text = builder.send().await?.text().await?;
-        dbg!("HELLLLOOOO", text);
-        Ok(())
+    pub async fn send_response<E: Extension>(&self, response: AuthorizationResponse<E>) -> Result<String> {
+        self.client
+            .post(response.redirect_uri.clone())
+            .form(&response)
+            .send()
+            .await?
+            .text()
+            .await
+            .map_err(|e| e.into())
     }
 }
 
@@ -125,6 +126,6 @@ mod tests {
             .unwrap();
 
         // Test whether the provider can generate a response for the request succesfully.
-        assert!(provider.generate_response(request, Default::default()).is_ok());
+        assert!(provider.generate_response(&request, Default::default()).is_ok());
     }
 }

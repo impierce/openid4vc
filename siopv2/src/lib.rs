@@ -10,8 +10,8 @@ pub use claims::{ClaimRequests, StandardClaimsRequests, StandardClaimsValues};
 use futures::executor::block_on;
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::{
-    authorization_response::AuthorizationResponse, jwt, serialize_unit_struct, Decoder, Extension, JsonObject,
-    JsonValue, Subject,
+    authorization_request::AuthorizationRequestObject, authorization_response::AuthorizationResponse, jwt,
+    serialize_unit_struct, Decoder, Extension, JsonObject, JsonValue, Subject, Unresolved,
 };
 pub use provider::Provider;
 pub use relying_party::RelyingParty;
@@ -38,10 +38,16 @@ impl Extension for SIOPv2 {
     type AuthorizationResponse = SIOPv2AuthorizationResponseParameters;
     type ResponseItem = crate::token::id_token::IdToken;
 
+    fn resolve(
+        authorization_request: AuthorizationRequestObject<Unresolved>,
+    ) -> anyhow::Result<AuthorizationRequestObject<Self>> {
+        todo!()
+    }
+
     fn generate_token(
         subject: Arc<dyn Subject>,
-        client_id: String,
-        extension: Self::AuthorizationRequest,
+        client_id: &String,
+        extension: &Self::AuthorizationRequest,
         user_input: &Self::UserClaims,
     ) -> anyhow::Result<Vec<String>> {
         let subject_identifier = subject.identifier()?;
