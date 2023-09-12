@@ -1,11 +1,11 @@
-# Rust library for the OpenID for Verifiable Credentials
+# Rust library for OpenID for Verifiable Credentials
 
 This is a library for the OpenID for Verifiable Credentials (OpenID4VC) specifications family developed by the [OpenID
 Digital Credentials Protocols
 Working Group](https://openid.net/wg/digital-credentials-protocols/).
 
 The Digital Credentials Protocols (DCP) Working Group focuses on creating OpenID specifications for a model where
-issuers provide digital credentials to holders, allowing end-users to present them to verifiers. These digital
+issuers provide digital credentials to holders, allowing holders to present them to verifiers. These digital
 credentials contain cryptographically signed statements about the holder, and verifiers can check their authenticity.
 The primary goals include enhancing user control and privacy over identity information, making identity verification
 more efficient and secure, and establishing a universal approach for identification, authentication, and authorization

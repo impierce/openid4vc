@@ -6,7 +6,7 @@ robust model where issuers provide digital credentials to holders. These digital
 signed statements about the holder, offering verifiers the ability to verify their authenticity. The overarching goals
 include strengthening user control and privacy over identity information, optimizing identity verification for
 efficiency and security, and establishing a universal framework for identification, authentication, and authorization in
-both the digital and real world.
+the digital, as well as in the real world.
 
 In this library, you'll find Rust implementations for several critical DCP specifications, including:
 * [OpenID for Verifiable Credential
