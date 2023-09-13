@@ -5,6 +5,7 @@ use oid4vc_core::{
     authorization_response::AuthorizationResponse,
     Decoder, Extension,
 };
+use reqwest::StatusCode;
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
 /// [`AuthorizationRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
@@ -70,15 +71,14 @@ impl Provider {
         E::build_authorization_response(jwts, user_claims, redirect_uri, state)
     }
 
-    pub async fn send_response<E: Extension>(&self, response: AuthorizationResponse<E>) -> Result<String> {
-        self.client
+    pub async fn send_response<E: Extension>(&self, response: AuthorizationResponse<E>) -> Result<StatusCode> {
+        Ok(self
+            .client
             .post(response.redirect_uri.clone())
             .form(&response)
             .send()
             .await?
-            .text()
-            .await
-            .map_err(|e| e.into())
+            .status())
     }
 }
 

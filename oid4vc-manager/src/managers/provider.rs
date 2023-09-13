@@ -5,6 +5,7 @@ use oid4vc_core::{
     Decoder, Extension, Subject, SubjectSyntaxType, Subjects,
 };
 use oid4vp::OID4VP;
+use reqwest::StatusCode;
 use siopv2::{Provider, SIOPv2};
 use std::sync::Arc;
 
@@ -44,7 +45,7 @@ impl ProviderManager {
         self.provider.generate_response(request, user_claims)
     }
 
-    pub async fn send_response<E: Extension>(&self, response: AuthorizationResponse<E>) -> Result<String> {
+    pub async fn send_response<E: Extension>(&self, response: AuthorizationResponse<E>) -> Result<StatusCode> {
         self.provider.send_response(response).await
     }
 
