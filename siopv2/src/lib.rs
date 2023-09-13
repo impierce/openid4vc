@@ -10,12 +10,11 @@ pub use claims::{ClaimRequests, StandardClaimsRequests, StandardClaimsValues};
 use futures::executor::block_on;
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::{
-    authorization_request::AuthorizationRequestObject, authorization_response::AuthorizationResponse, jwt,
-    serialize_unit_struct, Decoder, Extension, JsonObject, JsonValue, Subject, Unresolved,
+    authorization_response::AuthorizationResponse, jwt,
+    serialize_unit_struct, Decoder, Extension, JsonObject, JsonValue, Subject,
 };
 pub use provider::Provider;
 pub use relying_party::RelyingParty;
-use serde_json::json;
 pub use token::id_token_builder::IdTokenBuilder;
 
 use serde::{Deserialize, Deserializer, Serialize};
@@ -38,15 +37,9 @@ impl Extension for SIOPv2 {
     type AuthorizationResponse = SIOPv2AuthorizationResponseParameters;
     type ResponseItem = crate::token::id_token::IdToken;
 
-    fn resolve(
-        authorization_request: AuthorizationRequestObject<Unresolved>,
-    ) -> anyhow::Result<AuthorizationRequestObject<Self>> {
-        todo!()
-    }
-
     fn generate_token(
         subject: Arc<dyn Subject>,
-        client_id: &String,
+        client_id: &str,
         extension: &Self::AuthorizationRequest,
         user_input: &Self::UserClaims,
     ) -> anyhow::Result<Vec<String>> {
@@ -89,7 +82,7 @@ impl Extension for SIOPv2 {
         response: &AuthorizationResponse<Self>,
     ) -> anyhow::Result<Self::ResponseItem> {
         let token = response.extension.id_token.clone();
-        block_on(async move { decoder.decode(token).await.map_err(|e| e.into()) })
+        block_on(decoder.decode(token))
     }
 }
 

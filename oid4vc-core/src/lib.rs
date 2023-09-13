@@ -17,7 +17,7 @@ pub use authentication::{
     validator::{Validator, Validators},
     verify::Verify,
 };
-use authorization_request::{AuthorizationRequest, AuthorizationRequestObject};
+use authorization_request::AuthorizationRequestObject;
 use authorization_response::AuthorizationResponse;
 pub use collection::Collection;
 pub use decoder::Decoder;
@@ -36,22 +36,16 @@ mod test_utils;
 pub struct Unresolved;
 
 impl Extension for Unresolved {
-    type ResponseType = ();
-    type AuthorizationRequest = JsonObject;
+    type ResponseType = JsonValue;
+    type AuthorizationRequest = JsonValue;
     type AuthorizationRequestBuilder = ();
     type UserClaims = ();
     type AuthorizationResponse = ();
     type ResponseItem = ();
 
-    fn resolve(
-        authorization_request: AuthorizationRequestObject<Unresolved>,
-    ) -> anyhow::Result<AuthorizationRequestObject<Self>> {
-        Ok(authorization_request)
-    }
-
     fn generate_token(
         _subject: Arc<dyn Subject>,
-        _client_id: &String,
+        _client_id: &str,
         _extension: &Self::AuthorizationRequest,
         _user_input: &Self::UserClaims,
     ) -> anyhow::Result<Vec<String>> {
@@ -85,11 +79,22 @@ pub trait Extension: Serialize + PartialEq + Sized {
 
     fn resolve(
         authorization_request: AuthorizationRequestObject<Unresolved>,
-    ) -> anyhow::Result<AuthorizationRequestObject<Self>>;
+    ) -> anyhow::Result<AuthorizationRequestObject<Self>> {
+        Ok(AuthorizationRequestObject::<Self> {
+            rfc7519_claims: authorization_request.rfc7519_claims,
+            response_type: serde_json::from_value(authorization_request.response_type)
+                .map_err(|_| anyhow::anyhow!("Invalid `response_type` parameter."))?,
+            client_id: authorization_request.client_id,
+            redirect_uri: authorization_request.redirect_uri,
+            state: authorization_request.state,
+            extension: serde_json::from_value(authorization_request.extension)
+                .map_err(|_| anyhow::anyhow!("Invalid `extension` parameter."))?,
+        })
+    }
 
     fn generate_token(
         subject: Arc<dyn Subject>,
-        client_id: &String,
+        client_id: &str,
         extension: &Self::AuthorizationRequest,
         user_input: &Self::UserClaims,
     ) -> anyhow::Result<Vec<String>>;

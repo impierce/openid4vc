@@ -21,7 +21,7 @@ where
 impl<CFC: CredentialFormatCollection> CredentialIssuer<CFC> {
     pub async fn validate_proof(&self, proof: Proof, decoder: Decoder) -> anyhow::Result<ProofOfPossession> {
         match proof {
-            Proof::Jwt { jwt, .. } => decoder.decode(jwt).await.map_err(|e| e.into()),
+            Proof::Jwt { jwt, .. } => decoder.decode(jwt).await,
             Proof::Cwt { .. } => unimplemented!("CWT is not supported yet"),
         }
     }

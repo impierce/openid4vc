@@ -23,14 +23,6 @@ impl<E: Extension> TryInto<AuthorizationRequestObject<E>> for AuthorizationReque
     }
 }
 
-#[test]
-fn test() {
-    let temp = AuthorizationRequest::<Unresolved>::ByReference {
-        client_id: "client_id".to_owned(),
-        request_uri: "request_uri".parse().unwrap(),
-    };
-}
-
 impl<E: Extension> AuthorizationRequest<E> {
     pub fn builder() -> E::AuthorizationRequestBuilder {
         E::AuthorizationRequestBuilder::default()
