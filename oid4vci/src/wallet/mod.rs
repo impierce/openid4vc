@@ -13,6 +13,9 @@ use crate::{credential_response::CredentialResponse, token_request::TokenRequest
 use anyhow::Result;
 use oid4vc_core::authentication::subject::SigningSubject;
 use reqwest::Url;
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_retry::policies::ExponentialBackoff;
+use reqwest_retry::RetryTransientMiddleware;
 use serde::de::DeserializeOwned;
 
 pub struct Wallet<CFC = CredentialFormats>
@@ -20,15 +23,19 @@ where
     CFC: CredentialFormatCollection + DeserializeOwned,
 {
     pub subject: SigningSubject,
-    pub client: reqwest::Client,
+    pub client: ClientWithMiddleware,
     phantom: std::marker::PhantomData<CFC>,
 }
 
 impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
     pub fn new(subject: SigningSubject) -> Self {
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
+        let client = ClientBuilder::new(reqwest::Client::new())
+            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+            .build();
         Self {
             subject,
-            client: reqwest::Client::new(),
+            client,
             phantom: std::marker::PhantomData,
         }
     }

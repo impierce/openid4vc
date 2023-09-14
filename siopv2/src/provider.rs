@@ -6,22 +6,25 @@ use oid4vc_core::{
     Decoder, Extension,
 };
 use reqwest::StatusCode;
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
 /// [`AuthorizationRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
 /// the user who is trying to authenticate.
 pub struct Provider {
     pub subject: SigningSubject,
-    client: reqwest::Client,
+    client: ClientWithMiddleware,
 }
 
 impl Provider {
     // TODO: Use ProviderBuilder instead.
     pub fn new(subject: SigningSubject) -> Result<Self> {
-        Ok(Provider {
-            subject,
-            client: reqwest::Client::new(),
-        })
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
+        let client = ClientBuilder::new(reqwest::Client::new())
+            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+            .build();
+        Ok(Provider { subject, client })
     }
 
     /// TODO: Add more validation rules.
@@ -71,7 +74,7 @@ impl Provider {
         E::build_authorization_response(jwts, user_claims, redirect_uri, state)
     }
 
-    pub async fn send_response<E: Extension>(&self, response: AuthorizationResponse<E>) -> Result<StatusCode> {
+    pub async fn send_response<E: Extension>(&self, response: &AuthorizationResponse<E>) -> Result<StatusCode> {
         Ok(self
             .client
             .post(response.redirect_uri.clone())
