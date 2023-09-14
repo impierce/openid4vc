@@ -45,7 +45,7 @@ impl ProviderManager {
         self.provider.generate_response(request, user_claims)
     }
 
-    pub async fn send_response<E: Extension>(&self, response: AuthorizationResponse<E>) -> Result<StatusCode> {
+    pub async fn send_response<E: Extension>(&self, response: &AuthorizationResponse<E>) -> Result<StatusCode> {
         self.provider.send_response(response).await
     }
 
