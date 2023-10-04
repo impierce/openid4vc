@@ -1,4 +1,8 @@
+use crate::OID4VP;
+use anyhow::{anyhow, Result};
 use dif_presentation_exchange::PresentationDefinition;
+use is_empty::IsEmpty;
+use oid4vc_core::builder_fn;
 use oid4vc_core::{
     authorization_request::{AuthorizationRequest, AuthorizationRequestObject},
     client_metadata::ClientMetadata,
@@ -17,12 +21,6 @@ pub struct OID4VPAuthorizationRequestParameters {
     // TODO: impl client_metadata_uri.
     pub client_metadata: Option<ClientMetadata>,
 }
-
-use anyhow::{anyhow, Result};
-use is_empty::IsEmpty;
-use oid4vc_core::builder_fn;
-
-use crate::OID4VP;
 
 #[derive(Debug, Default, IsEmpty)]
 pub struct OID4VPAuthorizationRequestBuilder {
@@ -56,6 +54,7 @@ impl OID4VPAuthorizationRequestBuilder {
     builder_fn!(nonce, String);
     builder_fn!(client_metadata, ClientMetadata);
     builder_fn!(state, String);
+    builder_fn!(presentation_definition, PresentationDefinition);
 
     pub fn build(mut self) -> Result<AuthorizationRequest<OID4VP>> {
         match (
