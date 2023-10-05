@@ -76,37 +76,3 @@ impl ProviderManager {
         (!supported_types.is_empty()).then_some(supported_types.iter().map(|&sst| sst.clone()).collect())
     }
 }
-
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
-pub struct Example {
-    name: String,
-    age: u32,
-}
-
-#[test]
-fn test() {
-    use serde_json::json;
-
-    let value = json!({
-        "name": "John Doe",
-        "age": 43,
-        "phones": [
-            "+44 1234567",
-            "+44 2345678"
-        ],
-        "address": {
-            "street": "10 Downing Street",
-            "city": "London"
-        }
-    });
-
-    dbg!(&value);
-
-    let example: Example = serde_json::from_value(value).unwrap();
-
-    dbg!(&example);
-
-    let string: String = serde_json::to_string_pretty(&example).unwrap();
-
-    dbg!(string);
-}
