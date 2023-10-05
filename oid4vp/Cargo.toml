@@ -18,8 +18,8 @@ serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
 getset.workspace = true
+identity_core.workspace = true
 identity_credential.workspace = true
-identity_core = "=0.7.0-alpha.7"
 url.workspace = true
 is_empty.workspace = true
 chrono.workspace = true
