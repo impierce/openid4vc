@@ -4,7 +4,6 @@ use oid4vc_core::{
     authorization_response::AuthorizationResponse,
     Decoder, Extension, Subject, SubjectSyntaxType, Subjects,
 };
-use oid4vp::OID4VP;
 use reqwest::StatusCode;
 use siopv2::{Provider, SIOPv2};
 use std::sync::Arc;
@@ -13,11 +12,6 @@ use std::sync::Arc;
 pub struct ProviderManager {
     pub provider: Provider,
     subjects: Subjects,
-}
-
-pub enum AuthorizationRequestEnum {
-    SIOPv2(AuthorizationRequest<SIOPv2>),
-    OID4VP(AuthorizationRequest<OID4VP>),
 }
 
 impl ProviderManager {
