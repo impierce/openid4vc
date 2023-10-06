@@ -121,7 +121,7 @@ mod tests {
         // Create a new provider manager.
         let provider_manager = ProviderManager::new([Arc::new(subject)]).unwrap();
 
-        // Get a new SIOP request with response mode `direct_post` for cross-device communication.
+        // Get a new SIOP authorization_request with response mode `direct_post` for cross-device communication.
         let request_url = "\
             siopv2://idtoken?\
                 scope=openid\
@@ -135,19 +135,22 @@ mod tests {
                 &nonce=n-0S6_WzA2Mj\
             ";
 
-        // Let the provider manager validate the request.
-        let request = provider_manager
+        // Let the provider manager validate the authorization_request.
+        let authorization_request = provider_manager
             .validate_request::<SIOPv2>(request_url.parse().unwrap())
             .await
             .unwrap();
 
-        // Test whether the provider manager can generate a response for the request succesfully.
-        let response = provider_manager
-            .generate_response(&request, Default::default())
+        // Test whether the provider manager can generate a authorization_response for the authorization_request succesfully.
+        let authorization_response = provider_manager
+            .generate_response(&authorization_request, Default::default())
             .unwrap();
 
-        // Let the relying party validate the response.
+        // Let the relying party validate the authorization_response.
         let relying_party_manager = RelyingPartyManager::new([Arc::new(KeySubject::new())]).unwrap();
-        assert!(relying_party_manager.validate_response(&response).await.is_ok());
+        assert!(relying_party_manager
+            .validate_response(&authorization_response)
+            .await
+            .is_ok());
     }
 }

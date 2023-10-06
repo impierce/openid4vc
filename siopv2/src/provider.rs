@@ -34,13 +34,13 @@ impl Provider {
     /// If the request is valid, the request is returned.
     pub async fn validate_request<E: Extension>(
         &self,
-        request: AuthorizationRequest,
+        authorization_request: AuthorizationRequest,
         decoder: Decoder,
     ) -> Result<AuthorizationRequestObject<E>> {
-        if let AuthorizationRequest::Object(authorization_request) = request {
-            E::resolve(*authorization_request)
+        if let AuthorizationRequest::Object(authorization_request) = authorization_request {
+            E::from_generic(*authorization_request)
         } else {
-            let (request_object, client_id) = match request {
+            let (request_object, client_id) = match authorization_request {
                 AuthorizationRequest::ByReference { request_uri, client_id } => {
                     let builder = self.client.get(request_uri);
                     let request_value = builder.send().await?.text().await?;
@@ -59,27 +59,30 @@ impl Provider {
     /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
     pub fn generate_response<E: Extension>(
         &self,
-        request: &AuthorizationRequestObject<E>,
+        authorization_request: &AuthorizationRequestObject<E>,
         user_claims: E::AuthorizationResponseInput,
     ) -> Result<AuthorizationResponse<E>> {
-        let redirect_uri = request.redirect_uri.to_string();
-        let state = request.state.clone();
+        let redirect_uri = authorization_request.redirect_uri.to_string();
+        let state = authorization_request.state.clone();
 
         let jwts = E::generate_token(
             self.subject.clone(),
-            &request.client_id,
-            &request.extension,
+            &authorization_request.client_id,
+            &authorization_request.extension,
             &user_claims,
         )?;
 
         E::build_authorization_response(jwts, user_claims, redirect_uri, state)
     }
 
-    pub async fn send_response<E: Extension>(&self, response: &AuthorizationResponse<E>) -> Result<StatusCode> {
+    pub async fn send_response<E: Extension>(
+        &self,
+        authorization_response: &AuthorizationResponse<E>,
+    ) -> Result<StatusCode> {
         Ok(self
             .client
-            .post(response.redirect_uri.clone())
-            .form(&response)
+            .post(authorization_response.redirect_uri.clone())
+            .form(&authorization_response)
             .send()
             .await?
             .status())
@@ -101,7 +104,7 @@ mod tests {
         // Create a new provider.
         let provider = Provider::new(Arc::new(subject)).unwrap();
 
-        // Get a new SIOP request with response mode `direct_post` for cross-device communication.
+        // Get a new SIOP authorization_request with response mode `direct_post` for cross-device communication.
         let request_url = "\
             siopv2://idtoken?\
                 scope=openid\
@@ -115,8 +118,8 @@ mod tests {
                 &nonce=n-0S6_WzA2Mj\
             ";
 
-        // Let the provider validate the request.
-        let request: AuthorizationRequestObject<SIOPv2> = provider
+        // Let the provider validate the authorization_request.
+        let authorization_request: AuthorizationRequestObject<SIOPv2> = provider
             .validate_request(
                 request_url.parse().unwrap(),
                 Decoder {
@@ -129,7 +132,9 @@ mod tests {
             .await
             .unwrap();
 
-        // Test whether the provider can generate a response for the request succesfully.
-        assert!(provider.generate_response(&request, Default::default()).is_ok());
+        // Test whether the provider can generate a authorization_response for the authorization_request succesfully.
+        assert!(provider
+            .generate_response(&authorization_request, Default::default())
+            .is_ok());
     }
 }

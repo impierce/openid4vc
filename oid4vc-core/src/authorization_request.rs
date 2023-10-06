@@ -1,5 +1,5 @@
 use crate::{
-    openid4vc_extension::{Extension, Unresolved},
+    openid4vc_extension::{Extension, Generic},
     JsonObject, JsonValue, RFC7519Claims,
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -8,7 +8,7 @@ use serde_json::json;
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 #[serde(untagged)]
-pub enum AuthorizationRequest<E: Extension = Unresolved> {
+pub enum AuthorizationRequest<E: Extension = Generic> {
     ByReference { client_id: String, request_uri: url::Url },
     ByValue { client_id: String, request: String },
     Object(Box<AuthorizationRequestObject<E>>),
@@ -47,8 +47,8 @@ impl<E: Extension + DeserializeOwned> std::str::FromStr for AuthorizationRequest
                 _ => None,
             })
             .collect::<Result<_, anyhow::Error>>()?;
-        let request: AuthorizationRequest<E> = serde_json::from_value(JsonValue::Object(map))?;
-        Ok(request)
+        let authorization_request: AuthorizationRequest<E> = serde_json::from_value(JsonValue::Object(map))?;
+        Ok(authorization_request)
     }
 }
 
