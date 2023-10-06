@@ -158,7 +158,7 @@ async fn test_implicit_flow() {
         .build()
         .unwrap();
 
-    // Generate the response. It will include both an IdToken and a VpToken.
+    // Generate the authorization_response. It will include both an IdToken and a VpToken.
     let authorization_response: AuthorizationResponse<OID4VP> = provider_manager
         .generate_response(
             &authorization_request,
@@ -169,7 +169,7 @@ async fn test_implicit_flow() {
         )
         .unwrap();
 
-    // Validate the response.
+    // Validate the authorization_response.
     assert!(relying_party_manager
         .validate_response(&authorization_response)
         .await

@@ -66,9 +66,9 @@ impl Extension for SIOPv2 {
 
     fn decode_authorization_response(
         decoder: Decoder,
-        response: &AuthorizationResponse<Self>,
+        authorization_response: &AuthorizationResponse<Self>,
     ) -> anyhow::Result<Self::ResponseItem> {
-        let token = response.extension.id_token.clone();
+        let token = authorization_response.extension.id_token.clone();
         block_on(decoder.decode(token))
     }
 }

@@ -13,8 +13,9 @@ pub trait Extension: Serialize + PartialEq + Sized {
     type AuthorizationResponse: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq;
     type ResponseItem: Serialize + std::fmt::Debug + PartialEq;
 
-    fn resolve(
-        authorization_request: AuthorizationRequestObject<Unresolved>,
+    // Function to convert a generic [`AuthorizationRequestObject<Extension>`] to a specific [`AuthorizationRequestObject<Self>`].
+    fn from_generic(
+        authorization_request: AuthorizationRequestObject<Generic>,
     ) -> anyhow::Result<AuthorizationRequestObject<Self>> {
         Ok(AuthorizationRequestObject::<Self> {
             rfc7519_claims: authorization_request.rfc7519_claims,
@@ -25,6 +26,20 @@ pub trait Extension: Serialize + PartialEq + Sized {
             state: authorization_request.state,
             extension: serde_json::from_value(authorization_request.extension)
                 .map_err(|_| anyhow::anyhow!("Invalid `extension` parameter."))?,
+        })
+    }
+
+    // Function to convert a specific [`AuthorizationRequestObject<Self>`] to a generic [`AuthorizationRequestObject<Extension>`].
+    fn into_generic(
+        authorization_request: AuthorizationRequestObject<Self>,
+    ) -> anyhow::Result<AuthorizationRequestObject<Generic>> {
+        Ok(AuthorizationRequestObject::<Generic> {
+            rfc7519_claims: authorization_request.rfc7519_claims,
+            response_type: serde_json::to_value(authorization_request.response_type)?,
+            client_id: authorization_request.client_id,
+            redirect_uri: authorization_request.redirect_uri,
+            state: authorization_request.state,
+            extension: serde_json::to_value(authorization_request.extension)?,
         })
     }
 
@@ -44,14 +59,14 @@ pub trait Extension: Serialize + PartialEq + Sized {
 
     fn decode_authorization_response(
         decoder: Decoder,
-        response: &AuthorizationResponse<Self>,
+        authorization_response: &AuthorizationResponse<Self>,
     ) -> anyhow::Result<Self::ResponseItem>;
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub struct Unresolved;
+pub struct Generic;
 
-impl Extension for Unresolved {
+impl Extension for Generic {
     type ResponseType = JsonValue;
     type AuthorizationRequest = JsonValue;
     type AuthorizationRequestBuilder = ();
