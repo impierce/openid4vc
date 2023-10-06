@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use oid4vc_core::{
-    authorization_request::AuthorizationRequestObject, authorization_response::AuthorizationResponse, Decoder,
-    Extension, Subject, SubjectSyntaxType, Subjects,
+    authorization_request::AuthorizationRequestObject, authorization_response::AuthorizationResponse,
+    openid4vc_extension::Extension, Decoder, Subject, SubjectSyntaxType, Subjects,
 };
 use siopv2::RelyingParty;
 use std::sync::Arc;

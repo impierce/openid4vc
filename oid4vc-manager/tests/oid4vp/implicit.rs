@@ -11,7 +11,10 @@ use oid4vc_manager::{
     RelyingPartyManager,
 };
 use oid4vci::VerifiableCredentialJwt;
-use oid4vp::{OID4VPUserClaims, PresentationDefinition, OID4VP};
+use oid4vp::{
+    openid4vc_extension::{OID4VPAuthorizationResponseInput, OID4VP},
+    PresentationDefinition,
+};
 use serde_json::json;
 use std::sync::Arc;
 
@@ -159,7 +162,7 @@ async fn test_implicit_flow() {
     let authorization_response: AuthorizationResponse<OID4VP> = provider_manager
         .generate_response(
             &authorization_request,
-            OID4VPUserClaims {
+            OID4VPAuthorizationResponseInput {
                 verifiable_presentation,
                 presentation_submission,
             },

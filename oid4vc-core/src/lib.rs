@@ -5,11 +5,10 @@ pub mod client_metadata;
 pub mod collection;
 pub mod decoder;
 pub mod jwt;
+pub mod openid4vc_extension;
 pub mod rfc7519_claims;
 pub mod scope;
 pub mod subject_syntax_type;
-
-use std::sync::Arc;
 
 pub use authentication::{
     sign::Sign,
@@ -17,13 +16,11 @@ pub use authentication::{
     validator::{Validator, Validators},
     verify::Verify,
 };
-use authorization_request::AuthorizationRequestObject;
-use authorization_response::AuthorizationResponse;
 pub use collection::Collection;
 pub use decoder::Decoder;
 use rand::{distributions::Alphanumeric, Rng};
 pub use rfc7519_claims::RFC7519Claims;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::Serialize;
 pub use subject_syntax_type::{DidMethod, SubjectSyntaxType};
 
 pub use serde_json::Value as JsonValue;
@@ -32,86 +29,7 @@ pub type JsonObject = serde_json::Map<String, JsonValue>;
 #[cfg(test)]
 mod test_utils;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub struct Unresolved;
-
-impl Extension for Unresolved {
-    type ResponseType = JsonValue;
-    type AuthorizationRequest = JsonValue;
-    type AuthorizationRequestBuilder = ();
-    type UserClaims = ();
-    type AuthorizationResponse = ();
-    type ResponseItem = ();
-
-    fn generate_token(
-        _subject: Arc<dyn Subject>,
-        _client_id: &str,
-        _extension: &Self::AuthorizationRequest,
-        _user_input: &Self::UserClaims,
-    ) -> anyhow::Result<Vec<String>> {
-        unreachable!()
-    }
-
-    fn build_authorization_response(
-        _jwts: Vec<String>,
-        _user_input: Self::UserClaims,
-        _redirect_uri: String,
-        _state: Option<String>,
-    ) -> anyhow::Result<AuthorizationResponse<Self>> {
-        unreachable!()
-    }
-
-    fn decode_authorization_response(
-        _decoder: Decoder,
-        _response: &AuthorizationResponse<Self>,
-    ) -> anyhow::Result<Self::ResponseItem> {
-        unreachable!()
-    }
-}
-
-pub trait Extension: Serialize + PartialEq + Sized {
-    type ResponseType: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq + Default;
-    type AuthorizationRequest: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq;
-    type AuthorizationRequestBuilder: Default + std::fmt::Debug;
-    type UserClaims;
-    type AuthorizationResponse: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq;
-    type ResponseItem: Serialize + std::fmt::Debug + PartialEq;
-
-    fn resolve(
-        authorization_request: AuthorizationRequestObject<Unresolved>,
-    ) -> anyhow::Result<AuthorizationRequestObject<Self>> {
-        Ok(AuthorizationRequestObject::<Self> {
-            rfc7519_claims: authorization_request.rfc7519_claims,
-            response_type: serde_json::from_value(authorization_request.response_type)
-                .map_err(|_| anyhow::anyhow!("Invalid `response_type` parameter."))?,
-            client_id: authorization_request.client_id,
-            redirect_uri: authorization_request.redirect_uri,
-            state: authorization_request.state,
-            extension: serde_json::from_value(authorization_request.extension)
-                .map_err(|_| anyhow::anyhow!("Invalid `extension` parameter."))?,
-        })
-    }
-
-    fn generate_token(
-        subject: Arc<dyn Subject>,
-        client_id: &str,
-        extension: &Self::AuthorizationRequest,
-        user_input: &Self::UserClaims,
-    ) -> anyhow::Result<Vec<String>>;
-
-    fn build_authorization_response(
-        jwts: Vec<String>,
-        user_input: Self::UserClaims,
-        redirect_uri: String,
-        state: Option<String>,
-    ) -> anyhow::Result<AuthorizationResponse<Self>>;
-
-    fn decode_authorization_response(
-        decoder: Decoder,
-        response: &AuthorizationResponse<Self>,
-    ) -> anyhow::Result<Self::ResponseItem>;
-}
-
+// Macro that generates a builder function for a field.
 #[macro_export]
 macro_rules! builder_fn {
     ($name:ident, $ty:ty) => {

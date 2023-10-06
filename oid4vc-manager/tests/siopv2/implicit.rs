@@ -11,7 +11,8 @@ use oid4vc_core::{
 use oid4vc_manager::{ProviderManager, RelyingPartyManager};
 use siopv2::{
     claims::{Address, IndividualClaimRequest},
-    SIOPv2, StandardClaimsRequests, StandardClaimsValues,
+    openid4vc_extension::SIOPv2,
+    StandardClaimsRequests, StandardClaimsValues,
 };
 use std::{str::FromStr, sync::Arc};
 use wiremock::{

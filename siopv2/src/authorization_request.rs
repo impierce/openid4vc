@@ -1,4 +1,4 @@
-use crate::{ClaimRequests, SIOPv2, StandardClaimsRequests};
+use crate::{openid4vc_extension::SIOPv2, ClaimRequests, StandardClaimsRequests};
 use anyhow::{anyhow, Result};
 use is_empty::IsEmpty;
 use oid4vc_core::builder_fn;

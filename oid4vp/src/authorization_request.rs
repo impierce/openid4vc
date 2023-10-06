@@ -1,4 +1,4 @@
-use crate::OID4VP;
+use crate::openid4vc_extension::OID4VP;
 use anyhow::{anyhow, Result};
 use dif_presentation_exchange::PresentationDefinition;
 use is_empty::IsEmpty;
