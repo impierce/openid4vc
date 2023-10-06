@@ -10,6 +10,7 @@ use oid4vc_core::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+// Unit struct used for the `response_type` parameter.
 #[derive(Debug, PartialEq, Default)]
 pub struct IdToken;
 serialize_unit_struct!("id_token", IdToken);

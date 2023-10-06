@@ -1,8 +1,8 @@
 pub mod authorization_request;
 pub mod claims;
-pub mod openid4vc_extension;
 pub mod provider;
 pub mod relying_party;
+pub mod siopv2;
 pub mod token;
 
 pub use claims::{ClaimRequests, StandardClaimsRequests, StandardClaimsValues};

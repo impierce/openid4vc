@@ -6,7 +6,7 @@ use oid4vc_core::{
     Decoder, Subject, SubjectSyntaxType, Subjects,
 };
 use reqwest::StatusCode;
-use siopv2::{openid4vc_extension::SIOPv2, Provider};
+use siopv2::{siopv2::SIOPv2, Provider};
 use std::sync::Arc;
 
 /// Manager struct for [`siopv2::Provider`].

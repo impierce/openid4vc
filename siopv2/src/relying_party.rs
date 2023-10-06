@@ -1,4 +1,4 @@
-use crate::{openid4vc_extension::SIOPv2, token::id_token::IdToken, AuthorizationResponse};
+use crate::{siopv2::SIOPv2, token::id_token::IdToken, AuthorizationResponse};
 use anyhow::Result;
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::{

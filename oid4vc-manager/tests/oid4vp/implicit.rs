@@ -12,7 +12,7 @@ use oid4vc_manager::{
 };
 use oid4vci::VerifiableCredentialJwt;
 use oid4vp::{
-    openid4vc_extension::{OID4VPAuthorizationResponseInput, OID4VP},
+    oid4vp::{OID4VPAuthorizationResponseInput, OID4VP},
     PresentationDefinition,
 };
 use serde_json::json;
