@@ -1,5 +1,5 @@
 use crate::{
-    credential_format_profiles::{CredentialFormatCollection, CredentialFormats},
+    credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters},
     serialize_unit_struct,
 };
 use reqwest::Url;
@@ -10,7 +10,7 @@ use serde_with::skip_serializing_none;
 /// described in [OpenID4VCI](https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-request-issuance-of-a-certa)
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
-pub struct AuthorizationDetailsObject<CFC = CredentialFormats>
+pub struct AuthorizationDetailsObject<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {

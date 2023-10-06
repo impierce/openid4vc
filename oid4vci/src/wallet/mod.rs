@@ -54,8 +54,8 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         &self,
         credential_issuer_url: Url,
     ) -> Result<AuthorizationServerMetadata> {
-        let mut credential_issuer_url = credential_issuer_url.clone();
-        credential_issuer_url
+        let mut oauth_authorization_server_endpoint = credential_issuer_url.clone();
+        oauth_authorization_server_endpoint
             .path_segments_mut()
             .map_err(|_| anyhow::anyhow!("unable to parse credential issuer url"))
             .unwrap()
@@ -63,7 +63,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .push("oauth-authorization-server");
 
         self.client
-            .get(credential_issuer_url)
+            .get(oauth_authorization_server_endpoint)
             .send()
             .await?
             .json::<AuthorizationServerMetadata>()
@@ -75,15 +75,15 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         &self,
         credential_issuer_url: Url,
     ) -> Result<CredentialIssuerMetadata<CFC>> {
-        let mut credential_issuer_url = credential_issuer_url.clone();
-        credential_issuer_url
+        let mut openid_credential_issuer_endpoint = credential_issuer_url.clone();
+        openid_credential_issuer_endpoint
             .path_segments_mut()
             .map_err(|_| anyhow::anyhow!("unable to parse credential issuer url"))?
             .push(".well-known")
             .push("openid-credential-issuer");
 
         self.client
-            .get(credential_issuer_url)
+            .get(openid_credential_issuer_endpoint)
             .send()
             .await?
             .json::<CredentialIssuerMetadata<CFC>>()

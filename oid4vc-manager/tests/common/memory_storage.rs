@@ -8,6 +8,7 @@ use oid4vci::{
     authorization_response::AuthorizationResponse,
     credential_format_profiles::{
         w3c_verifiable_credentials::jwt_vc_json::JwtVcJson, Credential, CredentialFormatCollection, CredentialFormats,
+        WithParameters,
     },
     credential_issuer::credentials_supported::CredentialsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
@@ -90,8 +91,11 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
         credential_format: CFC,
         signer: SigningSubject,
     ) -> Option<CredentialResponse> {
-        let type_ = match serde_json::from_value::<CredentialFormats>(serde_json::to_value(credential_format).unwrap())
-            .unwrap()
+        dbg!(credential_format.clone());
+        let type_ = match serde_json::from_value::<CredentialFormats<WithParameters>>(
+            serde_json::to_value(credential_format).unwrap(),
+        )
+        .unwrap()
         {
             CredentialFormats::JwtVcJson(credential) => credential.parameters.credential_definition.type_,
             _ => unreachable!("Credential format not supported"),

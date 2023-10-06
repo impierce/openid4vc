@@ -6,7 +6,7 @@ use oid4vc_manager::{
     servers::credential_issuer::Server,
 };
 use oid4vci::{
-    credential_format_profiles::CredentialFormats,
+    credential_format_profiles::{CredentialFormats, WithParameters},
     credential_offer::{CredentialOffer, CredentialOfferQuery, CredentialsObject, Grants},
     credential_response::{BatchCredentialResponse, CredentialResponse, CredentialResponseType},
     token_request::{PreAuthorizedCode, TokenRequest},
@@ -22,7 +22,7 @@ use std::sync::Arc;
 #[tokio::test]
 async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference: bool) {
     // Setup the credential issuer.
-    let mut credential_issuer = Server::<_, CredentialFormats>::setup(
+    let mut credential_issuer = Server::<_, CredentialFormats<WithParameters>>::setup(
         CredentialIssuerManager::new(
             None,
             MemoryStorage,
@@ -60,27 +60,31 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             wallet.get_credential_offer(credential_offer_uri).await.unwrap()
         }
     };
-
+    dbg!(&credential_offer);
     // The credential offer contains a credential issuer url.
     let credential_issuer_url = credential_offer.credential_issuer;
+    dbg!("HERE");
 
     // Get the authorization server metadata.
     let authorization_server_metadata = wallet
         .get_authorization_server_metadata(credential_issuer_url.clone())
         .await
         .unwrap();
+    dbg!("HERE");
 
     assert_eq!(
         authorization_server_metadata.pre_authorized_grant_anonymous_access_supported,
         Some(true)
     );
 
+    dbg!("HERE");
     // Get the credential issuer metadata.
     let credential_issuer_metadata = wallet
         .get_credential_issuer_metadata(credential_issuer_url.clone())
         .await
         .unwrap();
 
+    dbg!("HERE");
     // Create a token request with grant_type `pre_authorized_code`.
     let token_request = match credential_offer.grants {
         Some(Grants {
@@ -93,11 +97,13 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         None => unreachable!(),
     };
 
+    dbg!("HERE");
     // Get an access token.
     let token_response = wallet
         .get_access_token(authorization_server_metadata.token_endpoint.unwrap(), token_request)
         .await
         .unwrap();
+    dbg!("HERE");
 
     if !batch {
         // The credential offer contains a credential format for a university degree.
@@ -106,6 +112,9 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             _ => unreachable!(),
         };
 
+        dbg!(university_degree_credential_format.clone());
+
+        dbg!("HERE");
         // Get the credential.
         let credential_response: CredentialResponse = wallet
             .get_credential(
@@ -116,14 +125,17 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             .await
             .unwrap();
 
+        dbg!("HERE");
         let credential = match credential_response.credential {
             CredentialResponseType::Immediate(CredentialFormats::JwtVcJson(credential)) => credential.credential,
             _ => panic!("Credential was not a JWT VC JSON."),
         };
 
+        dbg!("HERE");
         // Decode the JWT without performing validation
         let claims = get_jwt_claims(&credential);
 
+        dbg!("HERE");
         // Check the credential.
         assert_eq!(
             claims["vc"],
@@ -159,12 +171,14 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             })
             .collect::<Vec<_>>();
 
+        dbg!("HERE");
         // Get the credential.
         let batch_credential_response: BatchCredentialResponse = wallet
             .get_batch_credential(credential_issuer_metadata, &token_response, credentials)
             .await
             .unwrap();
 
+        dbg!("HERE");
         let credentials: Vec<_> = batch_credential_response
             .credential_responses
             .into_iter()
@@ -182,6 +196,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             })
             .collect();
 
+        dbg!("HERE");
         // Check the "UniversityDegree_JWT" credential.
         assert_eq!(
             credentials[0]["vc"],

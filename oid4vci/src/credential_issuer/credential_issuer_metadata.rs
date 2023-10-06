@@ -1,5 +1,5 @@
 use super::credentials_supported::CredentialsSupportedObject;
-use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats};
+use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters};
 use oid4vc_core::{JsonObject, JsonValue};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -9,7 +9,7 @@ use serde_with::skip_serializing_none;
 /// https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-issuer-metadata.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct CredentialIssuerMetadata<CFC = CredentialFormats>
+pub struct CredentialIssuerMetadata<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {
@@ -74,6 +74,9 @@ mod tests {
         // https://bitbucket.org/openid/connect/src/master/openid-4-verifiable-credential-issuance/examples/.
 
         assert_eq!(
+            json_example::<CredentialIssuerMetadata<CredentialFormats<WithParameters>>>(
+                "tests/examples/issuer_metadata.json"
+            ),
             CredentialIssuerMetadata {
                 credential_endpoint: Url::parse("https://server.example.com/credential").unwrap(),
                 credentials_supported: vec![
@@ -300,8 +303,7 @@ mod tests {
                 batch_credential_endpoint: None,
                 deferred_credential_endpoint: None,
                 display: None,
-            },
-            json_example::<CredentialIssuerMetadata<CredentialFormats>>("tests/examples/issuer_metadata.json")
+            }
         );
     }
 }
