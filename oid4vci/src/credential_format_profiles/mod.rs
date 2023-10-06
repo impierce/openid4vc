@@ -110,7 +110,7 @@ pub trait CredentialFormatCollection: Serialize + Send + Sync + Clone + std::fmt
 
 #[derive(Debug, Serialize, Clone, Eq, PartialEq, Deserialize)]
 #[serde(untagged)]
-pub enum CredentialFormats<C = WithParameters>
+pub enum CredentialFormats<C = ()>
 where
     C: FormatExtension + DeserializeOwned,
 {
@@ -123,26 +123,17 @@ where
 
 impl<C> CredentialFormatCollection for CredentialFormats<C> where C: FormatExtension {}
 
-impl TryInto<CredentialFormats<()>> for &CredentialFormats<WithCredential> {
-    type Error = anyhow::Error;
-
-    fn try_into(self) -> Result<CredentialFormats<()>, Self::Error> {
+impl<C> CredentialFormats<C>
+where
+    C: FormatExtension + DeserializeOwned,
+{
+    pub fn format(&self) -> anyhow::Result<CredentialFormats> {
         match self {
-            CredentialFormats::JwtVcJson(credential) => Ok(CredentialFormats::<()>::JwtVcJson(Profile {
-                format: credential.format.clone(),
-            })),
-            CredentialFormats::JwtVcJsonLd(credential) => Ok(CredentialFormats::<()>::JwtVcJsonLd(Profile {
-                format: credential.format.clone(),
-            })),
-            CredentialFormats::LdpVc(credential) => Ok(CredentialFormats::<()>::LdpVc(Profile {
-                format: credential.format.clone(),
-            })),
-            CredentialFormats::MsoMdoc(credential) => Ok(CredentialFormats::<()>::MsoMdoc(Profile {
-                format: credential.format.clone(),
-            })),
-            CredentialFormats::Other(_) => Err(anyhow::anyhow!(
-                "unable to convert CredentialFormats<WithCredential> to CredentialFormats<()>"
-            )),
+            CredentialFormats::JwtVcJson(_) => Ok(CredentialFormats::JwtVcJson(Profile { format: JwtVcJson })),
+            CredentialFormats::JwtVcJsonLd(_) => Ok(CredentialFormats::JwtVcJsonLd(Profile { format: JwtVcJsonLd })),
+            CredentialFormats::LdpVc(_) => Ok(CredentialFormats::LdpVc(Profile { format: LdpVc })),
+            CredentialFormats::MsoMdoc(_) => Ok(CredentialFormats::MsoMdoc(Profile { format: MsoMdoc })),
+            CredentialFormats::Other(_) => Err(anyhow::anyhow!("unable to get the format")),
         }
     }
 }
@@ -155,8 +146,86 @@ impl CredentialFormats<WithCredential> {
             CredentialFormats::LdpVc(credential) => Ok(&credential.credential),
             CredentialFormats::MsoMdoc(credential) => Ok(&credential.credential),
             CredentialFormats::Other(_) => Err(anyhow::anyhow!(
-                "unable to convert CredentialFormats<WithCredential> to CredentialFormats<()>"
+                "unable to get credential from CredentialFormats<WithCredential>"
             )),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        w3c_verifiable_credentials::jwt_vc_json::{self, JwtVcJsonParameters},
+        *,
+    };
+    use serde_json::json;
+
+    #[test]
+    fn test_credential_formats() {
+        // Assert that the credential formats with known value 'jwt_vc_json' can be deserialized.
+        assert_eq!(
+            serde_json::from_value::<CredentialFormats>(json!({
+                "format": "jwt_vc_json"
+            }))
+            .unwrap(),
+            CredentialFormats::JwtVcJson(Profile { format: JwtVcJson })
+        );
+
+        // Assert that unknown credential formats can still be deserialized.
+        assert_eq!(
+            serde_json::from_value::<CredentialFormats>(json!({
+                "format": "unknown_format"
+            }))
+            .unwrap(),
+            CredentialFormats::Other(json!({
+                "format": "unknown_format"
+            }))
+        );
+    }
+
+    #[test]
+    fn test_credential_formats_with_parameters() {
+        // Assert that the credential formats with known value 'jwt_vc_json' can be deserialized
+        // with format specific parameters.
+        assert_eq!(
+            serde_json::from_value::<CredentialFormats<WithParameters>>(json!({
+                "format": "jwt_vc_json",
+                "credential_definition":{
+                    "type": [
+                        "VerifiableCredential",
+                        "DriverLicenseCredential"
+                    ]
+                }
+            }))
+            .unwrap(),
+            CredentialFormats::JwtVcJson(Parameters {
+                format: JwtVcJson,
+                parameters: JwtVcJsonParameters {
+                    credential_definition: jwt_vc_json::CredentialDefinition {
+                        type_: vec![
+                            "VerifiableCredential".to_string(),
+                            "DriverLicenseCredential".to_string(),
+                        ],
+                        credential_subject: None,
+                    },
+                    order: None,
+                },
+            })
+        );
+
+        // Assert that unknown credential formats iwth parameters can still be deserialized.
+        assert_eq!(
+            serde_json::from_value::<CredentialFormats<WithParameters>>(json!({
+                "format": "unknown_format",
+                "unknown_format_specific_parameter": "unknown_value"
+            }))
+            .unwrap(),
+            CredentialFormats::Other(json!(
+                {
+                    "format": "unknown_format",
+                    "unknown_format_specific_parameter": "unknown_value"
+                }
+            ))
+        );
     }
 }

@@ -1,5 +1,5 @@
 use crate::{
-    credential_format_profiles::{CredentialFormatCollection, CredentialFormats},
+    credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters},
     ProofType,
 };
 use oid4vc_core::JsonValue;
@@ -9,7 +9,7 @@ use serde_with::skip_serializing_none;
 /// Credentials Supported object as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-objects-comprising-credenti.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct CredentialsSupportedObject<CFC = CredentialFormats>
+pub struct CredentialsSupportedObject<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {

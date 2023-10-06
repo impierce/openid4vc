@@ -108,10 +108,9 @@ async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use siopv2::SIOPv2;
-
     use super::*;
     use crate::{ProviderManager, RelyingPartyManager};
+    use siopv2::SIOPv2;
     use std::sync::Arc;
 
     #[tokio::test]

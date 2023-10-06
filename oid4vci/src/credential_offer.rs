@@ -1,4 +1,4 @@
-use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats};
+use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters};
 use anyhow::Result;
 use oid4vc_core::JsonObject;
 use oid4vc_core::{to_query_value, JsonValue};
@@ -24,7 +24,7 @@ pub struct PreAuthorizedCode {
 /// Credential Offer as described in https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer.
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
-pub struct CredentialOffer<CFC = CredentialFormats>
+pub struct CredentialOffer<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {

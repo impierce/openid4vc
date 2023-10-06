@@ -1,5 +1,5 @@
 use crate::{
-    credential_format_profiles::{CredentialFormatCollection, CredentialFormats},
+    credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters},
     proof::Proof,
 };
 use serde::{Deserialize, Serialize};
@@ -8,7 +8,7 @@ use serde_with::skip_serializing_none;
 /// Credential Request as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct CredentialRequest<CFC = CredentialFormats>
+pub struct CredentialRequest<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {
