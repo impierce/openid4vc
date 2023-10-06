@@ -16,6 +16,7 @@ use oid4vci::VerifiableCredentialJwt;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+// Unit struct used for the `response_type` parameter.
 #[derive(Debug, PartialEq, Default)]
 pub struct VpToken;
 serialize_unit_struct!("vp_token", VpToken);

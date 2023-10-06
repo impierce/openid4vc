@@ -11,7 +11,7 @@ use oid4vc_core::{
 use oid4vc_manager::{ProviderManager, RelyingPartyManager};
 use siopv2::{
     claims::{Address, IndividualClaimRequest},
-    openid4vc_extension::SIOPv2,
+    siopv2::SIOPv2,
     StandardClaimsRequests, StandardClaimsValues,
 };
 use std::{str::FromStr, sync::Arc};

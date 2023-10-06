@@ -1,6 +1,6 @@
 pub mod authorization_request;
+pub mod oid4vp;
 pub mod oid4vp_params;
-pub mod openid4vc_extension;
 pub mod token;
 
 pub use dif_presentation_exchange::{

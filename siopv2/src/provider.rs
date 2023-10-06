@@ -92,7 +92,7 @@ impl Provider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{openid4vc_extension::SIOPv2, test_utils::TestSubject};
+    use crate::{siopv2::SIOPv2, test_utils::TestSubject};
     use oid4vc_core::{Subject, SubjectSyntaxType, Validator, Validators};
     use std::{str::FromStr, sync::Arc};
 
