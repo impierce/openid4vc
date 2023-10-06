@@ -3,7 +3,8 @@ use oid4vc_core::{
     authentication::subject::SigningSubject,
     authorization_request::{AuthorizationRequest, AuthorizationRequestObject},
     authorization_response::AuthorizationResponse,
-    Decoder, Extension,
+    openid4vc_extension::Extension,
+    Decoder,
 };
 use reqwest::StatusCode;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -59,7 +60,7 @@ impl Provider {
     pub fn generate_response<E: Extension>(
         &self,
         request: &AuthorizationRequestObject<E>,
-        user_claims: E::UserClaims,
+        user_claims: E::AuthorizationResponseInput,
     ) -> Result<AuthorizationResponse<E>> {
         let redirect_uri = request.redirect_uri.to_string();
         let state = request.state.clone();
@@ -88,7 +89,7 @@ impl Provider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{test_utils::TestSubject, SIOPv2};
+    use crate::{openid4vc_extension::SIOPv2, test_utils::TestSubject};
     use oid4vc_core::{Subject, SubjectSyntaxType, Validator, Validators};
     use std::{str::FromStr, sync::Arc};
 

@@ -2,10 +2,11 @@ use anyhow::Result;
 use oid4vc_core::{
     authorization_request::{AuthorizationRequest, AuthorizationRequestObject},
     authorization_response::AuthorizationResponse,
-    Decoder, Extension, Subject, SubjectSyntaxType, Subjects,
+    openid4vc_extension::Extension,
+    Decoder, Subject, SubjectSyntaxType, Subjects,
 };
 use reqwest::StatusCode;
-use siopv2::{Provider, SIOPv2};
+use siopv2::{openid4vc_extension::SIOPv2, Provider};
 use std::sync::Arc;
 
 /// Manager struct for [`siopv2::Provider`].
@@ -34,7 +35,7 @@ impl ProviderManager {
     pub fn generate_response<E: Extension>(
         &self,
         request: &AuthorizationRequestObject<E>,
-        user_claims: E::UserClaims,
+        user_claims: E::AuthorizationResponseInput,
     ) -> Result<AuthorizationResponse<E>> {
         self.provider.generate_response(request, user_claims)
     }

@@ -1,4 +1,7 @@
-use crate::{Extension, JsonObject, JsonValue, RFC7519Claims, Unresolved};
+use crate::{
+    openid4vc_extension::{Extension, Unresolved},
+    JsonObject, JsonValue, RFC7519Claims,
+};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
 

@@ -1,8 +1,9 @@
-use crate::{token::id_token::IdToken, AuthorizationResponse, SIOPv2};
+use crate::{openid4vc_extension::SIOPv2, token::id_token::IdToken, AuthorizationResponse};
 use anyhow::Result;
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::{
-    authentication::subject::SigningSubject, authorization_request::AuthorizationRequestObject, jwt, Decoder, Extension,
+    authentication::subject::SigningSubject, authorization_request::AuthorizationRequestObject, jwt,
+    openid4vc_extension::Extension, Decoder,
 };
 use oid4vci::VerifiableCredentialJwt;
 use std::collections::HashMap;

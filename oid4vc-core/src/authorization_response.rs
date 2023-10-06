@@ -1,4 +1,4 @@
-use crate::Extension;
+use crate::openid4vc_extension::Extension;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
