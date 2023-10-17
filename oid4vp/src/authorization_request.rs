@@ -9,6 +9,7 @@ use oid4vc_core::{
 };
 use serde::{Deserialize, Serialize};
 
+/// [`AuthorizationRequest`] claims specific to [`OID4VP`].
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct AuthorizationRequestParameters {
     pub presentation_definition: PresentationDefinition,

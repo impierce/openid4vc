@@ -9,6 +9,7 @@ use oid4vc_core::{
 };
 use serde::{Deserialize, Serialize};
 
+/// [`AuthorizationRequest`] claims specific to [`SIOPv2`].
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct AuthorizationRequestParameters {
     // TODO: make generic Scope and add it to `AuthorizationRequest`.

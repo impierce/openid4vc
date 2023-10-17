@@ -5,11 +5,13 @@ use crate::{
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
 
+/// A `Body` is a set of claims that are sent by a client to a provider. It can be `ByValue`, `ByReference`, or an `Object`.
 pub trait Body: Serialize + std::fmt::Debug {
     fn client_id(&self) -> &String;
-    fn response_type(&self) -> Option<String>;
 }
 
+/// An `Object` is a set of claims that are sent by a client to a provider. On top of some generic claims, it also
+/// contains a set of claims specific to an [`Extension`].
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Object<E: Extension = Generic> {
     #[serde(flatten)]
@@ -23,6 +25,7 @@ pub struct Object<E: Extension = Generic> {
 }
 
 impl<E: Extension> Object<E> {
+    /// Converts a [`Object`] with a [`Generic`] [`Extension`] to a [`Object`] with a specific [`Extension`].
     fn from_generic(original: Object<Generic>) -> anyhow::Result<Self> {
         Ok(Object {
             rfc7519_claims: original.rfc7519_claims,
@@ -58,9 +61,6 @@ impl<E: Extension> Body for Object<E> {
     fn client_id(&self) -> &String {
         &self.client_id
     }
-    fn response_type(&self) -> Option<String> {
-        Some(self.response_type.to_string())
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -73,9 +73,6 @@ impl Body for ByReference {
     fn client_id(&self) -> &String {
         &self.client_id
     }
-    fn response_type(&self) -> Option<String> {
-        None
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -87,11 +84,10 @@ impl Body for ByValue {
     fn client_id(&self) -> &String {
         &self.client_id
     }
-    fn response_type(&self) -> Option<String> {
-        None
-    }
 }
 
+/// A [`AuthorizationRequest`] is a request that is sent by a client to a provider. It contains a set of claims in the
+/// form of a [`Body`] which can be [`ByValue`], [`ByReference`], or an [`Object`].
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct AuthorizationRequest<B: Body> {
     #[serde(flatten)]
@@ -99,6 +95,7 @@ pub struct AuthorizationRequest<B: Body> {
 }
 
 impl<E: Extension + OpenID4VC> AuthorizationRequest<Object<E>> {
+    /// Converts a [`AuthorizationRequest`] with a [`Generic`] [`Extension`] to a [`AuthorizationRequest`] with a specific [`Extension`].
     pub fn from_generic(
         original: AuthorizationRequest<Object<Generic>>,
     ) -> anyhow::Result<AuthorizationRequest<Object<E>>> {
@@ -109,12 +106,13 @@ impl<E: Extension + OpenID4VC> AuthorizationRequest<Object<E>> {
 }
 
 impl<E: Extension> AuthorizationRequest<Object<E>> {
+    /// Returns a [`AuthorizationRequest`]'s builder.
     pub fn builder() -> <E::RequestHandle as RequestHandle>::Builder {
         <E::RequestHandle as RequestHandle>::Builder::default()
     }
 }
 
-/// In order to convert a string to a [`RequestUrl`], we need to try to parse each value as a JSON object. This way we
+/// In order to convert a string to a [`AuthorizationRequest`], we need to try to parse each value as a JSON object. This way we
 /// can catch any non-primitive types. If the value is not a JSON object or an Array, we just leave it as a string.
 impl<B: Body + DeserializeOwned> std::str::FromStr for AuthorizationRequest<B> {
     type Err = anyhow::Error;
@@ -134,10 +132,10 @@ impl<B: Body + DeserializeOwned> std::str::FromStr for AuthorizationRequest<B> {
     }
 }
 
-/// In order to convert a [`RequestUrl`] to a string, we need to convert all the values to strings. This is because
+/// In order to convert a [`AuthorizationRequest`] to a string, we need to convert all the values to strings. This is because
 /// `serde_urlencoded` does not support serializing non-primitive types.
 // TODO: Find a way to dynamically generate the `siopv2://idtoken?` part of the URL. This will require some refactoring
-// for the `RequestUrl` enum.
+// for the `AuthorizationRequest` struct.
 impl<B: Body> std::fmt::Display for AuthorizationRequest<B> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let map: JsonObject = json!(self)
@@ -155,5 +153,44 @@ impl<B: Body> std::fmt::Display for AuthorizationRequest<B> {
 
         let encoded = serde_urlencoded::to_string(map).map_err(|_| std::fmt::Error)?;
         write!(f, "siopv2://idtoken?{}", encoded)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn test() {
+        let authorization_request = AuthorizationRequest::<Object> {
+            body: Object {
+                rfc7519_claims: Default::default(),
+                response_type: "id_token".to_string(),
+                client_id: "did:example:123".to_string(),
+                redirect_uri: "https://www.example.com".parse().unwrap(),
+                state: Some("state".to_string()),
+                extension: json!({
+                    "response_mode": "direct_post",
+                    "nonce": "nonce",
+                    "claims": {
+                        "id_token": {
+                            "email": {
+                                "essential": true
+                            }
+                        }
+                    }
+                }),
+            },
+        };
+
+        // Convert the authorization request to a form urlencoded string.
+        let form_urlencoded = authorization_request.to_string();
+
+        // Convert the form urlencoded string back to a authorization request.
+        assert_eq!(
+            AuthorizationRequest::<Object>::from_str(&form_urlencoded).unwrap(),
+            authorization_request
+        );
     }
 }

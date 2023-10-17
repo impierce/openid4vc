@@ -80,7 +80,7 @@ impl Provider {
     pub fn generate_response<E: Extension>(
         &self,
         authorization_request: &AuthorizationRequest<Object<E>>,
-        user_claims: <E::ResponseHandle as ResponseHandle>::Input,
+        input: <E::ResponseHandle as ResponseHandle>::Input,
     ) -> Result<AuthorizationResponse<E>> {
         let redirect_uri = authorization_request.body.redirect_uri.to_string();
         let state = authorization_request.body.state.clone();
@@ -89,10 +89,10 @@ impl Provider {
             self.subject.clone(),
             &authorization_request.body.client_id,
             &authorization_request.body.extension,
-            &user_claims,
+            &input,
         )?;
 
-        E::build_authorization_response(jwts, user_claims, redirect_uri, state)
+        E::build_authorization_response(jwts, input, redirect_uri, state)
     }
 
     pub async fn send_response<E: Extension>(
