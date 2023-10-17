@@ -26,15 +26,15 @@ pub struct Object<E: Extension = Generic> {
 
 impl<E: Extension> Object<E> {
     /// Converts a [`Object`] with a [`Generic`] [`Extension`] to a [`Object`] with a specific [`Extension`].
-    fn from_generic(original: Object<Generic>) -> anyhow::Result<Self> {
+    fn from_generic(original: &Object<Generic>) -> anyhow::Result<Self> {
         Ok(Object {
-            rfc7519_claims: original.rfc7519_claims,
+            rfc7519_claims: original.rfc7519_claims.clone(),
             // TODO: fix error message
             response_type: original.response_type.parse().map_err(|_| anyhow::anyhow!(""))?,
-            client_id: original.client_id,
-            redirect_uri: original.redirect_uri,
-            state: original.state,
-            extension: serde_json::from_value(original.extension)?,
+            client_id: original.client_id.clone(),
+            redirect_uri: original.redirect_uri.clone(),
+            state: original.state.clone(),
+            extension: serde_json::from_value(original.extension.clone())?,
         })
     }
 }
@@ -97,10 +97,10 @@ pub struct AuthorizationRequest<B: Body> {
 impl<E: Extension + OpenID4VC> AuthorizationRequest<Object<E>> {
     /// Converts a [`AuthorizationRequest`] with a [`Generic`] [`Extension`] to a [`AuthorizationRequest`] with a specific [`Extension`].
     pub fn from_generic(
-        original: AuthorizationRequest<Object<Generic>>,
+        original: &AuthorizationRequest<Object<Generic>>,
     ) -> anyhow::Result<AuthorizationRequest<Object<E>>> {
         Ok(AuthorizationRequest {
-            body: Object::from_generic(original.body)?,
+            body: Object::from_generic(&original.body)?,
         })
     }
 }

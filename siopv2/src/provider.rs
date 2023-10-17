@@ -153,7 +153,7 @@ mod tests {
             .unwrap();
 
         let authorization_request =
-            AuthorizationRequest::<Object<SIOPv2>>::from_generic(authorization_request).unwrap();
+            AuthorizationRequest::<Object<SIOPv2>>::from_generic(&authorization_request).unwrap();
 
         // Test whether the provider can generate a authorization_response for the authorization_request succesfully.
         assert!(provider

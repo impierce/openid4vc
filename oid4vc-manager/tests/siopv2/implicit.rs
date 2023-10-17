@@ -126,15 +126,16 @@ async fn test_implicit_flow() {
         },
     };
 
-    let string = authorization_request.to_string();
-
     // The Provider obtains the request url either by a deeplink or by scanning a QR code. It then validates the
     // authorization_request. Since in this case the authorization_request is a JWT, the provider will fetch the authorization_request by sending a GET
     // authorization_request to mock server's `request_uri` endpoint.
-    let generic_authorization_request = provider_manager.validate_request(string.clone()).await.unwrap();
+    let generic_authorization_request = provider_manager
+        .validate_request(authorization_request.to_string())
+        .await
+        .unwrap();
 
     let authorization_request =
-        AuthorizationRequest::<Object<SIOPv2>>::from_generic(generic_authorization_request).unwrap();
+        AuthorizationRequest::<Object<SIOPv2>>::from_generic(&generic_authorization_request).unwrap();
 
     // The provider can now access the claims requested by the relying party.
     let request_claims = authorization_request.body.extension.id_token_request_claims().unwrap();
