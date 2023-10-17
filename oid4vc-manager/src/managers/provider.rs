@@ -1,8 +1,8 @@
 use anyhow::Result;
 use oid4vc_core::{
-    authorization_request::{AuthorizationRequest, AuthorizationRequestObject},
+    authorization_request::{AuthorizationRequest, Object},
     authorization_response::AuthorizationResponse,
-    openid4vc_extension::Extension,
+    openid4vc_extension::{Extension, OpenID4VC, ResponseHandle},
     Decoder, Subject, SubjectSyntaxType, Subjects,
 };
 use reqwest::StatusCode;
@@ -23,19 +23,16 @@ impl ProviderManager {
         })
     }
 
-    pub async fn validate_request<E: Extension>(
-        &self,
-        authorization_request: AuthorizationRequest,
-    ) -> Result<AuthorizationRequestObject<E>> {
+    pub async fn validate_request(&self, authorization_request: String) -> Result<AuthorizationRequest<Object>> {
         self.provider
             .validate_request(authorization_request, Decoder::from(&self.subjects))
             .await
     }
 
-    pub fn generate_response<E: Extension>(
+    pub fn generate_response<E: Extension + OpenID4VC>(
         &self,
-        authorization_request: &AuthorizationRequestObject<E>,
-        user_claims: E::AuthorizationResponseInput,
+        authorization_request: &AuthorizationRequest<Object<E>>,
+        user_claims: <E::ResponseHandle as ResponseHandle>::Input,
     ) -> Result<AuthorizationResponse<E>> {
         self.provider.generate_response(authorization_request, user_claims)
     }
@@ -65,18 +62,18 @@ impl ProviderManager {
 
     pub fn matching_subject_syntax_types(
         &self,
-        authorization_request: &AuthorizationRequestObject<SIOPv2>,
+        authorization_request: &AuthorizationRequest<Object<SIOPv2>>,
     ) -> Option<Vec<SubjectSyntaxType>> {
-        let supported_types =
-            authorization_request
-                .extension
-                .subject_syntax_types_supported()
-                .map_or(Vec::new(), |types| {
-                    types
-                        .iter()
-                        .filter(|sst| self.subject_syntax_types_supported().contains(sst))
-                        .collect()
-                });
+        let supported_types = authorization_request
+            .body
+            .extension
+            .subject_syntax_types_supported()
+            .map_or(Vec::new(), |types| {
+                types
+                    .iter()
+                    .filter(|sst| self.subject_syntax_types_supported().contains(sst))
+                    .collect()
+            });
         (!supported_types.is_empty()).then_some(supported_types.iter().map(|&sst| sst.clone()).collect())
     }
 }

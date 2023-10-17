@@ -1,9 +1,11 @@
+use std::str::FromStr;
+
 use anyhow::Result;
 use oid4vc_core::{
     authentication::subject::SigningSubject,
-    authorization_request::{AuthorizationRequest, AuthorizationRequestObject},
+    authorization_request::{AuthorizationRequest, Body, ByReference, ByValue, Object},
     authorization_response::AuthorizationResponse,
-    openid4vc_extension::Extension,
+    openid4vc_extension::{Extension, ResponseHandle},
     Decoder,
 };
 use reqwest::StatusCode;
@@ -29,46 +31,64 @@ impl Provider {
     }
 
     /// TODO: Add more validation rules.
-    /// Takes a [`RequestUrl`] and returns a [`AuthorizationRequest`]. The [`RequestUrl`] can either be a [`AuthorizationRequest`] or a
-    /// request by value. If the [`RequestUrl`] is a request by value, the request is decoded by the [`Subject`] of the [`Provider`].
-    /// If the request is valid, the request is returned.
-    pub async fn validate_request<E: Extension>(
+    /// Takes a String and tries to parse it into an [`AuthorizationRequest<Object>`]. If the parsing fails, it tries to
+    /// parse the [`AuthorizationRequest<Object>`] from the `request` parameter of the [`AuthorizationRequest<ByValue>`]
+    /// or from the `request_uri` parameter of the [`AuthorizationRequest<ByReference>`].
+    pub async fn validate_request(
         &self,
-        authorization_request: AuthorizationRequest,
+        authorization_request: String,
         decoder: Decoder,
-    ) -> Result<AuthorizationRequestObject<E>> {
-        if let AuthorizationRequest::Object(authorization_request) = authorization_request {
-            E::from_generic(*authorization_request)
+    ) -> Result<AuthorizationRequest<Object>> {
+        let authorization_request = if let Ok(authorization_request) =
+            authorization_request.parse::<AuthorizationRequest<Object>>()
+        {
+            authorization_request
         } else {
-            let (request_object, client_id) = match authorization_request {
-                AuthorizationRequest::ByReference { request_uri, client_id } => {
-                    let builder = self.client.get(request_uri);
+            let (client_id, authorization_request) =
+                if let Ok(authorization_request) = AuthorizationRequest::<ByValue>::from_str(&authorization_request) {
+                    let client_id = authorization_request.body.client_id().clone();
+                    let authorization_request: AuthorizationRequest<Object> = decoder
+                        .decode(authorization_request.body.request.to_owned())
+                        .await
+                        .unwrap();
+
+                    (client_id, authorization_request)
+                } else if let Ok(authorization_request) =
+                    AuthorizationRequest::<ByReference>::from_str(&authorization_request)
+                {
+                    let client_id = authorization_request.body.client_id().clone();
+                    let builder = self.client.get(authorization_request.body.request_uri.clone());
                     let request_value = builder.send().await?.text().await?;
-                    (request_value, client_id)
-                }
-                AuthorizationRequest::ByValue { request, client_id } => (request, client_id),
-                _ => unreachable!(),
-            };
-            let authorization_request: AuthorizationRequestObject<E> = decoder.decode(request_object).await?;
-            anyhow::ensure!(authorization_request.client_id == client_id, "Client id mismatch.");
-            Ok(authorization_request)
-        }
+                    let authorization_request: AuthorizationRequest<Object> = decoder.decode(request_value).await?;
+
+                    (client_id, authorization_request)
+                } else {
+                    return Err(anyhow::anyhow!("Invalid authorization request."));
+                };
+            anyhow::ensure!(
+                authorization_request.body.client_id == *client_id,
+                "Client id mismatch."
+            );
+            authorization_request
+        };
+
+        Ok(authorization_request)
     }
 
     /// Generates an [`AuthorizationResponse`] in response to an [`AuthorizationRequest`] and the user's claims. The [`AuthorizationResponse`]
     /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
     pub fn generate_response<E: Extension>(
         &self,
-        authorization_request: &AuthorizationRequestObject<E>,
-        user_claims: E::AuthorizationResponseInput,
+        authorization_request: &AuthorizationRequest<Object<E>>,
+        user_claims: <E::ResponseHandle as ResponseHandle>::Input,
     ) -> Result<AuthorizationResponse<E>> {
-        let redirect_uri = authorization_request.redirect_uri.to_string();
-        let state = authorization_request.state.clone();
+        let redirect_uri = authorization_request.body.redirect_uri.to_string();
+        let state = authorization_request.body.state.clone();
 
         let jwts = E::generate_token(
             self.subject.clone(),
-            &authorization_request.client_id,
-            &authorization_request.extension,
+            &authorization_request.body.client_id,
+            &authorization_request.body.extension,
             &user_claims,
         )?;
 
@@ -119,9 +139,9 @@ mod tests {
             ";
 
         // Let the provider validate the authorization_request.
-        let authorization_request: AuthorizationRequestObject<SIOPv2> = provider
+        let authorization_request: AuthorizationRequest<Object> = provider
             .validate_request(
-                request_url.parse().unwrap(),
+                request_url.to_string(),
                 Decoder {
                     validators: Validators::from([(
                         SubjectSyntaxType::from_str("did:test").unwrap(),
@@ -131,6 +151,9 @@ mod tests {
             )
             .await
             .unwrap();
+
+        let authorization_request =
+            AuthorizationRequest::<Object<SIOPv2>>::from_generic(authorization_request).unwrap();
 
         // Test whether the provider can generate a authorization_response for the authorization_request succesfully.
         assert!(provider

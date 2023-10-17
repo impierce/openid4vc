@@ -18,6 +18,8 @@ did_url = "0.1.0"
 is_empty = "0.2.0"
 rand = "0.8"
 derive_more = "0.99.16"
+reqwest-middleware.workspace = true
+futures = "0.3"
 
 [dev-dependencies]
 ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }

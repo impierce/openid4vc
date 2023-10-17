@@ -110,6 +110,7 @@ async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
 mod tests {
     use super::*;
     use crate::{ProviderManager, RelyingPartyManager};
+    use oid4vc_core::authorization_request::{AuthorizationRequest, Object};
     use siopv2::siopv2::SIOPv2;
     use std::sync::Arc;
 
@@ -137,9 +138,12 @@ mod tests {
 
         // Let the provider manager validate the authorization_request.
         let authorization_request = provider_manager
-            .validate_request::<SIOPv2>(request_url.parse().unwrap())
+            .validate_request(request_url.to_string())
             .await
             .unwrap();
+
+        let authorization_request =
+            AuthorizationRequest::<Object<SIOPv2>>::from_generic(authorization_request).unwrap();
 
         // Test whether the provider manager can generate a authorization_response for the authorization_request succesfully.
         let authorization_response = provider_manager

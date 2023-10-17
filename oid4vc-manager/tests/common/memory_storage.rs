@@ -91,7 +91,6 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
         credential_format: CFC,
         signer: SigningSubject,
     ) -> Option<CredentialResponse> {
-        dbg!(credential_format.clone());
         let type_ = match serde_json::from_value::<CredentialFormats<WithParameters>>(
             serde_json::to_value(credential_format).unwrap(),
         )

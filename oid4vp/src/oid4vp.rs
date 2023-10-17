@@ -1,4 +1,4 @@
-use crate::authorization_request::{OID4VPAuthorizationRequestBuilder, OID4VPAuthorizationRequestParameters};
+use crate::authorization_request::{AuthorizationRequestBuilder, AuthorizationRequestParameters};
 use crate::oid4vp_params::Oid4vpParams;
 use chrono::{Duration, Utc};
 pub use dif_presentation_exchange::{
@@ -8,34 +8,49 @@ pub use dif_presentation_exchange::{
 use futures::{executor::block_on, future::join_all};
 use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
+use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};
 use oid4vc_core::{
     authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension, serialize_unit_struct, Decoder,
     Subject,
 };
 use oid4vci::VerifiableCredentialJwt;
 use serde::{Deserialize, Serialize};
+use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::sync::Arc;
 
+#[derive(Debug, PartialEq)]
+pub struct RequestHandler {}
+impl RequestHandle for RequestHandler {
+    type ResponseType = VpToken;
+    type Parameters = AuthorizationRequestParameters;
+    type Builder = AuthorizationRequestBuilder;
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ResponseHandler {}
+impl ResponseHandle for ResponseHandler {
+    type Input = AuthorizationResponseInput;
+    type Parameters = AuthorizationResponseParameters;
+    type ResponseItem = Vec<VerifiableCredentialJwt>;
+}
+
 // Unit struct used for the `response_type` parameter.
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, DeserializeFromStr, SerializeDisplay)]
 pub struct VpToken;
 serialize_unit_struct!("vp_token", VpToken);
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct OID4VP;
+impl OpenID4VC for OID4VP {}
 impl Extension for OID4VP {
-    type ResponseType = VpToken;
-    type AuthorizationRequest = OID4VPAuthorizationRequestParameters;
-    type AuthorizationRequestBuilder = OID4VPAuthorizationRequestBuilder;
-    type AuthorizationResponseInput = OID4VPAuthorizationResponseInput;
-    type AuthorizationResponse = OID4VPAuthorizationResponse;
-    type ResponseItem = Vec<VerifiableCredentialJwt>;
+    type RequestHandle = RequestHandler;
+    type ResponseHandle = ResponseHandler;
 
     fn generate_token(
         subject: Arc<dyn Subject>,
         client_id: &str,
-        extension: &Self::AuthorizationRequest,
-        user_input: &Self::AuthorizationResponseInput,
+        extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
+        user_input: &<Self::ResponseHandle as ResponseHandle>::Input,
     ) -> anyhow::Result<Vec<String>> {
         let subject_identifier = subject.identifier()?;
 
@@ -43,7 +58,7 @@ impl Extension for OID4VP {
             .iss(subject_identifier.clone())
             .sub(subject_identifier)
             .aud(client_id)
-            .nonce(extension.nonce.to_owned())
+            .nonce(extension_parameters.nonce.to_owned())
             .exp((Utc::now() + Duration::minutes(10)).timestamp())
             .iat((Utc::now()).timestamp())
             .verifiable_presentation(user_input.verifiable_presentation.clone())
@@ -55,14 +70,14 @@ impl Extension for OID4VP {
 
     fn build_authorization_response(
         jwts: Vec<String>,
-        user_input: Self::AuthorizationResponseInput,
+        user_input: <Self::ResponseHandle as ResponseHandle>::Input,
         redirect_uri: String,
         state: Option<String>,
     ) -> anyhow::Result<AuthorizationResponse<Self>> {
-        Ok(AuthorizationResponse::<OID4VP> {
+        Ok(AuthorizationResponse {
             redirect_uri,
             state,
-            extension: OID4VPAuthorizationResponse {
+            extension: AuthorizationResponseParameters {
                 oid4vp_parameters: Oid4vpParams::Params {
                     vp_token: jwts.get(0).unwrap().to_owned(),
                     presentation_submission: user_input.presentation_submission,
@@ -74,7 +89,7 @@ impl Extension for OID4VP {
     fn decode_authorization_response(
         decoder: Decoder,
         response: &AuthorizationResponse<Self>,
-    ) -> anyhow::Result<Self::ResponseItem> {
+    ) -> anyhow::Result<<Self::ResponseHandle as ResponseHandle>::ResponseItem> {
         let vp_token: crate::token::vp_token::VpToken = match &response.extension.oid4vp_parameters {
             Oid4vpParams::Jwt { .. } => todo!(),
             Oid4vpParams::Params { vp_token, .. } => block_on(decoder.decode(vp_token.to_owned()))?,
@@ -96,7 +111,7 @@ impl Extension for OID4VP {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub struct OID4VPAuthorizationResponse {
+pub struct AuthorizationResponseParameters {
     #[serde(flatten, with = "serde_oid4vp_response")]
     pub oid4vp_parameters: Oid4vpParams,
 }
@@ -162,7 +177,7 @@ pub mod serde_oid4vp_response {
     }
 }
 
-pub struct OID4VPAuthorizationResponseInput {
+pub struct AuthorizationResponseInput {
     pub verifiable_presentation: Presentation<Jwt>,
     pub presentation_submission: PresentationSubmission,
 }
