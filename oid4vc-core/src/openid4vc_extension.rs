@@ -1,101 +1,73 @@
-use crate::{
-    authorization_request::AuthorizationRequestObject, authorization_response::AuthorizationResponse, Decoder,
-    JsonValue, Subject,
-};
+use crate::{authorization_response::AuthorizationResponse, Decoder, JsonValue, Subject};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
-pub trait Extension: Serialize + PartialEq + Sized {
-    type ResponseType: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq;
-    type AuthorizationRequest: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq;
-    type AuthorizationRequestBuilder: Default + std::fmt::Debug;
-    type AuthorizationResponseInput;
-    type AuthorizationResponse: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq;
-    type ResponseItem: Serialize + std::fmt::Debug + PartialEq;
+pub trait Builder {}
 
-    // Function to convert a generic [`AuthorizationRequestObject<Extension>`] to a specific [`AuthorizationRequestObject<Self>`].
-    fn from_generic(
-        authorization_request: AuthorizationRequestObject<Generic>,
-    ) -> anyhow::Result<AuthorizationRequestObject<Self>> {
-        Ok(AuthorizationRequestObject::<Self> {
-            rfc7519_claims: authorization_request.rfc7519_claims,
-            response_type: serde_json::from_value(authorization_request.response_type)
-                .map_err(|_| anyhow::anyhow!("Invalid `response_type` parameter."))?,
-            client_id: authorization_request.client_id,
-            redirect_uri: authorization_request.redirect_uri,
-            state: authorization_request.state,
-            extension: serde_json::from_value(authorization_request.extension)
-                .map_err(|_| anyhow::anyhow!("Invalid `extension` parameter."))?,
-        })
-    }
-
-    // Function to convert a specific [`AuthorizationRequestObject<Self>`] to a generic [`AuthorizationRequestObject<Extension>`].
-    fn into_generic(
-        authorization_request: AuthorizationRequestObject<Self>,
-    ) -> anyhow::Result<AuthorizationRequestObject<Generic>> {
-        Ok(AuthorizationRequestObject::<Generic> {
-            rfc7519_claims: authorization_request.rfc7519_claims,
-            response_type: serde_json::to_value(authorization_request.response_type)?,
-            client_id: authorization_request.client_id,
-            redirect_uri: authorization_request.redirect_uri,
-            state: authorization_request.state,
-            extension: serde_json::to_value(authorization_request.extension)?,
-        })
-    }
-
-    fn generate_token(
-        subject: Arc<dyn Subject>,
-        client_id: &str,
-        extension: &Self::AuthorizationRequest,
-        user_input: &Self::AuthorizationResponseInput,
-    ) -> anyhow::Result<Vec<String>>;
-
-    fn build_authorization_response(
-        jwts: Vec<String>,
-        user_input: Self::AuthorizationResponseInput,
-        redirect_uri: String,
-        state: Option<String>,
-    ) -> anyhow::Result<AuthorizationResponse<Self>>;
-
-    fn decode_authorization_response(
-        decoder: Decoder,
-        authorization_response: &AuthorizationResponse<Self>,
-    ) -> anyhow::Result<Self::ResponseItem>;
+pub trait RequestHandle: std::fmt::Debug + PartialEq {
+    type ResponseType: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq + FromStr + std::fmt::Display;
+    type Parameters: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq;
+    type Builder: Default + std::fmt::Debug;
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub struct Generic;
+pub trait ResponseHandle: std::fmt::Debug + PartialEq {
+    type Input;
+    type Parameters: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq;
+    type ResponseItem: Serialize + std::fmt::Debug + PartialEq;
+}
 
-impl Extension for Generic {
-    type ResponseType = JsonValue;
-    type AuthorizationRequest = JsonValue;
-    type AuthorizationRequestBuilder = ();
-    type AuthorizationResponseInput = ();
-    type AuthorizationResponse = ();
-    type ResponseItem = ();
+/// This [`Extension'] trait is used to declare what functionality an extension should have. Most notable, it declares
+/// that an extension should be able to generate a token, build an authorization response, and decode an authorization response.
+pub trait Extension: Serialize + PartialEq + Sized + std::fmt::Debug {
+    type RequestHandle: RequestHandle;
+    type ResponseHandle: ResponseHandle;
 
     fn generate_token(
         _subject: Arc<dyn Subject>,
         _client_id: &str,
-        _extension: &Self::AuthorizationRequest,
-        _user_input: &Self::AuthorizationResponseInput,
+        _extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
+        _user_input: &<Self::ResponseHandle as ResponseHandle>::Input,
     ) -> anyhow::Result<Vec<String>> {
-        unreachable!()
+        // Will be overridden by the extension.
+        Err(anyhow::anyhow!("Not implemented."))
     }
 
     fn build_authorization_response(
         _jwts: Vec<String>,
-        _user_input: Self::AuthorizationResponseInput,
+        _user_input: <Self::ResponseHandle as ResponseHandle>::Input,
         _redirect_uri: String,
         _state: Option<String>,
     ) -> anyhow::Result<AuthorizationResponse<Self>> {
-        unreachable!()
+        // Will be overridden by the extension.
+        Err(anyhow::anyhow!("Not implemented."))
     }
 
     fn decode_authorization_response(
         _decoder: Decoder,
-        _response: &AuthorizationResponse<Self>,
-    ) -> anyhow::Result<Self::ResponseItem> {
-        unreachable!()
+        _authorization_response: &AuthorizationResponse<Self>,
+    ) -> anyhow::Result<<Self::ResponseHandle as ResponseHandle>::ResponseItem> {
+        // Will be overridden by the extension.
+        Err(anyhow::anyhow!("Not implemented."))
     }
 }
+
+impl RequestHandle for () {
+    type ResponseType = String;
+    type Parameters = JsonValue;
+    type Builder = ();
+}
+
+impl ResponseHandle for () {
+    type Input = ();
+    type Parameters = ();
+    type ResponseItem = ();
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct Generic;
+impl Extension for Generic {
+    type RequestHandle = ();
+    type ResponseHandle = ();
+}
+
+pub trait OpenID4VC {}

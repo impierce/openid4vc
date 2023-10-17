@@ -1,18 +1,20 @@
-use crate::{siopv2::SIOPv2, token::id_token::IdToken, AuthorizationResponse};
+use crate::{siopv2::SIOPv2, AuthorizationResponse};
 use anyhow::Result;
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::{
-    authentication::subject::SigningSubject, authorization_request::AuthorizationRequestObject, jwt,
-    openid4vc_extension::Extension, Decoder,
+    authentication::subject::SigningSubject,
+    authorization_request::{AuthorizationRequest, Object},
+    jwt,
+    openid4vc_extension::{Extension, ResponseHandle},
+    Decoder,
 };
-use oid4vci::VerifiableCredentialJwt;
 use std::collections::HashMap;
 
 pub struct RelyingParty {
     // TODO: Strictly speaking a relying party doesn't need to have a [`Subject`]. It just needs methods to
     // sign and verify tokens. For simplicity we use a [`Subject`] here for now but we should consider a cleaner solution.
     pub subject: SigningSubject,
-    pub sessions: HashMap<(String, String), AuthorizationRequestObject<SIOPv2>>,
+    pub sessions: HashMap<(String, String), AuthorizationRequest<Object<SIOPv2>>>,
 }
 
 impl RelyingParty {
@@ -24,7 +26,7 @@ impl RelyingParty {
         })
     }
 
-    pub fn encode<E: Extension>(&self, authorization_request: &AuthorizationRequestObject<E>) -> Result<String> {
+    pub fn encode<E: Extension>(&self, authorization_request: &AuthorizationRequest<Object<E>>) -> Result<String> {
         jwt::encode(
             self.subject.clone(),
             Header::new(Algorithm::EdDSA),
@@ -38,12 +40,7 @@ impl RelyingParty {
         &self,
         authorization_response: &AuthorizationResponse<E>,
         decoder: Decoder,
-    ) -> Result<E::ResponseItem> {
+    ) -> Result<<E::ResponseHandle as ResponseHandle>::ResponseItem> {
         E::decode_authorization_response(decoder, authorization_response)
     }
-}
-
-pub struct ResponseItems {
-    pub id_token: IdToken,
-    pub verifiable_credentials: Option<Vec<VerifiableCredentialJwt>>,
 }

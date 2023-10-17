@@ -52,45 +52,21 @@ macro_rules! builder_fn {
 #[macro_export]
 macro_rules! serialize_unit_struct {
     ($format:literal, $name:ident) => {
-        impl serde::Serialize for $name {
-            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-            where
-                S: serde::Serializer,
-            {
-                serializer.serialize_str($format)
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", $format)
             }
         }
 
-        impl<'de> serde::Deserialize<'de> for $name {
-            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                struct Visitor;
+        impl std::str::FromStr for $name {
+            type Err = anyhow::Error;
 
-                impl<'de> serde::de::Visitor<'de> for Visitor {
-                    type Value = $name;
-
-                    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                        formatter.write_str($format)
-                    }
-
-                    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        if value == $format {
-                            Ok($name)
-                        } else {
-                            Err(serde::de::Error::custom(format!(
-                                "expected {}, found {}",
-                                $format, value
-                            )))
-                        }
-                    }
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                if s == $format {
+                    Ok($name)
+                } else {
+                    Err(anyhow::anyhow!(format!("expected {}, found {}", $format, s)))
                 }
-
-                deserializer.deserialize_str(Visitor)
             }
         }
     };

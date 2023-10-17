@@ -1,10 +1,11 @@
 use did_key::{generate, Ed25519KeyPair};
-use identity_core::common::Object;
 use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
 use oid4vc_core::{
-    authorization_request::AuthorizationRequest, authorization_response::AuthorizationResponse, jwt, Subject,
+    authorization_request::{AuthorizationRequest, Object},
+    authorization_response::AuthorizationResponse,
+    jwt, Subject,
 };
 use oid4vc_manager::{
     managers::presentation::create_presentation_submission, methods::key_method::KeySubject, ProviderManager,
@@ -12,7 +13,7 @@ use oid4vc_manager::{
 };
 use oid4vci::VerifiableCredentialJwt;
 use oid4vp::{
-    oid4vp::{OID4VPAuthorizationResponseInput, OID4VP},
+    oid4vp::{AuthorizationResponseInput, OID4VP},
     PresentationDefinition,
 };
 use serde_json::json;
@@ -91,7 +92,7 @@ async fn test_implicit_flow() {
     let relying_party_manager = RelyingPartyManager::new([relying_party]).unwrap();
 
     // Create authorization request with response_type `id_token vp_token`
-    let authorization_request = AuthorizationRequest::<OID4VP>::builder()
+    let authorization_request = AuthorizationRequest::<Object<OID4VP>>::builder()
         .client_id(relying_party_did)
         .redirect_uri("https://example.com".parse::<url::Url>().unwrap())
         .presentation_definition(PRESENTATION_DEFINITION.clone())
@@ -101,10 +102,7 @@ async fn test_implicit_flow() {
 
     // Create a provider manager and validate the authorization request.
     let provider_manager = ProviderManager::new([subject]).unwrap();
-    let authorization_request = provider_manager
-        .validate_request(authorization_request.to_string().parse().unwrap())
-        .await
-        .unwrap();
+    let authorization_request = authorization_request;
 
     // Create a new verifiable credential.
     let verifiable_credential = VerifiableCredentialJwt::builder()
@@ -153,16 +151,17 @@ async fn test_implicit_flow() {
     .unwrap();
 
     // Create a verifiable presentation using the JWT.
-    let verifiable_presentation = Presentation::builder(subject_did.parse().unwrap(), Object::new())
-        .credential(Jwt::from(jwt))
-        .build()
-        .unwrap();
+    let verifiable_presentation =
+        Presentation::builder(subject_did.parse().unwrap(), identity_core::common::Object::new())
+            .credential(Jwt::from(jwt))
+            .build()
+            .unwrap();
 
     // Generate the authorization_response. It will include both an IdToken and a VpToken.
     let authorization_response: AuthorizationResponse<OID4VP> = provider_manager
         .generate_response(
             &authorization_request,
-            OID4VPAuthorizationResponseInput {
+            AuthorizationResponseInput {
                 verifiable_presentation,
                 presentation_submission,
             },

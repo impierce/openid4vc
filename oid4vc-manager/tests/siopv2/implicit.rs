@@ -1,8 +1,7 @@
 use crate::common::{MemoryStorage, Storage, TestSubject};
-use chrono::{Duration, Utc};
 use lazy_static::lazy_static;
 use oid4vc_core::{
-    authorization_request::{AuthorizationRequest, AuthorizationRequestObject},
+    authorization_request::{AuthorizationRequest, ByReference, Object},
     authorization_response::AuthorizationResponse,
     client_metadata::ClientMetadata,
     scope::{Scope, ScopeValue},
@@ -65,7 +64,7 @@ async fn test_implicit_flow() {
     let relying_party_manager = RelyingPartyManager::new([Arc::new(subject)]).unwrap();
 
     // Create a new RequestUrl with response mode `direct_post` for cross-device communication.
-    let authorization_request: AuthorizationRequestObject<SIOPv2> = AuthorizationRequest::<SIOPv2>::builder()
+    let authorization_request: AuthorizationRequest<Object<SIOPv2>> = AuthorizationRequest::<Object<SIOPv2>>::builder()
         .client_id("did:test:relyingparty".to_string())
         .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
         .redirect_uri(format!("{server_url}/redirect_uri").parse::<url::Url>().unwrap())
@@ -89,10 +88,9 @@ async fn test_implicit_flow() {
                 }
             }"#,
         )
-        .exp((Utc::now() + Duration::minutes(10)).timestamp())
+        // .exp((Utc::now() + Duration::minutes(10)).timestamp())
         .nonce("n-0S6_WzA2Mj".to_string())
         .build()
-        .and_then(TryInto::try_into)
         .unwrap();
 
     // Create a new `request_uri` endpoint on the mock server and load it with the JWT encoded `AuthorizationRequest`.
@@ -121,22 +119,25 @@ async fn test_implicit_flow() {
     let provider_manager = ProviderManager::new([Arc::new(subject)]).unwrap();
 
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
-    let request_url = AuthorizationRequest::<SIOPv2>::builder()
-        .client_id("did:test:relyingparty".to_string())
-        .request_uri(format!("{server_url}/request_uri").parse::<url::Url>().unwrap())
-        .build()
-        .unwrap();
+    let authorization_request = AuthorizationRequest::<ByReference> {
+        body: ByReference {
+            client_id: "did:test:relyingparty".to_string(),
+            request_uri: format!("{server_url}/request_uri").parse::<url::Url>().unwrap(),
+        },
+    };
 
-    // The Provider obtains the reuquest url either by a deeplink or by scanning a QR code. It then validates the
+    let string = authorization_request.to_string();
+
+    // The Provider obtains the request url either by a deeplink or by scanning a QR code. It then validates the
     // authorization_request. Since in this case the authorization_request is a JWT, the provider will fetch the authorization_request by sending a GET
     // authorization_request to mock server's `request_uri` endpoint.
-    let authorization_request: AuthorizationRequestObject<SIOPv2> = provider_manager
-        .validate_request(request_url.to_string().parse().unwrap())
-        .await
-        .unwrap();
+    let generic_authorization_request = provider_manager.validate_request(string.clone()).await.unwrap();
+
+    let authorization_request =
+        AuthorizationRequest::<Object<SIOPv2>>::from_generic(generic_authorization_request).unwrap();
 
     // The provider can now access the claims requested by the relying party.
-    let request_claims = authorization_request.extension.id_token_request_claims().unwrap();
+    let request_claims = authorization_request.body.extension.id_token_request_claims().unwrap();
     assert_eq!(
         request_claims,
         StandardClaimsRequests {

@@ -1,35 +1,51 @@
-use crate::authorization_request::{SIOPv2AuthorizationRequestBuilder, SIOPv2AuthorizationRequestParameters};
+use crate::authorization_request::{AuthorizationRequestBuilder, AuthorizationRequestParameters};
 use crate::claims::StandardClaimsValues;
 use chrono::{Duration, Utc};
 use futures::executor::block_on;
 use jsonwebtoken::{Algorithm, Header};
+use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};
 use oid4vc_core::{
     authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension, serialize_unit_struct, Decoder,
     Subject,
 };
+use oid4vci::VerifiableCredentialJwt;
 use serde::{Deserialize, Serialize};
+use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::sync::Arc;
 
+#[derive(Debug, PartialEq)]
+pub struct RequestHandler {}
+impl RequestHandle for RequestHandler {
+    type ResponseType = IdToken;
+    type Parameters = AuthorizationRequestParameters;
+    type Builder = AuthorizationRequestBuilder;
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ResponseHandler {}
+impl ResponseHandle for ResponseHandler {
+    type Input = StandardClaimsValues;
+    type Parameters = AuthorizationResponseParameters;
+    type ResponseItem = crate::token::id_token::IdToken;
+}
+
 // Unit struct used for the `response_type` parameter.
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, DeserializeFromStr, SerializeDisplay)]
 pub struct IdToken;
 serialize_unit_struct!("id_token", IdToken);
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct SIOPv2;
+impl OpenID4VC for SIOPv2 {}
 impl Extension for SIOPv2 {
-    type ResponseType = IdToken;
-    type AuthorizationRequest = SIOPv2AuthorizationRequestParameters;
-    type AuthorizationRequestBuilder = SIOPv2AuthorizationRequestBuilder;
-    type AuthorizationResponseInput = StandardClaimsValues;
-    type AuthorizationResponse = SIOPv2AuthorizationResponse;
-    type ResponseItem = crate::token::id_token::IdToken;
+    type RequestHandle = RequestHandler;
+    type ResponseHandle = ResponseHandler;
 
     fn generate_token(
         subject: Arc<dyn Subject>,
         client_id: &str,
-        extension: &Self::AuthorizationRequest,
-        user_input: &Self::AuthorizationResponseInput,
+        extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
+        user_input: &<Self::ResponseHandle as ResponseHandle>::Input,
     ) -> anyhow::Result<Vec<String>> {
         let subject_identifier = subject.identifier()?;
 
@@ -37,7 +53,7 @@ impl Extension for SIOPv2 {
             .iss(subject_identifier.clone())
             .sub(subject_identifier)
             .aud(client_id)
-            .nonce(extension.nonce.to_owned())
+            .nonce(extension_parameters.nonce.to_owned())
             .exp((Utc::now() + Duration::minutes(10)).timestamp())
             .iat((Utc::now()).timestamp())
             .claims(user_input.clone())
@@ -50,15 +66,15 @@ impl Extension for SIOPv2 {
 
     fn build_authorization_response(
         jwts: Vec<String>,
-        _user_input: Self::AuthorizationResponseInput,
+        _user_input: <Self::ResponseHandle as ResponseHandle>::Input,
         redirect_uri: String,
         state: Option<String>,
     ) -> anyhow::Result<AuthorizationResponse<Self>> {
-        let extension = SIOPv2AuthorizationResponse {
+        let extension = AuthorizationResponseParameters {
             id_token: jwts[0].to_string(),
         };
 
-        Ok(AuthorizationResponse::<SIOPv2> {
+        Ok(AuthorizationResponse {
             redirect_uri,
             state,
             extension,
@@ -68,13 +84,18 @@ impl Extension for SIOPv2 {
     fn decode_authorization_response(
         decoder: Decoder,
         authorization_response: &AuthorizationResponse<Self>,
-    ) -> anyhow::Result<Self::ResponseItem> {
+    ) -> anyhow::Result<<Self::ResponseHandle as ResponseHandle>::ResponseItem> {
         let token = authorization_response.extension.id_token.clone();
         block_on(decoder.decode(token))
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub struct SIOPv2AuthorizationResponse {
+pub struct AuthorizationResponseParameters {
     pub id_token: String,
+}
+
+pub struct ResponseItems {
+    pub id_token: IdToken,
+    pub verifiable_credentials: Option<Vec<VerifiableCredentialJwt>>,
 }
