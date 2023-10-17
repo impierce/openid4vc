@@ -32,9 +32,9 @@ impl ProviderManager {
     pub fn generate_response<E: Extension + OpenID4VC>(
         &self,
         authorization_request: &AuthorizationRequest<Object<E>>,
-        user_claims: <E::ResponseHandle as ResponseHandle>::Input,
+        input: <E::ResponseHandle as ResponseHandle>::Input,
     ) -> Result<AuthorizationResponse<E>> {
-        self.provider.generate_response(authorization_request, user_claims)
+        self.provider.generate_response(authorization_request, input)
     }
 
     pub async fn send_response<E: Extension>(
