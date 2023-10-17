@@ -1,7 +1,7 @@
 use crate::authorization_details::AuthorizationDetailsObject;
 use crate::authorization_request::AuthorizationRequest;
 use crate::authorization_response::AuthorizationResponse;
-use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters};
+use crate::credential_format_profiles::CredentialFormatCollection;
 use crate::credential_issuer::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
 };
@@ -18,26 +18,18 @@ use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
 use serde::de::DeserializeOwned;
 
-pub struct Wallet<CFC = CredentialFormats<WithParameters>>
-where
-    CFC: CredentialFormatCollection + DeserializeOwned,
-{
+pub struct Wallet {
     pub subject: SigningSubject,
     pub client: ClientWithMiddleware,
-    phantom: std::marker::PhantomData<CFC>,
 }
 
-impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
+impl Wallet {
     pub fn new(subject: SigningSubject) -> Self {
         let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
         let client = ClientBuilder::new(reqwest::Client::new())
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
             .build();
-        Self {
-            subject,
-            client,
-            phantom: std::marker::PhantomData,
-        }
+        Self { subject, client }
     }
 
     pub async fn get_credential_offer(&self, credential_offer_uri: Url) -> Result<CredentialOffer> {
@@ -71,7 +63,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .map_err(|_| anyhow::anyhow!("Failed to get authorization server metadata"))
     }
 
-    pub async fn get_credential_issuer_metadata(
+    pub async fn get_credential_issuer_metadata<CFC: CredentialFormatCollection + DeserializeOwned>(
         &self,
         credential_issuer_url: Url,
     ) -> Result<CredentialIssuerMetadata<CFC>> {
@@ -91,7 +83,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .map_err(|_| anyhow::anyhow!("Failed to get credential issuer metadata"))
     }
 
-    pub async fn get_authorization_code(
+    pub async fn get_authorization_code<CFC: CredentialFormatCollection + DeserializeOwned>(
         &self,
         authorization_endpoint: Url,
         authorization_details: Vec<AuthorizationDetailsObject<CFC>>,
@@ -125,7 +117,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .map_err(|e| e.into())
     }
 
-    pub async fn get_credential(
+    pub async fn get_credential<CFC: CredentialFormatCollection + DeserializeOwned>(
         &self,
         credential_issuer_metadata: CredentialIssuerMetadata<CFC>,
         token_response: &TokenResponse,
@@ -164,7 +156,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .map_err(|e| e.into())
     }
 
-    pub async fn get_batch_credential(
+    pub async fn get_batch_credential<CFC: CredentialFormatCollection + DeserializeOwned>(
         &self,
         credential_issuer_metadata: CredentialIssuerMetadata<CFC>,
         token_response: &TokenResponse,
