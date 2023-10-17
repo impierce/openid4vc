@@ -2,14 +2,16 @@ use crate::{authorization_response::AuthorizationResponse, Decoder, JsonValue, S
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{str::FromStr, sync::Arc};
 
-pub trait Builder {}
-
+/// A [`RequestHandle`] is used to declare what functionality a request should have. Most notable, it declares the
+/// `response_type``, the extension-specific parameters, and the builder for the extension-specific `AuthorizationRequest`.
 pub trait RequestHandle: std::fmt::Debug + PartialEq {
     type ResponseType: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq + FromStr + std::fmt::Display;
     type Parameters: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq;
     type Builder: Default + std::fmt::Debug;
 }
 
+/// A [`ResponseHandle`] is used to declare what functionality a response should have. Most notable, it declares the
+/// input that is needed to generate a token, the extension-specific parameters, and the response item.
 pub trait ResponseHandle: std::fmt::Debug + PartialEq {
     type Input;
     type Parameters: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq;
@@ -63,6 +65,8 @@ impl ResponseHandle for () {
     type ResponseItem = ();
 }
 
+/// This [`Extension`] is used to declare that a struct is a [`Generic`] extension. Which means that it does not have
+/// any extension-specific functionality. It is used as a default extension.
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Generic;
 impl Extension for Generic {
@@ -70,4 +74,5 @@ impl Extension for Generic {
     type ResponseHandle = ();
 }
 
+/// This marker trait is used to declare that a struct is an [`OpenID4VC`] extension.
 pub trait OpenID4VC {}

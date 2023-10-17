@@ -8,11 +8,11 @@ use oid4vc_core::{
     authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension, serialize_unit_struct, Decoder,
     Subject,
 };
-use oid4vci::VerifiableCredentialJwt;
 use serde::{Deserialize, Serialize};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::sync::Arc;
 
+/// This is the [`RequestHandle`] for the [`SIOPv2`] extension.
 #[derive(Debug, PartialEq)]
 pub struct RequestHandler {}
 impl RequestHandle for RequestHandler {
@@ -21,6 +21,7 @@ impl RequestHandle for RequestHandler {
     type Builder = AuthorizationRequestBuilder;
 }
 
+/// This is the [`ResponseHandle`] for the [`SIOPv2`] extension.
 #[derive(Debug, PartialEq)]
 pub struct ResponseHandler {}
 impl ResponseHandle for ResponseHandler {
@@ -34,6 +35,7 @@ impl ResponseHandle for ResponseHandler {
 pub struct IdToken;
 serialize_unit_struct!("id_token", IdToken);
 
+/// This is the [`Extension`] implementation for the [`SIOPv2`] extension.
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct SIOPv2;
 impl OpenID4VC for SIOPv2 {}
@@ -93,9 +95,4 @@ impl Extension for SIOPv2 {
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct AuthorizationResponseParameters {
     pub id_token: String,
-}
-
-pub struct ResponseItems {
-    pub id_token: IdToken,
-    pub verifiable_credentials: Option<Vec<VerifiableCredentialJwt>>,
 }

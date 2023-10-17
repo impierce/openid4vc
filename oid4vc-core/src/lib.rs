@@ -48,7 +48,7 @@ macro_rules! builder_fn {
     };
 }
 
-// macro that generates a serialize/deserialize implementation for a unit struct.
+// A macro that generates a `Display` and `FromStr` implementation for a unit struct.
 #[macro_export]
 macro_rules! serialize_unit_struct {
     ($format:literal, $name:ident) => {
