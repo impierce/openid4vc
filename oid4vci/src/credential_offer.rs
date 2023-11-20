@@ -82,7 +82,7 @@ impl<CFC: CredentialFormatCollection> std::fmt::Display for CredentialOfferQuery
 
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 #[serde(untagged)]
-pub enum CredentialsObject<CFC = CredentialFormats>
+pub enum CredentialsObject<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {
