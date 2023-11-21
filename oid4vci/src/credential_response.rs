@@ -4,7 +4,7 @@ use serde_with::skip_serializing_none;
 
 /// Credential Response as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-response.
 #[skip_serializing_none]
-#[derive(Serialize, Debug, PartialEq, Deserialize)]
+#[derive(Serialize, Debug, PartialEq, Deserialize, Clone)]
 pub struct CredentialResponse<CFC = CredentialFormats<WithCredential>>
 where
     CFC: CredentialFormatCollection,
@@ -25,7 +25,7 @@ pub struct BatchCredentialResponse {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Debug, PartialEq, Deserialize)]
+#[derive(Serialize, Debug, PartialEq, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum CredentialResponseType<CFC = CredentialFormats<WithCredential>>
 where
