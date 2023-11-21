@@ -28,17 +28,14 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        credential_format_profiles::{
-            iso_mdl::mso_mdoc::MsoMdoc,
-            w3c_verifiable_credentials::{
-                jwt_vc_json::{self, CredentialDefinition, JwtVcJson},
-                jwt_vc_json_ld::{self, JwtVcJsonLd},
-                ldp_vc::{self, LdpVc},
-            },
-            CredentialFormats, Parameters,
+    use crate::credential_format_profiles::{
+        iso_mdl::mso_mdoc::MsoMdoc,
+        w3c_verifiable_credentials::{
+            jwt_vc_json::{self, CredentialDefinition, JwtVcJson},
+            jwt_vc_json_ld::{self, JwtVcJsonLd},
+            ldp_vc::{self, LdpVc},
         },
-        Jwt,
+        CredentialFormats, Parameters,
     };
     use serde::de::DeserializeOwned;
     use serde_json::json;
@@ -99,7 +96,6 @@ mod tests {
                         .into()
                 }),
                 proof: Some(Proof::Jwt {
-                    proof_type: Jwt,
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -158,7 +154,6 @@ mod tests {
                         .into()
                 }),
                 proof: Some(Proof::Jwt {
-                    proof_type: Jwt,
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -180,7 +175,6 @@ mod tests {
                     parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
                 }),
                 proof: Some(Proof::Jwt {
-                    proof_type: Jwt,
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -208,7 +202,6 @@ mod tests {
                         .into()
                 }),
                 proof: Some(Proof::Jwt {
-                    proof_type: Jwt,
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -240,7 +233,6 @@ mod tests {
                         .into()
                 }),
                 proof: Some(Proof::Jwt {
-                    proof_type: Jwt,
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -264,7 +256,6 @@ mod tests {
                         .into()
                 }),
                 proof: Some(Proof::Jwt {
-                    proof_type: Jwt,
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJzNkJoZFJrcXQzIiwiYXVkIjoiaHR0cHM6Ly9zZXJ2ZXIuZXhhbXBsZS5jb20iLCJpYXQiOiIyMDE4LTA5LTE0VDIxOjE5OjEwWiIsIm5vbmNlIjoidFppZ25zbkZicCJ9.ewdkIkPV50iOeBUqMXCC_aZKPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -294,7 +285,6 @@ mod tests {
                         .into()
                 }),
                 proof: Some(Proof::Jwt {
-                    proof_type: Jwt,
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJzNkJoZFJrcXQzIiwiYXVkIjoiaHR0cHM6Ly9zZXJ2ZXIuZXhhbXBsZS5jb20iLCJpYXQiOiIyMDE4LTA5LTE0VDIxOjE5OjEwWiIsIm5vbmNlIjoidFppZ25zbkZicCJ9.ewdkIkPV50iOeBUqMXCC_aZKPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -328,7 +318,6 @@ mod tests {
                         .into()
                 }),
                 proof: Some(Proof::Jwt {
-                    proof_type: Jwt,
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },

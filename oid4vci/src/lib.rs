@@ -13,7 +13,7 @@ pub mod token_response;
 pub mod wallet;
 
 pub use credential::{VerifiableCredentialJwt, VerifiableCredentialJwtBuilder};
-pub use proof::{Cwt, Jwt, Proof, ProofType};
+pub use proof::{Proof, ProofType};
 pub use wallet::Wallet;
 
 // macro that generates a serialize/deserialize implementation for a unit struct.
