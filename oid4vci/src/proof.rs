@@ -1,24 +1,16 @@
-use crate::serialize_unit_struct;
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::{builder_fn, jwt, RFC7519Claims, Subject};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Jwt;
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Cwt;
-
-serialize_unit_struct!("jwt", Jwt);
-serialize_unit_struct!("cwt", Cwt);
-
 /// Key Proof Type (JWT or CWT) and the proof itself, as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-key-proof-types.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
-#[serde(untagged)]
+#[serde(tag = "proof_type")]
 pub enum Proof {
-    Jwt { proof_type: Jwt, jwt: String },
-    Cwt { proof_type: Cwt, cwt: String },
+    #[serde(rename = "jwt")]
+    Jwt { jwt: String },
+    #[serde(rename = "cwt")]
+    Cwt { cwt: String },
 }
 
 impl Proof {
@@ -57,7 +49,6 @@ impl ProofBuilder {
 
         match self.proof_type {
             Some(ProofType::Jwt) => Ok(Proof::Jwt {
-                proof_type: Jwt,
                 jwt: jwt::encode(
                     self.signer.ok_or(anyhow::anyhow!("No subject found"))?.clone(),
                     Header {
