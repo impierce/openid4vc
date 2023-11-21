@@ -35,7 +35,7 @@ where
 
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 #[serde(rename_all = "snake_case")]
-pub enum CredentialOfferQuery<CFC = CredentialFormats>
+pub enum CredentialOfferQuery<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {
