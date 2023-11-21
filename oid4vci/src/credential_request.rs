@@ -7,7 +7,7 @@ use serde_with::skip_serializing_none;
 
 /// Credential Request as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request
 #[skip_serializing_none]
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct CredentialRequest<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
