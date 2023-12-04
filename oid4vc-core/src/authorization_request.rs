@@ -88,7 +88,7 @@ impl Body for ByValue {
 
 /// A [`AuthorizationRequest`] is a request that is sent by a client to a provider. It contains a set of claims in the
 /// form of a [`Body`] which can be [`ByValue`], [`ByReference`], or an [`Object`].
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationRequest<B: Body> {
     #[serde(flatten)]
     pub body: B,
