@@ -31,12 +31,12 @@ impl ResponseHandle for ResponseHandler {
 }
 
 // Unit struct used for the `response_type` parameter.
-#[derive(Debug, PartialEq, Default, DeserializeFromStr, SerializeDisplay)]
+#[derive(Debug, PartialEq, Default, DeserializeFromStr, SerializeDisplay, Clone)]
 pub struct IdToken;
 serialize_unit_struct!("id_token", IdToken);
 
 /// This is the [`Extension`] implementation for the [`SIOPv2`] extension.
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct SIOPv2;
 impl OpenID4VC for SIOPv2 {}
 impl Extension for SIOPv2 {

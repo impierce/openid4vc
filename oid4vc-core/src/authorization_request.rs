@@ -12,7 +12,7 @@ pub trait Body: Serialize + std::fmt::Debug {
 
 /// An `Object` is a set of claims that are sent by a client to a provider. On top of some generic claims, it also
 /// contains a set of claims specific to an [`Extension`].
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct Object<E: Extension = Generic> {
     #[serde(flatten)]
     pub rfc7519_claims: RFC7519Claims,
