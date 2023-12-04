@@ -5,8 +5,8 @@ use std::{str::FromStr, sync::Arc};
 /// A [`RequestHandle`] is used to declare what functionality a request should have. Most notable, it declares the
 /// `response_type``, the extension-specific parameters, and the builder for the extension-specific `AuthorizationRequest`.
 pub trait RequestHandle: std::fmt::Debug + PartialEq {
-    type ResponseType: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq + FromStr + std::fmt::Display;
-    type Parameters: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq;
+    type ResponseType: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq + FromStr + std::fmt::Display + Clone;
+    type Parameters: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq + Clone;
     type Builder: Default + std::fmt::Debug;
 }
 
@@ -20,7 +20,7 @@ pub trait ResponseHandle: std::fmt::Debug + PartialEq {
 
 /// This [`Extension'] trait is used to declare what functionality an extension should have. Most notable, it declares
 /// that an extension should be able to generate a token, build an authorization response, and decode an authorization response.
-pub trait Extension: Serialize + PartialEq + Sized + std::fmt::Debug {
+pub trait Extension: Serialize + PartialEq + Sized + std::fmt::Debug + Clone {
     type RequestHandle: RequestHandle;
     type ResponseHandle: ResponseHandle;
 
@@ -67,7 +67,7 @@ impl ResponseHandle for () {
 
 /// This [`Extension`] is used to declare that a struct is a [`Generic`] extension. Which means that it does not have
 /// any extension-specific functionality. It is used as a default extension.
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct Generic;
 impl Extension for Generic {
     type RequestHandle = ();
