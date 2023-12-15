@@ -1,7 +1,11 @@
 # Self-Issued OpenID Provider v2
-This is a Rust library for the [Self-Issued OpenID Provider v2](https://openid.bitbucket.io/connect/openid-connect-self-issued-v2-1_0.html) (SIOPv2) specification developed by the [OpenID
+This is a Rust library for the Self-Issued OpenID Provider v2 (SIOPv2) specification developed by the [OpenID
 Digital Credentials Protocols
 Working Group](https://openid.net/wg/digital-credentials-protocols/).
+
+| Specification      | Description                                | Version
+| -------------------| ------------------------------------------ | -------
+| [SIOPv2](siopv2)   | Self-Issued OpenID Provider v2             | [Editor's Draft published: 24 August 2023](https://github.com/openid/SIOPv2/blob/fb00ab840daa0cec614691b712e28c1f77ed43ea/openid-connect-self-issued-v2-1_0.md)
 
 An overview of all the OpenID Digital Credentials Protocols implementation in Rust can be found [here](../README.md).
 

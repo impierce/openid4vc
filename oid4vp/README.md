@@ -1,7 +1,12 @@
 # OpenID for Verifiable Presentations
-This is a Rust library for the [OpenID for Verifiable Presentations](https://openid.bitbucket.io/connect/openid-connect-self-issued-v2-1_0.html) (OpenID4VP) specification developed by the [OpenID
+This is a Rust library for the OpenID for Verifiable Presentations (OpenID4VP) specification developed by the [OpenID
 Digital Credentials Protocols
-Working Group](https://openid.bitbucket.io/connect/openid-4-verifiable-presentations-1_0.html).
+Working Group](https://openid.net/wg/digital-credentials-protocols/).
+
+| Specification      | Description                                | Version
+| -------------------| ------------------------------------------ | -------
+| [OID4VP](oid4vp)   | OpenID for Verifiable Presentations        | [Editor's Draft published: 30 August 2023](https://github.com/openid/OpenID4VP/blob/965597ae01fc6e6a2bddc0d6b16f3f6122f3c1ab/openid-4-verifiable-presentations-1_0.md)
+
 
 An overview of all the OpenID Digital Credentials Protocols implementation in Rust can be found [here](../README.md).
 
