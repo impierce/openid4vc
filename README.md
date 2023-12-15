@@ -26,8 +26,7 @@ On top of that, this workspace also includes a library for the DIF Presentation 
 2.0.0:
 | Specification      | Description                                | Version
 | -------------------| ------------------------------------------ | -------
-| [DIF Presentation Exchange](dif-presentation-exchange) | DIF Presentation Exchange 2.0.0 | [Version
-2.0.0](https://identity.foundation/presentation-exchange/spec/v2.0.0/)
+| [DIF Presentation Exchange](dif-presentation-exchange) | DIF Presentation Exchange 2.0.0 | [Version 2.0.0](https://identity.foundation/presentation-exchange/spec/v2.0.0/)
 
 ### OID4VC Manager
 
