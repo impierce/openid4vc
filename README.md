@@ -14,13 +14,21 @@ in both digital and physical spaces.
 An overview of all the specifications developed by the OpenID Digital Credentials Protocols Working Group can be found [here](https://openid.net/wg/digital-credentials-protocols/specifications/).
 
 This workspace includes Rust implementations for the following DCP specifications:
-* [OID4VCI](oid4vci): OpenID for Verifiable Credential Issuance
-* [OID4VP](oid4vp): OpenID for Verifiable Presentations
-* [SIOPv2](siopv2): Self-Issued OpenID Provider v2
+| Specification      | Description                                | Version
+| -------------------| ------------------------------------------ | -------
+| [OID4VCI](oid4vci) | OpenID for Verifiable Credential Issuance  | [Editor's Draft published: 30 August 2023](https://github.com/openid/OpenID4VCI/blob/111db260b1ad1915ca1462cc4904781beb179972/openid-4-verifiable-credential-issuance-1_0.md)
+| [OID4VP](oid4vp)   | OpenID for Verifiable Presentations        | [Editor's Draft published: 30 August 2023](https://github.com/openid/OpenID4VP/blob/965597ae01fc6e6a2bddc0d6b16f3f6122f3c1ab/openid-4-verifiable-presentations-1_0.md)
+| [SIOPv2](siopv2)   | Self-Issued OpenID Provider v2             | [Editor's Draft published: 24 August 2023](https://github.com/openid/SIOPv2/blob/fb00ab840daa0cec614691b712e28c1f77ed43ea/openid-connect-self-issued-v2-1_0.md)
 
-On top of that, this workspace also includes a library for the [DIF Presentation Exchange
-2.0.0](https://identity.foundation/presentation-exchange/spec/v2.0.0/):
-* [DIF Presentation Exchange](dif-presentation-exchange)
+### DIF Presentation Exchange
+
+On top of that, this workspace also includes a library for the DIF Presentation Exchange
+2.0.0:
+| Specification      | Description                                | Version
+| -------------------| ------------------------------------------ | -------
+| [DIF Presentation Exchange](dif-presentation-exchange) | DIF Presentation Exchange 2.0.0 | [Version 2.0.0](https://identity.foundation/presentation-exchange/spec/v2.0.0/)
+
+### OID4VC Manager
 
 For an easy-to-use library that combines all the above specifications, please check out:
 * [OID4VC-Manager](oid4vc-manager)
