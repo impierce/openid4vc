@@ -16,7 +16,6 @@ pub trait Body: Serialize + std::fmt::Debug {
 pub struct Object<E: Extension = Generic> {
     #[serde(flatten)]
     pub rfc7519_claims: RFC7519Claims,
-    pub response_type: <E::RequestHandle as RequestHandle>::ResponseType,
     pub client_id: String,
     pub redirect_uri: url::Url,
     pub state: Option<String>,
@@ -29,8 +28,6 @@ impl<E: Extension> Object<E> {
     fn from_generic(original: &Object<Generic>) -> anyhow::Result<Self> {
         Ok(Object {
             rfc7519_claims: original.rfc7519_claims.clone(),
-            // TODO: fix error message
-            response_type: original.response_type.parse().map_err(|_| anyhow::anyhow!(""))?,
             client_id: original.client_id.clone(),
             redirect_uri: original.redirect_uri.clone(),
             state: original.state.clone(),
@@ -166,7 +163,7 @@ mod tests {
         let authorization_request = AuthorizationRequest::<Object> {
             body: Object {
                 rfc7519_claims: Default::default(),
-                response_type: "id_token".to_string(),
+                // response_type: "id_token".to_string(),
                 client_id: "did:example:123".to_string(),
                 redirect_uri: "https://www.example.com".parse().unwrap(),
                 state: Some("state".to_string()),

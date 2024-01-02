@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 /// [`AuthorizationRequest`] claims specific to [`OID4VP`].
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(tag = "response_type", rename = "vp_token")]
 pub struct AuthorizationRequestParameters {
     pub presentation_definition: PresentationDefinition,
     pub client_id_scheme: Option<String>,
@@ -75,7 +76,6 @@ impl AuthorizationRequestBuilder {
                     body: Object::<OID4VP> {
                         rfc7519_claims: self.rfc7519_claims,
                         client_id,
-                        response_type: Default::default(),
                         redirect_uri: self
                             .redirect_uri
                             .take()

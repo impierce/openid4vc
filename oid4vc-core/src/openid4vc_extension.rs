@@ -1,11 +1,10 @@
 use crate::{authorization_response::AuthorizationResponse, Decoder, JsonValue, Subject};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 /// A [`RequestHandle`] is used to declare what functionality a request should have. Most notable, it declares the
 /// `response_type``, the extension-specific parameters, and the builder for the extension-specific `AuthorizationRequest`.
 pub trait RequestHandle: std::fmt::Debug + PartialEq {
-    type ResponseType: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq + FromStr + std::fmt::Display + Clone;
     type Parameters: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq + Clone;
     type Builder: Default + std::fmt::Debug;
 }
@@ -54,7 +53,6 @@ pub trait Extension: Serialize + PartialEq + Sized + std::fmt::Debug + Clone {
 }
 
 impl RequestHandle for () {
-    type ResponseType = String;
     type Parameters = JsonValue;
     type Builder = ();
 }

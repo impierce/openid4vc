@@ -22,7 +22,6 @@ use std::sync::Arc;
 #[derive(Debug, PartialEq)]
 pub struct RequestHandler {}
 impl RequestHandle for RequestHandler {
-    type ResponseType = VpToken;
     type Parameters = AuthorizationRequestParameters;
     type Builder = AuthorizationRequestBuilder;
 }

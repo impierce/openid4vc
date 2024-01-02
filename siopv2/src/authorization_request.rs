@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 /// [`AuthorizationRequest`] claims specific to [`SIOPv2`].
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(tag = "response_type", rename = "id_token")]
 pub struct AuthorizationRequestParameters {
     // TODO: make generic Scope and add it to `AuthorizationRequest`.
     pub scope: Scope,
@@ -99,7 +100,6 @@ impl AuthorizationRequestBuilder {
                 Ok(AuthorizationRequest::<Object<SIOPv2>> {
                     body: Object::<SIOPv2> {
                         rfc7519_claims: self.rfc7519_claims,
-                        response_type: Default::default(),
                         client_id,
                         redirect_uri: self
                             .redirect_uri
@@ -172,7 +172,6 @@ mod tests {
             AuthorizationRequest::<Object<SIOPv2>> {
                 body: Object::<SIOPv2> {
                     rfc7519_claims: RFC7519Claims::default(),
-                    response_type: Default::default(),
                     client_id: "did:example:123".to_string(),
                     redirect_uri: "https://example.com".parse().unwrap(),
                     state: None,
