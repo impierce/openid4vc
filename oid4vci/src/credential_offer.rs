@@ -105,11 +105,7 @@ mod tests {
 
     use super::*;
     use crate::credential_format_profiles::{
-        iso_mdl::mso_mdoc::MsoMdoc,
-        w3c_verifiable_credentials::{
-            jwt_vc_json::{self, JwtVcJson},
-            ldp_vc::{self, LdpVc},
-        },
+        w3c_verifiable_credentials::{jwt_vc_json, ldp_vc},
         CredentialFormats, Parameters,
     };
     use serde_json::json;
@@ -155,7 +151,6 @@ mod tests {
                 credentials: vec![
                     CredentialsObject::ByReference("UniversityDegree_JWT".to_string()),
                     CredentialsObject::ByValue(CredentialFormats::MsoMdoc(Parameters {
-                        format: MsoMdoc,
                         parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
                     }))
                 ],
@@ -201,7 +196,6 @@ mod tests {
             CredentialOffer {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
                 credentials: vec![CredentialsObject::ByValue(CredentialFormats::JwtVcJson(Parameters {
-                    format: JwtVcJson,
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
                             type_: vec![
@@ -228,7 +222,6 @@ mod tests {
             CredentialOffer {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
                 credentials: vec![CredentialsObject::ByValue(CredentialFormats::LdpVc(Parameters {
-                    format: LdpVc,
                     parameters: (
                         ldp_vc::CredentialDefinition {
                             context: vec![
@@ -254,7 +247,6 @@ mod tests {
             CredentialOffer {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
                 credentials: vec![CredentialsObject::ByValue(CredentialFormats::MsoMdoc(Parameters {
-                    format: MsoMdoc,
                     parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
                 })),],
                 grants: Some(Grants {
@@ -275,7 +267,6 @@ mod tests {
                 credentials: vec![
                     CredentialsObject::ByReference("UniversityDegree_JWT".to_string()),
                     CredentialsObject::ByValue(CredentialFormats::MsoMdoc(Parameters {
-                        format: MsoMdoc,
                         parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
                     })),
                 ],
@@ -297,7 +288,6 @@ mod tests {
             CredentialOffer {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
                 credentials: vec![CredentialsObject::ByValue(CredentialFormats::JwtVcJson(Parameters {
-                    format: JwtVcJson,
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
                             type_: vec![

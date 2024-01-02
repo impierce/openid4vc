@@ -10,12 +10,10 @@ use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};
 use oid4vc_core::{
-    authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension, serialize_unit_struct, Decoder,
-    Subject,
+    authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension, Decoder, Subject,
 };
 use oid4vci::VerifiableCredentialJwt;
 use serde::{Deserialize, Serialize};
-use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::sync::Arc;
 
 /// This is the [`RequestHandle`] for the [`OID4VP`] extension.
@@ -34,11 +32,6 @@ impl ResponseHandle for ResponseHandler {
     type Parameters = AuthorizationResponseParameters;
     type ResponseItem = Vec<VerifiableCredentialJwt>;
 }
-
-// Unit struct used for the `response_type` parameter.
-#[derive(Debug, PartialEq, Default, DeserializeFromStr, SerializeDisplay, Clone)]
-pub struct VpToken;
-serialize_unit_struct!("vp_token", VpToken);
 
 /// This is the [`Extension`] implementation for the [`OID4VP`] extension.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]

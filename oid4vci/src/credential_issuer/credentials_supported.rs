@@ -27,11 +27,7 @@ where
 mod tests {
     use super::*;
     use crate::credential_format_profiles::{
-        iso_mdl::mso_mdoc::MsoMdoc,
-        w3c_verifiable_credentials::{
-            jwt_vc_json::{self, JwtVcJson},
-            ldp_vc::{self, LdpVc},
-        },
+        w3c_verifiable_credentials::{jwt_vc_json, ldp_vc},
         CredentialFormats, Parameters,
     };
     use serde::de::DeserializeOwned;
@@ -56,7 +52,6 @@ mod tests {
             CredentialsSupportedObject {
                 id: Some("UniversityDegree_JWT".to_string()),
                 credential_format: CredentialFormats::JwtVcJson(Parameters {
-                    format: JwtVcJson,
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
                             type_: vec![
@@ -116,7 +111,6 @@ mod tests {
             CredentialsSupportedObject {
                 id: None,
                 credential_format: CredentialFormats::LdpVc(Parameters {
-                    format: LdpVc,
                     parameters: (
                         ldp_vc::CredentialDefinition {
                             context: vec![
@@ -180,7 +174,6 @@ mod tests {
             CredentialsSupportedObject {
                 id: None,
                 credential_format: CredentialFormats::MsoMdoc(Parameters {
-                    format: MsoMdoc,
                     parameters: (
                         "org.iso.18013.5.1.mDL".to_string(),
                         Some(json!({

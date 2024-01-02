@@ -29,11 +29,9 @@ where
 mod tests {
     use super::*;
     use crate::credential_format_profiles::{
-        iso_mdl::mso_mdoc::MsoMdoc,
         w3c_verifiable_credentials::{
-            jwt_vc_json::{self, CredentialDefinition, JwtVcJson},
-            jwt_vc_json_ld::{self, JwtVcJsonLd},
-            ldp_vc::{self, LdpVc},
+            jwt_vc_json::{self, CredentialDefinition},
+            jwt_vc_json_ld, ldp_vc,
         },
         CredentialFormats, Parameters,
     };
@@ -78,7 +76,6 @@ mod tests {
             credential_request_jwt_vc_json,
             CredentialRequest {
                 credential_format: CredentialFormats::JwtVcJson(Parameters {
-                    format: JwtVcJson,
                     parameters: (
                         CredentialDefinition {
                             type_: vec![
@@ -136,7 +133,6 @@ mod tests {
             credential_request_mso_mdoc,
             CredentialRequest {
                 credential_format: CredentialFormats::MsoMdoc(Parameters {
-                    format: MsoMdoc,
                     parameters: (
                         "org.iso.18013.5.1.mDL".to_string(),
                         Some(json!({
@@ -171,7 +167,6 @@ mod tests {
         assert_eq!(
             CredentialRequest {
                 credential_format: CredentialFormats::MsoMdoc(Parameters {
-                    format: MsoMdoc,
                     parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
                 }),
                 proof: Some(Proof::Jwt {
@@ -184,7 +179,6 @@ mod tests {
         assert_eq!(
             CredentialRequest {
                 credential_format: CredentialFormats::MsoMdoc(Parameters {
-                    format: MsoMdoc,
                     parameters: (
                         "org.iso.18013.5.1.mDL".to_string(),
                         Some(json!({
@@ -211,7 +205,6 @@ mod tests {
         assert_eq!(
             CredentialRequest {
                 credential_format: CredentialFormats::JwtVcJsonLd(Parameters {
-                    format: JwtVcJsonLd,
                     parameters: (
                         jwt_vc_json_ld::CredentialDefinition {
                             context: vec![
@@ -242,7 +235,6 @@ mod tests {
         assert_eq!(
             CredentialRequest {
                 credential_format: CredentialFormats::JwtVcJson(Parameters {
-                    format: JwtVcJson,
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
                             type_: vec![
@@ -267,7 +259,6 @@ mod tests {
         assert_eq!(
             CredentialRequest {
                 credential_format: CredentialFormats::JwtVcJson(Parameters {
-                    format: JwtVcJson,
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
                             type_: vec![
@@ -296,7 +287,6 @@ mod tests {
         assert_eq!(
             CredentialRequest {
                 credential_format: CredentialFormats::LdpVc(Parameters {
-                    format: LdpVc,
                     parameters: (
                         ldp_vc::CredentialDefinition {
                             context: vec![

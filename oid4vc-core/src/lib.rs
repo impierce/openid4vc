@@ -48,30 +48,6 @@ macro_rules! builder_fn {
     };
 }
 
-// A macro that generates a `Display` and `FromStr` implementation for a unit struct.
-#[macro_export]
-macro_rules! serialize_unit_struct {
-    ($format:literal, $name:ident) => {
-        impl std::fmt::Display for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, "{}", $format)
-            }
-        }
-
-        impl std::str::FromStr for $name {
-            type Err = anyhow::Error;
-
-            fn from_str(s: &str) -> Result<Self, Self::Err> {
-                if s == $format {
-                    Ok($name)
-                } else {
-                    Err(anyhow::anyhow!(format!("expected {}, found {}", $format, s)))
-                }
-            }
-        }
-    };
-}
-
 // Helper function that allows to serialize custom structs into a query string.
 pub fn to_query_value<T: Serialize>(value: &T) -> anyhow::Result<String> {
     serde_json::to_string(value)

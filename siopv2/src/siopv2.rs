@@ -5,11 +5,9 @@ use futures::executor::block_on;
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};
 use oid4vc_core::{
-    authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension, serialize_unit_struct, Decoder,
-    Subject,
+    authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension, Decoder, Subject,
 };
 use serde::{Deserialize, Serialize};
-use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::sync::Arc;
 
 /// This is the [`RequestHandle`] for the [`SIOPv2`] extension.
@@ -28,11 +26,6 @@ impl ResponseHandle for ResponseHandler {
     type Parameters = AuthorizationResponseParameters;
     type ResponseItem = crate::token::id_token::IdToken;
 }
-
-// Unit struct used for the `response_type` parameter.
-#[derive(Debug, PartialEq, Default, DeserializeFromStr, SerializeDisplay, Clone)]
-pub struct IdToken;
-serialize_unit_struct!("id_token", IdToken);
 
 /// This is the [`Extension`] implementation for the [`SIOPv2`] extension.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
