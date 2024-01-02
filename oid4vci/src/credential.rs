@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use getset::Getters;
-use oid4vc_core::{builder_fn, JsonValue, RFC7519Claims};
+use oid4vc_core::{builder_fn, RFC7519Claims};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize, Getters)]
@@ -9,7 +9,7 @@ pub struct VerifiableCredentialJwt {
     pub rfc7519_claims: RFC7519Claims,
     #[serde(rename = "vc")]
     #[getset(get = "pub")]
-    pub verifiable_credential: JsonValue,
+    pub verifiable_credential: serde_json::Value,
 }
 
 impl VerifiableCredentialJwt {
@@ -21,7 +21,7 @@ impl VerifiableCredentialJwt {
 #[derive(Default)]
 pub struct VerifiableCredentialJwtBuilder {
     rfc7519_claims: RFC7519Claims,
-    verifiable_credential: Option<JsonValue>,
+    verifiable_credential: Option<serde_json::Value>,
 }
 
 impl VerifiableCredentialJwtBuilder {
@@ -45,5 +45,5 @@ impl VerifiableCredentialJwtBuilder {
     builder_fn!(rfc7519_claims, nbf, i64);
     builder_fn!(rfc7519_claims, iat, i64);
     builder_fn!(rfc7519_claims, jti, String);
-    builder_fn!(verifiable_credential, JsonValue);
+    builder_fn!(verifiable_credential, serde_json::Value);
 }

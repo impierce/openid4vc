@@ -1,6 +1,6 @@
 use crate::parse_other;
 use oid4vc_core::scope::{Scope, ScopeValue};
-use oid4vc_core::{JsonObject, JsonValue};
+use oid4vc_core::JsonObject;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -11,10 +11,10 @@ pub struct ClaimRequests {
     pub id_token: Option<StandardClaimsRequests>,
 }
 
-impl TryFrom<JsonValue> for ClaimRequests {
+impl TryFrom<serde_json::Value> for ClaimRequests {
     type Error = anyhow::Error;
 
-    fn try_from(value: JsonValue) -> Result<Self, Self::Error> {
+    fn try_from(value: serde_json::Value) -> Result<Self, Self::Error> {
         serde_json::from_value(value).map_err(Into::into)
     }
 }
@@ -316,11 +316,10 @@ mod tests {
     use super::*;
     use crate::test_utils::{MemoryStorage, Storage};
     use lazy_static::lazy_static;
-    use oid4vc_core::JsonValue;
     use serde_json::json;
 
     lazy_static! {
-        pub static ref USER_CLAIMS: JsonValue = json!(
+        pub static ref USER_CLAIMS: serde_json::Value = json!(
             {
                 "name": "Jane Doe",
                 "given_name": "Jane",

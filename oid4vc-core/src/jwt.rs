@@ -79,7 +79,7 @@ mod tests {
     use super::*;
     use crate::{
         test_utils::{MockVerifier, TestSubject},
-        JsonValue, Verify,
+        Verify,
     };
     use serde_json::json;
 
@@ -99,7 +99,7 @@ mod tests {
         let verifier = MockVerifier::new();
         let (kid, algorithm) = extract_header(&encoded).unwrap();
         let public_key = verifier.public_key(&kid).await.unwrap();
-        let decoded: JsonValue = decode(&encoded, public_key, algorithm).unwrap();
+        let decoded: serde_json::Value = decode(&encoded, public_key, algorithm).unwrap();
 
         assert_eq!(
             decoded,

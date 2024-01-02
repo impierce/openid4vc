@@ -18,7 +18,6 @@ pub enum Oid4vpParams {
 /// Custom serializer and deserializer for [`Oid4vpParams`].
 pub mod serde_oid4vp_response {
     use super::*;
-    use oid4vc_core::JsonValue;
     use serde::{
         de,
         ser::{self, SerializeMap},
@@ -49,10 +48,10 @@ pub mod serde_oid4vp_response {
     where
         D: serde::Deserializer<'de>,
     {
-        let oid4vp_response = JsonValue::deserialize(deserializer)?;
+        let oid4vp_response = serde_json::Value::deserialize(deserializer)?;
         match oid4vp_response {
-            JsonValue::String(response) => Ok(Oid4vpParams::Jwt { response }),
-            JsonValue::Object(map) => {
+            serde_json::Value::String(response) => Ok(Oid4vpParams::Jwt { response }),
+            serde_json::Value::Object(map) => {
                 let vp_token = map.get("vp_token").ok_or_else(|| {
                     de::Error::custom(
                         "`vp_token` parameter is required when using `presentation_submission` parameter.",

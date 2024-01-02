@@ -1,5 +1,6 @@
 use crate::authorization_request::{AuthorizationRequestBuilder, AuthorizationRequestParameters};
 use crate::claims::StandardClaimsValues;
+use crate::token::id_token::IdToken;
 use chrono::{Duration, Utc};
 use futures::executor::block_on;
 use jsonwebtoken::{Algorithm, Header};
@@ -24,7 +25,7 @@ pub struct ResponseHandler {}
 impl ResponseHandle for ResponseHandler {
     type Input = StandardClaimsValues;
     type Parameters = AuthorizationResponseParameters;
-    type ResponseItem = crate::token::id_token::IdToken;
+    type ResponseItem = IdToken;
 }
 
 /// This is the [`Extension`] implementation for the [`SIOPv2`] extension.
@@ -43,7 +44,7 @@ impl Extension for SIOPv2 {
     ) -> anyhow::Result<Vec<String>> {
         let subject_identifier = subject.identifier()?;
 
-        let id_token = crate::token::id_token::IdToken::builder()
+        let id_token = IdToken::builder()
             .iss(subject_identifier.clone())
             .sub(subject_identifier)
             .aud(client_id)

@@ -2,7 +2,7 @@ use std::fs::File;
 
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
-use oid4vc_core::{authentication::subject::SigningSubject, generate_authorization_code, jwt, JsonValue};
+use oid4vc_core::{authentication::subject::SigningSubject, generate_authorization_code, jwt};
 use oid4vc_manager::storage::Storage;
 use oid4vci::{
     authorization_response::AuthorizationResponse,
@@ -107,7 +107,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
             _ => unreachable!(),
         };
 
-        let mut verifiable_credential: JsonValue = serde_json::from_reader(credential_json).unwrap();
+        let mut verifiable_credential: serde_json::Value = serde_json::from_reader(credential_json).unwrap();
         verifiable_credential["issuer"] = json!(issuer_did);
         verifiable_credential["credentialSubject"]["id"] = json!(subject_did);
 

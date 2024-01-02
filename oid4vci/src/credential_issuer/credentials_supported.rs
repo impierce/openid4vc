@@ -2,7 +2,6 @@ use crate::{
     credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters},
     ProofType,
 };
-use oid4vc_core::JsonValue;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -20,7 +19,7 @@ where
     pub cryptographic_binding_methods_supported: Option<Vec<String>>,
     pub cryptographic_suites_supported: Option<Vec<String>>,
     pub proof_types_supported: Option<Vec<ProofType>>,
-    pub display: Option<Vec<JsonValue>>,
+    pub display: Option<Vec<serde_json::Value>>,
 }
 
 #[cfg(test)]

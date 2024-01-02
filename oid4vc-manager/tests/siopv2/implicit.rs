@@ -5,7 +5,7 @@ use oid4vc_core::{
     authorization_response::AuthorizationResponse,
     client_metadata::ClientMetadata,
     scope::{Scope, ScopeValue},
-    DidMethod, JsonValue, SubjectSyntaxType,
+    DidMethod, SubjectSyntaxType,
 };
 use oid4vc_manager::{ProviderManager, RelyingPartyManager};
 use siopv2::{
@@ -21,7 +21,7 @@ use wiremock::{
 };
 
 lazy_static! {
-    pub static ref USER_CLAIMS: JsonValue = serde_json::json!(
+    pub static ref USER_CLAIMS: serde_json::Value = serde_json::json!(
         {
             "name": "Jane Doe",
             "given_name": "Jane",

@@ -6,7 +6,7 @@ pub mod siopv2;
 pub mod token;
 
 pub use claims::{ClaimRequests, StandardClaimsRequests, StandardClaimsValues};
-use oid4vc_core::{authorization_response::AuthorizationResponse, JsonObject, JsonValue};
+use oid4vc_core::{authorization_response::AuthorizationResponse, JsonObject};
 pub use provider::Provider;
 pub use relying_party::RelyingParty;
 use serde::{Deserialize, Deserializer};
@@ -22,8 +22,8 @@ pub fn parse_other<'de, D>(deserializer: D) -> Result<Option<JsonObject>, D::Err
 where
     D: Deserializer<'de>,
 {
-    JsonValue::deserialize(deserializer).map(|value| match value {
-        JsonValue::Object(object) if !object.is_empty() => Some(object),
+    serde_json::Value::deserialize(deserializer).map(|value| match value {
+        serde_json::Value::Object(object) if !object.is_empty() => Some(object),
         _ => None,
     })
 }

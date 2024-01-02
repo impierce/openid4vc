@@ -1,5 +1,6 @@
 use crate::authorization_request::{AuthorizationRequestBuilder, AuthorizationRequestParameters};
 use crate::oid4vp_params::{serde_oid4vp_response, Oid4vpParams};
+use crate::token::vp_token::VpToken;
 use chrono::{Duration, Utc};
 pub use dif_presentation_exchange::{
     evaluate_input, ClaimFormatDesignation, InputDescriptor, InputDescriptorMappingObject, PathNested,
@@ -49,7 +50,7 @@ impl Extension for OID4VP {
     ) -> anyhow::Result<Vec<String>> {
         let subject_identifier = subject.identifier()?;
 
-        let vp_token = crate::token::vp_token::VpToken::builder()
+        let vp_token = VpToken::builder()
             .iss(subject_identifier.clone())
             .sub(subject_identifier)
             .aud(client_id)
@@ -85,7 +86,7 @@ impl Extension for OID4VP {
         decoder: Decoder,
         response: &AuthorizationResponse<Self>,
     ) -> anyhow::Result<<Self::ResponseHandle as ResponseHandle>::ResponseItem> {
-        let vp_token: crate::token::vp_token::VpToken = match &response.extension.oid4vp_parameters {
+        let vp_token: VpToken = match &response.extension.oid4vp_parameters {
             Oid4vpParams::Jwt { .. } => todo!(),
             Oid4vpParams::Params { vp_token, .. } => block_on(decoder.decode(vp_token.to_owned()))?,
         };

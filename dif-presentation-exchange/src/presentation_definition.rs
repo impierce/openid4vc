@@ -1,4 +1,3 @@
-use crate::JsonValue;
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -60,8 +59,8 @@ pub enum ClaimFormatDesignation {
 #[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ClaimFormatProperty {
-    Alg(Vec<JsonValue>),
-    ProofType(Vec<JsonValue>),
+    Alg(Vec<serde_json::Value>),
+    ProofType(Vec<serde_json::Value>),
 }
 
 #[allow(dead_code)]
@@ -96,7 +95,7 @@ pub struct Field {
     pub(crate) purpose: Option<String>,
     pub(crate) name: Option<String>,
     #[getset(get = "pub")]
-    pub(crate) filter: Option<JsonValue>,
+    pub(crate) filter: Option<serde_json::Value>,
     // TODO: check default behaviour
     #[getset(get = "pub")]
     pub(crate) optional: Option<bool>,

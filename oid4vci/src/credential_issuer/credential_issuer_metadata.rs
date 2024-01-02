@@ -1,6 +1,6 @@
 use super::credentials_supported::CredentialsSupportedObject;
 use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters};
-use oid4vc_core::{JsonObject, JsonValue};
+use oid4vc_core::JsonObject;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -19,7 +19,7 @@ where
     pub batch_credential_endpoint: Option<Url>,
     pub deferred_credential_endpoint: Option<Url>,
     pub credentials_supported: Vec<CredentialsSupportedObject<CFC>>,
-    pub display: Option<Vec<JsonValue>>,
+    pub display: Option<Vec<serde_json::Value>>,
 }
 
 #[skip_serializing_none]

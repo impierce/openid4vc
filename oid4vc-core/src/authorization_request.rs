@@ -1,6 +1,6 @@
 use crate::{
     openid4vc_extension::{Extension, Generic, OpenID4VC, RequestHandle},
-    JsonObject, JsonValue, RFC7519Claims,
+    JsonObject, RFC7519Claims,
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
@@ -45,11 +45,14 @@ impl<E: Extension> std::str::FromStr for Object<E> {
         let map = serde_urlencoded::from_str::<JsonObject>(query)?
             .into_iter()
             .filter_map(|(k, v)| match v {
-                JsonValue::String(s) => Some(Ok((k, serde_json::from_str(&s).unwrap_or(JsonValue::String(s))))),
+                serde_json::Value::String(s) => Some(Ok((
+                    k,
+                    serde_json::from_str(&s).unwrap_or(serde_json::Value::String(s)),
+                ))),
                 _ => None,
             })
             .collect::<Result<_, anyhow::Error>>()?;
-        let authorization_request: Object<E> = serde_json::from_value(JsonValue::Object(map))?;
+        let authorization_request: Object<E> = serde_json::from_value(serde_json::Value::Object(map))?;
         Ok(authorization_request)
     }
 }
@@ -120,11 +123,14 @@ impl<B: Body + DeserializeOwned> std::str::FromStr for AuthorizationRequest<B> {
         let map = serde_urlencoded::from_str::<JsonObject>(query)?
             .into_iter()
             .filter_map(|(k, v)| match v {
-                JsonValue::String(s) => Some(Ok((k, serde_json::from_str(&s).unwrap_or(JsonValue::String(s))))),
+                serde_json::Value::String(s) => Some(Ok((
+                    k,
+                    serde_json::from_str(&s).unwrap_or(serde_json::Value::String(s)),
+                ))),
                 _ => None,
             })
             .collect::<Result<_, anyhow::Error>>()?;
-        let authorization_request: AuthorizationRequest<B> = serde_json::from_value(JsonValue::Object(map))?;
+        let authorization_request: AuthorizationRequest<B> = serde_json::from_value(serde_json::Value::Object(map))?;
         Ok(authorization_request)
     }
 }
@@ -140,10 +146,10 @@ impl<B: Body> std::fmt::Display for AuthorizationRequest<B> {
             .ok_or(std::fmt::Error)?
             .iter()
             .filter_map(|(k, v)| match v {
-                JsonValue::Object(_) | JsonValue::Array(_) => {
-                    Some((k.to_owned(), JsonValue::String(serde_json::to_string(v).ok()?)))
+                serde_json::Value::Object(_) | serde_json::Value::Array(_) => {
+                    Some((k.to_owned(), serde_json::Value::String(serde_json::to_string(v).ok()?)))
                 }
-                JsonValue::String(_) => Some((k.to_owned(), v.to_owned())),
+                serde_json::Value::String(_) => Some((k.to_owned(), v.to_owned())),
                 _ => None,
             })
             .collect();
@@ -163,7 +169,6 @@ mod tests {
         let authorization_request = AuthorizationRequest::<Object> {
             body: Object {
                 rfc7519_claims: Default::default(),
-                // response_type: "id_token".to_string(),
                 client_id: "did:example:123".to_string(),
                 redirect_uri: "https://www.example.com".parse().unwrap(),
                 state: Some("state".to_string()),

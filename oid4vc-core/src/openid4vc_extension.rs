@@ -1,4 +1,4 @@
-use crate::{authorization_response::AuthorizationResponse, Decoder, JsonValue, Subject};
+use crate::{authorization_response::AuthorizationResponse, Decoder, Subject};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -29,7 +29,7 @@ pub trait Extension: Serialize + PartialEq + Sized + std::fmt::Debug + Clone {
         _extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
         _user_input: &<Self::ResponseHandle as ResponseHandle>::Input,
     ) -> anyhow::Result<Vec<String>> {
-        // Will be overridden by the extension.
+        // Will be overwritten by the extension.
         Err(anyhow::anyhow!("Not implemented."))
     }
 
@@ -39,7 +39,7 @@ pub trait Extension: Serialize + PartialEq + Sized + std::fmt::Debug + Clone {
         _redirect_uri: String,
         _state: Option<String>,
     ) -> anyhow::Result<AuthorizationResponse<Self>> {
-        // Will be overridden by the extension.
+        // Will be overwritten by the extension.
         Err(anyhow::anyhow!("Not implemented."))
     }
 
@@ -47,13 +47,13 @@ pub trait Extension: Serialize + PartialEq + Sized + std::fmt::Debug + Clone {
         _decoder: Decoder,
         _authorization_response: &AuthorizationResponse<Self>,
     ) -> anyhow::Result<<Self::ResponseHandle as ResponseHandle>::ResponseItem> {
-        // Will be overridden by the extension.
+        // Will be overwritten by the extension.
         Err(anyhow::anyhow!("Not implemented."))
     }
 }
 
 impl RequestHandle for () {
-    type Parameters = JsonValue;
+    type Parameters = serde_json::Value;
     type Builder = ();
 }
 

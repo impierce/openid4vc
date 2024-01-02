@@ -7,7 +7,7 @@ pub use dif_presentation_exchange::{
     evaluate_input, ClaimFormatDesignation, InputDescriptor, InputDescriptorMappingObject, PathNested,
     PresentationDefinition, PresentationSubmission,
 };
-use oid4vc_core::{JsonObject, JsonValue};
+use oid4vc_core::JsonObject;
 pub use oid4vp_params::Oid4vpParams;
 use serde::{Deserialize, Deserializer};
 
@@ -18,8 +18,8 @@ pub fn parse_other<'de, D>(deserializer: D) -> Result<Option<JsonObject>, D::Err
 where
     D: Deserializer<'de>,
 {
-    JsonValue::deserialize(deserializer).map(|value| match value {
-        JsonValue::Object(object) if !object.is_empty() => Some(object),
+    serde_json::Value::deserialize(deserializer).map(|value| match value {
+        serde_json::Value::Object(object) if !object.is_empty() => Some(object),
         _ => None,
     })
 }
