@@ -1,7 +1,7 @@
-use crate::common::{MemoryStorage, Storage, TestSubject};
+use crate::common::{MemoryStorage, Storage};
 use chrono::{Duration, Utc};
 use lazy_static::lazy_static;
-use oid4vc_core::{DidMethod, SubjectSyntaxType};
+use oid4vc_core::{test_utils::TestSubject, DidMethod, SubjectSyntaxType};
 use oid4vc_manager::{ProviderManager, RelyingPartyManager};
 use siopv2::{
     claims::{Address, IndividualClaimRequest},

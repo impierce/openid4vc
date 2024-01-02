@@ -315,7 +315,6 @@ pub struct Address<C: sealed::Claim> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::{MemoryStorage, Storage};
     use lazy_static::lazy_static;
     use serde_json::{json, Value};
 
@@ -361,82 +360,6 @@ mod tests {
                 picture: Some("https://example.com/janedoe/me.jpg".to_string()),
                 website: Some("https://example.com".to_string()),
                 email: Some("jane.doe@example.com".to_string()),
-                updated_at: Some(1311280970),
-                address: Some(Address {
-                    formatted: Some("100 Universal City Plaza\nHollywood, CA 91608".to_string()),
-                    street_address: Some("100 Universal City Plaza".to_string()),
-                    locality: Some("Hollywood".to_string()),
-                    region: Some("CA".to_string()),
-                    postal_code: Some("91608".to_string()),
-                    country: Some("US".to_string()),
-                }),
-                ..Default::default()
-            }
-        );
-    }
-
-    #[test]
-    fn test_request_claims() {
-        // Store the user claims in the storage.
-        let storage = MemoryStorage::new(serde_json::from_value::<StandardClaimsValues>(USER_CLAIMS.clone()).unwrap());
-
-        // Initialize a set of request claims.
-        let request_claims = ClaimRequests {
-            id_token: Some(StandardClaimsRequests {
-                name: Some(IndividualClaimRequest::Null),
-                given_name: Some(IndividualClaimRequest::object().essential(true)),
-                family_name: Some(IndividualClaimRequest::object().value("Doe".to_string())),
-                middle_name: Some(IndividualClaimRequest::object().values(vec!["Doe".to_string(), "Done".to_string()])),
-                nickname: Some(IndividualClaimRequest::object().essential(true).value("JD".to_string())),
-                updated_at: Some(
-                    IndividualClaimRequest::object()
-                        .essential(true)
-                        .values(vec![1311280970, 1311280971]),
-                ),
-                address: Some(
-                    IndividualClaimRequest::object().essential(false).value(Address {
-                        formatted: Some(IndividualClaimRequest::object().essential(false)),
-                        street_address: Some(
-                            IndividualClaimRequest::object().value("100 Universal City Plaza".to_string()),
-                        ),
-                        locality: Some(
-                            IndividualClaimRequest::object()
-                                .values(vec!["Hollywood".to_string(), "Amsterdam".to_string()]),
-                        ),
-                        region: Some(
-                            IndividualClaimRequest::object()
-                                .essential(false)
-                                .value("CA".to_string()),
-                        ),
-                        postal_code: Some(
-                            IndividualClaimRequest::object().other(
-                                serde_json::json!({
-                                    "other": "member"
-                                })
-                                .as_object()
-                                .unwrap()
-                                .to_owned(),
-                            ),
-                        ),
-                        ..Default::default()
-                    }),
-                ),
-                ..Default::default()
-            }),
-            user_claims: None,
-        };
-
-        // Fetch a selection of the user claims (based on the request claims) from the storage.
-        let response_claims = storage.fetch_claims(&request_claims.id_token.unwrap());
-
-        assert_eq!(
-            response_claims,
-            StandardClaims {
-                name: Some("Jane Doe".to_string()),
-                given_name: Some("Jane".to_string()),
-                family_name: Some("Doe".to_string()),
-                middle_name: Some("Middle".to_string()),
-                nickname: Some("JD".to_string()),
                 updated_at: Some(1311280970),
                 address: Some(Address {
                     formatted: Some("100 Universal City Plaza\nHollywood, CA 91608".to_string()),

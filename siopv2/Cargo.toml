@@ -32,8 +32,7 @@ identity_credential.workspace = true
 futures = "0.3"
 
 [dev-dependencies]
-ed25519-dalek = "1.0.1"
-rand = "0.7"
+oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
 lazy_static = "1.4.0"
 derivative = "2.2.0"
 wiremock = "0.5.18"

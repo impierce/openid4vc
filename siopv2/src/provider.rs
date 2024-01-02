@@ -148,8 +148,7 @@ impl Provider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::TestSubject;
-    use oid4vc_core::{Subject, SubjectSyntaxType, Validator, Validators};
+    use oid4vc_core::{test_utils::TestSubject, Subject, SubjectSyntaxType, Validator, Validators};
     use std::{str::FromStr, sync::Arc};
 
     #[tokio::test]

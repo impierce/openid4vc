@@ -31,8 +31,7 @@ paste = "1.0"
 tower-http = { version = "0.4", features = ["cors"]}
 
 [dev-dependencies]
-ed25519-dalek = "1.0.1"
-rand = "0.7"
+oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
 lazy_static = "1.4"
 derivative = "2.2"
 wiremock = "0.5"

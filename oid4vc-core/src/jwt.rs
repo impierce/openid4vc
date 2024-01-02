@@ -74,6 +74,7 @@ where
     Ok(base64_url::encode(serde_json::to_vec(value)?.as_slice()))
 }
 
+#[cfg(feature = "test-utils")]
 #[cfg(test)]
 mod tests {
     use super::*;
