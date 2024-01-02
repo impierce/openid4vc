@@ -192,49 +192,4 @@ mod tests {
             }
         );
     }
-
-    // #[test]
-    // fn test_invalid_request_builder() {
-    //     // A request builder with a `request_uri` parameter should fail to build.
-    //     assert!(AuthorizationRequest::<Object<SIOPv2>>::builder()
-    //         .client_id("did:example:123".to_string())
-    //         .scope(Scope::openid())
-    //         .redirect_uri("https://example.com".parse::<url::Url>().unwrap())
-    //         .nonce("nonce".to_string())
-    //         .build()
-    //         .is_err());
-
-    //     // A request builder without an invalid claim request should fail to build.
-    //     assert!(AuthorizationRequest::<Object<SIOPv2>>::builder()
-    //         .client_id("did:example:123".to_string())
-    //         .scope(Scope::openid())
-    //         .redirect_uri("https://example.com".parse::<url::Url>().unwrap())
-    //         .nonce("nonce".to_string())
-    //         .claims(
-    //             r#"{
-    //                 "id_token": {
-    //                     "name": "invalid"
-    //                 }
-    //             }"#,
-    //         )
-    //         .build()
-    //         .is_err());
-    // }
-
-    // #[test]
-    // fn test_valid_request_uri_builder() {
-    //     let request_url = AuthorizationRequest::<ByReference>::builder()
-    //         .client_id("did:example:123".to_string())
-    //         .request_uri("https://example.com/request_uri".parse::<url::Url>().unwrap())
-    //         .build()
-    //         .unwrap();
-
-    //     assert_eq!(
-    //         request_url,
-    //         AuthorizationRequest::<SIOPv2>::ByReference {
-    //             client_id: "did:example:123".to_string(),
-    //             request_uri: "https://example.com/request_uri".parse().unwrap()
-    //         }
-    //     );
-    // }
 }
