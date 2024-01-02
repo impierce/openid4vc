@@ -2,10 +2,10 @@ use crate::{claims::ClaimRequests, ClientMetadata, RequestUrlBuilder, Scope, Sta
 use anyhow::{anyhow, Result};
 use derive_more::Display;
 use getset::Getters;
-use oid4vc_core::{RFC7519Claims, SubjectSyntaxType};
+use oid4vc_core::{JsonObject, RFC7519Claims, SubjectSyntaxType};
 use oid4vp::PresentationDefinition;
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
+use serde_json::Value;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::convert::TryInto;
 use std::str::FromStr;
@@ -88,7 +88,7 @@ impl FromStr for RequestUrl {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let url = url::Url::parse(s)?;
         let query = url.query().ok_or_else(|| anyhow!("No query found."))?;
-        let map = serde_urlencoded::from_str::<Map<String, Value>>(query)?
+        let map = serde_urlencoded::from_str::<JsonObject>(query)?
             .into_iter()
             .filter_map(|(k, v)| match v {
                 Value::String(s) => Some(Ok((k, serde_json::from_str(&s).unwrap_or(Value::String(s))))),
@@ -106,7 +106,7 @@ impl FromStr for RequestUrl {
 // for the `RequestUrl` enum.
 impl std::fmt::Display for RequestUrl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let map: Map<String, Value> = serde_json::to_value(self)
+        let map: JsonObject = serde_json::to_value(self)
             .map_err(|_| std::fmt::Error)?
             .as_object()
             .ok_or(std::fmt::Error)?
