@@ -6,10 +6,10 @@ use oid4vc_manager::{
     servers::credential_issuer::Server,
 };
 use oid4vci::{
-    authorization_details::{AuthorizationDetailsObject, OpenIDCredential},
-    credential_format_profiles::CredentialFormats,
+    authorization_details::AuthorizationDetailsObject,
+    credential_format_profiles::{CredentialFormats, WithParameters},
     credential_response::{CredentialResponse, CredentialResponseType},
-    token_request::{AuthorizationCode, TokenRequest},
+    token_request::TokenRequest,
     Wallet,
 };
 use std::sync::Arc;
@@ -19,7 +19,7 @@ use std::sync::Arc;
 async fn test_authorization_code_flow() {
     // Setup the credential issuer.
     let mut credential_issuer: Server<_, _> = Server::setup(
-        CredentialIssuerManager::<_, CredentialFormats>::new(
+        CredentialIssuerManager::<_, CredentialFormats<WithParameters>>::new(
             None,
             MemoryStorage,
             [Arc::new(KeySubject::from_keypair(
@@ -62,7 +62,7 @@ async fn test_authorization_code_flow() {
         .unwrap();
 
     // Get the credential format for a university degree.
-    let university_degree_credential_format: CredentialFormats = credential_issuer_metadata
+    let university_degree_credential_format: CredentialFormats<WithParameters> = credential_issuer_metadata
         .credentials_supported
         .get(0)
         .unwrap()
@@ -74,7 +74,6 @@ async fn test_authorization_code_flow() {
         .get_authorization_code(
             authorization_server_metadata.authorization_endpoint.unwrap(),
             vec![AuthorizationDetailsObject {
-                type_: OpenIDCredential,
                 locations: None,
                 credential_format: university_degree_credential_format.clone(),
             }
@@ -84,7 +83,6 @@ async fn test_authorization_code_flow() {
         .unwrap();
 
     let token_request = TokenRequest::AuthorizationCode {
-        grant_type: AuthorizationCode,
         code: authorization_response.code,
         code_verifier: None,
         redirect_uri: None,

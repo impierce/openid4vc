@@ -1,4 +1,4 @@
-use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats};
+use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters};
 use anyhow::Result;
 use oid4vc_core::{to_query_value, JsonObject};
 use reqwest::Url;
@@ -24,7 +24,7 @@ pub struct PreAuthorizedCode {
 /// Credential Offer as described in https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer.
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
-pub struct CredentialOffer<CFC = CredentialFormats>
+pub struct CredentialOffer<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {
@@ -35,7 +35,7 @@ where
 
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
-pub enum CredentialOfferQuery<CFC = CredentialFormats>
+pub enum CredentialOfferQuery<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {
@@ -82,7 +82,7 @@ impl<CFC: CredentialFormatCollection> std::fmt::Display for CredentialOfferQuery
 
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 #[serde(untagged)]
-pub enum CredentialsObject<CFC = CredentialFormats>
+pub enum CredentialsObject<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {
@@ -105,11 +105,7 @@ mod tests {
 
     use super::*;
     use crate::credential_format_profiles::{
-        iso_mdl::mso_mdoc::MsoMdoc,
-        w3c_verifiable_credentials::{
-            jwt_vc_json::{self, JwtVcJson},
-            ldp_vc::{self, LdpVc},
-        },
+        w3c_verifiable_credentials::{jwt_vc_json, ldp_vc},
         CredentialFormats, Parameters,
     };
     use serde_json::json;
@@ -155,7 +151,6 @@ mod tests {
                 credentials: vec![
                     CredentialsObject::ByReference("UniversityDegree_JWT".to_string()),
                     CredentialsObject::ByValue(CredentialFormats::MsoMdoc(Parameters {
-                        format: MsoMdoc,
                         parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
                     }))
                 ],
@@ -201,7 +196,6 @@ mod tests {
             CredentialOffer {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
                 credentials: vec![CredentialsObject::ByValue(CredentialFormats::JwtVcJson(Parameters {
-                    format: JwtVcJson,
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
                             type_: vec![
@@ -228,7 +222,6 @@ mod tests {
             CredentialOffer {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
                 credentials: vec![CredentialsObject::ByValue(CredentialFormats::LdpVc(Parameters {
-                    format: LdpVc,
                     parameters: (
                         ldp_vc::CredentialDefinition {
                             context: vec![
@@ -254,7 +247,6 @@ mod tests {
             CredentialOffer {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
                 credentials: vec![CredentialsObject::ByValue(CredentialFormats::MsoMdoc(Parameters {
-                    format: MsoMdoc,
                     parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
                 })),],
                 grants: Some(Grants {
@@ -275,7 +267,6 @@ mod tests {
                 credentials: vec![
                     CredentialsObject::ByReference("UniversityDegree_JWT".to_string()),
                     CredentialsObject::ByValue(CredentialFormats::MsoMdoc(Parameters {
-                        format: MsoMdoc,
                         parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
                     })),
                 ],
@@ -297,7 +288,6 @@ mod tests {
             CredentialOffer {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
                 credentials: vec![CredentialsObject::ByValue(CredentialFormats::JwtVcJson(Parameters {
-                    format: JwtVcJson,
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
                             type_: vec![

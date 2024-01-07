@@ -6,10 +6,10 @@ use oid4vc_manager::{
     servers::credential_issuer::Server,
 };
 use oid4vci::{
-    credential_format_profiles::CredentialFormats,
+    credential_format_profiles::{CredentialFormats, WithParameters},
     credential_offer::{CredentialOffer, CredentialOfferQuery, CredentialsObject, Grants},
     credential_response::{BatchCredentialResponse, CredentialResponse, CredentialResponseType},
-    token_request::{PreAuthorizedCode, TokenRequest},
+    token_request::TokenRequest,
     Wallet,
 };
 use std::sync::Arc;
@@ -22,7 +22,7 @@ use std::sync::Arc;
 #[tokio::test]
 async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference: bool) {
     // Setup the credential issuer.
-    let mut credential_issuer = Server::<_, CredentialFormats>::setup(
+    let mut credential_issuer = Server::<_, CredentialFormats<WithParameters>>::setup(
         CredentialIssuerManager::new(
             None,
             MemoryStorage,
@@ -86,7 +86,6 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         Some(Grants {
             pre_authorized_code, ..
         }) => TokenRequest::PreAuthorizedCode {
-            grant_type: PreAuthorizedCode,
             pre_authorized_code: pre_authorized_code.unwrap().pre_authorized_code,
             user_pin: Some("493536".to_string()),
         },

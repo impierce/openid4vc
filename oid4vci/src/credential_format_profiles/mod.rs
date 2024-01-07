@@ -6,7 +6,7 @@ use self::{
     sealed::FormatExtension,
     w3c_verifiable_credentials::{jwt_vc_json::JwtVcJson, jwt_vc_json_ld::JwtVcJsonLd, ldp_vc::LdpVc},
 };
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[macro_export]
 macro_rules! credential_format {
@@ -39,53 +39,38 @@ macro_rules! credential_format {
                     }
                 }
             }
-
-            $crate::serialize_unit_struct!($format, $name);
         }
     };
 }
 
-pub trait Format: std::fmt::Debug + Serialize + Sync + Send + Clone {
-    type Parameters: std::fmt::Debug + Serialize + DeserializeOwned + Clone + Send + Sync;
-    type Credential: std::fmt::Debug + Serialize + DeserializeOwned + Clone + Send + Sync;
+pub trait Format: std::fmt::Debug + Sync + Send + Clone {
+    type Parameters: std::fmt::Debug + Serialize + Clone + Send + Sync;
+    type Credential: std::fmt::Debug + Serialize + Clone + Send + Sync;
 }
 
 mod sealed {
     use super::Format;
-    use serde::{de::DeserializeOwned, Serialize};
+    use serde::Serialize;
 
-    pub trait FormatExtension: Serialize + Clone + DeserializeOwned + std::fmt::Debug {
-        type Container<F: Format + Clone + DeserializeOwned>: Serialize
-            + std::fmt::Debug
-            + Clone
-            + Sync
-            + Send
-            + DeserializeOwned;
+    pub trait FormatExtension: Clone + std::fmt::Debug {
+        type Container<F: Format + Clone>: Serialize + std::fmt::Debug + Clone + Sync + Send;
     }
 }
 
 impl FormatExtension for () {
-    type Container<F: Format + DeserializeOwned> = Profile<F>;
-}
-#[derive(Debug, Serialize, Clone, Eq, PartialEq, Deserialize)]
-pub struct Profile<F>
-where
-    F: Format,
-{
-    pub format: F,
+    type Container<F: Format> = ();
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct WithParameters;
 impl FormatExtension for WithParameters {
-    type Container<F: Format + DeserializeOwned> = Parameters<F>;
+    type Container<F: Format> = Parameters<F>;
 }
 #[derive(Debug, Serialize, Clone, Eq, PartialEq, Deserialize)]
 pub struct Parameters<F>
 where
     F: Format,
 {
-    pub format: F,
     #[serde(flatten)]
     pub parameters: F::Parameters,
 }
@@ -93,53 +78,94 @@ where
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct WithCredential;
 impl FormatExtension for WithCredential {
-    type Container<F: Format + DeserializeOwned> = Credential<F>;
+    type Container<F: Format> = Credential<F>;
 }
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct Credential<F>
 where
     F: Format,
 {
-    pub format: F,
     pub credential: F::Credential,
 }
 
 pub trait CredentialFormatCollection: Serialize + Send + Sync + Clone + std::fmt::Debug {}
 
 #[derive(Debug, Serialize, Clone, Eq, PartialEq, Deserialize)]
-#[serde(untagged)]
-pub enum CredentialFormats<C = WithParameters>
+#[serde(tag = "format")]
+pub enum CredentialFormats<C = ()>
 where
-    C: FormatExtension + DeserializeOwned,
+    C: FormatExtension,
 {
+    #[serde(rename = "jwt_vc_json")]
     JwtVcJson(C::Container<JwtVcJson>),
+    #[serde(rename = "jwt_vc_json-ld")]
     JwtVcJsonLd(C::Container<JwtVcJsonLd>),
+    #[serde(rename = "ldp_vc")]
     LdpVc(C::Container<LdpVc>),
+    #[serde(rename = "mso_mdoc")]
     MsoMdoc(C::Container<MsoMdoc>),
-    Other(serde_json::Value),
 }
+
 impl<C> CredentialFormatCollection for CredentialFormats<C> where C: FormatExtension {}
 
-impl TryInto<CredentialFormats<()>> for &CredentialFormats<WithCredential> {
-    type Error = anyhow::Error;
-
-    fn try_into(self) -> Result<CredentialFormats<()>, Self::Error> {
+impl CredentialFormats<WithCredential> {
+    pub fn credential(&self) -> anyhow::Result<&serde_json::Value> {
         match self {
-            CredentialFormats::JwtVcJson(credential) => Ok(CredentialFormats::<()>::JwtVcJson(Profile {
-                format: credential.format.clone(),
-            })),
-            CredentialFormats::JwtVcJsonLd(credential) => Ok(CredentialFormats::<()>::JwtVcJsonLd(Profile {
-                format: credential.format.clone(),
-            })),
-            CredentialFormats::LdpVc(credential) => Ok(CredentialFormats::<()>::LdpVc(Profile {
-                format: credential.format.clone(),
-            })),
-            CredentialFormats::MsoMdoc(credential) => Ok(CredentialFormats::<()>::MsoMdoc(Profile {
-                format: credential.format.clone(),
-            })),
-            CredentialFormats::Other(_) => Err(anyhow::anyhow!(
-                "unable to convert CredentialFormats<WithCredential> to CredentialFormats<()>"
-            )),
+            CredentialFormats::JwtVcJson(credential) => Ok(&credential.credential),
+            CredentialFormats::JwtVcJsonLd(credential) => Ok(&credential.credential),
+            CredentialFormats::LdpVc(credential) => Ok(&credential.credential),
+            CredentialFormats::MsoMdoc(credential) => Ok(&credential.credential),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        w3c_verifiable_credentials::jwt_vc_json::{self, JwtVcJsonParameters},
+        *,
+    };
+    use serde_json::json;
+
+    #[test]
+    fn test_credential_formats() {
+        // Assert that the credential formats with known value 'jwt_vc_json' can be deserialized.
+        assert_eq!(
+            serde_json::from_value::<CredentialFormats>(json!({
+                "format": "jwt_vc_json"
+            }))
+            .unwrap(),
+            CredentialFormats::JwtVcJson(())
+        );
+    }
+
+    #[test]
+    fn test_credential_formats_with_parameters() {
+        // Assert that the credential formats with known value 'jwt_vc_json' can be deserialized
+        // with format specific parameters.
+        assert_eq!(
+            serde_json::from_value::<CredentialFormats<WithParameters>>(json!({
+                "format": "jwt_vc_json",
+                "credential_definition":{
+                    "type": [
+                        "VerifiableCredential",
+                        "DriverLicenseCredential"
+                    ]
+                }
+            }))
+            .unwrap(),
+            CredentialFormats::JwtVcJson(Parameters {
+                parameters: JwtVcJsonParameters {
+                    credential_definition: jwt_vc_json::CredentialDefinition {
+                        type_: vec![
+                            "VerifiableCredential".to_string(),
+                            "DriverLicenseCredential".to_string(),
+                        ],
+                        credential_subject: None,
+                    },
+                    order: None,
+                },
+            })
+        );
     }
 }
