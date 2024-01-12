@@ -18,10 +18,10 @@ pub use token::{id_token::IdToken, id_token_builder::IdTokenBuilder};
 
 use serde::{Deserialize, Deserializer};
 
-// When a struct has fields of type `Option<serde_json::Map<String, serde_json::Value>>`, by default these fields are deserialized as
+// When a struct has fields of type `Option<JsonObject>`, by default these fields are deserialized as
 // `Some(Object {})` instead of None when the corresponding values are missing.
 // The `parse_other()` helper function ensures that these fields are deserialized as `None` when no value is present.
-pub fn parse_other<'de, D>(deserializer: D) -> Result<Option<serde_json::Map<String, serde_json::Value>>, D::Error>
+pub fn parse_other<'de, D>(deserializer: D) -> Result<Option<JsonObject>, D::Error>
 where
     D: Deserializer<'de>,
 {
