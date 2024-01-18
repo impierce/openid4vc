@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::authorization_details::AuthorizationDetailsObject;
 use crate::authorization_request::AuthorizationRequest;
 use crate::authorization_response::AuthorizationResponse;
@@ -26,9 +28,14 @@ pub struct Wallet {
 impl Wallet {
     pub fn new(subject: SigningSubject) -> Self {
         let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
-        let client = ClientBuilder::new(reqwest::Client::new())
-            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-            .build();
+        let client = ClientBuilder::new(
+            reqwest::Client::builder()
+                .timeout(Duration::from_secs(2))
+                .build()
+                .unwrap(),
+        )
+        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .build();
         Self { subject, client }
     }
 
