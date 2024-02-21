@@ -52,7 +52,7 @@ where
 
 pub fn encode<C, S>(signer: Arc<S>, header: Header, claims: C) -> Result<String>
 where
-    C: Serialize + Send,
+    C: Serialize,
     S: Sign + ?Sized,
 {
     let kid = signer.key_id().ok_or(anyhow!("No key identifier found."))?;

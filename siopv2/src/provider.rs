@@ -1,154 +1,119 @@
-use crate::{
-    request::ResponseType, AuthorizationRequest, AuthorizationResponse, IdToken, RequestUrl, StandardClaimsValues,
-};
+use std::str::FromStr;
+
 use anyhow::Result;
-use chrono::{Duration, Utc};
-use identity_credential::{credential::Jwt, presentation::Presentation};
-use jsonwebtoken::{Algorithm, Header};
-use oid4vc_core::{authentication::subject::SigningSubject, jwt, Decoder};
-use oid4vp::{token::vp_token::VpToken, PresentationSubmission};
+use oid4vc_core::{
+    authentication::subject::SigningSubject,
+    authorization_request::{AuthorizationRequest, Body, ByReference, ByValue, Object},
+    authorization_response::AuthorizationResponse,
+    openid4vc_extension::{Extension, ResponseHandle},
+    Decoder,
+};
+use reqwest::StatusCode;
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
 /// [`AuthorizationRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
 /// the user who is trying to authenticate.
 pub struct Provider {
     pub subject: SigningSubject,
-    client: reqwest::Client,
+    client: ClientWithMiddleware,
 }
 
 impl Provider {
     // TODO: Use ProviderBuilder instead.
     pub fn new(subject: SigningSubject) -> Result<Self> {
-        Ok(Provider {
-            subject,
-            client: reqwest::Client::new(),
-        })
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
+        let client = ClientBuilder::new(reqwest::Client::new())
+            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+            .build();
+        Ok(Provider { subject, client })
     }
 
     /// TODO: Add more validation rules.
-    /// Takes a [`RequestUrl`] and returns a [`AuthorizationRequest`]. The [`RequestUrl`] can either be a [`AuthorizationRequest`] or a
-    /// request by value. If the [`RequestUrl`] is a request by value, the request is decoded by the [`Subject`] of the [`Provider`].
-    /// If the request is valid, the request is returned.
-    pub async fn validate_request(&self, request: RequestUrl, decoder: Decoder) -> Result<AuthorizationRequest> {
-        if let RequestUrl::Request(authorization_request) = request {
-            Ok(*authorization_request)
-        } else {
-            let (request_object, client_id) = match request {
-                RequestUrl::RequestUri { request_uri, client_id } => {
-                    let builder = self.client.get(request_uri);
-                    let request_value = builder.send().await?.text().await?;
-                    (request_value, client_id)
-                }
-                RequestUrl::RequestObject { request, client_id } => (request, client_id),
-                _ => unreachable!(),
-            };
-            let authorization_request: AuthorizationRequest = decoder.decode(request_object).await?;
-            anyhow::ensure!(*authorization_request.client_id() == client_id, "Client id mismatch.");
-            Ok(authorization_request)
-        }
-    }
-
-    /// Generates a [`AuthorizationResponse`] in response to a [`AuthorizationRequest`] and the user's claims. The [`AuthorizationResponse`]
-    /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
-    pub fn generate_response(
+    /// Takes a String and tries to parse it into an [`AuthorizationRequest<Object>`]. If the parsing fails, it tries to
+    /// parse the [`AuthorizationRequest<Object>`] from the `request` parameter of the [`AuthorizationRequest<ByValue>`]
+    /// or from the `request_uri` parameter of the [`AuthorizationRequest<ByReference>`].
+    pub async fn validate_request(
         &self,
-        request: AuthorizationRequest,
-        user_claims: StandardClaimsValues,
-        verifiable_presentation: Option<Presentation<Jwt>>,
-        presentation_submission: Option<PresentationSubmission>,
-    ) -> Result<AuthorizationResponse> {
-        let subject_identifier = self.subject.identifier()?;
+        authorization_request: String,
+        decoder: Decoder,
+    ) -> Result<AuthorizationRequest<Object>> {
+        let authorization_request = if let Ok(authorization_request) =
+            authorization_request.parse::<AuthorizationRequest<Object>>()
+        {
+            authorization_request
+        } else {
+            let (client_id, authorization_request) =
+                if let Ok(authorization_request) = AuthorizationRequest::<ByValue>::from_str(&authorization_request) {
+                    let client_id = authorization_request.body.client_id().clone();
+                    let authorization_request: AuthorizationRequest<Object> = decoder
+                        .decode(authorization_request.body.request.to_owned())
+                        .await
+                        .unwrap();
 
-        let mut builder = AuthorizationResponse::builder().redirect_uri(request.redirect_uri().to_owned());
-
-        // TODO: Clean this up!!
-        match *request.response_type() {
-            ResponseType::IdToken => {
-                let id_token = IdToken::builder()
-                    .iss(subject_identifier.clone())
-                    .sub(subject_identifier)
-                    .aud(request.client_id().to_owned())
-                    .nonce(request.nonce().to_owned())
-                    .exp((Utc::now() + Duration::minutes(10)).timestamp())
-                    .iat((Utc::now()).timestamp())
-                    .claims(user_claims)
-                    .build()?;
-
-                let jwt = jwt::encode(self.subject.clone(), Header::new(Algorithm::EdDSA), id_token)?;
-                builder = builder.id_token(jwt);
-            }
-            ResponseType::VpToken => {
-                if let (Some(verifiable_presentation), Some(presentation_submission)) =
-                    (verifiable_presentation, presentation_submission)
+                    (client_id, authorization_request)
+                } else if let Ok(authorization_request) =
+                    AuthorizationRequest::<ByReference>::from_str(&authorization_request)
                 {
-                    let vp_token = VpToken::builder()
-                        .iss(subject_identifier.clone())
-                        .sub(subject_identifier)
-                        .aud(request.client_id().to_owned())
-                        .nonce(request.nonce().to_owned())
-                        .exp((Utc::now() + Duration::minutes(10)).timestamp())
-                        .iat((Utc::now()).timestamp())
-                        .verifiable_presentation(verifiable_presentation)
-                        .build()?;
+                    let client_id = authorization_request.body.client_id().clone();
+                    let builder = self.client.get(authorization_request.body.request_uri.clone());
+                    let request_value = builder.send().await?.text().await?;
+                    let authorization_request: AuthorizationRequest<Object> = decoder.decode(request_value).await?;
 
-                    let jwt = jwt::encode(self.subject.clone(), Header::new(Algorithm::EdDSA), vp_token)?;
-                    builder = builder.vp_token(jwt).presentation_submission(presentation_submission);
+                    (client_id, authorization_request)
                 } else {
-                    anyhow::bail!("Verifiable presentation is required for this response type.");
-                }
-            }
-            ResponseType::IdTokenVpToken => {
-                let id_token = IdToken::builder()
-                    .iss(subject_identifier.clone())
-                    .sub(subject_identifier.clone())
-                    .aud(request.client_id().to_owned())
-                    .nonce(request.nonce().to_owned())
-                    .exp((Utc::now() + Duration::minutes(10)).timestamp())
-                    .iat((Utc::now()).timestamp())
-                    .claims(user_claims)
-                    .build()?;
+                    return Err(anyhow::anyhow!("Invalid authorization request."));
+                };
+            anyhow::ensure!(
+                authorization_request.body.client_id == *client_id,
+                "Client id mismatch."
+            );
+            authorization_request
+        };
 
-                let jwt = jwt::encode(self.subject.clone(), Header::new(Algorithm::EdDSA), id_token)?;
-                builder = builder.id_token(jwt);
-
-                if let (Some(verifiable_presentation), Some(presentation_submission)) =
-                    (verifiable_presentation, presentation_submission)
-                {
-                    let vp_token = VpToken::builder()
-                        .iss(subject_identifier.clone())
-                        .sub(subject_identifier)
-                        .aud(request.client_id().to_owned())
-                        .nonce(request.nonce().to_owned())
-                        .exp((Utc::now() + Duration::minutes(10)).timestamp())
-                        .iat((Utc::now()).timestamp())
-                        .verifiable_presentation(verifiable_presentation)
-                        .build()?;
-
-                    let jwt = jwt::encode(self.subject.clone(), Header::new(Algorithm::EdDSA), vp_token)?;
-                    builder = builder.vp_token(jwt).presentation_submission(presentation_submission);
-                } else {
-                    anyhow::bail!("Verifiable presentation is required for this response type.");
-                }
-            }
-        }
-
-        if let Some(state) = request.state() {
-            builder = builder.state(state.clone());
-        }
-        builder.build()
+        Ok(authorization_request)
     }
 
-    pub async fn send_response(&self, response: AuthorizationResponse) -> Result<()> {
-        let builder = self.client.post(response.redirect_uri()).form(&response);
-        builder.send().await?.text().await?;
-        Ok(())
+    /// Generates an [`AuthorizationResponse`] in response to an [`AuthorizationRequest`] and the user's claims. The [`AuthorizationResponse`]
+    /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
+    pub fn generate_response<E: Extension>(
+        &self,
+        authorization_request: &AuthorizationRequest<Object<E>>,
+        input: <E::ResponseHandle as ResponseHandle>::Input,
+    ) -> Result<AuthorizationResponse<E>> {
+        let redirect_uri = authorization_request.body.redirect_uri.to_string();
+        let state = authorization_request.body.state.clone();
+
+        let jwts = E::generate_token(
+            self.subject.clone(),
+            &authorization_request.body.client_id,
+            &authorization_request.body.extension,
+            &input,
+        )?;
+
+        E::build_authorization_response(jwts, input, redirect_uri, state)
+    }
+
+    pub async fn send_response<E: Extension>(
+        &self,
+        authorization_response: &AuthorizationResponse<E>,
+    ) -> Result<StatusCode> {
+        Ok(self
+            .client
+            .post(authorization_response.redirect_uri.clone())
+            .form(&authorization_response)
+            .send()
+            .await?
+            .status())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use oid4vc_core::{test_utils::TestSubject, Subject, SubjectSyntaxType, Validator, Validators};
+    use crate::{siopv2::SIOPv2, test_utils::TestSubject};
+    use oid4vc_core::{Subject, SubjectSyntaxType, Validator, Validators};
     use std::{str::FromStr, sync::Arc};
 
     #[tokio::test]
@@ -159,24 +124,24 @@ mod tests {
         // Create a new provider.
         let provider = Provider::new(Arc::new(subject)).unwrap();
 
-        // Get a new SIOP request with response mode `post` for cross-device communication.
+        // Get a new SIOP authorization_request with response mode `direct_post` for cross-device communication.
         let request_url = "\
             siopv2://idtoken?\
                 scope=openid\
                 &response_type=id_token\
                 &client_id=did%3Aexample%3AEiDrihTRe0GMdc3K16kgJB3Xbl9Hb8oqVHjzm6ufHcYDGA\
                 &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
-                &response_mode=post\
+                &response_mode=direct_post\
                 &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
                 %5B%22did%3Atest%22%5D%2C%0A%20%20%20%20\
                 %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\
             ";
 
-        // Let the provider validate the request.
-        let request = provider
+        // Let the provider validate the authorization_request.
+        let authorization_request: AuthorizationRequest<Object> = provider
             .validate_request(
-                request_url.parse().unwrap(),
+                request_url.to_string(),
                 Decoder {
                     validators: Validators::from([(
                         SubjectSyntaxType::from_str("did:test").unwrap(),
@@ -187,9 +152,12 @@ mod tests {
             .await
             .unwrap();
 
-        // Test whether the provider can generate a response for the request succesfully.
+        let authorization_request =
+            AuthorizationRequest::<Object<SIOPv2>>::from_generic(&authorization_request).unwrap();
+
+        // Test whether the provider can generate a authorization_response for the authorization_request succesfully.
         assert!(provider
-            .generate_response(request, Default::default(), None, None)
+            .generate_response(&authorization_request, Default::default())
             .is_ok());
     }
 }
