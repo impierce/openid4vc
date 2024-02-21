@@ -32,8 +32,17 @@ serde_urlencoded = "0.7"
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
 reqwest-middleware = "0.2"
 reqwest-retry = "0.3"
+chrono = "0.4"
+jsonwebtoken = "8.2"
 url = { version = "2", features = ["serde"] }
 getset = "0.1"
+is_empty = "0.2"
+identity_core = { version = "1.0.0-rc.1" }
+# identity_credential = { git = "https://github.com/iotaledger/identity.rs.git", default-features = false, features = [
+#     "validator",
+#     "credential",
+#     "presentation",
+# ] }
 identity_credential = { version = "=0.7.0-alpha.7", default-features = false, features = ["validator", "credential", "presentation"] }
 
 # TODO: Fix these dependencies once publishing to crates.io is automated.
