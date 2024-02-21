@@ -60,7 +60,6 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             wallet.get_credential_offer(credential_offer_uri).await.unwrap()
         }
     };
-
     // The credential offer contains a credential issuer url.
     let credential_issuer_url = credential_offer.credential_issuer;
 

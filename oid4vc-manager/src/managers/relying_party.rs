@@ -1,6 +1,11 @@
 use anyhow::{anyhow, Result};
-use oid4vc_core::{Decoder, Subject, SubjectSyntaxType, Subjects};
-use siopv2::{relying_party::ResponseItems, AuthorizationRequest, AuthorizationResponse, RelyingParty};
+use oid4vc_core::{
+    authorization_request::{AuthorizationRequest, Object},
+    authorization_response::AuthorizationResponse,
+    openid4vc_extension::{Extension, ResponseHandle},
+    Decoder, Subject, SubjectSyntaxType, Subjects,
+};
+use siopv2::RelyingParty;
 use std::sync::Arc;
 
 /// Manager struct for [`siopv2::RelyingParty`].
@@ -17,13 +22,16 @@ impl RelyingPartyManager {
         })
     }
 
-    pub fn encode(&self, request: &AuthorizationRequest) -> Result<String> {
-        self.relying_party.encode(request)
+    pub fn encode<E: Extension>(&self, authorization_request: &AuthorizationRequest<Object<E>>) -> Result<String> {
+        self.relying_party.encode(authorization_request)
     }
 
-    pub async fn validate_response(&self, response: &AuthorizationResponse) -> Result<ResponseItems> {
+    pub async fn validate_response<E: Extension>(
+        &self,
+        authorization_response: &AuthorizationResponse<E>,
+    ) -> Result<<E::ResponseHandle as ResponseHandle>::ResponseItem> {
         self.relying_party
-            .validate_response(response, Decoder::from(&self.subjects))
+            .validate_response(authorization_response, Decoder::from(&self.subjects))
             .await
     }
 

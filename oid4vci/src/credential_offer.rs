@@ -33,7 +33,7 @@ where
     pub grants: Option<Grants>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Eq, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum CredentialOfferQuery<CFC = CredentialFormats<WithParameters>>
 where

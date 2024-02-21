@@ -13,6 +13,9 @@ use crate::{credential_response::CredentialResponse, token_request::TokenRequest
 use anyhow::Result;
 use oid4vc_core::authentication::subject::SigningSubject;
 use reqwest::Url;
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_retry::policies::ExponentialBackoff;
+use reqwest_retry::RetryTransientMiddleware;
 use serde::de::DeserializeOwned;
 
 pub struct Wallet<CFC = CredentialFormats>
@@ -20,15 +23,19 @@ where
     CFC: CredentialFormatCollection + DeserializeOwned,
 {
     pub subject: SigningSubject,
-    pub client: reqwest::Client,
+    pub client: ClientWithMiddleware,
     phantom: std::marker::PhantomData<CFC>,
 }
 
 impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
     pub fn new(subject: SigningSubject) -> Self {
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
+        let client = ClientBuilder::new(reqwest::Client::new())
+            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+            .build();
         Self {
             subject,
-            client: reqwest::Client::new(),
+            client,
             phantom: std::marker::PhantomData,
         }
     }
@@ -47,8 +54,16 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         &self,
         credential_issuer_url: Url,
     ) -> Result<AuthorizationServerMetadata> {
+        let mut oauth_authorization_server_endpoint = credential_issuer_url.clone();
+        oauth_authorization_server_endpoint
+            .path_segments_mut()
+            .map_err(|_| anyhow::anyhow!("unable to parse credential issuer url"))
+            .unwrap()
+            .push(".well-known")
+            .push("oauth-authorization-server");
+
         self.client
-            .get(credential_issuer_url.join(".well-known/oauth-authorization-server")?)
+            .get(oauth_authorization_server_endpoint)
             .send()
             .await?
             .json::<AuthorizationServerMetadata>()
@@ -60,8 +75,15 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         &self,
         credential_issuer_url: Url,
     ) -> Result<CredentialIssuerMetadata<CFC>> {
+        let mut openid_credential_issuer_endpoint = credential_issuer_url.clone();
+        openid_credential_issuer_endpoint
+            .path_segments_mut()
+            .map_err(|_| anyhow::anyhow!("unable to parse credential issuer url"))?
+            .push(".well-known")
+            .push("openid-credential-issuer");
+
         self.client
-            .get(credential_issuer_url.join(".well-known/openid-credential-issuer")?)
+            .get(openid_credential_issuer_endpoint)
             .send()
             .await?
             .json::<CredentialIssuerMetadata<CFC>>()
