@@ -16,6 +16,7 @@ pub use response::AuthorizationResponse;
 pub use scope::Scope;
 pub use token::{id_token::IdToken, id_token_builder::IdTokenBuilder};
 
+use oid4vc_core::JsonObject;
 use serde::{Deserialize, Deserializer};
 
 // When a struct has fields of type `Option<JsonObject>`, by default these fields are deserialized as
