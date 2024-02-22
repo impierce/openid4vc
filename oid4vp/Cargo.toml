@@ -26,3 +26,4 @@ chrono.workspace = true
 jsonwebtoken.workspace = true
 anyhow = "1.0"
 futures = "0.3"
+monostate.workspace = true

@@ -1,6 +1,7 @@
 use crate::{siopv2::SIOPv2, ClaimRequests, StandardClaimsRequests};
 use anyhow::{anyhow, Result};
 use is_empty::IsEmpty;
+use monostate::MustBe;
 use oid4vc_core::authorization_request::Object;
 use oid4vc_core::builder_fn;
 use oid4vc_core::{
@@ -11,8 +12,8 @@ use serde::{Deserialize, Serialize};
 
 /// [`AuthorizationRequest`] claims specific to [`SIOPv2`].
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-#[serde(tag = "response_type", rename = "id_token")]
 pub struct AuthorizationRequestParameters {
+    pub response_type: MustBe!("id_token"),
     // TODO: make generic Scope and add it to `AuthorizationRequest`.
     pub scope: Scope,
     pub response_mode: Option<String>,
@@ -84,6 +85,7 @@ impl AuthorizationRequestBuilder {
             (None, _) => Err(anyhow!("client_id parameter is required.")),
             (Some(client_id), false) => {
                 let extension = AuthorizationRequestParameters {
+                    response_type: MustBe!("id_token"),
                     scope: self
                         .scope
                         .take()
@@ -176,6 +178,7 @@ mod tests {
                     redirect_uri: "https://example.com".parse().unwrap(),
                     state: None,
                     extension: AuthorizationRequestParameters {
+                        response_type: MustBe!("id_token"),
                         scope: Scope::openid(),
                         response_mode: None,
                         nonce: "nonce".to_string(),

@@ -2,6 +2,7 @@ use crate::oid4vp::OID4VP;
 use anyhow::{anyhow, Result};
 use dif_presentation_exchange::PresentationDefinition;
 use is_empty::IsEmpty;
+use monostate::MustBe;
 use oid4vc_core::authorization_request::Object;
 use oid4vc_core::builder_fn;
 use oid4vc_core::{
@@ -11,8 +12,8 @@ use serde::{Deserialize, Serialize};
 
 /// [`AuthorizationRequest`] claims specific to [`OID4VP`].
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-#[serde(tag = "response_type", rename = "vp_token")]
 pub struct AuthorizationRequestParameters {
+    pub response_type: MustBe!("vp_token"),
     pub presentation_definition: PresentationDefinition,
     pub client_id_scheme: Option<String>,
     pub response_mode: Option<String>,
@@ -58,6 +59,7 @@ impl AuthorizationRequestBuilder {
             (None, _) => Err(anyhow!("client_id parameter is required.")),
             (Some(client_id), false) => {
                 let extension = AuthorizationRequestParameters {
+                    response_type: MustBe!("vp_token"),
                     presentation_definition: self
                         .presentation_definition
                         .take()

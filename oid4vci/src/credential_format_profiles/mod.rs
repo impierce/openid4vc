@@ -108,6 +108,20 @@ where
 
 impl<C> CredentialFormatCollection for CredentialFormats<C> where C: FormatExtension {}
 
+impl<C> CredentialFormats<C>
+where
+    C: FormatExtension,
+{
+    pub fn format(&self) -> CredentialFormats {
+        match self {
+            CredentialFormats::JwtVcJson(_) => CredentialFormats::JwtVcJson(()),
+            CredentialFormats::JwtVcJsonLd(_) => CredentialFormats::JwtVcJsonLd(()),
+            CredentialFormats::LdpVc(_) => CredentialFormats::LdpVc(()),
+            CredentialFormats::MsoMdoc(_) => CredentialFormats::MsoMdoc(()),
+        }
+    }
+}
+
 impl CredentialFormats<WithCredential> {
     pub fn credential(&self) -> anyhow::Result<&serde_json::Value> {
         match self {

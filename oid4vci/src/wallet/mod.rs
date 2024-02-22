@@ -1,7 +1,7 @@
 use crate::authorization_details::AuthorizationDetailsObject;
 use crate::authorization_request::AuthorizationRequest;
 use crate::authorization_response::AuthorizationResponse;
-use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats};
+use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters};
 use crate::credential_issuer::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
 };
@@ -18,9 +18,9 @@ use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
 use serde::de::DeserializeOwned;
 
-pub struct Wallet<CFC = CredentialFormats>
+pub struct Wallet<CFC = CredentialFormats<WithParameters>>
 where
-    CFC: CredentialFormatCollection + DeserializeOwned,
+    CFC: CredentialFormatCollection,
 {
     pub subject: SigningSubject,
     pub client: ClientWithMiddleware,
