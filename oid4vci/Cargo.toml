@@ -11,20 +11,22 @@ repository.workspace = true
 [dependencies]
 oid4vc-core = { path = "../oid4vc-core" }
 dif-presentation-exchange = { path = "../dif-presentation-exchange" }
-getset.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-serde_with.workspace = true
-tokio.workspace = true
+
 anyhow = "1.0"
+derivative = "2.2.0"
+getset.workspace = true
+lazy_static = "1.4"
+jsonwebtoken = "8.3"
+paste = "1.0"
 reqwest.workspace = true
 reqwest-middleware.workspace = true
 reqwest-retry.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 serde_urlencoded.workspace = true
-derivative = "2.2.0"
-paste = "1.0"
-lazy_static = "1.4"
-jsonwebtoken = "8.3"
+serde_with.workspace = true
+tokio.workspace = true
+
 
 [dev-dependencies]
 wiremock = "0.5"

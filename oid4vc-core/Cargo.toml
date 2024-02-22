@@ -4,23 +4,23 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-serde.workspace = true
-url.workspace = true
-serde_urlencoded.workspace = true
-serde_json = "1.0"
-serde_with = "2.3"
 anyhow = "1.0.70"
-getset = "0.1.2"
-jsonwebtoken = "8.2.0"
-base64-url = "2.0.0"
 async-trait = "0.1.68"
-did_url = "0.1.0"
-is_empty = "0.2.0"
-rand = "0.8"
-derive_more = "0.99.16"
-ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
-lazy_static = "1.4.0"
+base64-url = "2.0.0"
 derivative = "2.2.0"
+derive_more = "0.99.16"
+did_url = "0.1.0"
+ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
+getset = "0.1.2"
+is_empty = "0.2.0"
+jsonwebtoken = "8.2.0"
+lazy_static = "1.4.0"
+rand = "0.8"
+serde.workspace = true
+serde_json = "1.0"
+serde_urlencoded.workspace = true
+serde_with = "2.3"
+url.workspace = true
 
 [dev-dependencies]
 tokio.workspace = true

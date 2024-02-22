@@ -9,35 +9,36 @@ oid4vc-core = { path = "../oid4vc-core" }
 siopv2 = { path = "../siopv2" }
 oid4vp = { path = "../oid4vp" }
 oid4vci = { path = "../oid4vci" }
-tokio.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-serde_with.workspace = true
-getset.workspace = true
-url.workspace = true
+
 anyhow = "1.0"
 async-trait = "0.1"
-did_url = "0.1"
-chrono = "0.4"
-serde_urlencoded.workspace = true
-did-key = "0.2"
-identity_core.workspace = true
-identity_credential.workspace = true
-futures = "0.3"
 axum = "0.6"
 axum-auth = "0.4"
-reqwest.workspace = true
+chrono = "0.4"
+did-key = "0.2"
+did_url = "0.1"
+futures = "0.3"
+getset.workspace = true
+identity_core.workspace = true
+identity_credential.workspace = true
 jsonwebtoken = "8.3"
 paste = "1.0"
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_urlencoded.workspace = true
+serde_with.workspace = true
+tokio.workspace = true
 tower-http = { version = "0.4", features = ["cors"]}
+url.workspace = true
 
 [dev-dependencies]
-ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
-rand = "0.8"
 oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
-lazy_static = "1.4"
-derivative = "2.2"
-wiremock = "0.5"
-uuid = { version = "1.4", features = ["v4", "fast-rng"] }
-rstest = "0.18"
 
+derivative = "2.2"
+ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
+lazy_static = "1.4"
+rand = "0.8"
+rstest = "0.18"
+uuid = { version = "1.4", features = ["v4", "fast-rng"] }
+wiremock = "0.5"

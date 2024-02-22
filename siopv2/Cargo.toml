@@ -12,32 +12,35 @@ repository.workspace = true
 oid4vc-core = { path = "../oid4vc-core" }
 oid4vp = { path = "../oid4vp" }
 oid4vci = { path = "../oid4vci" }
-tokio.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-serde_with.workspace = true
-getset.workspace = true
+
 anyhow = "1.0.70"
-chrono = "0.4.24"
-jsonwebtoken = "8.2.0"
-reqwest.workspace = true
-base64-url = "2.0.0"
 async-trait = "0.1.68"
-did_url = "0.1.0"
-url = { version = "2.3.1", features = ["serde"] }
-is_empty = "0.2.0"
-serde_urlencoded = "0.7.1"
+base64-url = "2.0.0"
+chrono = "0.4.24"
 derive_more = "0.99.16"
-identity_credential.workspace = true
+did_url = "0.1.0"
 futures = "0.3"
+getset.workspace = true
+identity_credential.workspace = true
+is_empty = "0.2.0"
+jsonwebtoken = "8.2.0"
+monostate.workspace = true
+reqwest.workspace = true
 reqwest-middleware.workspace = true
 reqwest-retry.workspace = true
-monostate.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_urlencoded = "0.7.1"
+serde_with.workspace = true
+tokio.workspace = true
+url = { version = "2.3.1", features = ["serde"] }
+
 
 [dev-dependencies]
 oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
-ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
-rand = "0.8"
-lazy_static = "1.4.0"
+
 derivative = "2.2.0"
+ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
+lazy_static = "1.4.0"
+rand = "0.8"
 wiremock = "0.5.18"
