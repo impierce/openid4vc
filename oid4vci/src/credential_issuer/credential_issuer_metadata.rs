@@ -19,6 +19,8 @@ where
     pub credential_endpoint: Url,
     pub batch_credential_endpoint: Option<Url>,
     pub deferred_credential_endpoint: Option<Url>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub credential_response_encryption_alg_values_supported: Vec<String>,
     pub credentials_supported: Vec<CredentialsSupportedObject<CFC>>,
     pub display: Option<Vec<serde_json::Value>>,
 }
@@ -293,6 +295,7 @@ mod tests {
                 authorization_servers: vec![],
                 batch_credential_endpoint: None,
                 deferred_credential_endpoint: None,
+                credential_response_encryption_alg_values_supported: vec![],
                 display: None,
             },
             json_example::<CredentialIssuerMetadata>("tests/examples/issuer_metadata.json")
