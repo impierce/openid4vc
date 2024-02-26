@@ -14,7 +14,8 @@ where
     CFC: CredentialFormatCollection,
 {
     pub credential_issuer: Url,
-    pub authorization_server: Option<Url>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub authorization_servers: Vec<Url>,
     pub credential_endpoint: Url,
     pub batch_credential_endpoint: Option<Url>,
     pub deferred_credential_endpoint: Option<Url>,
@@ -289,7 +290,7 @@ mod tests {
                     }
                 ],
                 credential_issuer: "https://server.example.com".parse().unwrap(),
-                authorization_server: None,
+                authorization_servers: vec![],
                 batch_credential_endpoint: None,
                 deferred_credential_endpoint: None,
                 display: None,
