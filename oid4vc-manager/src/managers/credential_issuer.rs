@@ -42,6 +42,7 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
                     batch_credential_endpoint: Some(issuer_url.join("/batch_credential")?),
                     deferred_credential_endpoint: None,
                     credential_response_encryption_alg_values_supported: vec![],
+                    credential_response_encryption_enc_values_supported: vec![],
                     credentials_supported: storage.get_credentials_supported(),
                     display: None,
                 },
