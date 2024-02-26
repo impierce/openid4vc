@@ -4,6 +4,7 @@ use oid4vc_core::JsonObject;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
+use std::collections::HashMap;
 
 /// Credential Issuer Metadata as described here:
 /// https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-issuer-metadata.
@@ -25,8 +26,8 @@ where
     pub credential_response_encryption_enc_values_supported: Vec<String>,
     pub require_credential_response_encryption: Option<bool>,
     pub credential_identifiers_supported: Option<bool>,
-    pub credentials_supported: Vec<CredentialsSupportedObject<CFC>>,
     pub display: Option<Vec<serde_json::Value>>,
+    pub credentials_supported: HashMap<String, CredentialsSupportedObject<CFC>>,
 }
 
 #[skip_serializing_none]
@@ -54,9 +55,11 @@ pub struct Logo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::credential_format_profiles::{
-        w3c_verifiable_credentials::{jwt_vc_json, ldp_vc},
-        CredentialFormats, Parameters, WithParameters,
+    use crate::{
+        credential_format_profiles::{
+            w3c_verifiable_credentials::jwt_vc_json, CredentialFormats, Parameters, WithParameters,
+        },
+        ProofType,
     };
     use serde::de::DeserializeOwned;
     use serde_json::json;
@@ -78,86 +81,37 @@ mod tests {
 
         assert_eq!(
             CredentialIssuerMetadata {
-                credential_endpoint: Url::parse("https://server.example.com/credential").unwrap(),
-                credentials_supported: vec![
+                credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
+                authorization_servers: vec!["https://server.example.com".parse().unwrap()],
+                credential_endpoint: Url::parse("https://credential-issuer.example.com").unwrap(),
+                batch_credential_endpoint: Some(
+                    "https://credential-issuer.example.com/batch_credential"
+                        .parse()
+                        .unwrap()
+                ),
+                deferred_credential_endpoint: Some(
+                    "https://credential-issuer.example.com/deferred_credential"
+                        .parse()
+                        .unwrap()
+                ),
+                credential_response_encryption_alg_values_supported: vec![],
+                credential_response_encryption_enc_values_supported: vec![],
+                credential_identifiers_supported: None,
+                require_credential_response_encryption: None,
+                display: Some(vec![
+                    json!({
+                        "name": "Example University",
+                        "locale": "en-US"
+                    }),
+                    json!({
+                        "name": "Example Université",
+                        "locale": "fr-FR"
+                    })
+                ]),
+                credentials_supported: vec![(
+                    "UniversityDegreeCredential".to_string(),
                     CredentialsSupportedObject {
-                        id: Some("UniversityDegree_LDP".to_string()),
-                        credential_format: CredentialFormats::<WithParameters>::LdpVc(Parameters {
-                            parameters: (
-                                ldp_vc::CredentialDefinition {
-                                    context: vec![
-                                        "https://www.w3.org/2018/credentials/v1".to_string(),
-                                        "https://www.w3.org/2018/credentials/examples/v1".to_string(),
-                                    ],
-                                    type_: vec![
-                                        "VerifiableCredential".to_string(),
-                                        "UniversityDegreeCredential".to_string()
-                                    ],
-                                    credential_subject: Some(json!({
-                                        "given_name": {
-                                            "display": [
-                                                {
-                                                    "name": "Given Name",
-                                                    "locale": "en-US"
-                                                },
-                                                {
-                                                    "name": "名前",
-                                                    "locale": "ja-JP"
-                                                }
-                                            ]
-                                        },
-                                        "family_name": {
-                                            "display": [
-                                                {
-                                                    "name": "Surname",
-                                                    "locale": "en-US"
-                                                }
-                                            ]
-                                        },
-                                        "degree": {},
-                                        "gpa": {
-                                            "display": [
-                                                {
-                                                    "name": "GPA"
-                                                }
-                                            ]
-                                        }
-                                    }))
-                                },
-                                None
-                            )
-                                .into()
-                        }),
-                        scope: None,
-                        cryptographic_binding_methods_supported: Some(vec!["did".to_string()]),
-                        cryptographic_suites_supported: Some(vec!["Ed25519Signature2018".to_string()]),
-                        proof_types_supported: None,
-                        display: Some(vec![
-                            json!({
-                                "name": "University Credential",
-                                "locale": "en-US",
-                                "logo": {
-                                    "url": "https://exampleuniversity.com/public/logo.png",
-                                    "alternative_text": "a square logo of a university"
-                                },
-                                "background_color": "#12107c",
-                                "text_color": "#FFFFFF"
-                            }),
-                            json!({
-                                "name": "在籍証明書",
-                                "locale": "ja-JP",
-                                "logo": {
-                                    "url": "https://exampleuniversity.com/public/logo.png",
-                                    "alternative_text": "大学のロゴ"
-                                },
-                                "background_color": "#12107c",
-                                "text_color": "#FFFFFF"
-                            })
-                        ]),
-                    },
-                    CredentialsSupportedObject {
-                        id: None,
-                        credential_format: CredentialFormats::JwtVcJson(Parameters {
+                        credential_format: CredentialFormats::<WithParameters>::JwtVcJson(Parameters {
                             parameters: (
                                 jwt_vc_json::CredentialDefinition {
                                     type_: vec![
@@ -171,10 +125,6 @@ mod tests {
                                                     "name": "Given Name",
                                                     "locale": "en-US"
                                                 },
-                                                {
-                                                    "name": "名前",
-                                                    "locale": "ja-JP"
-                                                }
                                             ]
                                         },
                                         "family_name": {
@@ -199,113 +149,26 @@ mod tests {
                             )
                                 .into()
                         }),
-                        scope: None,
-                        cryptographic_binding_methods_supported: Some(vec!["did".to_string()]),
-                        cryptographic_suites_supported: Some(vec!["ES256K".to_string()]),
-                        proof_types_supported: None,
-                        display: Some(vec![
-                            json!({
-                                "name": "University Credential",
-                                "locale": "en-US",
-                                "logo": {
-                                    "url": "https://exampleuniversity.com/public/logo.png",
-                                    "alternative_text": "a square logo of a university"
-                                },
-                                "background_color": "#12107c",
-                                "text_color": "#FFFFFF"
-                            }),
-                            json!({
-                                "name": "在籍証明書",
-                                "locale": "ja-JP",
-                                "logo": {
-                                    "url": "https://exampleuniversity.com/public/logo.png",
-                                    "alternative_text": "大学のロゴ"
-                                },
-                                "background_color": "#12107c",
-                                "text_color": "#FFFFFF"
-                            })
-                        ]),
+                        scope: Some("UniversityDegree".to_string()),
+                        cryptographic_binding_methods_supported: vec!["did:example".to_string()],
+                        cryptographic_suites_supported: vec!["ES256K".to_string()],
+                        proof_types_supported: vec![ProofType::Jwt],
+                        display: vec![json!({
+                            "name": "University Credential",
+                            "locale": "en-US",
+                            "logo": {
+                                "url": "https://exampleuniversity.com/public/logo.png",
+                                "alt_text": "a square logo of a university"
+                            },
+                            "background_color": "#12107c",
+                            "text_color": "#FFFFFF"
+                        })],
                     },
-                    CredentialsSupportedObject {
-                        id: None,
-                        credential_format: CredentialFormats::MsoMdoc(Parameters {
-                            parameters: (
-                                "org.iso.18013.5.1.mDL".to_string(),
-                                Some(json!({
-                                    "org.iso.18013.5.1": {
-                                        "given_name": {
-                                            "display": [
-                                                {
-                                                    "name": "Given Name",
-                                                    "locale": "en-US"
-                                                },
-                                                {
-                                                    "name": "名前",
-                                                    "locale": "ja-JP"
-                                                }
-                                            ]
-                                        },
-                                        "family_name": {
-                                            "display": [
-                                                {
-                                                    "name": "Surname",
-                                                    "locale": "en-US"
-                                                }
-                                            ]
-                                        },
-                                        "birth_date": {}
-                                    },
-                                    "org.iso.18013.5.1.aamva": {
-                                        "organ_donor": {}
-                                    }
-                                })),
-                                None
-                            )
-                                .into()
-                        }),
-                        scope: None,
-                        cryptographic_binding_methods_supported: Some(vec!["mso".to_string()]),
-                        cryptographic_suites_supported: Some(vec![
-                            "ES256".to_string(),
-                            "ES384".to_string(),
-                            "ES512".to_string()
-                        ]),
-                        proof_types_supported: None,
-                        display: Some(vec![
-                            json!({
-                                "name": "Mobile Driving License",
-                                "locale": "en-US",
-                                "logo": {
-                                    "url": "https://examplestate.com/public/mdl.png",
-                                    "alternative_text": "a square figure of a mobile driving license"
-                                },
-                                "background_color": "#12107c",
-                                "text_color": "#FFFFFF"
-                            }),
-                            json!({
-                                "name": "在籍証明書",
-                                "locale": "ja-JP",
-                                "logo": {
-                                    "url": "https://examplestate.com/public/mdl.png",
-                                    "alternative_text": "大学のロゴ"
-                                },
-                                "background_color": "#12107c",
-                                "text_color": "#FFFFFF"
-                            })
-                        ]),
-                    }
-                ],
-                credential_issuer: "https://server.example.com".parse().unwrap(),
-                authorization_servers: vec![],
-                batch_credential_endpoint: None,
-                deferred_credential_endpoint: None,
-                credential_response_encryption_alg_values_supported: vec![],
-                credential_response_encryption_enc_values_supported: vec![],
-                credential_identifiers_supported: None,
-                require_credential_response_encryption: None,
-                display: None,
+                ),]
+                .into_iter()
+                .collect(),
             },
-            json_example::<CredentialIssuerMetadata>("tests/examples/issuer_metadata.json")
+            json_example::<CredentialIssuerMetadata>("tests/examples/credential_issuer_metadata_jwt_vc_json.json")
         );
     }
 }
