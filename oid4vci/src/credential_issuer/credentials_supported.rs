@@ -12,14 +12,18 @@ pub struct CredentialsSupportedObject<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {
-    pub id: Option<String>,
+    /// This field is flattened into a `format` field and optionally extra format-specific fields.
     #[serde(flatten)]
     pub credential_format: CFC,
     pub scope: Option<String>,
-    pub cryptographic_binding_methods_supported: Option<Vec<String>>,
-    pub cryptographic_suites_supported: Option<Vec<String>>,
-    pub proof_types_supported: Option<Vec<ProofType>>,
-    pub display: Option<Vec<serde_json::Value>>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub cryptographic_binding_methods_supported: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub cryptographic_suites_supported: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub proof_types_supported: Vec<ProofType>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub display: Vec<serde_json::Value>,
 }
 
 #[cfg(test)]
@@ -49,7 +53,6 @@ mod tests {
 
         assert_eq!(
             CredentialsSupportedObject {
-                id: Some("UniversityDegree_JWT".to_string()),
                 credential_format: CredentialFormats::JwtVcJson(Parameters {
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
@@ -89,10 +92,10 @@ mod tests {
                         .into()
                 }),
                 scope: None,
-                cryptographic_binding_methods_supported: Some(vec!["did:example".to_string()]),
-                cryptographic_suites_supported: Some(vec!["ES256K".to_string()]),
-                proof_types_supported: Some(vec![ProofType::Jwt]),
-                display: Some(vec![json!({
+                cryptographic_binding_methods_supported: vec!["did:example".to_string()],
+                cryptographic_suites_supported: vec!["ES256K".to_string()],
+                proof_types_supported: vec![ProofType::Jwt],
+                display: vec![json!({
                     "name": "University Credential",
                     "locale": "en-US",
                     "logo": {
@@ -101,14 +104,13 @@ mod tests {
                     },
                     "background_color": "#12107c",
                     "text_color": "#FFFFFF"
-                })])
+                })]
             },
             json_example::<CredentialsSupportedObject>("tests/examples/credential_metadata_jwt_vc_json.json")
         );
 
         assert_eq!(
             CredentialsSupportedObject {
-                id: None,
                 credential_format: CredentialFormats::LdpVc(Parameters {
                     parameters: (
                         ldp_vc::CredentialDefinition {
@@ -152,10 +154,10 @@ mod tests {
                         .into()
                 }),
                 scope: None,
-                cryptographic_binding_methods_supported: Some(vec!["did:example".to_string()]),
-                cryptographic_suites_supported: Some(vec!["Ed25519Signature2018".to_string()]),
-                proof_types_supported: None,
-                display: Some(vec![json!({
+                cryptographic_binding_methods_supported: vec!["did:example".to_string()],
+                cryptographic_suites_supported: vec!["Ed25519Signature2018".to_string()],
+                proof_types_supported: vec![],
+                display: vec![json!({
                     "name": "University Credential",
                     "locale": "en-US",
                     "logo": {
@@ -164,14 +166,13 @@ mod tests {
                     },
                     "background_color": "#12107c",
                     "text_color": "#FFFFFF"
-                })])
+                })]
             },
             json_example::<CredentialsSupportedObject>("tests/examples/credential_metadata_ldp_vc.json")
         );
 
         assert_eq!(
             CredentialsSupportedObject {
-                id: None,
                 credential_format: CredentialFormats::MsoMdoc(Parameters {
                     parameters: (
                         "org.iso.18013.5.1.mDL".to_string(),
@@ -208,14 +209,10 @@ mod tests {
                         .into()
                 }),
                 scope: None,
-                cryptographic_binding_methods_supported: Some(vec!["mso".to_string()]),
-                cryptographic_suites_supported: Some(vec![
-                    "ES256".to_string(),
-                    "ES384".to_string(),
-                    "ES512".to_string()
-                ]),
-                proof_types_supported: None,
-                display: Some(vec![
+                cryptographic_binding_methods_supported: vec!["mso".to_string()],
+                cryptographic_suites_supported: vec!["ES256".to_string(), "ES384".to_string(), "ES512".to_string()],
+                proof_types_supported: vec![],
+                display: vec![
                     json!({
                         "name": "Mobile Driving License",
                         "locale": "en-US",
@@ -236,7 +233,7 @@ mod tests {
                         "background_color": "#12107c",
                         "text_color": "#FFFFFF"
                     })
-                ])
+                ]
             },
             json_example::<CredentialsSupportedObject>("tests/examples/credential_metadata_mso_mdoc.json")
         );
