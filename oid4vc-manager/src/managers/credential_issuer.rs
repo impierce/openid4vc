@@ -43,6 +43,7 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
                     deferred_credential_endpoint: None,
                     credential_response_encryption_alg_values_supported: vec![],
                     credential_response_encryption_enc_values_supported: vec![],
+                    require_credential_response_encryption: None,
                     credentials_supported: storage.get_credentials_supported(),
                     display: None,
                 },
