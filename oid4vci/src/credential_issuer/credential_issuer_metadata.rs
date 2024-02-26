@@ -24,6 +24,7 @@ where
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub credential_response_encryption_enc_values_supported: Vec<String>,
     pub require_credential_response_encryption: Option<bool>,
+    pub credential_identifiers_supported: Option<bool>,
     pub credentials_supported: Vec<CredentialsSupportedObject<CFC>>,
     pub display: Option<Vec<serde_json::Value>>,
 }
@@ -300,6 +301,7 @@ mod tests {
                 deferred_credential_endpoint: None,
                 credential_response_encryption_alg_values_supported: vec![],
                 credential_response_encryption_enc_values_supported: vec![],
+                credential_identifiers_supported: None,
                 require_credential_response_encryption: None,
                 display: None,
             },
