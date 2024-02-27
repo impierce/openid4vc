@@ -15,6 +15,7 @@ where
     /// This field is flattened into a `format` field and optionally extra format-specific fields.
     #[serde(flatten)]
     pub credential_format: CFC,
+    // Use `Scope` from oid4vc-core/src/scope.rs.
     pub scope: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub cryptographic_binding_methods_supported: Vec<String>,

@@ -5,9 +5,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_with::skip_serializing_none;
 
+#[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct AuthorizationCode {
     pub issuer_state: Option<String>,
+    pub authorization_server: Option<Url>,
 }
 
 #[skip_serializing_none]
@@ -132,7 +134,8 @@ mod tests {
                         ..Default::default()
                     }),
                     authorization_code: Some(AuthorizationCode {
-                        issuer_state: Some("eyJhbGciOiJSU0Et...FYUaBy".to_string())
+                        issuer_state: Some("eyJhbGciOiJSU0Et...FYUaBy".to_string()),
+                        authorization_server: None
                     })
                 })
             }
@@ -169,7 +172,8 @@ mod tests {
                 credentials: vec!["UniversityDegreeCredential".to_string(),],
                 grants: Some(Grants {
                     authorization_code: Some(AuthorizationCode {
-                        issuer_state: Some("eyJhbGciOiJSU0Et...FYUaBy".to_string())
+                        issuer_state: Some("eyJhbGciOiJSU0Et...FYUaBy".to_string()),
+                        authorization_server: None
                     }),
                     pre_authorized_code: None
                 })
@@ -211,7 +215,8 @@ mod tests {
                 ],
                 grants: Some(Grants {
                     authorization_code: Some(AuthorizationCode {
-                        issuer_state: Some("eyJhbGciOiJSU0Et...FYUaBy".to_string())
+                        issuer_state: Some("eyJhbGciOiJSU0Et...FYUaBy".to_string()),
+                        authorization_server: None
                     }),
                     pre_authorized_code: Some(PreAuthorizedCode {
                         pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
