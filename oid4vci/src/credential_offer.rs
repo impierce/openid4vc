@@ -39,7 +39,7 @@ pub struct CredentialOfferParameters {
 #[serde(rename_all = "snake_case")]
 pub enum CredentialOffer {
     CredentialOfferUri(Url),
-    CredentialOffer(CredentialOfferParameters),
+    CredentialOffer(Box<CredentialOfferParameters>),
 }
 
 impl std::str::FromStr for CredentialOffer {

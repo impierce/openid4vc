@@ -55,7 +55,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
 
     // Parse the credential offer url.
     let mut credential_offer: CredentialOfferParameters = match credential_offer_query.parse().unwrap() {
-        CredentialOffer::CredentialOffer(credential_offer) => credential_offer,
+        CredentialOffer::CredentialOffer(credential_offer) => *credential_offer,
         CredentialOffer::CredentialOfferUri(credential_offer_uri) => {
             wallet.get_credential_offer(credential_offer_uri).await.unwrap()
         }

@@ -32,7 +32,7 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
         Ok(Self {
             credential_issuer: CredentialIssuer {
                 subject: subjects
-                    .get(0)
+                    .first()
                     .ok_or_else(|| anyhow::anyhow!("No subjects found."))?
                     .clone(),
                 metadata: CredentialIssuerMetadata {
@@ -93,7 +93,7 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
         if by_reference {
             Ok(CredentialOffer::CredentialOfferUri(self.credential_offer_uri()?).to_string())
         } else {
-            Ok(CredentialOffer::CredentialOffer(self.credential_offer()?).to_string())
+            Ok(CredentialOffer::CredentialOffer(Box::new(self.credential_offer()?)).to_string())
         }
     }
 }
