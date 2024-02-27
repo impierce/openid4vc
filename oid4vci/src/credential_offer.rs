@@ -20,6 +20,7 @@ pub struct PreAuthorizedCode {
     #[serde(default)]
     pub user_pin_required: bool,
     pub interval: Option<i64>,
+    pub authorization_server: Option<Url>,
 }
 
 /// Credential Offer as described in https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer.
