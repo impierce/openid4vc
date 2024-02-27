@@ -15,6 +15,7 @@ where
     #[serde(flatten)]
     pub credential_format: CFC,
     pub proof: Option<Proof>,
+    // TODO: add `credential_identifier` field when support for Authorization Code Flow is added.
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
