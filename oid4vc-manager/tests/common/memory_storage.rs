@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::{collections::HashMap, fs::File};
 
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
@@ -33,17 +33,25 @@ lazy_static! {
 pub struct MemoryStorage;
 
 impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for MemoryStorage {
-    fn get_credentials_supported(&self) -> Vec<CredentialsSupportedObject<CFC>> {
+    fn get_credentials_supported(&self) -> HashMap<String, CredentialsSupportedObject<CFC>> {
         vec![
-            serde_json::from_reader(
-                File::open("./tests/common/credentials_supported_objects/university_degree.json").unwrap(),
-            )
-            .unwrap(),
-            serde_json::from_reader(
-                File::open("./tests/common/credentials_supported_objects/driver_license.json").unwrap(),
-            )
-            .unwrap(),
+            (
+                "UniversityDegree_JWT".to_string(),
+                serde_json::from_reader(
+                    File::open("./tests/common/credentials_supported_objects/university_degree.json").unwrap(),
+                )
+                .unwrap(),
+            ),
+            (
+                "DriverLicense_JWT".to_string(),
+                serde_json::from_reader(
+                    File::open("./tests/common/credentials_supported_objects/driver_license.json").unwrap(),
+                )
+                .unwrap(),
+            ),
         ]
+        .into_iter()
+        .collect()
     }
 
     fn get_authorization_code(&self) -> Option<AuthorizationCode> {

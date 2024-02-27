@@ -7,7 +7,7 @@ use oid4vc_manager::{
 };
 use oid4vci::{
     credential_format_profiles::{CredentialFormats, WithParameters},
-    credential_offer::{CredentialOffer, CredentialOfferQuery, CredentialsObject, Grants},
+    credential_offer::{CredentialOffer, CredentialOfferQuery, Grants},
     credential_response::{BatchCredentialResponse, CredentialResponse, CredentialResponseType},
     token_request::TokenRequest,
     Wallet,
@@ -45,7 +45,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
     let subject_did = subject.identifier().unwrap();
 
     // Create a new wallet.
-    let wallet = Wallet::new(Arc::new(subject));
+    let wallet: Wallet<CredentialFormats<WithParameters>> = Wallet::new(Arc::new(subject));
 
     // Get the credential offer url.
     let credential_offer_query = credential_issuer
@@ -54,7 +54,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         .unwrap();
 
     // Parse the credential offer url.
-    let credential_offer: CredentialOffer = match credential_offer_query.parse().unwrap() {
+    let mut credential_offer: CredentialOffer = match credential_offer_query.parse().unwrap() {
         CredentialOfferQuery::CredentialOffer(credential_offer) => credential_offer,
         CredentialOfferQuery::CredentialOfferUri(credential_offer_uri) => {
             wallet.get_credential_offer(credential_offer_uri).await.unwrap()
@@ -97,12 +97,25 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         .await
         .unwrap();
 
+    // Sort the credentials for predictable testing.
+    credential_offer.credentials.sort();
+
+    // The credential offer contains two credentials
+    let credentials: Vec<_> = credential_offer
+        .credentials
+        .iter()
+        .map(|credential| {
+            credential_issuer_metadata
+                .credentials_supported
+                .get(credential)
+                .unwrap()
+                .credential_format
+                .clone()
+        })
+        .collect();
+
     if !batch {
-        // The credential offer contains a credential format for a university degree.
-        let university_degree_credential_format = match credential_offer.credentials.get(0).unwrap().clone() {
-            CredentialsObject::ByValue(credential_format) => credential_format,
-            _ => unreachable!(),
-        };
+        let university_degree_credential_format = credentials.last().unwrap().clone();
 
         // Get the credential.
         let credential_response: CredentialResponse = wallet
@@ -147,17 +160,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             })
         )
     } else if batch {
-        // The credential offer contains two credentials
-        let credentials = credential_offer
-            .credentials
-            .into_iter()
-            .map(|credential| match credential {
-                CredentialsObject::ByValue(credential_format) => credential_format.clone(),
-                _ => unreachable!(),
-            })
-            .collect::<Vec<_>>();
-
-        // Get the credential.
+        // Get the credentials.
         let batch_credential_response: BatchCredentialResponse = wallet
             .get_batch_credential(credential_issuer_metadata, &token_response, credentials)
             .await
@@ -180,34 +183,9 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             })
             .collect();
 
-        // Check the "UniversityDegree_JWT" credential.
-        assert_eq!(
-            credentials[0]["vc"],
-            serde_json::json!({
-                "@context": [
-                    "https://www.w3.org/2018/credentials/v1",
-                    "https://www.w3.org/2018/credentials/examples/v1"
-                ],
-                "id": "UniversityDegree_JWT",
-                "type": [
-                    "VerifiableCredential",
-                    "PersonalInformation"
-                ],
-                "issuanceDate": "2022-01-01T00:00:00Z",
-                "issuer": credential_issuer_url,
-                "credentialSubject": {
-                    "id": subject_did,
-                    "givenName": "Ferris",
-                    "familyName": "Crabman",
-                    "email": "ferris.crabman@crabmail.com",
-                    "birthdate": "1985-05-21"
-                }
-            })
-        );
-
         // Check the "DriverLicense_JWT" credential.
         assert_eq!(
-            credentials[1]["vc"],
+            credentials[0]["vc"],
             serde_json::json!({
                 "@context": [
                     "https://www.w3.org/2018/credentials/v1",
@@ -226,6 +204,31 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
                     "licenseClass": "Class C",
                     "issuedBy": "California",
                     "validity": "Valid"
+                }
+            })
+        );
+
+        // Check the "UniversityDegree_JWT" credential.
+        assert_eq!(
+            credentials[1]["vc"],
+            serde_json::json!({
+                "@context": [
+                    "https://www.w3.org/2018/credentials/v1",
+                    "https://www.w3.org/2018/credentials/examples/v1"
+                ],
+                "id": "UniversityDegree_JWT",
+                "type": [
+                    "VerifiableCredential",
+                    "PersonalInformation"
+                ],
+                "issuanceDate": "2022-01-01T00:00:00Z",
+                "issuer": credential_issuer_url,
+                "credentialSubject": {
+                    "id": subject_did,
+                    "givenName": "Ferris",
+                    "familyName": "Crabman",
+                    "email": "ferris.crabman@crabmail.com",
+                    "birthdate": "1985-05-21"
                 }
             })
         );

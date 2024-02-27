@@ -7,7 +7,7 @@ use oid4vci::{
         authorization_server_metadata::AuthorizationServerMetadata,
         credential_issuer_metadata::CredentialIssuerMetadata, CredentialIssuer,
     },
-    credential_offer::{CredentialOffer, CredentialOfferQuery, CredentialsObject, Grants},
+    credential_offer::{CredentialOffer, CredentialOfferQuery, Grants},
 };
 use reqwest::Url;
 use std::{net::TcpListener, sync::Arc};
@@ -45,8 +45,8 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
                     credential_response_encryption_enc_values_supported: vec![],
                     require_credential_response_encryption: None,
                     credential_identifiers_supported: None,
-                    credentials_supported: storage.get_credentials_supported(),
                     display: None,
+                    credentials_supported: storage.get_credentials_supported(),
                 },
                 authorization_server_metadata: AuthorizationServerMetadata {
                     issuer: issuer_url.clone(),
@@ -66,13 +66,13 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
         Ok(self.credential_issuer.metadata.credential_issuer.clone())
     }
 
-    pub fn credential_offer(&self) -> Result<CredentialOffer<CFC>> {
-        let credentials: Vec<CredentialsObject<CFC>> = self
+    pub fn credential_offer(&self) -> Result<CredentialOffer> {
+        let credentials: Vec<String> = self
             .credential_issuer
             .metadata
             .credentials_supported
             .iter()
-            .map(|credential| CredentialsObject::ByValue(credential.credential_format.clone()))
+            .map(|credential| credential.0.clone())
             .collect();
         Ok(CredentialOffer {
             credential_issuer: self.credential_issuer.metadata.credential_issuer.clone(),
@@ -91,7 +91,7 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
 
     pub fn credential_offer_query(&self, by_reference: bool) -> Result<String> {
         if by_reference {
-            Ok(CredentialOfferQuery::<CFC>::CredentialOfferUri(self.credential_offer_uri()?).to_string())
+            Ok(CredentialOfferQuery::CredentialOfferUri(self.credential_offer_uri()?).to_string())
         } else {
             Ok(CredentialOfferQuery::CredentialOffer(self.credential_offer()?).to_string())
         }

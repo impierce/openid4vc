@@ -1,6 +1,5 @@
 {
     "format": "jwt_vc_json",
-    "id": "DriverLicense_JWT",
     "cryptographic_binding_methods_supported": [
         "did:key",
         "did:iota"
