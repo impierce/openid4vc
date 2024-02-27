@@ -3,15 +3,23 @@ use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
+/// Represents the `openid_credential` field of the `AuthorizationDetailsObject`.
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize, Default)]
+pub enum OpenidCredential {
+    #[default]
+    #[serde(rename = "openid_credential")]
+    Type,
+}
+
 /// Represents an object of the `authorization_details` field of the `AuthorizationRequest` object in the Authorization Code Flow as
 /// described in [OpenID4VCI](https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-request-issuance-of-a-certa)
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
-#[serde(tag = "type", rename = "openid_credential")]
 pub struct AuthorizationDetailsObject<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {
+    pub r#type: OpenidCredential,
     pub locations: Option<Vec<Url>>,
     #[serde(flatten)]
     pub credential_format: CFC,
@@ -62,6 +70,7 @@ mod tests {
         assert_eq!(
             authorization_details_mso_mdoc,
             AuthorizationDetailsObject {
+                r#type: OpenidCredential::Type,
                 locations: None,
                 credential_format: CredentialFormats::JwtVcJson(Parameters {
                     parameters: (
@@ -112,6 +121,7 @@ mod tests {
         assert_eq!(
             authorization_details_mso_mdoc,
             AuthorizationDetailsObject {
+                r#type: OpenidCredential::Type,
                 locations: None,
                 credential_format: CredentialFormats::MsoMdoc(Parameters {
                     parameters: (
@@ -144,6 +154,7 @@ mod tests {
 
         assert_eq!(
             vec![AuthorizationDetailsObject {
+                r#type: OpenidCredential::Type,
                 locations: None,
                 credential_format: CredentialFormats::JwtVcJson(Parameters {
                     parameters: (
@@ -165,6 +176,7 @@ mod tests {
 
         assert_eq!(
             vec![AuthorizationDetailsObject {
+                r#type: OpenidCredential::Type,
                 locations: None,
                 credential_format: CredentialFormats::LdpVc(Parameters {
                     parameters: (
@@ -190,6 +202,7 @@ mod tests {
 
         assert_eq!(
             vec![AuthorizationDetailsObject {
+                r#type: OpenidCredential::Type,
                 locations: None,
                 credential_format: CredentialFormats::MsoMdoc(Parameters {
                     parameters: (
@@ -215,6 +228,7 @@ mod tests {
         assert_eq!(
             vec![
                 AuthorizationDetailsObject {
+                    r#type: OpenidCredential::Type,
                     locations: None,
                     credential_format: CredentialFormats::LdpVc(Parameters {
                         parameters: (
@@ -232,6 +246,7 @@ mod tests {
                     }),
                 },
                 AuthorizationDetailsObject {
+                    r#type: OpenidCredential::Type,
                     locations: None,
                     credential_format: CredentialFormats::MsoMdoc(Parameters {
                         parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
@@ -245,6 +260,7 @@ mod tests {
 
         assert_eq!(
             vec![AuthorizationDetailsObject {
+                r#type: OpenidCredential::Type,
                 locations: Some(vec!["https://credential-issuer.example.com".parse().unwrap()]),
                 credential_format: CredentialFormats::JwtVcJson(Parameters {
                     parameters: (
@@ -262,6 +278,7 @@ mod tests {
 
         assert_eq!(
             vec![AuthorizationDetailsObject {
+                r#type: OpenidCredential::Type,
                 locations: None,
                 credential_format: CredentialFormats::JwtVcJson(Parameters {
                     parameters: (
