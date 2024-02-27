@@ -16,6 +16,8 @@ where
     pub credential_format: CFC,
     pub proof: Option<Proof>,
     // TODO: add `credential_identifier` field when support for Authorization Code Flow is added.
+    // TODO: add `credential_encryption_jwk`, `credential_response_encryption_alg` and
+    // `credential_response_encryption_enc` fields when support for JWE is added.
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
