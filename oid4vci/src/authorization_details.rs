@@ -12,7 +12,7 @@ pub enum OpenidCredential {
 }
 
 /// Represents an object of the `authorization_details` field of the `AuthorizationRequest` object in the Authorization Code Flow as
-/// described in [OpenID4VCI](https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-request-issuance-of-a-certa)
+/// described in [OpenID4VCI](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html#name-request-issuance-of-a-certa)
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct AuthorizationDetailsObject<CFC = CredentialFormats<WithParameters>>
@@ -150,7 +150,7 @@ mod tests {
     #[test]
     fn test_oid4vci_examples() {
         // Examples from
-        // https://bitbucket.org/openid/connect/src/master/openid-4-verifiable-credential-issuance/examples/.
+        // https://github.com/openid/OpenID4VCI/tree/f7985f6120cbcd51fd971a320a61606da14e2580/examples.
 
         assert_eq!(
             vec![AuthorizationDetailsObject {

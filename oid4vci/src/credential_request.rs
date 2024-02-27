@@ -1,11 +1,11 @@
 use crate::{
     credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters},
-    proof::Proof,
+    proof::KeyProofType,
 };
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-/// Credential Request as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request
+/// Credential Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html#name-credential-request.
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct CredentialRequest<CFC = CredentialFormats<WithParameters>>
@@ -14,12 +14,13 @@ where
 {
     #[serde(flatten)]
     pub credential_format: CFC,
-    pub proof: Option<Proof>,
+    pub proof: Option<KeyProofType>,
     // TODO: add `credential_identifier` field when support for Authorization Code Flow is added.
     // TODO: add `credential_encryption_jwk`, `credential_response_encryption_alg` and
     // `credential_response_encryption_enc` fields when support for JWE is added.
 }
 
+/// Batch Credential Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html#name-batch-credential-request.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BatchCredentialRequest<CFC = CredentialFormats>
 where
@@ -95,7 +96,7 @@ mod tests {
                     )
                         .into()
                 }),
-                proof: Some(Proof::Jwt {
+                proof: Some(KeyProofType::Jwt {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -152,7 +153,7 @@ mod tests {
                     )
                         .into()
                 }),
-                proof: Some(Proof::Jwt {
+                proof: Some(KeyProofType::Jwt {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -165,14 +166,14 @@ mod tests {
     #[test]
     fn test_oid4vci_examples() {
         // Examples from
-        // https://bitbucket.org/openid/connect/src/master/openid-4-verifiable-credential-issuance/examples/.
+        // https://github.com/openid/OpenID4VCI/tree/f7985f6120cbcd51fd971a320a61606da14e2580/examples.
 
         assert_eq!(
             CredentialRequest {
                 credential_format: CredentialFormats::MsoMdoc(Parameters {
                     parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
                 }),
-                proof: Some(Proof::Jwt {
+                proof: Some(KeyProofType::Jwt {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -198,7 +199,7 @@ mod tests {
                     )
                         .into()
                 }),
-                proof: Some(Proof::Jwt {
+                proof: Some(KeyProofType::Jwt {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -228,7 +229,7 @@ mod tests {
                     )
                         .into()
                 }),
-                proof: Some(Proof::Jwt {
+                proof: Some(KeyProofType::Jwt {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -250,7 +251,7 @@ mod tests {
                     )
                         .into()
                 }),
-                proof: Some(Proof::Jwt {
+                proof: Some(KeyProofType::Jwt {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJzNkJoZFJrcXQzIiwiYXVkIjoiaHR0cHM6Ly9zZXJ2ZXIuZXhhbXBsZS5jb20iLCJpYXQiOiIyMDE4LTA5LTE0VDIxOjE5OjEwWiIsIm5vbmNlIjoidFppZ25zbkZicCJ9.ewdkIkPV50iOeBUqMXCC_aZKPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -278,7 +279,7 @@ mod tests {
                     )
                         .into()
                 }),
-                proof: Some(Proof::Jwt {
+                proof: Some(KeyProofType::Jwt {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJzNkJoZFJrcXQzIiwiYXVkIjoiaHR0cHM6Ly9zZXJ2ZXIuZXhhbXBsZS5jb20iLCJpYXQiOiIyMDE4LTA5LTE0VDIxOjE5OjEwWiIsIm5vbmNlIjoidFppZ25zbkZicCJ9.ewdkIkPV50iOeBUqMXCC_aZKPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -310,7 +311,7 @@ mod tests {
                     )
                         .into()
                 }),
-                proof: Some(Proof::Jwt {
+                proof: Some(KeyProofType::Jwt {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },

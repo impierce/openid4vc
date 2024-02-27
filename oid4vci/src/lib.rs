@@ -13,5 +13,5 @@ pub mod token_response;
 pub mod wallet;
 
 pub use credential::{VerifiableCredentialJwt, VerifiableCredentialJwtBuilder};
-pub use proof::{Proof, ProofType};
+pub use proof::{KeyProofType, ProofType};
 pub use wallet::Wallet;

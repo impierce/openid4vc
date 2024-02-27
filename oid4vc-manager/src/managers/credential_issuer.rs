@@ -7,7 +7,7 @@ use oid4vci::{
         authorization_server_metadata::AuthorizationServerMetadata,
         credential_issuer_metadata::CredentialIssuerMetadata, CredentialIssuer,
     },
-    credential_offer::{CredentialOffer, CredentialOfferQuery, Grants},
+    credential_offer::{CredentialOffer, CredentialOfferParameters, Grants},
 };
 use reqwest::Url;
 use std::{net::TcpListener, sync::Arc};
@@ -66,7 +66,7 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
         Ok(self.credential_issuer.metadata.credential_issuer.clone())
     }
 
-    pub fn credential_offer(&self) -> Result<CredentialOffer> {
+    pub fn credential_offer(&self) -> Result<CredentialOfferParameters> {
         let credentials: Vec<String> = self
             .credential_issuer
             .metadata
@@ -74,7 +74,7 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
             .iter()
             .map(|credential| credential.0.clone())
             .collect();
-        Ok(CredentialOffer {
+        Ok(CredentialOfferParameters {
             credential_issuer: self.credential_issuer.metadata.credential_issuer.clone(),
             credentials,
             grants: Some(Grants {
@@ -91,9 +91,9 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
 
     pub fn credential_offer_query(&self, by_reference: bool) -> Result<String> {
         if by_reference {
-            Ok(CredentialOfferQuery::CredentialOfferUri(self.credential_offer_uri()?).to_string())
+            Ok(CredentialOffer::CredentialOfferUri(self.credential_offer_uri()?).to_string())
         } else {
-            Ok(CredentialOfferQuery::CredentialOffer(self.credential_offer()?).to_string())
+            Ok(CredentialOffer::CredentialOffer(self.credential_offer()?).to_string())
         }
     }
 }

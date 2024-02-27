@@ -5,7 +5,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-/// Credentials Supported object as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-objects-comprising-credenti.
+/// Credentials Supported object as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html#section-10.2.3-2.11.1.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct CredentialsSupportedObject<CFC = CredentialFormats<WithParameters>>
@@ -55,7 +55,7 @@ mod tests {
     #[test]
     fn test_oid4vci_examples() {
         // Examples from
-        // https://bitbucket.org/openid/connect/src/master/openid-4-verifiable-credential-issuance/examples/.
+        // https://github.com/openid/OpenID4VCI/tree/f7985f6120cbcd51fd971a320a61606da14e2580/examples.
 
         assert_eq!(
             TestWrapper {

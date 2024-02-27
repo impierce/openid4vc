@@ -1,13 +1,12 @@
 use super::credentials_supported::CredentialsSupportedObject;
 use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters};
-use oid4vc_core::JsonObject;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::HashMap;
 
 /// Credential Issuer Metadata as described here:
-/// https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-issuer-metadata.
+/// https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html#name-credential-issuer-metadata-p.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct CredentialIssuerMetadata<CFC = CredentialFormats<WithParameters>>
@@ -28,28 +27,6 @@ where
     pub credential_identifiers_supported: Option<bool>,
     pub display: Option<Vec<serde_json::Value>>,
     pub credentials_supported: HashMap<String, CredentialsSupportedObject<CFC>>,
-}
-
-#[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
-pub struct CredentialsSupportedDisplay {
-    name: String,
-    locale: Option<String>,
-    logo: Option<Logo>,
-    description: Option<String>,
-    background_color: Option<String>,
-    text_color: Option<String>,
-    #[serde(flatten)]
-    other: Option<JsonObject>,
-}
-
-#[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Logo {
-    url: Option<Url>,
-    alt_text: Option<String>,
-    #[serde(flatten)]
-    other: Option<JsonObject>,
 }
 
 #[cfg(test)]
@@ -77,7 +54,7 @@ mod tests {
     #[test]
     fn test_oid4vci_examples() {
         // Examples from
-        // https://bitbucket.org/openid/connect/src/master/openid-4-verifiable-credential-issuance/examples/.
+        // https://github.com/openid/OpenID4VCI/tree/f7985f6120cbcd51fd971a320a61606da14e2580/examples.
 
         assert_eq!(
             CredentialIssuerMetadata {

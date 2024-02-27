@@ -3,17 +3,17 @@ use oid4vc_core::{builder_fn, jwt, RFC7519Claims, Subject};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-/// Key Proof Type (JWT or CWT) and the proof itself, as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-key-proof-types.
+/// Key Proof Type (JWT or CWT) and the proof itself, as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html#name-key-proof-types.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 #[serde(tag = "proof_type")]
-pub enum Proof {
+pub enum KeyProofType {
     #[serde(rename = "jwt")]
     Jwt { jwt: String },
     #[serde(rename = "cwt")]
     Cwt { cwt: String },
 }
 
-impl Proof {
+impl KeyProofType {
     pub fn builder() -> ProofBuilder {
         ProofBuilder::default()
     }
@@ -42,13 +42,13 @@ pub struct ProofOfPossession {
 }
 
 impl ProofBuilder {
-    pub fn build(self) -> anyhow::Result<Proof> {
+    pub fn build(self) -> anyhow::Result<KeyProofType> {
         anyhow::ensure!(self.rfc7519_claims.aud.is_some(), "aud claim is required");
         anyhow::ensure!(self.rfc7519_claims.iat.is_some(), "iat claim is required");
         anyhow::ensure!(self.nonce.is_some(), "nonce claim is required");
 
         match self.proof_type {
-            Some(ProofType::Jwt) => Ok(Proof::Jwt {
+            Some(ProofType::Jwt) => Ok(KeyProofType::Jwt {
                 jwt: jwt::encode(
                     self.signer.ok_or(anyhow::anyhow!("No subject found"))?.clone(),
                     Header {

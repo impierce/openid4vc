@@ -7,7 +7,7 @@ use oid4vc_manager::{
 };
 use oid4vci::{
     credential_format_profiles::{CredentialFormats, WithParameters},
-    credential_offer::{CredentialOffer, CredentialOfferQuery, Grants},
+    credential_offer::{CredentialOffer, CredentialOfferParameters, Grants},
     credential_response::{BatchCredentialResponse, CredentialResponse, CredentialResponseType},
     token_request::TokenRequest,
     Wallet,
@@ -54,9 +54,9 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         .unwrap();
 
     // Parse the credential offer url.
-    let mut credential_offer: CredentialOffer = match credential_offer_query.parse().unwrap() {
-        CredentialOfferQuery::CredentialOffer(credential_offer) => credential_offer,
-        CredentialOfferQuery::CredentialOfferUri(credential_offer_uri) => {
+    let mut credential_offer: CredentialOfferParameters = match credential_offer_query.parse().unwrap() {
+        CredentialOffer::CredentialOffer(credential_offer) => credential_offer,
+        CredentialOffer::CredentialOfferUri(credential_offer_uri) => {
             wallet.get_credential_offer(credential_offer_uri).await.unwrap()
         }
     };
