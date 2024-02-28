@@ -16,7 +16,7 @@ An overview of all the specifications developed by the OpenID Digital Credential
 This workspace includes Rust implementations for the following DCP specifications:
 | Specification      | Description                                | Version
 | -------------------| ------------------------------------------ | -------
-| [OID4VCI](oid4vci) | OpenID for Verifiable Credential Issuance  | [Editor's Draft published: 30 August 2023](https://github.com/openid/OpenID4VCI/blob/111db260b1ad1915ca1462cc4904781beb179972/openid-4-verifiable-credential-issuance-1_0.md)
+| [OID4VCI](oid4vci) | OpenID for Verifiable Credential Issuance  | [Working Group Draft 12 published: 26 November 2023](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html)
 | [OID4VP](oid4vp)   | OpenID for Verifiable Presentations        | [Editor's Draft published: 30 August 2023](https://github.com/openid/OpenID4VP/blob/965597ae01fc6e6a2bddc0d6b16f3f6122f3c1ab/openid-4-verifiable-presentations-1_0.md)
 | [SIOPv2](siopv2)   | Self-Issued OpenID Provider v2             | [Editor's Draft published: 24 August 2023](https://github.com/openid/SIOPv2/blob/fb00ab840daa0cec614691b712e28c1f77ed43ea/openid-connect-self-issued-v2-1_0.md)
 
