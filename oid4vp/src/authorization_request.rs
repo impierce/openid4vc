@@ -1,14 +1,16 @@
 use crate::oid4vp::OID4VP;
 use anyhow::{anyhow, Result};
-use dif_presentation_exchange::PresentationDefinition;
+use dif_presentation_exchange::presentation_definition::ClaimFormatProperty;
+use dif_presentation_exchange::{ClaimFormatDesignation, PresentationDefinition};
 use is_empty::IsEmpty;
 use monostate::MustBe;
 use oid4vc_core::authorization_request::Object;
 use oid4vc_core::builder_fn;
 use oid4vc_core::{
-    authorization_request::AuthorizationRequest, client_metadata::ClientMetadata, scope::Scope, RFC7519Claims,
+    authorization_request::AuthorizationRequest, client_metadata::ClientMetadataEnum, scope::Scope, RFC7519Claims,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// [`AuthorizationRequest`] claims specific to [`OID4VP`].
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -20,7 +22,16 @@ pub struct AuthorizationRequestParameters {
     pub scope: Option<Scope>,
     pub nonce: String,
     // TODO: impl client_metadata_uri.
-    pub client_metadata: Option<ClientMetadata>,
+    #[serde(flatten)]
+    pub client_metadata: Option<ClientMetadataEnum<ClientMetadataParameters>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct ClientMetadataParameters {
+    /// Object defining the formats and proof types of Verifiable Presentations and Verifiable Credentials that a
+    /// Verifier supports.
+    /// As described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-20.html#name-additional-verifier-metadat.
+    vp_formats: HashMap<ClaimFormatDesignation, ClaimFormatProperty>,
 }
 
 #[derive(Debug, Default, IsEmpty)]
@@ -34,7 +45,7 @@ pub struct AuthorizationRequestBuilder {
     scope: Option<Scope>,
     response_mode: Option<String>,
     nonce: Option<String>,
-    client_metadata: Option<ClientMetadata>,
+    client_metadata: Option<ClientMetadataEnum<ClientMetadataParameters>>,
 }
 
 impl AuthorizationRequestBuilder {
@@ -50,7 +61,7 @@ impl AuthorizationRequestBuilder {
     builder_fn!(scope, Scope);
     builder_fn!(redirect_uri, url::Url);
     builder_fn!(nonce, String);
-    builder_fn!(client_metadata, ClientMetadata);
+    builder_fn!(client_metadata, ClientMetadataEnum<ClientMetadataParameters>);
     builder_fn!(state, String);
     builder_fn!(presentation_definition, PresentationDefinition);
 
@@ -91,5 +102,76 @@ impl AuthorizationRequestBuilder {
                 "one of either request_uri, request or other parameters should be set"
             )),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{fs::File, path::Path};
+
+    use serde::de::DeserializeOwned;
+
+    use super::*;
+
+    fn json_example<T>(path: &str) -> T
+    where
+        T: DeserializeOwned,
+    {
+        let file_path = Path::new(path);
+        let file = File::open(file_path).expect("file does not exist");
+        serde_json::from_reader::<_, T>(file).expect("could not parse json")
+    }
+
+    #[test]
+    fn test_oid4vp_examples() {
+        // Examples from
+        // https://github.com/openid/OpenID4VP/tree/965597ae01fc6e6a2bddc0d6b16f3f6122f3c1ab/examples/client_metadata.
+
+        // Some required parameters are omitted in the examples. Therefore this example struct represents a subset of
+        // the full `AuthorizationRequestParameters` struct.
+        #[derive(Serialize, Deserialize, Debug, PartialEq)]
+        struct ExampleAuthorizationRequest {
+            pub client_id: String,
+            pub redirect_uri: url::Url,
+            pub response_type: MustBe!("vp_token id_token"),
+            // pub presentation_definition: PresentationDefinition,
+            pub client_id_scheme: Option<String>,
+            pub response_mode: Option<String>,
+            pub scope: Option<Scope>,
+            // pub nonce: String,
+            // TODO: impl client_metadata_uri.
+            #[serde(flatten)]
+            pub client_metadata: Option<ClientMetadataEnum<ClientMetadataParameters>>,
+        }
+
+        assert_eq!(
+            ExampleAuthorizationRequest {
+                client_id: "did:example:123".to_string(),
+                redirect_uri: url::Url::parse("https://client.example.org/callback").unwrap(),
+                response_type: MustBe!("vp_token id_token"),
+                client_id_scheme: None,
+                response_mode: None,
+                scope: None,
+                client_metadata: Some(ClientMetadataEnum::ClientMetadata {
+                    client_name: Some("My Example (SIOP)".to_string()),
+                    logo_uri: None,
+                    extension: ClientMetadataParameters {
+                        vp_formats: vec![
+                            (
+                                ClaimFormatDesignation::JwtVpJson,
+                                ClaimFormatProperty::Alg(vec!["EdDSA".to_string(), "ES256K".to_string(),])
+                            ),
+                            (
+                                ClaimFormatDesignation::LdpVp,
+                                ClaimFormatProperty::ProofType(vec!["Ed25519Signature2018".to_string(),])
+                            )
+                        ]
+                        .into_iter()
+                        .collect()
+                    }
+                }),
+            },
+            json_example::<ExampleAuthorizationRequest>("tests/examples/client_metadata/client_client_id_did.json")
+        );
     }
 }
