@@ -5,7 +5,7 @@ Working Group](https://openid.net/wg/digital-credentials-protocols/).
 
 | Specification      | Description                                | Version
 | -------------------| ------------------------------------------ | -------
-| [OID4VP](oid4vp)   | OpenID for Verifiable Presentations        | [Editor's Draft published: 30 August 2023](https://github.com/openid/OpenID4VP/blob/965597ae01fc6e6a2bddc0d6b16f3f6122f3c1ab/openid-4-verifiable-presentations-1_0.md)
+| [OID4VP](oid4vp)   | OpenID for Verifiable Presentations        | [Working Group Draft 20 published: 29 November 2023](https://openid.net/specs/openid-4-verifiable-presentations-1_0-20.html)
 
 
 An overview of all the OpenID Digital Credentials Protocols implementation in Rust can be found [here](../README.md).
