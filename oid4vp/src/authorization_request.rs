@@ -12,12 +12,27 @@ use oid4vc_core::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// The Client ID Scheme enables the use of different mechanisms to obtain and validate the Verifier's metadata. As
+/// described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-20.html#name-verifier-metadata-managemen.
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum ClientIdScheme {
+    #[serde(rename = "pre-registered")]
+    PreRegistered,
+    RedirectUri,
+    EntityId,
+    Did,
+    VerifierAttestation,
+    X509SanDns,
+    X509SanUri,
+}
+
 /// [`AuthorizationRequest`] claims specific to [`OID4VP`].
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationRequestParameters {
     pub response_type: MustBe!("vp_token"),
     pub presentation_definition: PresentationDefinition,
-    pub client_id_scheme: Option<String>,
+    pub client_id_scheme: Option<ClientIdScheme>,
     pub response_mode: Option<String>,
     pub scope: Option<Scope>,
     pub nonce: String,
@@ -38,7 +53,7 @@ pub struct ClientMetadataParameters {
 pub struct AuthorizationRequestBuilder {
     rfc7519_claims: RFC7519Claims,
     presentation_definition: Option<PresentationDefinition>,
-    client_id_scheme: Option<String>,
+    client_id_scheme: Option<ClientIdScheme>,
     client_id: Option<String>,
     redirect_uri: Option<url::Url>,
     state: Option<String>,
@@ -64,6 +79,7 @@ impl AuthorizationRequestBuilder {
     builder_fn!(client_metadata, ClientMetadataEnum<ClientMetadataParameters>);
     builder_fn!(state, String);
     builder_fn!(presentation_definition, PresentationDefinition);
+    builder_fn!(client_id_scheme, ClientIdScheme);
 
     pub fn build(mut self) -> Result<AuthorizationRequest<Object<OID4VP>>> {
         match (self.client_id.take(), self.is_empty()) {
@@ -120,6 +136,38 @@ mod tests {
         let file_path = Path::new(path);
         let file = File::open(file_path).expect("file does not exist");
         serde_json::from_reader::<_, T>(file).expect("could not parse json")
+    }
+
+    #[test]
+    fn test_client_id_scheme() {
+        assert_eq!(
+            ClientIdScheme::PreRegistered,
+            serde_json::from_str::<ClientIdScheme>("\"pre-registered\"").unwrap()
+        );
+        assert_eq!(
+            ClientIdScheme::RedirectUri,
+            serde_json::from_str::<ClientIdScheme>("\"redirect_uri\"").unwrap()
+        );
+        assert_eq!(
+            ClientIdScheme::EntityId,
+            serde_json::from_str::<ClientIdScheme>("\"entity_id\"").unwrap()
+        );
+        assert_eq!(
+            ClientIdScheme::Did,
+            serde_json::from_str::<ClientIdScheme>("\"did\"").unwrap()
+        );
+        assert_eq!(
+            ClientIdScheme::VerifierAttestation,
+            serde_json::from_str::<ClientIdScheme>("\"verifier_attestation\"").unwrap()
+        );
+        assert_eq!(
+            ClientIdScheme::X509SanDns,
+            serde_json::from_str::<ClientIdScheme>("\"x509_san_dns\"").unwrap()
+        );
+        assert_eq!(
+            ClientIdScheme::X509SanUri,
+            serde_json::from_str::<ClientIdScheme>("\"x509_san_uri\"").unwrap()
+        );
     }
 
     #[test]
