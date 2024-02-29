@@ -3,12 +3,13 @@ use lazy_static::lazy_static;
 use oid4vc_core::{
     authorization_request::{AuthorizationRequest, ByReference, Object},
     authorization_response::AuthorizationResponse,
-    client_metadata::ClientMetadata,
+    client_metadata::ClientMetadataEnum,
     scope::{Scope, ScopeValue},
     DidMethod, SubjectSyntaxType,
 };
 use oid4vc_manager::{ProviderManager, RelyingPartyManager};
 use siopv2::{
+    authorization_request::ClientMetadataParameters,
     claims::{Address, IndividualClaimRequest},
     siopv2::SIOPv2,
     StandardClaimsRequests, StandardClaimsValues,
@@ -69,13 +70,13 @@ async fn test_implicit_flow() {
         .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
         .redirect_uri(format!("{server_url}/redirect_uri").parse::<url::Url>().unwrap())
         .response_mode("direct_post".to_string())
-        .client_metadata(
-            ClientMetadata::default()
-                .with_subject_syntax_types_supported(vec![SubjectSyntaxType::Did(
-                    DidMethod::from_str("did:test").unwrap(),
-                )])
-                .with_id_token_signing_alg_values_supported(vec!["EdDSA".to_string()]),
-        )
+        .client_metadata(ClientMetadataEnum::<ClientMetadataParameters>::ClientMetadata {
+            client_name: None,
+            logo_uri: None,
+            extension: ClientMetadataParameters {
+                subject_syntax_types_supported: vec![SubjectSyntaxType::Did(DidMethod::from_str("did:test").unwrap())],
+            },
+        })
         .claims(
             r#"{
                 "id_token": {
