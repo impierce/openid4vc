@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// This is the [`RequestHandle`] for the [`SIOPv2`] extension.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct RequestHandler {}
 impl RequestHandle for RequestHandler {
     type Parameters = AuthorizationRequestParameters;

@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// This is the [`RequestHandle`] for the [`OID4VP`] extension.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct RequestHandler {}
 impl RequestHandle for RequestHandler {
     type Parameters = AuthorizationRequestParameters;
