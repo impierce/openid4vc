@@ -55,6 +55,8 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         credential_issuer_url: Url,
     ) -> Result<AuthorizationServerMetadata> {
         let mut oauth_authorization_server_endpoint = credential_issuer_url.clone();
+
+        // TODO(NGDIL): remove this NGDIL specific code. This is a temporary fix to get the authorization server metadata.
         oauth_authorization_server_endpoint
             .path_segments_mut()
             .map_err(|_| anyhow::anyhow!("unable to parse credential issuer url"))
@@ -76,6 +78,8 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         credential_issuer_url: Url,
     ) -> Result<CredentialIssuerMetadata<CFC>> {
         let mut openid_credential_issuer_endpoint = credential_issuer_url.clone();
+
+        // TODO(NGDIL): remove this NGDIL specific code. This is a temporary fix to get the credential issuer metadata.
         openid_credential_issuer_endpoint
             .path_segments_mut()
             .map_err(|_| anyhow::anyhow!("unable to parse credential issuer url"))?

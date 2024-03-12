@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// This is the [`RequestHandle`] for the [`OID4VP`] extension.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct RequestHandler {}
 impl RequestHandle for RequestHandler {
     type Parameters = AuthorizationRequestParameters;
@@ -55,6 +55,7 @@ impl Extension for OID4VP {
             .sub(subject_identifier)
             .aud(client_id)
             .nonce(extension_parameters.nonce.to_owned())
+            // TODO: make this configurable.
             .exp((Utc::now() + Duration::minutes(10)).timestamp())
             .iat((Utc::now()).timestamp())
             .verifiable_presentation(user_input.verifiable_presentation.clone())

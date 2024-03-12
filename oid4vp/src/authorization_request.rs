@@ -36,7 +36,6 @@ pub struct AuthorizationRequestParameters {
     pub response_mode: Option<String>,
     pub scope: Option<Scope>,
     pub nonce: String,
-    // TODO: impl client_metadata_uri.
     #[serde(flatten)]
     pub client_metadata: Option<ClientMetadataEnum<ClientMetadataParameters>>,
 }
