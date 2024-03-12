@@ -19,10 +19,25 @@ pub struct AuthorizationCode {
 pub struct PreAuthorizedCode {
     #[serde(rename = "pre-authorized_code")]
     pub pre_authorized_code: String,
-    #[serde(default)]
-    pub user_pin_required: bool,
+    pub tx_code: Option<TransactionCode>,
     pub interval: Option<i64>,
     pub authorization_server: Option<Url>,
+}
+
+#[skip_serializing_none]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
+pub struct TransactionCode {
+    pub input_mode: Option<InputMode>,
+    pub length: Option<u64>,
+    pub description: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum InputMode {
+    #[default]
+    Numeric,
+    Text,
 }
 
 /// Credential Offer Parameters as described in https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html#name-credential-offer-parameters.
@@ -109,7 +124,7 @@ mod tests {
     fn test_credential_offer_serde() {
         let json = json!({
            "credential_issuer": "https://credential-issuer.example.com/",
-           "credentials": [
+           "credential_configuration_ids": [
               "UniversityDegree_JWT",
            ],
            "grants": {
@@ -117,8 +132,7 @@ mod tests {
                  "issuer_state": "eyJhbGciOiJSU0Et...FYUaBy"
               },
               "urn:ietf:params:oauth:grant-type:pre-authorized_code": {
-                 "pre-authorized_code": "adhjhdjajkdkhjhdj",
-                 "user_pin_required": true
+                 "pre-authorized_code": "adhjhdjajkdkhjhdj"
               }
            }
         });
@@ -134,7 +148,6 @@ mod tests {
                 grants: Some(Grants {
                     pre_authorized_code: Some(PreAuthorizedCode {
                         pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
-                        user_pin_required: true,
                         ..Default::default()
                     }),
                     authorization_code: Some(AuthorizationCode {
@@ -157,12 +170,12 @@ mod tests {
         assert_eq!(
             CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credential_configuration_ids: vec!["UniversityDegree_LDP".to_string(),],
+                credential_configuration_ids: vec!["UniversityDegree_LDP_VC".to_string(),],
                 grants: Some(Grants {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
                         pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
-                        user_pin_required: true,
+                        tx_code: Some(TransactionCode::default()),
                         ..Default::default()
                     })
                 })
@@ -173,58 +186,19 @@ mod tests {
         assert_eq!(
             CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credential_configuration_ids: vec!["UniversityDegreeCredential".to_string(),],
-                grants: Some(Grants {
-                    authorization_code: Some(AuthorizationCode {
-                        issuer_state: Some("eyJhbGciOiJSU0Et...FYUaBy".to_string()),
-                        authorization_server: None
-                    }),
-                    pre_authorized_code: None
-                })
-            },
-            json_example::<CredentialOfferParameters>("tests/examples/credential_offer_jwt_vc_json.json")
-        );
-
-        assert_eq!(
-            CredentialOfferParameters {
-                credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credential_configuration_ids: vec!["UniversityDegree_LDP_VC".to_string()],
-                grants: None
-            },
-            json_example::<CredentialOfferParameters>("tests/examples/credential_offer_ldp_vc.json")
-        );
-
-        assert_eq!(
-            CredentialOfferParameters {
-                credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credential_configuration_ids: vec!["org.iso.18013.5.1.mDL".to_string(),],
-                grants: Some(Grants {
-                    authorization_code: None,
-                    pre_authorized_code: Some(PreAuthorizedCode {
-                        pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
-                        user_pin_required: true,
-                        ..Default::default()
-                    })
-                })
-            },
-            json_example::<CredentialOfferParameters>("tests/examples/credential_offer_mso_mdoc.json")
-        );
-
-        assert_eq!(
-            CredentialOfferParameters {
-                credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
                 credential_configuration_ids: vec![
                     "UniversityDegreeCredential".to_string(),
                     "org.iso.18013.5.1.mDL".to_string(),
                 ],
                 grants: Some(Grants {
-                    authorization_code: Some(AuthorizationCode {
-                        issuer_state: Some("eyJhbGciOiJSU0Et...FYUaBy".to_string()),
-                        authorization_server: None
-                    }),
+                    authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
-                        pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
-                        user_pin_required: true,
+                        pre_authorized_code: "oaKazRN8I0IbtZ0C7JuMn5".to_string(),
+                        tx_code: Some(TransactionCode {
+                            length: Some(4),
+                            input_mode: Some(InputMode::Numeric),
+                            description: Some("Please provide the one-time code that was sent via e-mail".to_string()),
+                        }),
                         ..Default::default()
                     })
                 })
@@ -240,7 +214,13 @@ mod tests {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
                         pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
-                        user_pin_required: true,
+                        tx_code: Some(TransactionCode {
+                            description: Some(
+                                "Please provide the one-time code which was sent to your mobile phone via SMS"
+                                    .to_string()
+                            ),
+                            ..Default::default()
+                        }),
                         ..Default::default()
                     })
                 })
