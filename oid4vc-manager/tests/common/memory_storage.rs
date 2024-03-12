@@ -6,7 +6,7 @@ use oid4vc_core::{authentication::subject::SigningSubject, generate_authorizatio
 use oid4vc_manager::storage::Storage;
 use oid4vci::{
     authorization_response::AuthorizationResponse,
-    credential_format_profiles::{Credential, CredentialFormatCollection, CredentialFormats, WithParameters},
+    credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters},
     credential_issuer::credentials_supported::CredentialsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
     credential_response::{CredentialResponse, CredentialResponseType},
@@ -119,7 +119,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
         verifiable_credential["credentialSubject"]["id"] = json!(subject_did);
 
         (access_token == ACCESS_TOKEN.clone()).then_some(CredentialResponse {
-            credential: CredentialResponseType::Immediate(CredentialFormats::JwtVcJson(Credential {
+            credential: CredentialResponseType::Immediate {
                 credential: serde_json::to_value(
                     jwt::encode(
                         signer.clone(),
@@ -136,7 +136,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
                     .ok(),
                 )
                 .unwrap(),
-            })),
+            },
             c_nonce: Some(C_NONCE.clone()),
             c_nonce_expires_in: Some(86400),
         })
