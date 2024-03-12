@@ -1,6 +1,7 @@
-use crate::{
-    parse_other,
+use crate::parse_other;
+use oid4vc_core::{
     scope::{Scope, ScopeValue},
+    JsonObject,
 };
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_with::skip_serializing_none;
@@ -67,7 +68,7 @@ pub enum IndividualClaimRequest<T> {
         // Other members MAY be defined to provide additional information about the requested Claims. Any members used that
         // are not understood MUST be ignored.
         #[serde(flatten, deserialize_with = "parse_other")]
-        other: Option<serde_json::Map<String, serde_json::Value>>,
+        other: Option<JsonObject>,
     },
 }
 
@@ -98,7 +99,7 @@ impl<T> IndividualClaimRequest<T> {
     object_member!(essential, bool);
     object_member!(value, T);
     object_member!(values, Vec<T>);
-    object_member!(other, serde_json::Map<String, serde_json::Value>);
+    object_member!(other, JsonObject);
 }
 
 /// An individual claim request as defined in [OpenID Connect Core 1.0, section 5.5.1](https://openid.net/specs/openid-connect-core-1_0.html#IndividualClaimsRequests).

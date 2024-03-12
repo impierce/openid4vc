@@ -4,7 +4,7 @@ use serde_with::skip_serializing_none;
 
 /// Credential Response as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-response.
 #[skip_serializing_none]
-#[derive(Serialize, Debug, PartialEq, Deserialize)]
+#[derive(Serialize, Debug, PartialEq, Deserialize, Clone)]
 pub struct CredentialResponse<CFC = CredentialFormats<WithCredential>>
 where
     CFC: CredentialFormatCollection,
@@ -25,7 +25,7 @@ pub struct BatchCredentialResponse {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Debug, PartialEq, Deserialize)]
+#[derive(Serialize, Debug, PartialEq, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum CredentialResponseType<CFC = CredentialFormats<WithCredential>>
 where
@@ -38,7 +38,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::credential_format_profiles::{w3c_verifiable_credentials::jwt_vc_json::JwtVcJson, Credential};
+    use crate::credential_format_profiles::Credential;
     use serde_json::json;
 
     #[test]
@@ -71,7 +71,6 @@ mod tests {
                     transaction_id: "123".to_string(),
                 },
                 CredentialResponseType::Immediate(CredentialFormats::<WithCredential>::JwtVcJson(Credential {
-                    format: JwtVcJson,
                     credential: json!({
                         "id": "http://example.edu/credentials/3732",
                         "type": ["VerifiableCredential", "UniversityDegreeCredential"],

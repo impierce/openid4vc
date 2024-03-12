@@ -1,7 +1,4 @@
-use crate::{
-    credential_format_profiles::{CredentialFormatCollection, CredentialFormats},
-    serialize_unit_struct,
-};
+use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -10,31 +7,21 @@ use serde_with::skip_serializing_none;
 /// described in [OpenID4VCI](https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-request-issuance-of-a-certa)
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
-pub struct AuthorizationDetailsObject<CFC = CredentialFormats>
+#[serde(tag = "type", rename = "openid_credential")]
+pub struct AuthorizationDetailsObject<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {
-    #[serde(rename = "type")]
-    pub type_: OpenIDCredential,
     pub locations: Option<Vec<Url>>,
     #[serde(flatten)]
     pub credential_format: CFC,
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct OpenIDCredential;
-
-serialize_unit_struct!("openid_credential", OpenIDCredential);
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::credential_format_profiles::{
-        iso_mdl::mso_mdoc::MsoMdoc,
-        w3c_verifiable_credentials::{
-            jwt_vc_json::{self, JwtVcJson},
-            ldp_vc::{self, LdpVc},
-        },
+        w3c_verifiable_credentials::{jwt_vc_json, ldp_vc},
         CredentialFormats, Parameters,
     };
     use serde::de::DeserializeOwned;
@@ -75,10 +62,8 @@ mod tests {
         assert_eq!(
             authorization_details_mso_mdoc,
             AuthorizationDetailsObject {
-                type_: OpenIDCredential,
                 locations: None,
                 credential_format: CredentialFormats::JwtVcJson(Parameters {
-                    format: JwtVcJson,
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
                             type_: vec!["VerifiableCredential".into(), "UniversityDegreeCredential".into()],
@@ -127,10 +112,8 @@ mod tests {
         assert_eq!(
             authorization_details_mso_mdoc,
             AuthorizationDetailsObject {
-                type_: OpenIDCredential,
                 locations: None,
                 credential_format: CredentialFormats::MsoMdoc(Parameters {
-                    format: MsoMdoc,
                     parameters: (
                         "org.iso.18013.5.1.mDL".to_string(),
                         Some(json!({
@@ -161,10 +144,8 @@ mod tests {
 
         assert_eq!(
             vec![AuthorizationDetailsObject {
-                type_: OpenIDCredential,
                 locations: None,
                 credential_format: CredentialFormats::JwtVcJson(Parameters {
-                    format: JwtVcJson,
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
                             type_: vec!["VerifiableCredential".into(), "UniversityDegreeCredential".into()],
@@ -184,10 +165,8 @@ mod tests {
 
         assert_eq!(
             vec![AuthorizationDetailsObject {
-                type_: OpenIDCredential,
                 locations: None,
                 credential_format: CredentialFormats::LdpVc(Parameters {
-                    format: LdpVc,
                     parameters: (
                         ldp_vc::CredentialDefinition {
                             context: vec![
@@ -211,10 +190,8 @@ mod tests {
 
         assert_eq!(
             vec![AuthorizationDetailsObject {
-                type_: OpenIDCredential,
                 locations: None,
                 credential_format: CredentialFormats::MsoMdoc(Parameters {
-                    format: MsoMdoc,
                     parameters: (
                         "org.iso.18013.5.1.mDL".to_string(),
                         Some(json!({
@@ -238,10 +215,8 @@ mod tests {
         assert_eq!(
             vec![
                 AuthorizationDetailsObject {
-                    type_: OpenIDCredential,
                     locations: None,
                     credential_format: CredentialFormats::LdpVc(Parameters {
-                        format: LdpVc,
                         parameters: (
                             ldp_vc::CredentialDefinition {
                                 context: vec![
@@ -257,10 +232,8 @@ mod tests {
                     }),
                 },
                 AuthorizationDetailsObject {
-                    type_: OpenIDCredential,
                     locations: None,
                     credential_format: CredentialFormats::MsoMdoc(Parameters {
-                        format: MsoMdoc,
                         parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
                     }),
                 }
@@ -272,10 +245,8 @@ mod tests {
 
         assert_eq!(
             vec![AuthorizationDetailsObject {
-                type_: OpenIDCredential,
                 locations: Some(vec!["https://credential-issuer.example.com".parse().unwrap()]),
                 credential_format: CredentialFormats::JwtVcJson(Parameters {
-                    format: JwtVcJson,
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
                             type_: vec!["VerifiableCredential".into(), "UniversityDegreeCredential".into()],
@@ -291,10 +262,8 @@ mod tests {
 
         assert_eq!(
             vec![AuthorizationDetailsObject {
-                type_: OpenIDCredential,
                 locations: None,
                 credential_format: CredentialFormats::JwtVcJson(Parameters {
-                    format: JwtVcJson,
                     parameters: (
                         jwt_vc_json::CredentialDefinition {
                             type_: vec!["VerifiableCredential".into(), "UniversityDegreeCredential".into()],

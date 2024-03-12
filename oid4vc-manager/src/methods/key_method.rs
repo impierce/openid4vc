@@ -110,6 +110,8 @@ async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
 mod tests {
     use super::*;
     use crate::{ProviderManager, RelyingPartyManager};
+    use oid4vc_core::authorization_request::{AuthorizationRequest, Object};
+    use siopv2::siopv2::SIOPv2;
     use std::sync::Arc;
 
     #[tokio::test]
@@ -120,33 +122,39 @@ mod tests {
         // Create a new provider manager.
         let provider_manager = ProviderManager::new([Arc::new(subject)]).unwrap();
 
-        // Get a new SIOP request with response mode `post` for cross-device communication.
+        // Get a new SIOP authorization_request with response mode `direct_post` for cross-device communication.
         let request_url = "\
             siopv2://idtoken?\
                 scope=openid\
                 &response_type=id_token\
                 &client_id=did:key:z6MkiTcXZ1JxooACo99YcfkugH6Kifzj7ZupSDCmLEABpjpF\
                 &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb\
-                &response_mode=post\
+                &response_mode=direct_post\
                 &client_metadata=%7B%22subject_syntax_types_supported%22%3A\
                 %5B%22did%3Akey%22%5D%2C%0A%20%20%20%20\
                 %22id_token_signing_alg_values_supported%22%3A%5B%22EdDSA%22%5D%7D\
                 &nonce=n-0S6_WzA2Mj\
             ";
 
-        // Let the provider amanger validate the request.
-        let request = provider_manager
-            .validate_request(request_url.parse().unwrap())
+        // Let the provider manager validate the authorization_request.
+        let authorization_request = provider_manager
+            .validate_request(request_url.to_string())
             .await
             .unwrap();
 
-        // Test whether the provider manager can generate a response for the request succesfully.
-        let response = provider_manager
-            .generate_response(request, Default::default(), None, None)
+        let authorization_request =
+            AuthorizationRequest::<Object<SIOPv2>>::from_generic(&authorization_request).unwrap();
+
+        // Test whether the provider manager can generate a authorization_response for the authorization_request succesfully.
+        let authorization_response = provider_manager
+            .generate_response(&authorization_request, Default::default())
             .unwrap();
 
-        // Let the relying party validate the response.
+        // Let the relying party validate the authorization_response.
         let relying_party_manager = RelyingPartyManager::new([Arc::new(KeySubject::new())]).unwrap();
-        assert!(relying_party_manager.validate_response(&response).await.is_ok());
+        assert!(relying_party_manager
+            .validate_response(&authorization_response)
+            .await
+            .is_ok());
     }
 }

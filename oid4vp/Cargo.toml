@@ -13,11 +13,18 @@ repository.workspace = true
 oid4vc-core = { path = "../oid4vc-core" }
 dif-presentation-exchange = { path = "../dif-presentation-exchange" }
 oid4vci = { path = "../oid4vci" }
-tokio.workspace = true
+
+anyhow = "1.0"
+chrono.workspace = true
+futures = "0.3"
+getset.workspace = true
+identity_core.workspace = true
+identity_credential.workspace = true
+is_empty.workspace = true
+jsonwebtoken.workspace = true
+monostate.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
-getset.workspace = true
-identity_credential.workspace = true
-anyhow = "1.0"
-futures = "0.3"
+tokio.workspace = true
+url.workspace = true

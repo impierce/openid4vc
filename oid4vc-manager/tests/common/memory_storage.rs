@@ -6,9 +6,7 @@ use oid4vc_core::{authentication::subject::SigningSubject, generate_authorizatio
 use oid4vc_manager::storage::Storage;
 use oid4vci::{
     authorization_response::AuthorizationResponse,
-    credential_format_profiles::{
-        w3c_verifiable_credentials::jwt_vc_json::JwtVcJson, Credential, CredentialFormatCollection, CredentialFormats,
-    },
+    credential_format_profiles::{Credential, CredentialFormatCollection, CredentialFormats, WithParameters},
     credential_issuer::credentials_supported::CredentialsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
     credential_response::{CredentialResponse, CredentialResponseType},
@@ -90,8 +88,10 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
         credential_format: CFC,
         signer: SigningSubject,
     ) -> Option<CredentialResponse> {
-        let type_ = match serde_json::from_value::<CredentialFormats>(serde_json::to_value(credential_format).unwrap())
-            .unwrap()
+        let type_ = match serde_json::from_value::<CredentialFormats<WithParameters>>(
+            serde_json::to_value(credential_format).unwrap(),
+        )
+        .unwrap()
         {
             CredentialFormats::JwtVcJson(credential) => credential.parameters.credential_definition.type_,
             _ => unreachable!("Credential format not supported"),
@@ -113,7 +113,6 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
 
         (access_token == ACCESS_TOKEN.clone()).then_some(CredentialResponse {
             credential: CredentialResponseType::Immediate(CredentialFormats::JwtVcJson(Credential {
-                format: JwtVcJson,
                 credential: serde_json::to_value(
                     jwt::encode(
                         signer.clone(),

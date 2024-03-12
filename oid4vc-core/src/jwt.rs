@@ -52,7 +52,7 @@ where
 
 pub fn encode<C, S>(signer: Arc<S>, header: Header, claims: C) -> Result<String>
 where
-    C: Serialize + Send,
+    C: Serialize,
     S: Sign + ?Sized,
 {
     let kid = signer.key_id().ok_or(anyhow!("No key identifier found."))?;
@@ -74,6 +74,7 @@ where
     Ok(base64_url::encode(serde_json::to_vec(value)?.as_slice()))
 }
 
+#[cfg(feature = "test-utils")]
 #[cfg(test)]
 mod tests {
     use super::*;

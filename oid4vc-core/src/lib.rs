@@ -1,8 +1,13 @@
 pub mod authentication;
+pub mod authorization_request;
+pub mod authorization_response;
+pub mod client_metadata;
 pub mod collection;
 pub mod decoder;
 pub mod jwt;
+pub mod openid4vc_extension;
 pub mod rfc7519_claims;
+pub mod scope;
 pub mod subject_syntax_type;
 
 pub use authentication::{
@@ -18,9 +23,12 @@ pub use rfc7519_claims::RFC7519Claims;
 use serde::Serialize;
 pub use subject_syntax_type::{DidMethod, SubjectSyntaxType};
 
-#[cfg(test)]
-mod test_utils;
+pub type JsonObject = serde_json::Map<String, serde_json::Value>;
 
+#[cfg(feature = "test-utils")]
+pub mod test_utils;
+
+// Macro that generates a builder function for a field.
 #[macro_export]
 macro_rules! builder_fn {
     ($name:ident, $ty:ty) => {

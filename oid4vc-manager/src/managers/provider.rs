@@ -1,8 +1,12 @@
 use anyhow::Result;
-use identity_credential::{credential::Jwt, presentation::Presentation};
-use oid4vc_core::{Decoder, Subject, SubjectSyntaxType, Subjects};
-use oid4vp::PresentationSubmission;
-use siopv2::{AuthorizationRequest, AuthorizationResponse, Provider, RequestUrl, StandardClaimsValues};
+use oid4vc_core::{
+    authorization_request::{AuthorizationRequest, Object},
+    authorization_response::AuthorizationResponse,
+    openid4vc_extension::{Extension, OpenID4VC, ResponseHandle},
+    Decoder, Subject, SubjectSyntaxType, Subjects,
+};
+use reqwest::StatusCode;
+use siopv2::{siopv2::SIOPv2, Provider};
 use std::sync::Arc;
 
 /// Manager struct for [`siopv2::Provider`].
@@ -19,25 +23,25 @@ impl ProviderManager {
         })
     }
 
-    pub async fn validate_request(&self, request: RequestUrl) -> Result<AuthorizationRequest> {
+    pub async fn validate_request(&self, authorization_request: String) -> Result<AuthorizationRequest<Object>> {
         self.provider
-            .validate_request(request, Decoder::from(&self.subjects))
+            .validate_request(authorization_request, Decoder::from(&self.subjects))
             .await
     }
 
-    pub fn generate_response(
+    pub fn generate_response<E: Extension + OpenID4VC>(
         &self,
-        request: AuthorizationRequest,
-        user_claims: StandardClaimsValues,
-        verifiable_presentation: Option<Presentation<Jwt>>,
-        presentation_submission: Option<PresentationSubmission>,
-    ) -> Result<AuthorizationResponse> {
-        self.provider
-            .generate_response(request, user_claims, verifiable_presentation, presentation_submission)
+        authorization_request: &AuthorizationRequest<Object<E>>,
+        input: <E::ResponseHandle as ResponseHandle>::Input,
+    ) -> Result<AuthorizationResponse<E>> {
+        self.provider.generate_response(authorization_request, input)
     }
 
-    pub async fn send_response(&self, response: AuthorizationResponse) -> Result<()> {
-        self.provider.send_response(response).await
+    pub async fn send_response<E: Extension>(
+        &self,
+        authorization_response: &AuthorizationResponse<E>,
+    ) -> Result<StatusCode> {
+        self.provider.send_response(authorization_response).await
     }
 
     pub fn current_subject_syntax_type(&self) -> Result<SubjectSyntaxType> {
@@ -58,9 +62,11 @@ impl ProviderManager {
 
     pub fn matching_subject_syntax_types(
         &self,
-        authorization_request: &AuthorizationRequest,
+        authorization_request: &AuthorizationRequest<Object<SIOPv2>>,
     ) -> Option<Vec<SubjectSyntaxType>> {
         let supported_types = authorization_request
+            .body
+            .extension
             .subject_syntax_types_supported()
             .map_or(Vec::new(), |types| {
                 types
@@ -69,34 +75,5 @@ impl ProviderManager {
                     .collect()
             });
         (!supported_types.is_empty()).then_some(supported_types.iter().map(|&sst| sst.clone()).collect())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::methods::{iota_method::IotaSubject, key_method::KeySubject};
-    use std::str::FromStr;
-
-    #[tokio::test]
-    async fn test_multiple_methods() {
-        let key_subject = Arc::new(KeySubject::new());
-        let iota_subject = Arc::new(IotaSubject::new().await.unwrap());
-
-        // The first subject in the array is the default subject.
-        let mut provider_manager = ProviderManager::new([key_subject, iota_subject]).unwrap();
-        assert_eq!(
-            provider_manager.current_subject_syntax_type().unwrap(),
-            SubjectSyntaxType::from_str("did:key").unwrap()
-        );
-
-        // Set the subject syntax type to `did:iota`.
-        provider_manager
-            .set_subject_syntax_type(SubjectSyntaxType::from_str("did:iota").unwrap())
-            .unwrap();
-        assert_eq!(
-            provider_manager.current_subject_syntax_type().unwrap(),
-            SubjectSyntaxType::from_str("did:iota").unwrap()
-        );
     }
 }

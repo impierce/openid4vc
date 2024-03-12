@@ -1,20 +1,26 @@
 use did_key::{generate, Ed25519KeyPair};
-use identity_core::common::{Object, Url};
 use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
-use oid4vc_core::{jwt, Subject};
+use oid4vc_core::{
+    authorization_request::{AuthorizationRequest, Object},
+    authorization_response::AuthorizationResponse,
+    jwt, Subject,
+};
 use oid4vc_manager::{
     managers::presentation::create_presentation_submission, methods::key_method::KeySubject, ProviderManager,
     RelyingPartyManager,
 };
 use oid4vci::VerifiableCredentialJwt;
-use oid4vp::PresentationDefinition;
-use siopv2::{request::ResponseType, AuthorizationRequest, RequestUrl, Scope};
+use oid4vp::{
+    oid4vp::{AuthorizationResponseInput, OID4VP},
+    PresentationDefinition,
+};
+use serde_json::json;
 use std::sync::Arc;
 
 lazy_static! {
-    pub static ref PRESENTATION_DEFINITION: PresentationDefinition = serde_json::from_value(serde_json::json!(
+    pub static ref PRESENTATION_DEFINITION: PresentationDefinition = serde_json::from_value(json!(
         {
             "id":"Verifiable Presentation request for sign-on",
                 "input_descriptors":[
@@ -86,23 +92,16 @@ async fn test_implicit_flow() {
     let relying_party_manager = RelyingPartyManager::new([relying_party]).unwrap();
 
     // Create authorization request with response_type `id_token vp_token`
-    let authorization_request: AuthorizationRequest = RequestUrl::builder()
-        .response_type(ResponseType::IdTokenVpToken)
+    let authorization_request = AuthorizationRequest::<Object<OID4VP>>::builder()
         .client_id(relying_party_did)
-        .redirect_uri("https://example.com".to_string())
-        .scope(Scope::openid())
+        .redirect_uri("https://example.com".parse::<url::Url>().unwrap())
         .presentation_definition(PRESENTATION_DEFINITION.clone())
         .nonce("nonce".to_string())
         .build()
-        .and_then(TryInto::try_into)
         .unwrap();
 
     // Create a provider manager and validate the authorization request.
     let provider_manager = ProviderManager::new([subject]).unwrap();
-    let authorization_request = provider_manager
-        .validate_request(RequestUrl::Request(Box::new(authorization_request)))
-        .await
-        .unwrap();
 
     // Create a new verifiable credential.
     let verifiable_credential = VerifiableCredentialJwt::builder()
@@ -151,22 +150,24 @@ async fn test_implicit_flow() {
     .unwrap();
 
     // Create a verifiable presentation using the JWT.
-    let verifiable_presentation = Presentation::builder(Url::parse(subject_did).unwrap(), Object::new())
-        .credential(Jwt::from(jwt))
-        .build()
-        .unwrap();
+    let verifiable_presentation =
+        Presentation::builder(subject_did.parse().unwrap(), identity_core::common::Object::new())
+            .credential(Jwt::from(jwt))
+            .build()
+            .unwrap();
 
-    // Generate the response. It will include both an IdToken and a VpToken.
-    let authorization_response = provider_manager
+    // Generate the authorization_response. It will include both an IdToken and a VpToken.
+    let authorization_response: AuthorizationResponse<OID4VP> = provider_manager
         .generate_response(
-            authorization_request,
-            Default::default(),
-            Some(verifiable_presentation),
-            Some(presentation_submission),
+            &authorization_request,
+            AuthorizationResponseInput {
+                verifiable_presentation,
+                presentation_submission,
+            },
         )
         .unwrap();
 
-    // Validate the response.
+    // Validate the authorization_response.
     assert!(relying_party_manager
         .validate_response(&authorization_response)
         .await
