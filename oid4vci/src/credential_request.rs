@@ -16,8 +16,7 @@ where
     pub credential_format: CFC,
     pub proof: Option<KeyProofType>,
     // TODO: add `credential_identifier` field when support for Authorization Code Flow is added.
-    // TODO: add `credential_encryption_jwk`, `credential_response_encryption_alg` and
-    // `credential_response_encryption_enc` fields when support for JWE is added.
+    // TODO: add `credential_response_encryption` field when support for JWE is added.
 }
 
 /// Batch Credential Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html#name-batch-credential-request.
