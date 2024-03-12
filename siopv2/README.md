@@ -5,7 +5,7 @@ Working Group](https://openid.net/wg/digital-credentials-protocols/).
 
 | Specification      | Description                                | Version
 | -------------------| ------------------------------------------ | -------
-| [SIOPv2](siopv2)   | Self-Issued OpenID Provider v2             | [Editor's Draft published: 24 August 2023](https://github.com/openid/SIOPv2/blob/fb00ab840daa0cec614691b712e28c1f77ed43ea/openid-connect-self-issued-v2-1_0.md)
+| [SIOPv2](siopv2)   | Self-Issued OpenID Provider v2             | [Working Group Draft 13 published: 28 November 2023](https://openid.net/specs/openid-connect-self-issued-v2-1_0-13.html)
 
 An overview of all the OpenID Digital Credentials Protocols implementation in Rust can be found [here](../README.md).
 

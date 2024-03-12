@@ -69,6 +69,7 @@ pub struct AuthorizationRequestBuilder {
     nonce: Option<String>,
     claims: Option<Result<ClaimRequests>>,
     client_metadata: Option<ClientMetadataEnum<ClientMetadataParameters>>,
+    custom_url_scheme: Option<String>,
 }
 
 impl AuthorizationRequestBuilder {
@@ -91,6 +92,7 @@ impl AuthorizationRequestBuilder {
     builder_fn!(nonce, String);
     builder_fn!(client_metadata, ClientMetadataEnum<ClientMetadataParameters>);
     builder_fn!(state, String);
+    builder_fn!(custom_url_scheme, String);
 
     pub fn build(mut self) -> Result<AuthorizationRequest<Object<SIOPv2>>> {
         match (self.client_id.take(), self.is_empty()) {
@@ -112,6 +114,7 @@ impl AuthorizationRequestBuilder {
                 };
 
                 Ok(AuthorizationRequest::<Object<SIOPv2>> {
+                    custom_url_scheme: self.custom_url_scheme.take().unwrap_or("openid".to_string()),
                     body: Object::<SIOPv2> {
                         rfc7519_claims: self.rfc7519_claims,
                         client_id,
@@ -184,6 +187,7 @@ mod tests {
         assert_eq!(
             request_url,
             AuthorizationRequest::<Object<SIOPv2>> {
+                custom_url_scheme: "openid".to_string(),
                 body: Object::<SIOPv2> {
                     rfc7519_claims: RFC7519Claims::default(),
                     client_id: "did:example:123".to_string(),

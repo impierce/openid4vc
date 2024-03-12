@@ -5,7 +5,7 @@ Working Group](https://openid.net/wg/digital-credentials-protocols/).
 
 | Specification      | Description                                | Version
 | -------------------| ------------------------------------------ | -------
-| [OID4VCI](oid4vci) | OpenID for Verifiable Credential Issuance  | [Editor's Draft published: 30 August 2023](https://github.com/openid/OpenID4VCI/blob/111db260b1ad1915ca1462cc4904781beb179972/openid-4-verifiable-credential-issuance-1_0.md)
+| [OID4VCI](oid4vci) | OpenID for Verifiable Credential Issuance  | [Working Group Draft 12 published: 26 November 2023](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html)
 
 An overview of all the OpenID Digital Credentials Protocols implementation in Rust can be found [here](../README.md).
 
