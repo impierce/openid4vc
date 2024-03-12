@@ -16,7 +16,7 @@ pub enum TokenRequest {
     PreAuthorizedCode {
         #[serde(rename = "pre-authorized_code")]
         pre_authorized_code: String,
-        user_pin: Option<String>,
+        tx_code: Option<String>,
     },
 }
 
@@ -45,12 +45,12 @@ mod tests {
             serde_urlencoded::from_str::<TokenRequest>(
                 "grant_type=urn:ietf:params:oauth:grant-type:pre-authorized_code\
                 &pre-authorized_code=SplxlOBeZQQYbYS6WxSbIA\
-                &user_pin=493536"
+                &tx_code=493536"
             )
             .unwrap(),
             TokenRequest::PreAuthorizedCode {
                 pre_authorized_code: "SplxlOBeZQQYbYS6WxSbIA".to_string(),
-                user_pin: Some("493536".to_string())
+                tx_code: Some("493536".to_string())
             }
         );
     }

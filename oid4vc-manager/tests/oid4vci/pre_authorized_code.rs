@@ -86,7 +86,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             pre_authorized_code, ..
         }) => TokenRequest::PreAuthorizedCode {
             pre_authorized_code: pre_authorized_code.unwrap().pre_authorized_code,
-            user_pin: Some("493536".to_string()),
+            tx_code: Some("493536".to_string()),
         },
         None => unreachable!(),
     };

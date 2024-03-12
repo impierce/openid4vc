@@ -24,7 +24,6 @@ lazy_static! {
         pre_authorized_code: generate_authorization_code(16),
         ..Default::default()
     };
-    pub static ref USER_PIN: String = "493536".to_string();
     pub static ref ACCESS_TOKEN: String = "czZCaGRSa3F0MzpnWDFmQmF0M2JW".to_string();
     pub static ref C_NONCE: String = "tZignsnFbp".to_string();
 }
