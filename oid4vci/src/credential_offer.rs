@@ -30,7 +30,7 @@ pub struct PreAuthorizedCode {
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 pub struct CredentialOfferParameters {
     pub credential_issuer: Url,
-    pub credentials: Vec<String>,
+    pub credential_configuration_ids: Vec<String>,
     pub grants: Option<Grants>,
 }
 
@@ -130,7 +130,7 @@ mod tests {
             credential_offer,
             CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec!["UniversityDegree_JWT".to_string(),],
+                credential_configuration_ids: vec!["UniversityDegree_JWT".to_string(),],
                 grants: Some(Grants {
                     pre_authorized_code: Some(PreAuthorizedCode {
                         pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
@@ -157,7 +157,7 @@ mod tests {
         assert_eq!(
             CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec!["UniversityDegree_LDP".to_string(),],
+                credential_configuration_ids: vec!["UniversityDegree_LDP".to_string(),],
                 grants: Some(Grants {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
@@ -173,7 +173,7 @@ mod tests {
         assert_eq!(
             CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec!["UniversityDegreeCredential".to_string(),],
+                credential_configuration_ids: vec!["UniversityDegreeCredential".to_string(),],
                 grants: Some(Grants {
                     authorization_code: Some(AuthorizationCode {
                         issuer_state: Some("eyJhbGciOiJSU0Et...FYUaBy".to_string()),
@@ -188,7 +188,7 @@ mod tests {
         assert_eq!(
             CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec!["UniversityDegree_LDP_VC".to_string()],
+                credential_configuration_ids: vec!["UniversityDegree_LDP_VC".to_string()],
                 grants: None
             },
             json_example::<CredentialOfferParameters>("tests/examples/credential_offer_ldp_vc.json")
@@ -197,7 +197,7 @@ mod tests {
         assert_eq!(
             CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec!["org.iso.18013.5.1.mDL".to_string(),],
+                credential_configuration_ids: vec!["org.iso.18013.5.1.mDL".to_string(),],
                 grants: Some(Grants {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
@@ -213,7 +213,7 @@ mod tests {
         assert_eq!(
             CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec![
+                credential_configuration_ids: vec![
                     "UniversityDegreeCredential".to_string(),
                     "org.iso.18013.5.1.mDL".to_string(),
                 ],
@@ -235,7 +235,7 @@ mod tests {
         assert_eq!(
             CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec!["UniversityDegreeCredential".to_string()],
+                credential_configuration_ids: vec!["UniversityDegreeCredential".to_string()],
                 grants: Some(Grants {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {

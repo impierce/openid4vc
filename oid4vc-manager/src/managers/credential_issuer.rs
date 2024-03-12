@@ -67,7 +67,7 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
     }
 
     pub fn credential_offer(&self) -> Result<CredentialOfferParameters> {
-        let credentials: Vec<String> = self
+        let credential_configuration_ids: Vec<String> = self
             .credential_issuer
             .metadata
             .credentials_supported
@@ -76,7 +76,7 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
             .collect();
         Ok(CredentialOfferParameters {
             credential_issuer: self.credential_issuer.metadata.credential_issuer.clone(),
-            credentials,
+            credential_configuration_ids,
             grants: Some(Grants {
                 authorization_code: self.storage.get_authorization_code(),
                 pre_authorized_code: self.storage.get_pre_authorized_code(),

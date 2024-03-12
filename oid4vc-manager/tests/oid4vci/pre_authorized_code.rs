@@ -97,12 +97,12 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         .await
         .unwrap();
 
-    // Sort the credentials for predictable testing.
-    credential_offer.credentials.sort();
+    // Sort the credential_configuration_ids for predictable testing.
+    credential_offer.credential_configuration_ids.sort();
 
-    // The credential offer contains two credentials
+    // The credential offer contains two credential_configuration_ids which are supported by the credential issuer.
     let credentials: Vec<_> = credential_offer
-        .credentials
+        .credential_configuration_ids
         .iter()
         .map(|credential| {
             credential_issuer_metadata
