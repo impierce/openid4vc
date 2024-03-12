@@ -128,7 +128,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             .unwrap();
 
         let credential = match credential_response.credential {
-            CredentialResponseType::Immediate { credential } => credential,
+            CredentialResponseType::Immediate { credential, .. } => credential,
             _ => panic!("Credential was not a JWT VC JSON."),
         };
 
@@ -171,7 +171,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             .into_iter()
             .map(|credential_response| {
                 let credential = match credential_response {
-                    CredentialResponseType::Immediate { credential } => credential,
+                    CredentialResponseType::Immediate { credential, .. } => credential,
                     _ => panic!("Credential was not a JWT VC JSON."),
                 };
 

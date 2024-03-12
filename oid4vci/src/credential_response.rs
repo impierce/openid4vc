@@ -24,8 +24,13 @@ pub struct BatchCredentialResponse {
 #[derive(Serialize, Debug, PartialEq, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum CredentialResponseType {
-    Deferred { transaction_id: String },
-    Immediate { credential: serde_json::Value },
+    Deferred {
+        transaction_id: String,
+    },
+    Immediate {
+        credential: serde_json::Value,
+        notification_id: Option<String>,
+    },
 }
 
 #[cfg(test)]
@@ -76,6 +81,7 @@ mod tests {
                             }
                         }
                     }),
+                    notification_id: None,
                 },
             ],
             c_nonce: Some("456".to_string()),
