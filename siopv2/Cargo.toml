@@ -10,8 +10,6 @@ repository.workspace = true
 
 [dependencies]
 oid4vc-core = { path = "../oid4vc-core" }
-oid4vp = { path = "../oid4vp" }
-oid4vci = { path = "../oid4vci" }
 
 anyhow = "1.0.70"
 async-trait = "0.1.68"

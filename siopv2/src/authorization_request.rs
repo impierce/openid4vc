@@ -24,10 +24,6 @@ pub struct AuthorizationRequestParameters {
 }
 
 impl AuthorizationRequestParameters {
-    pub fn is_cross_device_request(&self) -> bool {
-        self.response_mode == Some("post".to_string())
-    }
-
     pub fn subject_syntax_types_supported(&self) -> Option<&Vec<SubjectSyntaxType>> {
         self.client_metadata
             .as_ref()

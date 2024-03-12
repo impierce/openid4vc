@@ -102,7 +102,6 @@ async fn test_implicit_flow() {
 
     // Create a provider manager and validate the authorization request.
     let provider_manager = ProviderManager::new([subject]).unwrap();
-    let authorization_request = authorization_request;
 
     // Create a new verifiable credential.
     let verifiable_credential = VerifiableCredentialJwt::builder()
