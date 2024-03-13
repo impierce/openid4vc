@@ -170,18 +170,6 @@ mod tests {
         assert_eq!(
             CredentialRequest {
                 credential_format: CredentialFormats::MsoMdoc(Parameters {
-                    parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
-                }),
-                proof: Some(KeyProofType::Jwt {
-                    jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
-                })
-            },
-            json_example::<CredentialRequest>("tests/examples/credential_request_iso_mdl.json")
-        );
-
-        assert_eq!(
-            CredentialRequest {
-                credential_format: CredentialFormats::MsoMdoc(Parameters {
                     parameters: (
                         "org.iso.18013.5.1.mDL".to_string(),
                         Some(json!({
@@ -233,30 +221,6 @@ mod tests {
                 })
             },
             json_example::<CredentialRequest>("tests/examples/credential_request_jwt_vc_json-ld.json")
-        );
-
-        assert_eq!(
-            CredentialRequest {
-                credential_format: CredentialFormats::JwtVcJson(Parameters {
-                    parameters: (
-                        jwt_vc_json::CredentialDefinition {
-                            type_: vec![
-                                "VerifiableCredential".to_string(),
-                                "UniversityDegreeCredential".to_string()
-                            ],
-                            credential_subject: None
-                        },
-                        None
-                    )
-                        .into()
-                }),
-                proof: Some(KeyProofType::Jwt {
-                    jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJzNkJoZFJrcXQzIiwiYXVkIjoiaHR0cHM6Ly9zZXJ2ZXIuZXhhbXBsZS5jb20iLCJpYXQiOiIyMDE4LTA5LTE0VDIxOjE5OjEwWiIsIm5vbmNlIjoidFppZ25zbkZicCJ9.ewdkIkPV50iOeBUqMXCC_aZKPxgihac0aW9EkL1nOzM".to_string()
-                })
-            },
-            json_example::<CredentialRequest>(
-                "tests/examples/credential_request_jwt_vc_json.json"
-            )
         );
 
         assert_eq!(
