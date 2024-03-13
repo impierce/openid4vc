@@ -19,6 +19,7 @@ where
     pub credential_endpoint: Url,
     pub batch_credential_endpoint: Option<Url>,
     pub deferred_credential_endpoint: Option<Url>,
+    pub notification_endpoint: Option<Url>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub credential_response_encryption_alg_values_supported: Vec<String>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
@@ -71,6 +72,7 @@ mod tests {
                         .parse()
                         .unwrap()
                 ),
+                notification_endpoint: None,
                 credential_response_encryption_alg_values_supported: vec![],
                 credential_response_encryption_enc_values_supported: vec![],
                 credential_identifiers_supported: None,
