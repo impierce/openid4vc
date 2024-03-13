@@ -138,7 +138,7 @@ mod tests {
                         }),
                         scope: Some("UniversityDegree".to_string()),
                         cryptographic_binding_methods_supported: vec!["did:example".to_string()],
-                        credential_signing_alg_values_supported: vec!["ES256K".to_string()],
+                        credential_signing_alg_values_supported: vec!["ES256".to_string()],
                         proof_types_supported: vec![(
                             ProofType::Jwt,
                             KeyProofMetadata {
@@ -151,7 +151,7 @@ mod tests {
                             "name": "University Credential",
                             "locale": "en-US",
                             "logo": {
-                                "url": "https://exampleuniversity.com/public/logo.png",
+                                "url": "https://university.example.edu/public/logo.png",
                                 "alt_text": "a square logo of a university"
                             },
                             "background_color": "#12107c",
