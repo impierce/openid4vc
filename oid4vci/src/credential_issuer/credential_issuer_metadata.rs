@@ -5,6 +5,13 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::HashMap;
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct CredentialResponseEncryption {
+    pub alg_values_supported: Vec<String>,
+    pub enc_values_supported: Vec<String>,
+    pub encryption_required: bool,
+}
+
 /// Credential Issuer Metadata as described here:
 /// https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html#name-credential-issuer-metadata-p.
 #[skip_serializing_none]
@@ -20,11 +27,7 @@ where
     pub batch_credential_endpoint: Option<Url>,
     pub deferred_credential_endpoint: Option<Url>,
     pub notification_endpoint: Option<Url>,
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub credential_response_encryption_alg_values_supported: Vec<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub credential_response_encryption_enc_values_supported: Vec<String>,
-    pub require_credential_response_encryption: Option<bool>,
+    pub credential_response_encryption: Option<CredentialResponseEncryption>,
     pub credential_identifiers_supported: Option<bool>,
     pub display: Option<Vec<serde_json::Value>>,
     pub credentials_supported: HashMap<String, CredentialsSupportedObject<CFC>>,
@@ -73,10 +76,12 @@ mod tests {
                         .unwrap()
                 ),
                 notification_endpoint: None,
-                credential_response_encryption_alg_values_supported: vec![],
-                credential_response_encryption_enc_values_supported: vec![],
+                credential_response_encryption: Some(CredentialResponseEncryption {
+                    alg_values_supported: vec!["ECDH-ES".to_string()],
+                    enc_values_supported: vec!["A128GCM".to_string()],
+                    encryption_required: false
+                }),
                 credential_identifiers_supported: None,
-                require_credential_response_encryption: None,
                 display: Some(vec![
                     json!({
                         "name": "Example University",
