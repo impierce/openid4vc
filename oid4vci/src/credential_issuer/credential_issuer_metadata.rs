@@ -1,4 +1,4 @@
-use super::credentials_supported::CredentialsSupportedObject;
+use super::credential_configurations_supported::CredentialConfigurationsSupportedObject;
 use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -31,7 +31,7 @@ where
     pub credential_identifiers_supported: Option<bool>,
     pub signed_metadata: Option<String>,
     pub display: Option<Vec<serde_json::Value>>,
-    pub credential_configurations_supported: HashMap<String, CredentialsSupportedObject<CFC>>,
+    pub credential_configurations_supported: HashMap<String, CredentialConfigurationsSupportedObject<CFC>>,
 }
 
 #[cfg(test)]
@@ -97,7 +97,7 @@ mod tests {
                 ]),
                 credential_configurations_supported: vec![(
                     "UniversityDegreeCredential".to_string(),
-                    CredentialsSupportedObject {
+                    CredentialConfigurationsSupportedObject {
                         credential_format: CredentialFormats::<WithParameters>::JwtVcJson(Parameters {
                             parameters: (
                                 jwt_vc_json::CredentialDefinition {

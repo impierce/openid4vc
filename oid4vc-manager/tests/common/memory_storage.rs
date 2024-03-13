@@ -7,7 +7,7 @@ use oid4vc_manager::storage::Storage;
 use oid4vci::{
     authorization_response::AuthorizationResponse,
     credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters},
-    credential_issuer::credentials_supported::CredentialsSupportedObject,
+    credential_issuer::credential_configurations_supported::CredentialConfigurationsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
     credential_response::{CredentialResponse, CredentialResponseType},
     token_request::TokenRequest,
@@ -32,19 +32,21 @@ lazy_static! {
 pub struct MemoryStorage;
 
 impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for MemoryStorage {
-    fn get_credentials_supported(&self) -> HashMap<String, CredentialsSupportedObject<CFC>> {
+    fn get_credential_configurations_supported(&self) -> HashMap<String, CredentialConfigurationsSupportedObject<CFC>> {
         vec![
             (
                 "UniversityDegree_JWT".to_string(),
                 serde_json::from_reader(
-                    File::open("./tests/common/credentials_supported_objects/university_degree.json").unwrap(),
+                    File::open("./tests/common/credential_configurations_supported_objects/university_degree.json")
+                        .unwrap(),
                 )
                 .unwrap(),
             ),
             (
                 "DriverLicense_JWT".to_string(),
                 serde_json::from_reader(
-                    File::open("./tests/common/credentials_supported_objects/driver_license.json").unwrap(),
+                    File::open("./tests/common/credential_configurations_supported_objects/driver_license.json")
+                        .unwrap(),
                 )
                 .unwrap(),
             ),

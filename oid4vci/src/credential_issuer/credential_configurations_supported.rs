@@ -11,7 +11,7 @@ use serde_with::skip_serializing_none;
 /// Credentials Supported object as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html#section-10.2.3-2.11.1.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct CredentialsSupportedObject<CFC = CredentialFormats<WithParameters>>
+pub struct CredentialConfigurationsSupportedObject<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {
@@ -43,7 +43,7 @@ mod tests {
 
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     struct TestWrapper {
-        credentials_supported: HashMap<String, CredentialsSupportedObject>,
+        credential_configurations_supported: HashMap<String, CredentialConfigurationsSupportedObject>,
     }
 
     fn json_example<T>(path: &str) -> T
@@ -62,9 +62,9 @@ mod tests {
 
         assert_eq!(
             TestWrapper {
-                credentials_supported: vec![(
+                credential_configurations_supported: vec![(
                     "UniversityDegreeCredential".to_string(),
-                    CredentialsSupportedObject {
+                    CredentialConfigurationsSupportedObject {
                         credential_format: CredentialFormats::JwtVcJson(Parameters {
                             parameters: (
                                 jwt_vc_json::CredentialDefinition {
@@ -134,9 +134,9 @@ mod tests {
 
         assert_eq!(
             TestWrapper {
-                credentials_supported: vec![(
+                credential_configurations_supported: vec![(
                     "UniversityDegree_LDP_VC".to_string(),
-                    CredentialsSupportedObject {
+                    CredentialConfigurationsSupportedObject {
                         credential_format: CredentialFormats::LdpVc(Parameters {
                             parameters: (
                                 ldp_vc::CredentialDefinition {
@@ -204,9 +204,9 @@ mod tests {
 
         assert_eq!(
             TestWrapper {
-                credentials_supported: vec![(
+                credential_configurations_supported: vec![(
                     "org.iso.18013.5.1.mDL".to_string(),
-                    CredentialsSupportedObject {
+                    CredentialConfigurationsSupportedObject {
                         credential_format: CredentialFormats::MsoMdoc(Parameters {
                             parameters: (
                                 "org.iso.18013.5.1.mDL".to_string(),

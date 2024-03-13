@@ -46,7 +46,7 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
                     credential_identifiers_supported: None,
                     signed_metadata: None,
                     display: None,
-                    credential_configurations_supported: storage.get_credentials_supported(),
+                    credential_configurations_supported: storage.get_credential_configurations_supported(),
                 },
                 authorization_server_metadata: AuthorizationServerMetadata {
                     issuer: issuer_url.clone(),
