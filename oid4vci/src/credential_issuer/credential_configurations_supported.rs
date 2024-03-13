@@ -91,6 +91,7 @@ mod tests {
                                         },
                                         "degree": {},
                                         "gpa": {
+                                            "mandatory": true,
                                             "display": [
                                                 {
                                                     "name": "GPA"
@@ -105,7 +106,7 @@ mod tests {
                         }),
                         scope: Some("UniversityDegree".to_string()),
                         cryptographic_binding_methods_supported: vec!["did:example".to_string()],
-                        credential_signing_alg_values_supported: vec!["ES256K".to_string()],
+                        credential_signing_alg_values_supported: vec!["ES256".to_string()],
                         proof_types_supported: vec![(
                             ProofType::Jwt,
                             KeyProofMetadata {
@@ -118,7 +119,7 @@ mod tests {
                             "name": "University Credential",
                             "locale": "en-US",
                             "logo": {
-                                "url": "https://exampleuniversity.com/public/logo.png",
+                                "url": "https://university.example.edu/public/logo.png",
                                 "alt_text": "a square logo of a university"
                             },
                             "background_color": "#12107c",
@@ -167,6 +168,7 @@ mod tests {
                                         },
                                         "degree": {},
                                         "gpa": {
+                                            "mandatory": true,
                                             "display": [
                                                 {
                                                     "name": "GPA"
@@ -187,7 +189,7 @@ mod tests {
                                 "name": "University Credential",
                                 "locale": "en-US",
                                 "logo": {
-                                    "url": "https://exampleuniversity.com/public/logo.png",
+                                    "url": "https://university.example.edu/public/logo.png",
                                     "alt_text": "a square logo of a university"
                                 },
                                 "background_color": "#12107c",
@@ -232,7 +234,9 @@ mod tests {
                                                 }
                                             ]
                                         },
-                                        "birth_date": {}
+                                        "birth_date": {
+                                            "mandatory": true,
+                                        }
                                     },
                                     "org.iso.18013.5.1.aamva": {
                                         "organ_donor": {}
@@ -243,7 +247,7 @@ mod tests {
                                 .into()
                         }),
                         scope: None,
-                        cryptographic_binding_methods_supported: vec!["mso".to_string()],
+                        cryptographic_binding_methods_supported: vec!["cose_key".to_string()],
                         credential_signing_alg_values_supported: vec![
                             "ES256".to_string(),
                             "ES384".to_string(),
@@ -255,18 +259,18 @@ mod tests {
                                 "name": "Mobile Driving License",
                                 "locale": "en-US",
                                 "logo": {
-                                    "url": "https://examplestate.com/public/mdl.png",
-                                    "alt_text": "a square figure of a mobile driving license"
+                                    "url": "https://state.example.org/public/mdl.png",
+                                    "alt_text": "state mobile driving license"
                                 },
                                 "background_color": "#12107c",
                                 "text_color": "#FFFFFF"
                             }),
                             json!({
-                                "name": "在籍証明書",
+                                "name": "モバイル運転免許証",
                                 "locale": "ja-JP",
                                 "logo": {
-                                    "url": "https://examplestate.com/public/mdl.png",
-                                    "alt_text": "大学のロゴ"
+                                    "url": "https://state.example.org/public/mdl.png",
+                                    "alt_text": "米国州発行のモバイル運転免許証"
                                 },
                                 "background_color": "#12107c",
                                 "text_color": "#FFFFFF"
