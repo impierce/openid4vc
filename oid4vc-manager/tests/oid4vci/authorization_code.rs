@@ -6,7 +6,7 @@ use oid4vc_manager::{
     servers::credential_issuer::Server,
 };
 use oid4vci::{
-    authorization_details::{AuthorizationDetailsObject, OpenidCredential},
+    authorization_details::{AuthorizationDetailsObject, CredentialConfigurationOrFormat, OpenidCredential},
     credential_format_profiles::{CredentialFormats, WithParameters},
     credential_response::{CredentialResponse, CredentialResponseType},
     token_request::TokenRequest,
@@ -76,7 +76,9 @@ async fn test_authorization_code_flow() {
             vec![AuthorizationDetailsObject {
                 r#type: OpenidCredential::Type,
                 locations: None,
-                credential_format: university_degree_credential_format.clone(),
+                credential_configuration_or_format: CredentialConfigurationOrFormat::CredentialFormat(
+                    university_degree_credential_format.clone(),
+                ),
             }
             .into()],
         )

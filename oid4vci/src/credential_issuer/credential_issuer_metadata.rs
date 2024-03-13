@@ -39,7 +39,8 @@ mod tests {
     use super::*;
     use crate::{
         credential_format_profiles::{
-            w3c_verifiable_credentials::jwt_vc_json, CredentialFormats, Parameters, WithParameters,
+            w3c_verifiable_credentials::{jwt_vc_json, CredentialSubject},
+            CredentialFormats, Parameters, WithParameters,
         },
         proof::KeyProofMetadata,
         ProofType,
@@ -105,32 +106,34 @@ mod tests {
                                         "VerifiableCredential".to_string(),
                                         "UniversityDegreeCredential".to_string()
                                     ],
-                                    credential_subject: Some(json!({
-                                        "given_name": {
-                                            "display": [
-                                                {
-                                                    "name": "Given Name",
-                                                    "locale": "en-US"
-                                                },
-                                            ]
-                                        },
-                                        "family_name": {
-                                            "display": [
-                                                {
-                                                    "name": "Surname",
-                                                    "locale": "en-US"
-                                                }
-                                            ]
-                                        },
-                                        "degree": {},
-                                        "gpa": {
-                                            "display": [
-                                                {
-                                                    "name": "GPA"
-                                                }
-                                            ]
-                                        }
-                                    }))
+                                    credential_subject: CredentialSubject {
+                                        credential_subject: Some(json!({
+                                            "given_name": {
+                                                "display": [
+                                                    {
+                                                        "name": "Given Name",
+                                                        "locale": "en-US"
+                                                    },
+                                                ]
+                                            },
+                                            "family_name": {
+                                                "display": [
+                                                    {
+                                                        "name": "Surname",
+                                                        "locale": "en-US"
+                                                    }
+                                                ]
+                                            },
+                                            "degree": {},
+                                            "gpa": {
+                                                "display": [
+                                                    {
+                                                        "name": "GPA"
+                                                    }
+                                                ]
+                                            }
+                                        }))
+                                    }
                                 },
                                 None
                             )

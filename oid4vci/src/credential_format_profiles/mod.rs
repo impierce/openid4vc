@@ -4,9 +4,12 @@ pub mod w3c_verifiable_credentials;
 use self::{
     iso_mdl::mso_mdoc::MsoMdoc,
     sealed::FormatExtension,
-    w3c_verifiable_credentials::{jwt_vc_json::JwtVcJson, jwt_vc_json_ld::JwtVcJsonLd, ldp_vc::LdpVc},
+    w3c_verifiable_credentials::{
+        jwt_vc_json::JwtVcJson, jwt_vc_json_ld::JwtVcJsonLd, ldp_vc::LdpVc, CredentialSubject,
+    },
 };
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 #[macro_export]
 macro_rules! credential_format {
@@ -106,6 +109,15 @@ where
     MsoMdoc(C::Container<MsoMdoc>),
 }
 
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Clone, Eq, PartialEq, Deserialize)]
+pub enum CredentialConfiguration {
+    #[serde(rename = "credential_definition")]
+    W3cVerifiableCredential(CredentialSubject),
+    #[serde(rename = "claims")]
+    MsoMdoc(Option<serde_json::Value>),
+}
+
 impl<C> CredentialFormatCollection for CredentialFormats<C> where C: FormatExtension {}
 
 impl<C> CredentialFormats<C>
@@ -175,7 +187,7 @@ mod tests {
                             "VerifiableCredential".to_string(),
                             "DriverLicenseCredential".to_string(),
                         ],
-                        credential_subject: None,
+                        credential_subject: Default::default(),
                     },
                     order: None,
                 },

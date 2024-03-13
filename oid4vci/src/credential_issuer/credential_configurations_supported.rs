@@ -34,7 +34,7 @@ where
 mod tests {
     use super::*;
     use crate::credential_format_profiles::{
-        w3c_verifiable_credentials::{jwt_vc_json, ldp_vc},
+        w3c_verifiable_credentials::{jwt_vc_json, ldp_vc, CredentialSubject},
         CredentialFormats, Parameters,
     };
     use serde::de::DeserializeOwned;
@@ -72,33 +72,35 @@ mod tests {
                                         "VerifiableCredential".to_string(),
                                         "UniversityDegreeCredential".to_string()
                                     ],
-                                    credential_subject: Some(json!({
-                                        "given_name": {
-                                            "display": [
-                                                {
-                                                    "name": "Given Name",
-                                                    "locale": "en-US"
-                                                }
-                                            ]
-                                        },
-                                        "family_name": {
-                                            "display": [
-                                                {
-                                                    "name": "Surname",
-                                                    "locale": "en-US"
-                                                }
-                                            ]
-                                        },
-                                        "degree": {},
-                                        "gpa": {
-                                            "mandatory": true,
-                                            "display": [
-                                                {
-                                                    "name": "GPA"
-                                                }
-                                            ]
-                                        }
-                                    })),
+                                    credential_subject: CredentialSubject {
+                                        credential_subject: Some(json!({
+                                            "given_name": {
+                                                "display": [
+                                                    {
+                                                        "name": "Given Name",
+                                                        "locale": "en-US"
+                                                    }
+                                                ]
+                                            },
+                                            "family_name": {
+                                                "display": [
+                                                    {
+                                                        "name": "Surname",
+                                                        "locale": "en-US"
+                                                    }
+                                                ]
+                                            },
+                                            "degree": {},
+                                            "gpa": {
+                                                "mandatory": true,
+                                                "display": [
+                                                    {
+                                                        "name": "GPA"
+                                                    }
+                                                ]
+                                            }
+                                        }))
+                                    },
                                 },
                                 None
                             )
@@ -149,33 +151,35 @@ mod tests {
                                         "VerifiableCredential".to_string(),
                                         "UniversityDegreeCredential".to_string()
                                     ],
-                                    credential_subject: Some(json!({
-                                        "given_name": {
-                                            "display": [
-                                                {
-                                                    "name": "Given Name",
-                                                    "locale": "en-US"
-                                                }
-                                            ]
-                                        },
-                                        "family_name": {
-                                            "display": [
-                                                {
-                                                    "name": "Surname",
-                                                    "locale": "en-US"
-                                                }
-                                            ]
-                                        },
-                                        "degree": {},
-                                        "gpa": {
-                                            "mandatory": true,
-                                            "display": [
-                                                {
-                                                    "name": "GPA"
-                                                }
-                                            ]
-                                        }
-                                    })),
+                                    credential_subject: CredentialSubject {
+                                        credential_subject: Some(json!({
+                                            "given_name": {
+                                                "display": [
+                                                    {
+                                                        "name": "Given Name",
+                                                        "locale": "en-US"
+                                                    }
+                                                ]
+                                            },
+                                            "family_name": {
+                                                "display": [
+                                                    {
+                                                        "name": "Surname",
+                                                        "locale": "en-US"
+                                                    }
+                                                ]
+                                            },
+                                            "degree": {},
+                                            "gpa": {
+                                                "mandatory": true,
+                                                "display": [
+                                                    {
+                                                        "name": "GPA"
+                                                    }
+                                                ]
+                                            }
+                                        }))
+                                    },
                                 },
                                 None
                             )

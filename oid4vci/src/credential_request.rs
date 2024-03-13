@@ -34,7 +34,7 @@ mod tests {
     use crate::credential_format_profiles::{
         w3c_verifiable_credentials::{
             jwt_vc_json::{self, CredentialDefinition},
-            jwt_vc_json_ld, ldp_vc,
+            jwt_vc_json_ld, ldp_vc, CredentialSubject,
         },
         CredentialFormats, Parameters,
     };
@@ -85,11 +85,13 @@ mod tests {
                                 "VerifiableCredential".to_string(),
                                 "UniversityDegreeCredential".to_string()
                             ],
-                            credential_subject: Some(json!({
-                                "given_name": {},
-                                "family_name": {},
-                                "degree": {}
-                            })),
+                            credential_subject: CredentialSubject {
+                                credential_subject: Some(json!({
+                                    "given_name": {},
+                                    "family_name": {},
+                                    "degree": {}
+                                }))
+                            },
                         },
                         None
                     )
@@ -206,11 +208,13 @@ mod tests {
                                 "VerifiableCredential".to_string(),
                                 "UniversityDegreeCredential".to_string()
                             ],
-                            credential_subject: Some(json!({
-                                "degree": {
-                                    "type":{}
-                                }
-                            })),
+                            credential_subject: CredentialSubject {
+                                credential_subject: Some(json!({
+                                    "degree": {
+                                        "type":{}
+                                    }
+                                }))
+                            },
                         },
                         None
                     )
@@ -232,11 +236,13 @@ mod tests {
                                 "VerifiableCredential".to_string(),
                                 "UniversityDegreeCredential".to_string()
                             ],
-                            credential_subject: Some(json!({
+                            credential_subject: CredentialSubject {
+                                credential_subject: Some(json!({
                                     "given_name": {},
                                     "family_name": {},
                                     "degree": {}
-                            }))
+                                }))
+                            },
                         },
                         None
                     )
@@ -264,11 +270,13 @@ mod tests {
                                 "VerifiableCredential".to_string(),
                                 "UniversityDegreeCredential".to_string()
                             ],
-                            credential_subject: Some(json!({
-                                    "degree": {
-                                        "type": {}
-                                    }
-                            }))
+                            credential_subject: CredentialSubject {
+                                credential_subject: Some(json!({
+                                        "degree": {
+                                            "type": {}
+                                        }
+                                }))
+                            }
                         },
                         None
                     )
