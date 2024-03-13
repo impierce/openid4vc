@@ -20,7 +20,7 @@ where
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub cryptographic_binding_methods_supported: Vec<String>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub cryptographic_suites_supported: Vec<String>,
+    pub credential_signing_alg_values_supported: Vec<String>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub proof_types_supported: Vec<ProofType>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
@@ -102,7 +102,7 @@ mod tests {
                         }),
                         scope: Some("UniversityDegree".to_string()),
                         cryptographic_binding_methods_supported: vec!["did:example".to_string()],
-                        cryptographic_suites_supported: vec!["ES256K".to_string()],
+                        credential_signing_alg_values_supported: vec!["ES256K".to_string()],
                         proof_types_supported: vec![ProofType::Jwt],
                         display: vec![json!({
                             "name": "University Credential",
@@ -171,7 +171,7 @@ mod tests {
                         }),
                         scope: None,
                         cryptographic_binding_methods_supported: vec!["did:example".to_string()],
-                        cryptographic_suites_supported: vec!["Ed25519Signature2018".to_string()],
+                        credential_signing_alg_values_supported: vec!["Ed25519Signature2018".to_string()],
                         proof_types_supported: vec![],
                         display: vec![json!({
                                 "name": "University Credential",
@@ -234,7 +234,7 @@ mod tests {
                         }),
                         scope: None,
                         cryptographic_binding_methods_supported: vec!["mso".to_string()],
-                        cryptographic_suites_supported: vec![
+                        credential_signing_alg_values_supported: vec![
                             "ES256".to_string(),
                             "ES384".to_string(),
                             "ES512".to_string()
