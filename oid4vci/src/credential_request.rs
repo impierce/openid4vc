@@ -5,7 +5,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-/// Credential Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html#name-credential-request.
+/// Credential Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-request.
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct CredentialRequest<CFC = CredentialFormats<WithParameters>>
@@ -19,7 +19,7 @@ where
     // TODO: add `credential_response_encryption` field when support for JWE is added.
 }
 
-/// Batch Credential Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html#name-batch-credential-request.
+/// Batch Credential Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-batch-credential-request.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BatchCredentialRequest<CFC = CredentialFormats>
 where

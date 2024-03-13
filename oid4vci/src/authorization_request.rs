@@ -4,7 +4,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-/// The Authorization Request is used to request authorization as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html#name-authorization-request.
+/// The Authorization Request is used to request authorization as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-authorization-request.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AuthorizationRequest<CFC>

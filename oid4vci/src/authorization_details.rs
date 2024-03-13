@@ -19,7 +19,7 @@ pub enum OpenidCredential {
 }
 
 /// Represents an object of the `authorization_details` field of the `AuthorizationRequest` object in the Authorization Code Flow as
-/// described in [OpenID4VCI](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html#name-request-issuance-of-a-certa)
+/// described in [OpenID4VCI](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-request-issuance-of-a-certa)
 // TODO: Add `credential_configuration_id` field.
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]

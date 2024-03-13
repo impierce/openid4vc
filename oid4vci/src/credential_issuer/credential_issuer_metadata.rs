@@ -13,7 +13,7 @@ pub struct CredentialResponseEncryption {
 }
 
 /// Credential Issuer Metadata as described here:
-/// https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html#name-credential-issuer-metadata-p.
+/// https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-issuer-metadata-p.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct CredentialIssuerMetadata<CFC = CredentialFormats<WithParameters>>

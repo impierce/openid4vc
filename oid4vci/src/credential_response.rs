@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-/// Credential Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html#name-credential-response.
+/// Credential Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-response.
 #[skip_serializing_none]
 #[derive(Serialize, Debug, PartialEq, Deserialize, Clone)]
 pub struct CredentialResponse {
@@ -11,7 +11,7 @@ pub struct CredentialResponse {
     pub c_nonce_expires_in: Option<u64>,
 }
 
-/// Batch Credential Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html#name-batch-credential-response.
+/// Batch Credential Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-batch-credential-response.
 #[skip_serializing_none]
 #[derive(Serialize, Debug, PartialEq, Deserialize)]
 pub struct BatchCredentialResponse {
