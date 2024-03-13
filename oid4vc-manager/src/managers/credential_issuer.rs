@@ -44,6 +44,7 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
                     notification_endpoint: None,
                     credential_response_encryption: None,
                     credential_identifiers_supported: None,
+                    signed_metadata: None,
                     display: None,
                     credentials_supported: storage.get_credentials_supported(),
                 },

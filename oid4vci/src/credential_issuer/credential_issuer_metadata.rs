@@ -29,6 +29,7 @@ where
     pub notification_endpoint: Option<Url>,
     pub credential_response_encryption: Option<CredentialResponseEncryption>,
     pub credential_identifiers_supported: Option<bool>,
+    pub signed_metadata: Option<String>,
     pub display: Option<Vec<serde_json::Value>>,
     pub credentials_supported: HashMap<String, CredentialsSupportedObject<CFC>>,
 }
@@ -82,6 +83,7 @@ mod tests {
                     encryption_required: false
                 }),
                 credential_identifiers_supported: None,
+                signed_metadata: None,
                 display: Some(vec![
                     json!({
                         "name": "Example University",
