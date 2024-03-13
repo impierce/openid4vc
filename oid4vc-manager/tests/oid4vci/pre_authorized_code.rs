@@ -106,7 +106,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         .iter()
         .map(|credential| {
             credential_issuer_metadata
-                .credentials_supported
+                .credential_configurations_supported
                 .get(credential)
                 .unwrap()
                 .credential_format

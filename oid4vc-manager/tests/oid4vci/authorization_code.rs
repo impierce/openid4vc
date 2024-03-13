@@ -63,7 +63,7 @@ async fn test_authorization_code_flow() {
 
     // Get the credential format for a university degree.
     let university_degree_credential_format: CredentialFormats<WithParameters> = credential_issuer_metadata
-        .credentials_supported
+        .credential_configurations_supported
         .get("UniversityDegree_JWT")
         .unwrap()
         .clone()

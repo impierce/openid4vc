@@ -46,7 +46,7 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
                     credential_identifiers_supported: None,
                     signed_metadata: None,
                     display: None,
-                    credentials_supported: storage.get_credentials_supported(),
+                    credential_configurations_supported: storage.get_credentials_supported(),
                 },
                 authorization_server_metadata: AuthorizationServerMetadata {
                     issuer: issuer_url.clone(),
@@ -70,7 +70,7 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
         let credential_configuration_ids: Vec<String> = self
             .credential_issuer
             .metadata
-            .credentials_supported
+            .credential_configurations_supported
             .iter()
             .map(|credential| credential.0.clone())
             .collect();

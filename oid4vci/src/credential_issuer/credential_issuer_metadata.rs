@@ -31,7 +31,7 @@ where
     pub credential_identifiers_supported: Option<bool>,
     pub signed_metadata: Option<String>,
     pub display: Option<Vec<serde_json::Value>>,
-    pub credentials_supported: HashMap<String, CredentialsSupportedObject<CFC>>,
+    pub credential_configurations_supported: HashMap<String, CredentialsSupportedObject<CFC>>,
 }
 
 #[cfg(test)]
@@ -94,7 +94,7 @@ mod tests {
                         "locale": "fr-FR"
                     })
                 ]),
-                credentials_supported: vec![(
+                credential_configurations_supported: vec![(
                     "UniversityDegreeCredential".to_string(),
                     CredentialsSupportedObject {
                         credential_format: CredentialFormats::<WithParameters>::JwtVcJson(Parameters {
