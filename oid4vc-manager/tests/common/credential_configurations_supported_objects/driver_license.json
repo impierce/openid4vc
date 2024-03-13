@@ -1,11 +1,10 @@
 {
     "format": "jwt_vc_json",
-    "id": "DriverLicense_JWT",
     "cryptographic_binding_methods_supported": [
         "did:key",
         "did:iota"
     ],
-    "cryptographic_suites_supported": [
+    "credential_signing_alg_values_supported": [
         "EdDSA"
     ],
     "credential_definition":{
@@ -14,9 +13,13 @@
             "DriverLicenseCredential"
         ]
     },
-    "proof_types_supported": [
-        "jwt"
-    ],
+    "proof_types_supported": {
+        "jwt": {
+            "proof_signing_alg_values_supported": [
+                "ES256"
+            ]
+        }
+    },
     "display": [
         {
             "name": "Driver License Credential",

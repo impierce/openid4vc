@@ -47,7 +47,7 @@ impl Sign for KeySubject {
         self.document
             .authentication
             .as_ref()
-            .and_then(|authentication_methods| authentication_methods.get(0).cloned())
+            .and_then(|authentication_methods| authentication_methods.first().cloned())
     }
 
     fn sign(&self, message: &str) -> Result<Vec<u8>> {
@@ -99,7 +99,7 @@ async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
     let authentication_method = keypair
         .get_did_document(Config::default())
         .authentication
-        .and_then(|authentication_methods| authentication_methods.get(0).cloned())
+        .and_then(|authentication_methods| authentication_methods.first().cloned())
         .ok_or(anyhow!("No public key found"))?;
     PatchedKeyPair::try_from(authentication_method.as_str())
         .map(|keypair| keypair.public_key_bytes())

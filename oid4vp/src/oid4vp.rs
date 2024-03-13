@@ -76,7 +76,7 @@ impl Extension for OID4VP {
             state,
             extension: AuthorizationResponseParameters {
                 oid4vp_parameters: Oid4vpParams::Params {
-                    vp_token: jwts.get(0).unwrap().to_owned(),
+                    vp_token: jwts.first().unwrap().to_owned(),
                     presentation_submission: user_input.presentation_submission,
                 },
             },
