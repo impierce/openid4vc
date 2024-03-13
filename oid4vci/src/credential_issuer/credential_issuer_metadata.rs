@@ -41,6 +41,7 @@ mod tests {
         credential_format_profiles::{
             w3c_verifiable_credentials::jwt_vc_json, CredentialFormats, Parameters, WithParameters,
         },
+        proof::KeyProofMetadata,
         ProofType,
     };
     use serde::de::DeserializeOwned;
@@ -138,7 +139,14 @@ mod tests {
                         scope: Some("UniversityDegree".to_string()),
                         cryptographic_binding_methods_supported: vec!["did:example".to_string()],
                         credential_signing_alg_values_supported: vec!["ES256K".to_string()],
-                        proof_types_supported: vec![ProofType::Jwt],
+                        proof_types_supported: vec![(
+                            ProofType::Jwt,
+                            KeyProofMetadata {
+                                proof_signing_alg_values_supported: vec!["ES256".to_string()]
+                            }
+                        )]
+                        .into_iter()
+                        .collect(),
                         display: vec![json!({
                             "name": "University Credential",
                             "locale": "en-US",

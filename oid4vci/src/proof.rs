@@ -20,10 +20,16 @@ impl KeyProofType {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct KeyProofMetadata {
+    pub proof_signing_alg_values_supported: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum ProofType {
     Jwt,
     Cwt,
+    // TODO: add support for `LdpVp` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#section-7.2.1-2.3
 }
 
 #[derive(Default)]

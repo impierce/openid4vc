@@ -1,5 +1,8 @@
+use std::collections::HashMap;
+
 use crate::{
     credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters},
+    proof::KeyProofMetadata,
     ProofType,
 };
 use serde::{Deserialize, Serialize};
@@ -21,8 +24,8 @@ where
     pub cryptographic_binding_methods_supported: Vec<String>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub credential_signing_alg_values_supported: Vec<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub proof_types_supported: Vec<ProofType>,
+    #[serde(skip_serializing_if = "HashMap::is_empty", default)]
+    pub proof_types_supported: HashMap<ProofType, KeyProofMetadata>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub display: Vec<serde_json::Value>,
 }
@@ -103,7 +106,14 @@ mod tests {
                         scope: Some("UniversityDegree".to_string()),
                         cryptographic_binding_methods_supported: vec!["did:example".to_string()],
                         credential_signing_alg_values_supported: vec!["ES256K".to_string()],
-                        proof_types_supported: vec![ProofType::Jwt],
+                        proof_types_supported: vec![(
+                            ProofType::Jwt,
+                            KeyProofMetadata {
+                                proof_signing_alg_values_supported: vec!["ES256".to_string()]
+                            }
+                        )]
+                        .into_iter()
+                        .collect(),
                         display: vec![json!({
                             "name": "University Credential",
                             "locale": "en-US",
@@ -172,7 +182,7 @@ mod tests {
                         scope: None,
                         cryptographic_binding_methods_supported: vec!["did:example".to_string()],
                         credential_signing_alg_values_supported: vec!["Ed25519Signature2018".to_string()],
-                        proof_types_supported: vec![],
+                        proof_types_supported: HashMap::new(),
                         display: vec![json!({
                                 "name": "University Credential",
                                 "locale": "en-US",
@@ -239,7 +249,7 @@ mod tests {
                             "ES384".to_string(),
                             "ES512".to_string()
                         ],
-                        proof_types_supported: vec![],
+                        proof_types_supported: HashMap::new(),
                         display: vec![
                             json!({
                                 "name": "Mobile Driving License",
