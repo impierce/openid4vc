@@ -1,13 +1,8 @@
 use crate::credential_format_profiles::{
-    w3c_verifiable_credentials::{
-        jwt_vc_json::{self, JwtVcJson},
-        CredentialSubject,
-    },
-    CredentialConfiguration, CredentialFormatCollection, CredentialFormats, Parameters, WithParameters,
+    CredentialConfiguration, CredentialFormatCollection, CredentialFormats, WithParameters,
 };
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use serde_with::skip_serializing_none;
 
 /// Represents the `openid_credential` field of the `AuthorizationDetailsObject`.
@@ -50,7 +45,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::credential_format_profiles::w3c_verifiable_credentials::CredentialSubject;
+    use crate::credential_format_profiles::{
+        w3c_verifiable_credentials::{jwt_vc_json, CredentialSubject},
+        Parameters,
+    };
     use serde::de::DeserializeOwned;
     use serde_json::json;
     use std::{fs::File, path::Path};
@@ -101,7 +99,7 @@ mod tests {
     #[test]
     fn test_oid4vci_examples() {
         // Examples from
-        // https://github.com/openid/OpenID4VCI/tree/f7985f6120cbcd51fd971a320a61606da14e2580/examples.
+        // https://github.com/openid/OpenID4VCI/tree/80b2214814106e55e5fd09af3415ba4fc124b6be/examples.
 
         assert_eq!(
             vec![AuthorizationDetailsObject {

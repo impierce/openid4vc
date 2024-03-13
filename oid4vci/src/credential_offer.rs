@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn test_oid4vci_examples() {
         // Examples from
-        // https://github.com/openid/OpenID4VCI/tree/f7985f6120cbcd51fd971a320a61606da14e2580/examples.
+        // https://github.com/openid/OpenID4VCI/tree/80b2214814106e55e5fd09af3415ba4fc124b6be/examples.
 
         assert_eq!(
             CredentialOfferParameters {
