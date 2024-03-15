@@ -8,7 +8,7 @@ use url::Url;
 #[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ClientMetadataEnum<T = ()> {
-    // TODO: Add all fields described in https://www.rfc-editor.org/rfc/rfc7591.html#section-2.
+    // TODO: Add all fields described in https://www.rfc-editor.org/rfc/rfc7591.html#section-2
     ClientMetadata {
         client_name: Option<String>,
         logo_uri: Option<Url>,

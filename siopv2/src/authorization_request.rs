@@ -27,7 +27,7 @@ pub struct AuthorizationRequestParameters {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct ClientMetadataParameters {
     /// Represents the URI scheme identifiers of supported Subject Syntax Types.
-    /// As described here: https://openid.net/specs/openid-connect-self-issued-v2-1_0.html#section-7.5-2.1.1.
+    /// As described here: https://openid.net/specs/openid-connect-self-issued-v2-1_0.html#section-7.5-2.1.1
     pub subject_syntax_types_supported: Vec<SubjectSyntaxType>,
 }
 
