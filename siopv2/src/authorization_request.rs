@@ -5,7 +5,7 @@ use monostate::MustBe;
 use oid4vc_core::authorization_request::Object;
 use oid4vc_core::builder_fn;
 use oid4vc_core::{
-    authorization_request::AuthorizationRequest, client_metadata::ClientMetadataEnum, scope::Scope, RFC7519Claims,
+    authorization_request::AuthorizationRequest, client_metadata::ClientMetadataResource, scope::Scope, RFC7519Claims,
     SubjectSyntaxType,
 };
 use serde::{Deserialize, Serialize};
@@ -19,9 +19,8 @@ pub struct AuthorizationRequestParameters {
     pub response_mode: Option<String>,
     pub nonce: String,
     pub claims: Option<ClaimRequests>,
-    // TODO: impl client_metadata_uri.
     #[serde(flatten)]
-    pub client_metadata: Option<ClientMetadataEnum<ClientMetadataParameters>>,
+    pub client_metadata: Option<ClientMetadataResource<ClientMetadataParameters>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -38,11 +37,11 @@ impl AuthorizationRequestParameters {
 
     pub fn subject_syntax_types_supported(&self) -> Option<&Vec<SubjectSyntaxType>> {
         self.client_metadata.as_ref().and_then(|r| match r {
-            ClientMetadataEnum::ClientMetadata { extension, .. } => {
+            ClientMetadataResource::ClientMetadata { extension, .. } => {
                 Some(extension.subject_syntax_types_supported.as_ref())
             }
             // TODO: impl client_metadata_uri.
-            ClientMetadataEnum::ClientMetadataUri(_) => None,
+            ClientMetadataResource::ClientMetadataUri(_) => None,
         })
     }
 
@@ -68,7 +67,7 @@ pub struct AuthorizationRequestBuilder {
     response_mode: Option<String>,
     nonce: Option<String>,
     claims: Option<Result<ClaimRequests>>,
-    client_metadata: Option<ClientMetadataEnum<ClientMetadataParameters>>,
+    client_metadata: Option<ClientMetadataResource<ClientMetadataParameters>>,
 }
 
 impl AuthorizationRequestBuilder {
@@ -89,7 +88,7 @@ impl AuthorizationRequestBuilder {
     builder_fn!(scope, Scope);
     builder_fn!(redirect_uri, url::Url);
     builder_fn!(nonce, String);
-    builder_fn!(client_metadata, ClientMetadataEnum<ClientMetadataParameters>);
+    builder_fn!(client_metadata, ClientMetadataResource<ClientMetadataParameters>);
     builder_fn!(state, String);
 
     pub fn build(mut self) -> Result<AuthorizationRequest<Object<SIOPv2>>> {

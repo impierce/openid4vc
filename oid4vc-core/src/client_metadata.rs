@@ -7,7 +7,7 @@ use url::Url;
 #[skip_serializing_none]
 #[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum ClientMetadataEnum<T = ()> {
+pub enum ClientMetadataResource<T = ()> {
     // TODO: Add all fields described in https://www.rfc-editor.org/rfc/rfc7591.html#section-2
     ClientMetadata {
         client_name: Option<String>,

@@ -7,7 +7,7 @@ use monostate::MustBe;
 use oid4vc_core::authorization_request::Object;
 use oid4vc_core::builder_fn;
 use oid4vc_core::{
-    authorization_request::AuthorizationRequest, client_metadata::ClientMetadataEnum, scope::Scope, RFC7519Claims,
+    authorization_request::AuthorizationRequest, client_metadata::ClientMetadataResource, scope::Scope, RFC7519Claims,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -37,7 +37,7 @@ pub struct AuthorizationRequestParameters {
     pub scope: Option<Scope>,
     pub nonce: String,
     #[serde(flatten)]
-    pub client_metadata: Option<ClientMetadataEnum<ClientMetadataParameters>>,
+    pub client_metadata: Option<ClientMetadataResource<ClientMetadataParameters>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -59,7 +59,7 @@ pub struct AuthorizationRequestBuilder {
     scope: Option<Scope>,
     response_mode: Option<String>,
     nonce: Option<String>,
-    client_metadata: Option<ClientMetadataEnum<ClientMetadataParameters>>,
+    client_metadata: Option<ClientMetadataResource<ClientMetadataParameters>>,
 }
 
 impl AuthorizationRequestBuilder {
@@ -75,7 +75,7 @@ impl AuthorizationRequestBuilder {
     builder_fn!(scope, Scope);
     builder_fn!(redirect_uri, url::Url);
     builder_fn!(nonce, String);
-    builder_fn!(client_metadata, ClientMetadataEnum<ClientMetadataParameters>);
+    builder_fn!(client_metadata, ClientMetadataResource<ClientMetadataParameters>);
     builder_fn!(state, String);
     builder_fn!(presentation_definition, PresentationDefinition);
     builder_fn!(client_id_scheme, ClientIdScheme);
@@ -188,7 +188,7 @@ mod tests {
             // pub nonce: String,
             // TODO: impl client_metadata_uri.
             #[serde(flatten)]
-            pub client_metadata: Option<ClientMetadataEnum<ClientMetadataParameters>>,
+            pub client_metadata: Option<ClientMetadataResource<ClientMetadataParameters>>,
         }
 
         assert_eq!(
@@ -199,7 +199,7 @@ mod tests {
                 client_id_scheme: None,
                 response_mode: None,
                 scope: None,
-                client_metadata: Some(ClientMetadataEnum::ClientMetadata {
+                client_metadata: Some(ClientMetadataResource::ClientMetadata {
                     client_name: Some("My Example (SIOP)".to_string()),
                     logo_uri: None,
                     extension: ClientMetadataParameters {
