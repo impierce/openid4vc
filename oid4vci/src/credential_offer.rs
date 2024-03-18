@@ -2,7 +2,7 @@ use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFo
 use anyhow::Result;
 use oid4vc_core::{to_query_value, JsonObject};
 use reqwest::Url;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_with::skip_serializing_none;
 
@@ -43,7 +43,7 @@ where
     CredentialOffer(CredentialOffer<CFC>),
 }
 
-impl<CFC: CredentialFormatCollection + DeserializeOwned> std::str::FromStr for CredentialOfferQuery<CFC> {
+impl std::str::FromStr for CredentialOfferQuery {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self> {
@@ -108,6 +108,7 @@ mod tests {
         w3c_verifiable_credentials::{jwt_vc_json, ldp_vc},
         CredentialFormats, Parameters,
     };
+    use serde::de::DeserializeOwned;
     use serde_json::json;
 
     fn json_example<T>(path: &str) -> T
