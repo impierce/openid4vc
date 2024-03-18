@@ -1,6 +1,5 @@
 use super::id_token_builder::IdTokenBuilder;
 use crate::{parse_other, StandardClaimsValues};
-use getset::Getters;
 use oid4vc_core::{JsonObject, RFC7519Claims};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -8,22 +7,20 @@ use serde_with::skip_serializing_none;
 /// An SIOPv2 [`IdToken`] as specified in the [SIOPv2 specification](https://openid.net/specs/openid-connect-self-issued-v2-1_0.html#name-self-issued-id-token)
 /// and [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html#IDToken).
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Getters, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
 pub struct IdToken {
     #[serde(flatten)]
-    #[getset(get = "pub")]
-    pub(super) rfc7519_claims: RFC7519Claims,
+    pub rfc7519_claims: RFC7519Claims,
     #[serde(flatten)]
-    #[getset(get = "pub")]
-    pub(super) standard_claims: StandardClaimsValues,
-    pub(super) auth_time: Option<i64>,
-    pub(super) nonce: Option<String>,
-    pub(super) acr: Option<String>,
-    pub(super) amr: Option<Vec<String>>,
-    pub(super) azp: Option<String>,
-    pub(super) sub_jwk: Option<SubJwk>,
+    pub standard_claims: StandardClaimsValues,
+    pub auth_time: Option<i64>,
+    pub nonce: Option<String>,
+    pub acr: Option<String>,
+    pub amr: Option<Vec<String>>,
+    pub azp: Option<String>,
+    pub sub_jwk: Option<SubJwk>,
     #[serde(flatten, deserialize_with = "parse_other")]
-    pub(super) other: Option<JsonObject>,
+    pub other: Option<JsonObject>,
 }
 
 impl IdToken {
@@ -33,11 +30,11 @@ impl IdToken {
 }
 
 // TODO: Make feature complete.
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
 pub struct SubJwk {
-    pub(super) kty: String,
-    pub(super) n: String,
-    pub(super) e: String,
+    pub kty: String,
+    pub n: String,
+    pub e: String,
 }
 
 #[cfg(test)]

@@ -5,7 +5,7 @@ use serde_with::skip_serializing_none;
 /// The [`AuthorizationResponse`] is a set of claims that are sent by a provider to a client. On top of some generic
 /// claims, it also contains a set of claims specific to an [`Extension`].
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationResponse<E: Extension> {
     #[serde(skip)]
     pub redirect_uri: String,

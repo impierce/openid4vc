@@ -183,7 +183,7 @@ async fn test_implicit_flow() {
         .await
         .unwrap();
     assert_eq!(
-        id_token.standard_claims().to_owned(),
+        id_token.standard_claims,
         StandardClaimsValues {
             name: Some("Jane Doe".to_string()),
             email: Some("jane.doe@example.com".to_string()),
