@@ -9,8 +9,10 @@ use oid4vc_core::{
     SubjectSyntaxType,
 };
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 /// [`AuthorizationRequest`] claims specific to [`SIOPv2`].
+#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationRequestParameters {
     pub response_type: MustBe!("id_token"),

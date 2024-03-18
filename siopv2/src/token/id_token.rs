@@ -8,7 +8,7 @@ use serde_with::skip_serializing_none;
 /// An SIOPv2 [`IdToken`] as specified in the [SIOPv2 specification](https://openid.net/specs/openid-connect-self-issued-v2-1_0.html#name-self-issued-id-token)
 /// and [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html#IDToken).
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Getters, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
 pub struct IdToken {
     #[serde(flatten)]
     #[getset(get = "pub")]
@@ -33,7 +33,7 @@ impl IdToken {
 }
 
 // TODO: Make feature complete.
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone)]
 pub struct SubJwk {
     pub(super) kty: String,
     pub(super) n: String,

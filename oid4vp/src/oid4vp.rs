@@ -26,7 +26,7 @@ impl RequestHandle for RequestHandler {
 }
 
 /// This is the [`ResponseHandle`] for the [`OID4VP`] extension.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ResponseHandler {}
 impl ResponseHandle for ResponseHandler {
     type Input = AuthorizationResponseInput;

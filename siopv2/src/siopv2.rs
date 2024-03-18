@@ -2,7 +2,6 @@ use crate::authorization_request::{AuthorizationRequestBuilder, AuthorizationReq
 use crate::claims::StandardClaimsValues;
 use crate::token::id_token::IdToken;
 use chrono::{Duration, Utc};
-use futures::executor::block_on;
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};
 use oid4vc_core::{
@@ -20,7 +19,7 @@ impl RequestHandle for RequestHandler {
 }
 
 /// This is the [`ResponseHandle`] for the [`SIOPv2`] extension.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ResponseHandler {}
 impl ResponseHandle for ResponseHandler {
     type Input = StandardClaimsValues;
@@ -77,16 +76,16 @@ impl Extension for SIOPv2 {
         })
     }
 
-    fn decode_authorization_response(
+    async fn decode_authorization_response(
         decoder: Decoder,
         authorization_response: &AuthorizationResponse<Self>,
     ) -> anyhow::Result<<Self::ResponseHandle as ResponseHandle>::ResponseItem> {
         let token = authorization_response.extension.id_token.clone();
-        block_on(decoder.decode(token))
+        decoder.decode(token).await
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationResponseParameters {
     pub id_token: String,
 }
