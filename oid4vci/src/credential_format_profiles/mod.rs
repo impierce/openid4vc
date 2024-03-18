@@ -90,7 +90,7 @@ where
 
 pub trait CredentialFormatCollection: Serialize + Send + Sync + Clone + std::fmt::Debug {}
 
-#[derive(Debug, Serialize, Clone, Eq, PartialEq, Deserialize)]
+#[derive(Debug, Serialize, Clone, Eq, PartialEq, Deserialize, Default)]
 #[serde(tag = "format")]
 pub enum CredentialFormats<C = ()>
 where
@@ -104,6 +104,8 @@ where
     LdpVc(C::Container<LdpVc>),
     #[serde(rename = "mso_mdoc")]
     MsoMdoc(C::Container<MsoMdoc>),
+    #[default]
+    Unknown,
 }
 
 impl<C> CredentialFormatCollection for CredentialFormats<C> where C: FormatExtension {}
@@ -118,6 +120,7 @@ where
             CredentialFormats::JwtVcJsonLd(_) => CredentialFormats::JwtVcJsonLd(()),
             CredentialFormats::LdpVc(_) => CredentialFormats::LdpVc(()),
             CredentialFormats::MsoMdoc(_) => CredentialFormats::MsoMdoc(()),
+            CredentialFormats::Unknown => CredentialFormats::Unknown,
         }
     }
 }
@@ -129,6 +132,7 @@ impl CredentialFormats<WithCredential> {
             CredentialFormats::JwtVcJsonLd(credential) => Ok(&credential.credential),
             CredentialFormats::LdpVc(credential) => Ok(&credential.credential),
             CredentialFormats::MsoMdoc(credential) => Ok(&credential.credential),
+            CredentialFormats::Unknown => Err(anyhow::anyhow!("Unknown credential format")),
         }
     }
 }
