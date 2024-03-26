@@ -1,7 +1,6 @@
-use crate::{jwt, subject_syntax_type::DidMethod, Subjects, Validators};
+use crate::{jwt, Subjects, Validators};
 use anyhow::{anyhow, Result};
 use serde::de::DeserializeOwned;
-use std::str::FromStr;
 
 pub struct Decoder {
     pub validators: Validators,
@@ -11,14 +10,13 @@ impl Decoder {
     pub async fn decode<T: DeserializeOwned>(&self, jwt: String) -> Result<T> {
         let (kid, algorithm) = jwt::extract_header(&jwt)?;
         //  TODO: decode for JWK Thumbprint
-        let did_method = DidMethod::from(did_url::DID::from_str(&kid)?);
+        for validator in &self.validators.0 {
+            if let Ok(public_key) = validator.1.public_key(&kid).await {
+                return jwt::decode(&jwt, public_key, algorithm);
+            }
+        }
 
-        let validator = self
-            .validators
-            .get(&did_method.into())
-            .ok_or_else(|| anyhow!("No validator found for this signed JWT."))?;
-        let public_key = validator.public_key(&kid).await?;
-        jwt::decode(&jwt, public_key, algorithm)
+        Err(anyhow!("No validator found for this signed JWT."))
     }
 }
 
