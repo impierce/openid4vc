@@ -5,7 +5,7 @@ use monostate::MustBe;
 use oid4vc_core::authorization_request::Object;
 use oid4vc_core::builder_fn;
 use oid4vc_core::{
-    authorization_request::AuthorizationRequest, client_metadata::ClientMetadata, scope::Scope, RFC7519Claims,
+    authorization_request::AuthorizationRequest, client_metadata::ClientMetadataResource, scope::Scope, RFC7519Claims,
     SubjectSyntaxType,
 };
 use serde::{Deserialize, Serialize};
@@ -21,15 +21,30 @@ pub struct AuthorizationRequestParameters {
     pub response_mode: Option<String>,
     pub nonce: String,
     pub claims: Option<ClaimRequests>,
-    // TODO: impl client_metadata_uri.
-    pub client_metadata: Option<ClientMetadata>,
+    #[serde(flatten)]
+    pub client_metadata: Option<ClientMetadataResource<ClientMetadataParameters>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct ClientMetadataParameters {
+    /// Represents the URI scheme identifiers of supported Subject Syntax Types.
+    /// As described here: https://openid.net/specs/openid-connect-self-issued-v2-1_0.html#section-7.5-2.1.1
+    pub subject_syntax_types_supported: Vec<SubjectSyntaxType>,
 }
 
 impl AuthorizationRequestParameters {
+    pub fn is_cross_device_request(&self) -> bool {
+        self.response_mode == Some("post".to_string())
+    }
+
     pub fn subject_syntax_types_supported(&self) -> Option<&Vec<SubjectSyntaxType>> {
-        self.client_metadata
-            .as_ref()
-            .and_then(|r| r.subject_syntax_types_supported().as_ref())
+        self.client_metadata.as_ref().and_then(|r| match r {
+            ClientMetadataResource::ClientMetadata { extension, .. } => {
+                Some(extension.subject_syntax_types_supported.as_ref())
+            }
+            // TODO: impl client_metadata_uri.
+            ClientMetadataResource::ClientMetadataUri(_) => None,
+        })
     }
 
     /// Returns the `id_token` claims from the `claims` parameter including those from the request's scope values.
@@ -54,7 +69,7 @@ pub struct AuthorizationRequestBuilder {
     response_mode: Option<String>,
     nonce: Option<String>,
     claims: Option<Result<ClaimRequests>>,
-    client_metadata: Option<ClientMetadata>,
+    client_metadata: Option<ClientMetadataResource<ClientMetadataParameters>>,
 }
 
 impl AuthorizationRequestBuilder {
@@ -75,7 +90,7 @@ impl AuthorizationRequestBuilder {
     builder_fn!(scope, Scope);
     builder_fn!(redirect_uri, url::Url);
     builder_fn!(nonce, String);
-    builder_fn!(client_metadata, ClientMetadata);
+    builder_fn!(client_metadata, ClientMetadataResource<ClientMetadataParameters>);
     builder_fn!(state, String);
 
     pub fn build(mut self) -> Result<AuthorizationRequest<Object<SIOPv2>>> {
