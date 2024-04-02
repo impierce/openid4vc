@@ -5,7 +5,7 @@ use serde_with::skip_serializing_none;
 
 // Authorization Server Metadata as described here: https://www.rfc-editor.org/rfc/rfc8414.html#section-2
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, Derivative)]
+#[derive(Debug, Clone, Serialize, Deserialize, Derivative, PartialEq)]
 #[derivative(Default)]
 pub struct AuthorizationServerMetadata {
     // TODO: Temporary solution

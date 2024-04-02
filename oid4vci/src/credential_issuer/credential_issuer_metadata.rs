@@ -1,5 +1,6 @@
 use super::credentials_supported::CredentialsSupportedObject;
 use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters};
+use derivative::Derivative;
 use oid4vc_core::JsonObject;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -8,13 +9,18 @@ use serde_with::skip_serializing_none;
 /// Credential Issuer Metadata as described here:
 /// https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-issuer-metadata.
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Derivative)]
+#[derivative(Default)]
 pub struct CredentialIssuerMetadata<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {
+    // TODO: Temporary solution
+    #[derivative(Default(value = "Url::parse(\"https://example.com\").unwrap()"))]
     pub credential_issuer: Url,
     pub authorization_server: Option<Url>,
+    // TODO: Temporary solution
+    #[derivative(Default(value = "Url::parse(\"https://example.com\").unwrap()"))]
     pub credential_endpoint: Url,
     pub batch_credential_endpoint: Option<Url>,
     pub deferred_credential_endpoint: Option<Url>,

@@ -4,7 +4,7 @@ use serde_with::skip_serializing_none;
 
 /// As specified in https://identity.foundation/presentation-exchange/#presentation-definition.
 #[allow(dead_code)]
-#[derive(Deserialize, Debug, Serialize, PartialEq)]
+#[derive(Deserialize, Debug, Serialize, PartialEq, Clone)]
 pub struct PresentationSubmission {
     // TODO: Must be unique.
     pub id: String,
@@ -15,7 +15,7 @@ pub struct PresentationSubmission {
 
 #[allow(dead_code)]
 #[skip_serializing_none]
-#[derive(Deserialize, Debug, Serialize, PartialEq)]
+#[derive(Deserialize, Debug, Serialize, PartialEq, Clone)]
 pub struct InputDescriptorMappingObject {
     // Matches the `id` property of the Input Descriptor in the Presentation Definition that this Presentation
     // Submission is related to.
@@ -31,7 +31,7 @@ pub struct InputDescriptorMappingObject {
 
 #[allow(dead_code)]
 #[skip_serializing_none]
-#[derive(Deserialize, Debug, Serialize, PartialEq)]
+#[derive(Deserialize, Debug, Serialize, PartialEq, Clone)]
 pub struct PathNested {
     pub id: Option<String>,
     pub format: ClaimFormatDesignation,

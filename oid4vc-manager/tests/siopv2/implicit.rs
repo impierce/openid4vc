@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use oid4vc_core::{
     authorization_request::{AuthorizationRequest, ByReference, Object},
     authorization_response::AuthorizationResponse,
-    client_metadata::ClientMetadataEnum,
+    client_metadata::ClientMetadataResource,
     scope::{Scope, ScopeValue},
     DidMethod, SubjectSyntaxType,
 };
@@ -70,7 +70,7 @@ async fn test_implicit_flow() {
         .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
         .redirect_uri(format!("{server_url}/redirect_uri").parse::<url::Url>().unwrap())
         .response_mode("direct_post".to_string())
-        .client_metadata(ClientMetadataEnum::<ClientMetadataParameters>::ClientMetadata {
+        .client_metadata(ClientMetadataResource::<ClientMetadataParameters>::ClientMetadata {
             client_name: None,
             logo_uri: None,
             extension: ClientMetadataParameters {
@@ -185,7 +185,7 @@ async fn test_implicit_flow() {
         .await
         .unwrap();
     assert_eq!(
-        id_token.standard_claims().to_owned(),
+        id_token.standard_claims,
         StandardClaimsValues {
             name: Some("Jane Doe".to_string()),
             email: Some("jane.doe@example.com".to_string()),
