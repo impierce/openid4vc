@@ -59,8 +59,8 @@ pub enum ClaimFormatDesignation {
 #[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ClaimFormatProperty {
-    Alg(Vec<serde_json::Value>),
-    ProofType(Vec<serde_json::Value>),
+    Alg(Vec<String>),
+    ProofType(Vec<String>),
 }
 
 #[allow(dead_code)]
@@ -129,7 +129,7 @@ mod tests {
                     purpose: None,
                     format: Some(HashMap::from_iter(vec![(
                         ClaimFormatDesignation::AcVc,
-                        ClaimFormatProperty::ProofType(vec![serde_json::json!("CLSignature2019")])
+                        ClaimFormatProperty::ProofType(vec!["CLSignature2019".to_string()])
                     )])),
                     constraints: Constraints {
                         limit_disclosure: Some(LimitDisclosure::Required),
@@ -170,7 +170,7 @@ mod tests {
                     purpose: None,
                     format: Some(HashMap::from_iter(vec![(
                         ClaimFormatDesignation::AcVc,
-                        ClaimFormatProperty::ProofType(vec![serde_json::json!("CLSignature2019")])
+                        ClaimFormatProperty::ProofType(vec!["CLSignature2019".to_string()])
                     )])),
                     constraints: Constraints {
                         fields: Some(vec![Field {
@@ -201,7 +201,7 @@ mod tests {
                     purpose: None,
                     format: Some(HashMap::from_iter(vec![(
                         ClaimFormatDesignation::JwtVcJson,
-                        ClaimFormatProperty::ProofType(vec![serde_json::json!("JsonWebSignature2020")])
+                        ClaimFormatProperty::ProofType(vec!["JsonWebSignature2020".to_string()])
                     )])),
                     constraints: Constraints {
                         fields: Some(vec![Field {
@@ -234,7 +234,7 @@ mod tests {
                     purpose: None,
                     format: Some(HashMap::from_iter(vec![(
                         ClaimFormatDesignation::LdpVc,
-                        ClaimFormatProperty::ProofType(vec![serde_json::json!("Ed25519Signature2018")])
+                        ClaimFormatProperty::ProofType(vec!["Ed25519Signature2018".to_string()])
                     )])),
                     constraints: Constraints {
                         fields: Some(vec![Field {
@@ -268,7 +268,7 @@ mod tests {
                     purpose: None,
                     format: Some(HashMap::from_iter(vec![(
                         ClaimFormatDesignation::MsoMdoc,
-                        ClaimFormatProperty::Alg(vec![serde_json::json!("EdDSA"), serde_json::json!("ES256")])
+                        ClaimFormatProperty::Alg(vec!["EdDSA".to_string(), "ES256".to_string()])
                     )])),
                     constraints: Constraints {
                         limit_disclosure: Some(LimitDisclosure::Required),
@@ -321,7 +321,7 @@ mod tests {
                     purpose: None,
                     format: Some(HashMap::from_iter(vec![(
                         ClaimFormatDesignation::LdpVc,
-                        ClaimFormatProperty::ProofType(vec![serde_json::json!("Ed25519Signature2018")])
+                        ClaimFormatProperty::ProofType(vec!["Ed25519Signature2018".to_string()])
                     )])),
                     constraints: Constraints {
                         fields: Some(vec![
@@ -366,7 +366,7 @@ mod tests {
                     purpose: None,
                     format: Some(HashMap::from_iter(vec![(
                         ClaimFormatDesignation::LdpVc,
-                        ClaimFormatProperty::ProofType(vec![serde_json::json!("Ed25519Signature2018")])
+                        ClaimFormatProperty::ProofType(vec!["Ed25519Signature2018".to_string()])
                     )])),
                     constraints: Constraints {
                         fields: Some(vec![Field {

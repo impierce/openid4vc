@@ -1,6 +1,6 @@
 use crate::{authorization_response::AuthorizationResponse, Decoder, Subject};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::sync::Arc;
+use std::{future::Future, sync::Arc};
 
 /// A [`RequestHandle`] is used to declare what functionality a request should have. Most notable, it declares the
 /// `response_type``, the extension-specific parameters, and the builder for the extension-specific `AuthorizationRequest`.
@@ -11,15 +11,15 @@ pub trait RequestHandle: std::fmt::Debug + PartialEq {
 
 /// A [`ResponseHandle`] is used to declare what functionality a response should have. Most notable, it declares the
 /// input that is needed to generate a token, the extension-specific parameters, and the response item.
-pub trait ResponseHandle: std::fmt::Debug + PartialEq {
+pub trait ResponseHandle: std::fmt::Debug + PartialEq + Clone {
     type Input;
-    type Parameters: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq;
+    type Parameters: Serialize + DeserializeOwned + std::fmt::Debug + PartialEq + Clone;
     type ResponseItem: Serialize + std::fmt::Debug + PartialEq;
 }
 
 /// This [`Extension'] trait is used to declare what functionality an extension should have. Most notable, it declares
 /// that an extension should be able to generate a token, build an authorization response, and decode an authorization response.
-pub trait Extension: Serialize + PartialEq + Sized + std::fmt::Debug + Clone {
+pub trait Extension: Serialize + PartialEq + Sized + std::fmt::Debug + Clone + Send + Sync {
     type RequestHandle: RequestHandle;
     type ResponseHandle: ResponseHandle;
 
@@ -46,9 +46,9 @@ pub trait Extension: Serialize + PartialEq + Sized + std::fmt::Debug + Clone {
     fn decode_authorization_response(
         _decoder: Decoder,
         _authorization_response: &AuthorizationResponse<Self>,
-    ) -> anyhow::Result<<Self::ResponseHandle as ResponseHandle>::ResponseItem> {
+    ) -> impl Future<Output = anyhow::Result<<Self::ResponseHandle as ResponseHandle>::ResponseItem>> + Send {
         // Will be overwritten by the extension.
-        Err(anyhow::anyhow!("Not implemented."))
+        async { Err(anyhow::anyhow!("Not implemented.")) }
     }
 }
 

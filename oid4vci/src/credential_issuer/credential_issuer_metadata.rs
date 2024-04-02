@@ -1,5 +1,6 @@
 use super::credential_configurations_supported::CredentialConfigurationsSupportedObject;
 use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters};
+use derivative::Derivative;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -15,14 +16,19 @@ pub struct CredentialResponseEncryption {
 /// Credential Issuer Metadata as described here:
 /// https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-issuer-metadata-p.
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Derivative)]
+#[derivative(Default)]
 pub struct CredentialIssuerMetadata<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {
+    // TODO: Temporary solution
+    #[derivative(Default(value = "Url::parse(\"https://example.com\").unwrap()"))]
     pub credential_issuer: Url,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub authorization_servers: Vec<Url>,
+    // TODO: Temporary solution
+    #[derivative(Default(value = "Url::parse(\"https://example.com\").unwrap()"))]
     pub credential_endpoint: Url,
     pub batch_credential_endpoint: Option<Url>,
     pub deferred_credential_endpoint: Option<Url>,

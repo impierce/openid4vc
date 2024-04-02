@@ -26,7 +26,7 @@ impl RequestHandle for RequestHandler {
 }
 
 /// This is the [`ResponseHandle`] for the [`OID4VP`] extension.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ResponseHandler {}
 impl ResponseHandle for ResponseHandler {
     type Input = AuthorizationResponseInput;
@@ -83,7 +83,7 @@ impl Extension for OID4VP {
         })
     }
 
-    fn decode_authorization_response(
+    async fn decode_authorization_response(
         decoder: Decoder,
         response: &AuthorizationResponse<Self>,
     ) -> anyhow::Result<<Self::ResponseHandle as ResponseHandle>::ResponseItem> {
@@ -92,22 +92,21 @@ impl Extension for OID4VP {
             Oid4vpParams::Params { vp_token, .. } => block_on(decoder.decode(vp_token.to_owned()))?,
         };
 
-        block_on(async move {
-            join_all(
-                vp_token
-                    .verifiable_presentation()
-                    .verifiable_credential
-                    .iter()
-                    .map(|vc| async { decoder.decode(vc.as_str().to_owned()).await }),
-            )
-            .await
-            .into_iter()
-            .collect()
-        })
+        join_all(
+            vp_token
+                .verifiable_presentation()
+                .verifiable_credential
+                .iter()
+                .map(|vc| decoder.decode(vc.as_str().to_owned()))
+                .collect::<Vec<_>>(),
+        )
+        .await
+        .into_iter()
+        .collect()
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationResponseParameters {
     #[serde(flatten, with = "serde_oid4vp_response")]
     pub oid4vp_parameters: Oid4vpParams,

@@ -42,6 +42,6 @@ impl RelyingParty {
         authorization_response: &AuthorizationResponse<E>,
         decoder: Decoder,
     ) -> Result<<E::ResponseHandle as ResponseHandle>::ResponseItem> {
-        E::decode_authorization_response(decoder, authorization_response)
+        E::decode_authorization_response(decoder, authorization_response).await
     }
 }
