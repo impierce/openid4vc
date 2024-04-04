@@ -2,6 +2,8 @@ use crate::credential_format;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
+use super::CredentialSubject;
+
 credential_format!("jwt_vc_json", JwtVcJson, {
     credential_definition: CredentialDefinition,
     order: Option<String>
@@ -12,6 +14,6 @@ credential_format!("jwt_vc_json", JwtVcJson, {
 pub struct CredentialDefinition {
     #[serde(rename = "type")]
     pub type_: Vec<String>,
-    #[serde(rename = "credentialSubject")]
-    pub credential_subject: Option<serde_json::Value>,
+    #[serde(flatten)]
+    pub credential_subject: CredentialSubject,
 }

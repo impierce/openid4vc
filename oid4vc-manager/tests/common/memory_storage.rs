@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::{collections::HashMap, fs::File};
 
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
@@ -6,8 +6,8 @@ use oid4vc_core::{authentication::subject::SigningSubject, generate_authorizatio
 use oid4vc_manager::storage::Storage;
 use oid4vci::{
     authorization_response::AuthorizationResponse,
-    credential_format_profiles::{Credential, CredentialFormatCollection, CredentialFormats, WithParameters},
-    credential_issuer::credentials_supported::CredentialsSupportedObject,
+    credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters},
+    credential_issuer::credential_configurations_supported::CredentialConfigurationsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
     credential_response::{CredentialResponse, CredentialResponseType},
     token_request::TokenRequest,
@@ -24,7 +24,6 @@ lazy_static! {
         pre_authorized_code: generate_authorization_code(16),
         ..Default::default()
     };
-    pub static ref USER_PIN: String = "493536".to_string();
     pub static ref ACCESS_TOKEN: String = "czZCaGRSa3F0MzpnWDFmQmF0M2JW".to_string();
     pub static ref C_NONCE: String = "tZignsnFbp".to_string();
 }
@@ -33,17 +32,27 @@ lazy_static! {
 pub struct MemoryStorage;
 
 impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for MemoryStorage {
-    fn get_credentials_supported(&self) -> Vec<CredentialsSupportedObject<CFC>> {
+    fn get_credential_configurations_supported(&self) -> HashMap<String, CredentialConfigurationsSupportedObject<CFC>> {
         vec![
-            serde_json::from_reader(
-                File::open("./tests/common/credentials_supported_objects/university_degree.json").unwrap(),
-            )
-            .unwrap(),
-            serde_json::from_reader(
-                File::open("./tests/common/credentials_supported_objects/driver_license.json").unwrap(),
-            )
-            .unwrap(),
+            (
+                "UniversityDegree_JWT".to_string(),
+                serde_json::from_reader(
+                    File::open("./tests/common/credential_configurations_supported_objects/university_degree.json")
+                        .unwrap(),
+                )
+                .unwrap(),
+            ),
+            (
+                "DriverLicense_JWT".to_string(),
+                serde_json::from_reader(
+                    File::open("./tests/common/credential_configurations_supported_objects/driver_license.json")
+                        .unwrap(),
+                )
+                .unwrap(),
+            ),
         ]
+        .into_iter()
+        .collect()
     }
 
     fn get_authorization_code(&self) -> Option<AuthorizationCode> {
@@ -112,7 +121,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
         verifiable_credential["credentialSubject"]["id"] = json!(subject_did);
 
         (access_token == ACCESS_TOKEN.clone()).then_some(CredentialResponse {
-            credential: CredentialResponseType::Immediate(CredentialFormats::JwtVcJson(Credential {
+            credential: CredentialResponseType::Immediate {
                 credential: serde_json::to_value(
                     jwt::encode(
                         signer.clone(),
@@ -130,7 +139,8 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
                     .ok(),
                 )
                 .unwrap(),
-            })),
+                notification_id: None,
+            },
             c_nonce: Some(C_NONCE.clone()),
             c_nonce_expires_in: Some(86400),
         })

@@ -1,21 +1,17 @@
-use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithCredential};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-/// Credential Response as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-response.
+/// Credential Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-response
 #[skip_serializing_none]
 #[derive(Serialize, Debug, PartialEq, Deserialize, Clone)]
-pub struct CredentialResponse<CFC = CredentialFormats<WithCredential>>
-where
-    CFC: CredentialFormatCollection,
-{
+pub struct CredentialResponse {
     #[serde(flatten)]
-    pub credential: CredentialResponseType<CFC>,
+    pub credential: CredentialResponseType,
     pub c_nonce: Option<String>,
     pub c_nonce_expires_in: Option<u64>,
 }
 
-/// Batch Credential Response as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-batch-credential-response.
+/// Batch Credential Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-batch-credential-response
 #[skip_serializing_none]
 #[derive(Serialize, Debug, PartialEq, Deserialize)]
 pub struct BatchCredentialResponse {
@@ -27,18 +23,19 @@ pub struct BatchCredentialResponse {
 #[skip_serializing_none]
 #[derive(Serialize, Debug, PartialEq, Deserialize, Clone)]
 #[serde(untagged)]
-pub enum CredentialResponseType<CFC = CredentialFormats<WithCredential>>
-where
-    CFC: CredentialFormatCollection,
-{
-    Deferred { transaction_id: String },
-    Immediate(CFC),
+pub enum CredentialResponseType {
+    Deferred {
+        transaction_id: String,
+    },
+    Immediate {
+        credential: serde_json::Value,
+        notification_id: Option<String>,
+    },
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::credential_format_profiles::Credential;
     use serde_json::json;
 
     #[test]
@@ -70,7 +67,7 @@ mod tests {
                 CredentialResponseType::Deferred {
                     transaction_id: "123".to_string(),
                 },
-                CredentialResponseType::Immediate(CredentialFormats::<WithCredential>::JwtVcJson(Credential {
+                CredentialResponseType::Immediate {
                     credential: json!({
                         "id": "http://example.edu/credentials/3732",
                         "type": ["VerifiableCredential", "UniversityDegreeCredential"],
@@ -84,7 +81,8 @@ mod tests {
                             }
                         }
                     }),
-                })),
+                    notification_id: None,
+                },
             ],
             c_nonce: Some("456".to_string()),
             c_nonce_expires_in: Some(789),
@@ -98,7 +96,6 @@ mod tests {
                         "transaction_id": "123"
                     },
                     {
-                        "format": "jwt_vc_json",
                         "credential": {
                             "id": "http://example.edu/credentials/3732",
                             "type": ["VerifiableCredential", "UniversityDegreeCredential"],

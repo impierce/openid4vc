@@ -1,11 +1,11 @@
 use crate::{
     credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters},
-    proof::Proof,
+    proof::KeyProofType,
 };
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-/// Credential Request as described here: https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request
+/// Credential Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-request
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct CredentialRequest<CFC = CredentialFormats<WithParameters>>
@@ -14,9 +14,12 @@ where
 {
     #[serde(flatten)]
     pub credential_format: CFC,
-    pub proof: Option<Proof>,
+    pub proof: Option<KeyProofType>,
+    // TODO: add `credential_identifier` field when support for Authorization Code Flow is added.
+    // TODO: add `credential_response_encryption` field when support for JWE is added.
 }
 
+/// Batch Credential Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-batch-credential-request
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BatchCredentialRequest<CFC = CredentialFormats>
 where
@@ -31,7 +34,7 @@ mod tests {
     use crate::credential_format_profiles::{
         w3c_verifiable_credentials::{
             jwt_vc_json::{self, CredentialDefinition},
-            jwt_vc_json_ld, ldp_vc,
+            jwt_vc_json_ld, ldp_vc, CredentialSubject,
         },
         CredentialFormats, Parameters,
     };
@@ -82,17 +85,19 @@ mod tests {
                                 "VerifiableCredential".to_string(),
                                 "UniversityDegreeCredential".to_string()
                             ],
-                            credential_subject: Some(json!({
-                                "given_name": {},
-                                "family_name": {},
-                                "degree": {}
-                            })),
+                            credential_subject: CredentialSubject {
+                                credential_subject: Some(json!({
+                                    "given_name": {},
+                                    "family_name": {},
+                                    "degree": {}
+                                }))
+                            },
                         },
                         None
                     )
                         .into()
                 }),
-                proof: Some(Proof::Jwt {
+                proof: Some(KeyProofType::Jwt {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -149,7 +154,7 @@ mod tests {
                     )
                         .into()
                 }),
-                proof: Some(Proof::Jwt {
+                proof: Some(KeyProofType::Jwt {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -162,19 +167,7 @@ mod tests {
     #[test]
     fn test_oid4vci_examples() {
         // Examples from
-        // https://bitbucket.org/openid/connect/src/master/openid-4-verifiable-credential-issuance/examples/.
-
-        assert_eq!(
-            CredentialRequest {
-                credential_format: CredentialFormats::MsoMdoc(Parameters {
-                    parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
-                }),
-                proof: Some(Proof::Jwt {
-                    jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
-                })
-            },
-            json_example::<CredentialRequest>("tests/examples/credential_request_iso_mdl.json")
-        );
+        // https://github.com/openid/OpenID4VCI/tree/80b2214814106e55e5fd09af3415ba4fc124b6be/examples
 
         assert_eq!(
             CredentialRequest {
@@ -195,7 +188,7 @@ mod tests {
                     )
                         .into()
                 }),
-                proof: Some(Proof::Jwt {
+                proof: Some(KeyProofType::Jwt {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -215,17 +208,19 @@ mod tests {
                                 "VerifiableCredential".to_string(),
                                 "UniversityDegreeCredential".to_string()
                             ],
-                            credential_subject: Some(json!({
-                                "degree": {
-                                    "type":{}
-                                }
-                            })),
+                            credential_subject: CredentialSubject {
+                                credential_subject: Some(json!({
+                                    "degree": {
+                                        "type":{}
+                                    }
+                                }))
+                            },
                         },
                         None
                     )
                         .into()
                 }),
-                proof: Some(Proof::Jwt {
+                proof: Some(KeyProofType::Jwt {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -241,41 +236,19 @@ mod tests {
                                 "VerifiableCredential".to_string(),
                                 "UniversityDegreeCredential".to_string()
                             ],
-                            credential_subject: None
-                        },
-                        None
-                    )
-                        .into()
-                }),
-                proof: Some(Proof::Jwt {
-                    jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJzNkJoZFJrcXQzIiwiYXVkIjoiaHR0cHM6Ly9zZXJ2ZXIuZXhhbXBsZS5jb20iLCJpYXQiOiIyMDE4LTA5LTE0VDIxOjE5OjEwWiIsIm5vbmNlIjoidFppZ25zbkZicCJ9.ewdkIkPV50iOeBUqMXCC_aZKPxgihac0aW9EkL1nOzM".to_string()
-                })
-            },
-            json_example::<CredentialRequest>(
-                "tests/examples/credential_request_jwt_vc_json.json"
-            )
-        );
-
-        assert_eq!(
-            CredentialRequest {
-                credential_format: CredentialFormats::JwtVcJson(Parameters {
-                    parameters: (
-                        jwt_vc_json::CredentialDefinition {
-                            type_: vec![
-                                "VerifiableCredential".to_string(),
-                                "UniversityDegreeCredential".to_string()
-                            ],
-                            credential_subject: Some(json!({
+                            credential_subject: CredentialSubject {
+                                credential_subject: Some(json!({
                                     "given_name": {},
                                     "family_name": {},
                                     "degree": {}
-                            }))
+                                }))
+                            },
                         },
                         None
                     )
                         .into()
                 }),
-                proof: Some(Proof::Jwt {
+                proof: Some(KeyProofType::Jwt {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJzNkJoZFJrcXQzIiwiYXVkIjoiaHR0cHM6Ly9zZXJ2ZXIuZXhhbXBsZS5jb20iLCJpYXQiOiIyMDE4LTA5LTE0VDIxOjE5OjEwWiIsIm5vbmNlIjoidFppZ25zbkZicCJ9.ewdkIkPV50iOeBUqMXCC_aZKPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
@@ -297,17 +270,19 @@ mod tests {
                                 "VerifiableCredential".to_string(),
                                 "UniversityDegreeCredential".to_string()
                             ],
-                            credential_subject: Some(json!({
-                                    "degree": {
-                                        "type": {}
-                                    }
-                            }))
+                            credential_subject: CredentialSubject {
+                                credential_subject: Some(json!({
+                                        "degree": {
+                                            "type": {}
+                                        }
+                                }))
+                            }
                         },
                         None
                     )
                         .into()
                 }),
-                proof: Some(Proof::Jwt {
+                proof: Some(KeyProofType::Jwt {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },

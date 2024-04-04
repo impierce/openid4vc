@@ -1,11 +1,10 @@
 {
     "format": "jwt_vc_json",
-    "id": "UniversityDegree_JWT",
     "cryptographic_binding_methods_supported": [
         "did:key",
         "did:iota"
     ],
-    "cryptographic_suites_supported": [
+    "credential_signing_alg_values_supported": [
         "EdDSA"
     ],
     "credential_definition":{
@@ -40,9 +39,13 @@
             }
         }
     },
-    "proof_types_supported": [
-        "jwt"
-    ],
+    "proof_types_supported": {
+        "jwt": {
+            "proof_signing_alg_values_supported": [
+                "ES256"
+            ]
+        }
+    },
     "display": [
         {
             "name": "University Credential",

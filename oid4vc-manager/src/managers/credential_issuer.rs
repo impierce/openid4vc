@@ -7,7 +7,7 @@ use oid4vci::{
         authorization_server_metadata::AuthorizationServerMetadata,
         credential_issuer_metadata::CredentialIssuerMetadata, CredentialIssuer,
     },
-    credential_offer::{CredentialOffer, CredentialOfferQuery, CredentialsObject, Grants},
+    credential_offer::{CredentialOffer, CredentialOfferParameters, Grants},
 };
 use reqwest::Url;
 use std::{net::TcpListener, sync::Arc};
@@ -32,17 +32,21 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
         Ok(Self {
             credential_issuer: CredentialIssuer {
                 subject: subjects
-                    .get(0)
+                    .first()
                     .ok_or_else(|| anyhow::anyhow!("No subjects found."))?
                     .clone(),
                 metadata: CredentialIssuerMetadata {
                     credential_issuer: issuer_url.clone(),
-                    authorization_server: None,
+                    authorization_servers: vec![],
                     credential_endpoint: issuer_url.join("/credential")?,
                     batch_credential_endpoint: Some(issuer_url.join("/batch_credential")?),
                     deferred_credential_endpoint: None,
-                    credentials_supported: storage.get_credentials_supported(),
+                    notification_endpoint: None,
+                    credential_response_encryption: None,
+                    credential_identifiers_supported: None,
+                    signed_metadata: None,
                     display: None,
+                    credential_configurations_supported: storage.get_credential_configurations_supported(),
                 },
                 authorization_server_metadata: AuthorizationServerMetadata {
                     issuer: issuer_url.clone(),
@@ -62,17 +66,17 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
         Ok(self.credential_issuer.metadata.credential_issuer.clone())
     }
 
-    pub fn credential_offer(&self) -> Result<CredentialOffer<CFC>> {
-        let credentials: Vec<CredentialsObject<CFC>> = self
+    pub fn credential_offer(&self) -> Result<CredentialOfferParameters> {
+        let credential_configuration_ids: Vec<String> = self
             .credential_issuer
             .metadata
-            .credentials_supported
+            .credential_configurations_supported
             .iter()
-            .map(|credential| CredentialsObject::ByValue(credential.credential_format.clone()))
+            .map(|credential| credential.0.clone())
             .collect();
-        Ok(CredentialOffer {
+        Ok(CredentialOfferParameters {
             credential_issuer: self.credential_issuer.metadata.credential_issuer.clone(),
-            credentials,
+            credential_configuration_ids,
             grants: Some(Grants {
                 authorization_code: self.storage.get_authorization_code(),
                 pre_authorized_code: self.storage.get_pre_authorized_code(),
@@ -87,9 +91,9 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
 
     pub fn credential_offer_query(&self, by_reference: bool) -> Result<String> {
         if by_reference {
-            Ok(CredentialOfferQuery::<CFC>::CredentialOfferUri(self.credential_offer_uri()?).to_string())
+            Ok(CredentialOffer::CredentialOfferUri(self.credential_offer_uri()?).to_string())
         } else {
-            Ok(CredentialOfferQuery::CredentialOffer(self.credential_offer()?).to_string())
+            Ok(CredentialOffer::CredentialOffer(Box::new(self.credential_offer()?)).to_string())
         }
     }
 }

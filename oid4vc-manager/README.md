@@ -10,6 +10,6 @@ the digital, as well as in the real world.
 
 In this library, you'll find Rust implementations for several critical DCP specifications, including:
 * [OpenID for Verifiable Credential
-  Issuance](https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html) (OpenID4VCI)
-* [OpenID for Verifiable Presentations](https://openid.bitbucket.io/connect/openid-connect-self-issued-v2-1_0.html) (OpenID4VP)
-* [Self-Issued OpenID Provider v2](https://openid.bitbucket.io/connect/openid-connect-self-issued-v2-1_0.html) (SIOPv2)
+  Issuance](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-12.html) (OpenID4VCI)
+* [OpenID for Verifiable Presentations](https://openid.net/specs/openid-4-verifiable-presentations-1_0-20.html) (OpenID4VP)
+* [Self-Issued OpenID Provider v2](https://openid.net/specs/openid-connect-self-issued-v2-1_0-13.html) (SIOPv2)

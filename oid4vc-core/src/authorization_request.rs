@@ -90,6 +90,8 @@ impl Body for ByValue {
 /// form of a [`Body`] which can be [`ByValue`], [`ByReference`], or an [`Object`].
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationRequest<B: Body> {
+    #[serde(skip)]
+    pub custom_url_scheme: String,
     #[serde(flatten)]
     pub body: B,
 }
@@ -100,6 +102,7 @@ impl<E: Extension + OpenID4VC> AuthorizationRequest<Object<E>> {
         original: &AuthorizationRequest<Object<Generic>>,
     ) -> anyhow::Result<AuthorizationRequest<Object<E>>> {
         Ok(AuthorizationRequest {
+            custom_url_scheme: original.custom_url_scheme.clone(),
             body: Object::from_generic(&original.body)?,
         })
     }
@@ -130,15 +133,15 @@ impl<B: Body + DeserializeOwned> std::str::FromStr for AuthorizationRequest<B> {
                 _ => None,
             })
             .collect::<Result<_, anyhow::Error>>()?;
-        let authorization_request: AuthorizationRequest<B> = serde_json::from_value(serde_json::Value::Object(map))?;
+        let mut authorization_request: AuthorizationRequest<B> =
+            serde_json::from_value(serde_json::Value::Object(map))?;
+        authorization_request.custom_url_scheme = url.scheme().to_string();
         Ok(authorization_request)
     }
 }
 
 /// In order to convert a [`AuthorizationRequest`] to a string, we need to convert all the values to strings. This is because
 /// `serde_urlencoded` does not support serializing non-primitive types.
-// TODO: Find a way to dynamically generate the `siopv2://idtoken?` part of the URL. This will require some refactoring
-// for the `AuthorizationRequest` struct.
 impl<B: Body> std::fmt::Display for AuthorizationRequest<B> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let map: JsonObject = json!(self)
@@ -155,7 +158,7 @@ impl<B: Body> std::fmt::Display for AuthorizationRequest<B> {
             .collect();
 
         let encoded = serde_urlencoded::to_string(map).map_err(|_| std::fmt::Error)?;
-        write!(f, "siopv2://idtoken?{}", encoded)
+        write!(f, "{}://?{}", self.custom_url_scheme, encoded)
     }
 }
 
@@ -167,6 +170,7 @@ mod tests {
     #[test]
     fn test() {
         let authorization_request = AuthorizationRequest::<Object> {
+            custom_url_scheme: "test".to_string(),
             body: Object {
                 rfc7519_claims: Default::default(),
                 client_id: "did:example:123".to_string(),

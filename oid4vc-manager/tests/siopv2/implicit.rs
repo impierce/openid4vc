@@ -170,6 +170,7 @@ async fn test_implicit_flow() {
 
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
     let authorization_request = AuthorizationRequest::<ByReference> {
+        custom_url_scheme: "openid".to_string(),
         body: ByReference {
             client_id: "did:test:relyingparty".to_string(),
             request_uri: format!("{server_url}/request_uri").parse::<url::Url>().unwrap(),
