@@ -60,6 +60,7 @@ pub struct AuthorizationRequestBuilder {
     response_mode: Option<String>,
     nonce: Option<String>,
     client_metadata: Option<ClientMetadataResource<ClientMetadataParameters>>,
+    custom_url_scheme: Option<String>,
 }
 
 impl AuthorizationRequestBuilder {
@@ -79,6 +80,7 @@ impl AuthorizationRequestBuilder {
     builder_fn!(state, String);
     builder_fn!(presentation_definition, PresentationDefinition);
     builder_fn!(client_id_scheme, ClientIdScheme);
+    builder_fn!(custom_url_scheme, String);
 
     pub fn build(mut self) -> Result<AuthorizationRequest<Object<OID4VP>>> {
         match (self.client_id.take(), self.is_empty()) {
@@ -101,6 +103,7 @@ impl AuthorizationRequestBuilder {
                 };
 
                 Ok(AuthorizationRequest::<Object<OID4VP>> {
+                    custom_url_scheme: self.custom_url_scheme.take().unwrap_or("openid".to_string()),
                     body: Object::<OID4VP> {
                         rfc7519_claims: self.rfc7519_claims,
                         client_id,
