@@ -1,4 +1,4 @@
-use crate::{authorization_response::AuthorizationResponse, Subject, Validator};
+use crate::{authorization_response::AuthorizationResponse, Subject, SubjectSyntaxType, Validator};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{future::Future, sync::Arc};
 
@@ -28,7 +28,7 @@ pub trait Extension: Serialize + PartialEq + Sized + std::fmt::Debug + Clone + S
         _client_id: &str,
         _extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
         _user_input: &<Self::ResponseHandle as ResponseHandle>::Input,
-        _did_method: &str,
+        _subject_syntax_type: impl TryInto<SubjectSyntaxType>,
     ) -> anyhow::Result<Vec<String>> {
         // Will be overwritten by the extension.
         Err(anyhow::anyhow!("Not implemented."))

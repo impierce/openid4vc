@@ -1,9 +1,9 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use oid4vc_core::{
     authorization_request::{AuthorizationRequest, Object},
     authorization_response::AuthorizationResponse,
     openid4vc_extension::{Extension, ResponseHandle},
-    Subject, SubjectSyntaxType,
+    Subject,
 };
 use siopv2::RelyingParty;
 use std::sync::Arc;
@@ -14,12 +14,9 @@ pub struct RelyingPartyManager {
 }
 
 impl RelyingPartyManager {
-    pub fn new<const N: usize>(subjects: [Arc<dyn Subject>; N], default_did_method: String) -> Result<Self> {
+    pub fn new(subject: Arc<dyn Subject>, subject_syntax_type: String) -> Result<Self> {
         Ok(Self {
-            relying_party: RelyingParty::new(
-                subjects.get(0).ok_or_else(|| anyhow!("No subjects found."))?.clone(),
-                default_did_method,
-            )?,
+            relying_party: RelyingParty::new(subject, subject_syntax_type)?,
         })
     }
 
@@ -32,9 +29,5 @@ impl RelyingPartyManager {
         authorization_response: &AuthorizationResponse<E>,
     ) -> Result<<E::ResponseHandle as ResponseHandle>::ResponseItem> {
         self.relying_party.validate_response(authorization_response).await
-    }
-
-    pub fn current_subject_syntax_type(&self) -> Result<SubjectSyntaxType> {
-        self.relying_party.subject.type_()
     }
 }

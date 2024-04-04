@@ -50,18 +50,20 @@ where
     Ok(jsonwebtoken::decode::<T>(jwt, &key, &validation)?.claims)
 }
 
-pub fn encode<C, S>(signer: Arc<S>, header: Header, claims: C, did_method: &str) -> Result<String>
+pub fn encode<C, S>(signer: Arc<S>, header: Header, claims: C, subject_syntax_type: &str) -> Result<String>
 where
     C: Serialize,
     S: Sign + ?Sized,
 {
-    let kid = signer.key_id(did_method).ok_or(anyhow!("No key identifier found."))?;
+    let kid = signer
+        .key_id(subject_syntax_type)
+        .ok_or(anyhow!("No key identifier found."))?;
 
     let jwt = JsonWebToken::new(header, claims).kid(kid);
 
     let message = [base64_url_encode(&jwt.header)?, base64_url_encode(&jwt.payload)?].join(".");
 
-    let proof_value = signer.sign(&message, did_method)?;
+    let proof_value = signer.sign(&message, subject_syntax_type)?;
     let signature = base64_url::encode(proof_value.as_slice());
     let message = [message, signature].join(".");
     Ok(message)

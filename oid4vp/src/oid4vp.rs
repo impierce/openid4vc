@@ -10,8 +10,8 @@ use futures::{executor::block_on, future::join_all};
 use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};
-use oid4vc_core::Validator;
 use oid4vc_core::{authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension, Subject};
+use oid4vc_core::{SubjectSyntaxType, Validator};
 use oid4vci::VerifiableCredentialJwt;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -46,9 +46,13 @@ impl Extension for OID4VP {
         client_id: &str,
         extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
         user_input: &<Self::ResponseHandle as ResponseHandle>::Input,
-        did_method: &str,
+        subject_syntax_type: impl TryInto<SubjectSyntaxType>,
     ) -> anyhow::Result<Vec<String>> {
-        let subject_identifier = subject.identifier(did_method)?;
+        let subject_syntax_type_string = subject_syntax_type
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("Failed to convert the subject syntax type"))?
+            .to_string();
+        let subject_identifier = subject.identifier(&subject_syntax_type_string)?;
 
         let vp_token = VpToken::builder()
             .iss(subject_identifier.clone())
@@ -61,7 +65,12 @@ impl Extension for OID4VP {
             .verifiable_presentation(user_input.verifiable_presentation.clone())
             .build()?;
 
-        let jwt = jwt::encode(subject.clone(), Header::new(Algorithm::EdDSA), vp_token, did_method)?;
+        let jwt = jwt::encode(
+            subject.clone(),
+            Header::new(Algorithm::EdDSA),
+            vp_token,
+            &subject_syntax_type_string,
+        )?;
         Ok(vec![jwt])
     }
 

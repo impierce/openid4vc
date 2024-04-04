@@ -6,7 +6,7 @@ use oid4vc_core::{
     authorization_request::{AuthorizationRequest, Body, ByReference, ByValue, Object},
     authorization_response::AuthorizationResponse,
     openid4vc_extension::{Extension, ResponseHandle},
-    Validator,
+    SubjectSyntaxType, Validator,
 };
 use reqwest::StatusCode;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -17,13 +17,13 @@ use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 /// the user who is trying to authenticate.
 pub struct Provider {
     pub subject: SigningSubject,
-    pub default_did_method: String,
+    pub default_subject_syntax_type: SubjectSyntaxType,
     client: ClientWithMiddleware,
 }
 
 impl Provider {
     // TODO: Use ProviderBuilder instead.
-    pub fn new(subject: SigningSubject, default_did_method: String) -> Result<Self> {
+    pub fn new(subject: SigningSubject, default_subject_syntax_type: impl TryInto<SubjectSyntaxType>) -> Result<Self> {
         let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
         let client = ClientBuilder::new(reqwest::Client::new())
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
@@ -31,7 +31,9 @@ impl Provider {
         Ok(Provider {
             subject,
             client,
-            default_did_method,
+            default_subject_syntax_type: default_subject_syntax_type
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Invalid did method."))?,
         })
     }
 
@@ -93,7 +95,7 @@ impl Provider {
             &authorization_request.body.client_id,
             &authorization_request.body.extension,
             &input,
-            &self.default_did_method,
+            self.default_subject_syntax_type.clone(),
         )?;
 
         E::build_authorization_response(jwts, input, redirect_uri, state)
@@ -125,7 +127,7 @@ mod tests {
         let subject = TestSubject::new("did:test:123".to_string(), "key_id".to_string()).unwrap();
 
         // Create a new provider.
-        let provider = Provider::new(Arc::new(subject), "did:test".to_string()).unwrap();
+        let provider = Provider::new(Arc::new(subject), "did:test").unwrap();
 
         // Get a new SIOP authorization_request with response mode `direct_post` for cross-device communication.
         let request_url = "\

@@ -26,12 +26,12 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         CredentialIssuerManager::new(
             None,
             MemoryStorage,
-            [Arc::new(KeySubject::from_keypair(
+            Arc::new(KeySubject::from_keypair(
                 generate::<Ed25519KeyPair>(Some(
                     "this-is-a-very-UNSAFE-issuer-secret-key".as_bytes().try_into().unwrap(),
                 )),
                 None,
-            ))],
+            )),
         )
         .unwrap(),
         None,

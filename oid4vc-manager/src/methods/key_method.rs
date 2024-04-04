@@ -43,14 +43,14 @@ impl Default for KeySubject {
 
 #[async_trait]
 impl Sign for KeySubject {
-    fn key_id(&self, _did_method: &str) -> Option<String> {
+    fn key_id(&self, _subject_syntax_type: &str) -> Option<String> {
         self.document
             .authentication
             .as_ref()
             .and_then(|authentication_methods| authentication_methods.first().cloned())
     }
 
-    fn sign(&self, message: &str, _did_method: &str) -> Result<Vec<u8>> {
+    fn sign(&self, message: &str, _subject_syntax_type: &str) -> Result<Vec<u8>> {
         match self.external_signer() {
             Some(external_signer) => external_signer.sign(message),
             None => Ok(self.keypair.sign(message.as_bytes())),
@@ -70,7 +70,7 @@ impl Verify for KeySubject {
 }
 
 impl Subject for KeySubject {
-    fn identifier(&self, _did_method: &str) -> Result<String> {
+    fn identifier(&self, _subject_syntax_type: &str) -> Result<String> {
         Ok(self.document.id.clone())
     }
 }
@@ -120,7 +120,7 @@ mod tests {
         let subject = KeySubject::new();
 
         // Create a new provider manager.
-        let provider_manager = ProviderManager::new([Arc::new(subject)], "did:key".to_string()).unwrap();
+        let provider_manager = ProviderManager::new(Arc::new(subject), "did:key").unwrap();
 
         // Get a new SIOP authorization_request with response mode `direct_post` for cross-device communication.
         let request_url = "\
@@ -152,7 +152,7 @@ mod tests {
 
         // Let the relying party validate the authorization_response.
         let relying_party_manager =
-            RelyingPartyManager::new([Arc::new(KeySubject::new())], "did:key".to_string()).unwrap();
+            RelyingPartyManager::new(Arc::new(KeySubject::new()), "did:key".to_string()).unwrap();
         assert!(relying_party_manager
             .validate_response(&authorization_response)
             .await

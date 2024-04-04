@@ -30,16 +30,16 @@ pub struct MultiDidMethodSubject {
 }
 
 impl Sign for MultiDidMethodSubject {
-    fn key_id(&self, did_method: &str) -> Option<String> {
-        match did_method {
-            "did:test" => self.test_subject.key_id(did_method),
-            "did:key" => self.key_subject.key_id(did_method),
+    fn key_id(&self, subject_syntax_type: &str) -> Option<String> {
+        match subject_syntax_type {
+            "did:test" => self.test_subject.key_id(subject_syntax_type),
+            "did:key" => self.key_subject.key_id(subject_syntax_type),
             _ => None,
         }
     }
 
-    fn sign(&self, message: &str, _did_method: &str) -> anyhow::Result<Vec<u8>> {
-        self.test_subject.sign(message, _did_method)
+    fn sign(&self, message: &str, _subject_syntax_type: &str) -> anyhow::Result<Vec<u8>> {
+        self.test_subject.sign(message, _subject_syntax_type)
     }
 
     fn external_signer(&self) -> Option<Arc<dyn ExternalSign>> {
@@ -59,10 +59,10 @@ impl Verify for MultiDidMethodSubject {
 }
 
 impl Subject for MultiDidMethodSubject {
-    fn identifier(&self, did_method: &str) -> anyhow::Result<String> {
-        match did_method {
-            "did:test" => self.test_subject.identifier(did_method),
-            "did:key" => self.key_subject.identifier(did_method),
+    fn identifier(&self, subject_syntax_type: &str) -> anyhow::Result<String> {
+        match subject_syntax_type {
+            "did:test" => self.test_subject.identifier(subject_syntax_type),
+            "did:key" => self.key_subject.identifier(subject_syntax_type),
             _ => Err(anyhow::anyhow!("Unsupported DID method.")),
         }
     }
@@ -112,7 +112,7 @@ async fn test_implicit_flow() {
     };
 
     // Create a new relying party manager.
-    let relying_party_manager = RelyingPartyManager::new([Arc::new(subject)], "did:test".to_string()).unwrap();
+    let relying_party_manager = RelyingPartyManager::new(Arc::new(subject), "did:test".to_string()).unwrap();
 
     // Create a new RequestUrl with response mode `direct_post` for cross-device communication.
     let authorization_request: AuthorizationRequest<Object<SIOPv2>> = AuthorizationRequest::<Object<SIOPv2>>::builder()
@@ -166,7 +166,7 @@ async fn test_implicit_flow() {
     let subject = TestSubject::new("did:test:subject".to_string(), "did:test:subject#key_id".to_string()).unwrap();
 
     // Create a new provider manager.
-    let provider_manager = ProviderManager::new([Arc::new(subject)], "did:test".to_string()).unwrap();
+    let provider_manager = ProviderManager::new(Arc::new(subject), "did:test").unwrap();
 
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
     let authorization_request = AuthorizationRequest::<ByReference> {

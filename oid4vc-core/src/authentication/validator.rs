@@ -1,25 +1,7 @@
-use crate::{jwt, Collection, Subject, Subjects, Verify};
+use crate::{jwt, Subject, Verify};
 use anyhow::Result;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
-
-pub type Validators = Collection<Validator>;
-
-impl From<&Subjects> for Validators {
-    fn from(subjects: &Subjects) -> Self {
-        Self::from(
-            subjects
-                .iter()
-                .map(|(subject_syntax_type, subject)| {
-                    (
-                        subject_syntax_type.clone(),
-                        Arc::new(Validator::Subject(subject.clone())),
-                    )
-                })
-                .collect::<Vec<_>>(),
-        )
-    }
-}
 
 pub enum Validator {
     Subject(Arc<dyn Subject>),

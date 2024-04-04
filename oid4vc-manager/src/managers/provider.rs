@@ -15,9 +15,12 @@ pub struct ProviderManager {
 }
 
 impl ProviderManager {
-    pub fn new<const N: usize>(subjects: [Arc<dyn Subject>; N], default_did_method: String) -> Result<Self> {
+    pub fn new(
+        subject: Arc<dyn Subject>,
+        default_subject_syntax_type: impl TryInto<SubjectSyntaxType>,
+    ) -> Result<Self> {
         Ok(Self {
-            provider: Provider::new(subjects[0].clone(), default_did_method)?,
+            provider: Provider::new(subject, default_subject_syntax_type)?,
         })
     }
 
@@ -38,9 +41,5 @@ impl ProviderManager {
         authorization_response: &AuthorizationResponse<E>,
     ) -> Result<StatusCode> {
         self.provider.send_response(authorization_response).await
-    }
-
-    pub fn current_subject_syntax_type(&self) -> Result<SubjectSyntaxType> {
-        self.provider.subject.type_()
     }
 }

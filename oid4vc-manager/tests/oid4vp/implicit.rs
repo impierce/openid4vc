@@ -89,7 +89,7 @@ async fn test_implicit_flow() {
     // Create a new relying party.
     let relying_party = Arc::new(KeySubject::new());
     let relying_party_did = relying_party.identifier("did:key").unwrap();
-    let relying_party_manager = RelyingPartyManager::new([relying_party], "did:key".to_string()).unwrap();
+    let relying_party_manager = RelyingPartyManager::new(relying_party, "did:key".to_string()).unwrap();
 
     // Create authorization request with response_type `id_token vp_token`
     let authorization_request = AuthorizationRequest::<Object<OID4VP>>::builder()
@@ -101,7 +101,7 @@ async fn test_implicit_flow() {
         .unwrap();
 
     // Create a provider manager and validate the authorization request.
-    let provider_manager = ProviderManager::new([subject], "did:key".to_string()).unwrap();
+    let provider_manager = ProviderManager::new(subject, "did:key").unwrap();
 
     // Create a new verifiable credential.
     let verifiable_credential = VerifiableCredentialJwt::builder()

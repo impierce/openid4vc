@@ -15,16 +15,16 @@ pub struct RelyingParty {
     // TODO: Strictly speaking a relying party doesn't need to have a [`Subject`]. It just needs methods to
     // sign and verify tokens. For simplicity we use a [`Subject`] here for now but we should consider a cleaner solution.
     pub subject: SigningSubject,
-    pub default_did_method: String,
+    pub default_subject_syntax_type: String,
     pub sessions: HashMap<(String, String), AuthorizationRequest<Object<SIOPv2>>>,
 }
 
 impl RelyingParty {
     // TODO: Use RelyingPartyBuilder instead.
-    pub fn new(subject: SigningSubject, default_did_method: String) -> Result<Self> {
+    pub fn new(subject: SigningSubject, default_subject_syntax_type: String) -> Result<Self> {
         Ok(RelyingParty {
             subject,
-            default_did_method,
+            default_subject_syntax_type,
             sessions: HashMap::new(),
         })
     }
@@ -34,7 +34,7 @@ impl RelyingParty {
             self.subject.clone(),
             Header::new(Algorithm::EdDSA),
             authorization_request,
-            &self.default_did_method,
+            &self.default_subject_syntax_type,
         )
     }
 
