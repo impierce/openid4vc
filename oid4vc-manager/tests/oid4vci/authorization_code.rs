@@ -6,7 +6,7 @@ use oid4vc_manager::{
     servers::credential_issuer::Server,
 };
 use oid4vci::{
-    authorization_details::AuthorizationDetailsObject,
+    authorization_details::{AuthorizationDetailsObject, CredentialConfigurationOrFormat, OpenidCredential},
     credential_format_profiles::{CredentialFormats, WithParameters},
     credential_response::{CredentialResponse, CredentialResponseType},
     token_request::TokenRequest,
@@ -63,8 +63,8 @@ async fn test_authorization_code_flow() {
 
     // Get the credential format for a university degree.
     let university_degree_credential_format: CredentialFormats<WithParameters> = credential_issuer_metadata
-        .credentials_supported
-        .get(0)
+        .credential_configurations_supported
+        .get("UniversityDegree_JWT")
         .unwrap()
         .clone()
         .credential_format;
@@ -74,8 +74,11 @@ async fn test_authorization_code_flow() {
         .get_authorization_code(
             authorization_server_metadata.authorization_endpoint.unwrap(),
             vec![AuthorizationDetailsObject {
+                r#type: OpenidCredential::Type,
                 locations: None,
-                credential_format: university_degree_credential_format.clone(),
+                credential_configuration_or_format: CredentialConfigurationOrFormat::CredentialFormat(
+                    university_degree_credential_format.clone(),
+                ),
             }
             .into()],
         )
@@ -105,7 +108,7 @@ async fn test_authorization_code_flow() {
         .unwrap();
 
     let credential = match credential_response.credential {
-        CredentialResponseType::Immediate(CredentialFormats::JwtVcJson(credential)) => credential.credential,
+        CredentialResponseType::Immediate { credential, .. } => credential,
         _ => panic!("Credential was not a JWT VC JSON."),
     };
 

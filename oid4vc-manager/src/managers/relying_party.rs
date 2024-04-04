@@ -17,7 +17,7 @@ pub struct RelyingPartyManager {
 impl RelyingPartyManager {
     pub fn new<const N: usize>(subjects: [Arc<dyn Subject>; N]) -> Result<Self> {
         Ok(Self {
-            relying_party: RelyingParty::new(subjects.get(0).ok_or_else(|| anyhow!("No subjects found."))?.clone())?,
+            relying_party: RelyingParty::new(subjects.first().ok_or_else(|| anyhow!("No subjects found."))?.clone())?,
             subjects: Subjects::try_from(subjects)?,
         })
     }

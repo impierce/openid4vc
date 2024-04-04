@@ -5,10 +5,10 @@ use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFo
 use crate::credential_issuer::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
 };
-use crate::credential_offer::CredentialOffer;
+use crate::credential_offer::CredentialOfferParameters;
 use crate::credential_request::{BatchCredentialRequest, CredentialRequest};
 use crate::credential_response::BatchCredentialResponse;
-use crate::proof::{Proof, ProofType};
+use crate::proof::{KeyProofType, ProofType};
 use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
 use anyhow::Result;
 use oid4vc_core::authentication::subject::SigningSubject;
@@ -40,12 +40,12 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         }
     }
 
-    pub async fn get_credential_offer(&self, credential_offer_uri: Url) -> Result<CredentialOffer> {
+    pub async fn get_credential_offer(&self, credential_offer_uri: Url) -> Result<CredentialOfferParameters> {
         self.client
             .get(credential_offer_uri)
             .send()
             .await?
-            .json::<CredentialOffer>()
+            .json::<CredentialOfferParameters>()
             .await
             .map_err(|_| anyhow::anyhow!("Failed to get credential offer"))
     }
@@ -138,7 +138,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         let credential_request = CredentialRequest {
             credential_format,
             proof: Some(
-                Proof::builder()
+                KeyProofType::builder()
                     .proof_type(ProofType::Jwt)
                     .signer(self.subject.clone())
                     .iss(self.subject.identifier()?)
@@ -175,7 +175,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         credential_formats: Vec<CFC>,
     ) -> Result<BatchCredentialResponse> {
         let proof = Some(
-            Proof::builder()
+            KeyProofType::builder()
                 .proof_type(ProofType::Jwt)
                 .signer(self.subject.clone())
                 .iss(self.subject.identifier()?)

@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+
 use oid4vc_core::authentication::subject::SigningSubject;
 use oid4vci::{
     authorization_response::AuthorizationResponse,
     credential_format_profiles::CredentialFormatCollection,
-    credential_issuer::credentials_supported::CredentialsSupportedObject,
+    credential_issuer::credential_configurations_supported::CredentialConfigurationsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
     credential_response::CredentialResponse,
     token_request::TokenRequest,
@@ -15,7 +17,7 @@ pub trait Storage<CFC>: Send + Sync + 'static
 where
     CFC: CredentialFormatCollection,
 {
-    fn get_credentials_supported(&self) -> Vec<CredentialsSupportedObject<CFC>>;
+    fn get_credential_configurations_supported(&self) -> HashMap<String, CredentialConfigurationsSupportedObject<CFC>>;
     fn get_authorization_response(&self) -> Option<AuthorizationResponse>;
     fn get_authorization_code(&self) -> Option<AuthorizationCode>;
     fn get_pre_authorized_code(&self) -> Option<PreAuthorizedCode>;

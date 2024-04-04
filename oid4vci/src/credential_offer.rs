@@ -1,4 +1,3 @@
-use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters};
 use anyhow::Result;
 use oid4vc_core::{to_query_value, JsonObject};
 use reqwest::Url;
@@ -6,44 +5,59 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_with::skip_serializing_none;
 
+/// Grant Type `authorization_code` as described in https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#section-4.1.1-4.1.1
+#[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct AuthorizationCode {
     pub issuer_state: Option<String>,
+    pub authorization_server: Option<Url>,
 }
 
+/// Grant Type `pre-authorized_code` as described in https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#section-4.1.1-4.2.1
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
 pub struct PreAuthorizedCode {
     #[serde(rename = "pre-authorized_code")]
     pub pre_authorized_code: String,
-    #[serde(default)]
-    pub user_pin_required: bool,
+    pub tx_code: Option<TransactionCode>,
     pub interval: Option<i64>,
+    pub authorization_server: Option<Url>,
 }
 
-/// Credential Offer as described in https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer.
+#[skip_serializing_none]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
+pub struct TransactionCode {
+    pub input_mode: Option<InputMode>,
+    pub length: Option<u64>,
+    pub description: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum InputMode {
+    #[default]
+    Numeric,
+    Text,
+}
+
+/// Credential Offer Parameters as described in https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-offer-parameters
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
-pub struct CredentialOffer<CFC = CredentialFormats<WithParameters>>
-where
-    CFC: CredentialFormatCollection,
-{
+pub struct CredentialOfferParameters {
     pub credential_issuer: Url,
-    pub credentials: Vec<CredentialsObject<CFC>>,
+    pub credential_configuration_ids: Vec<String>,
     pub grants: Option<Grants>,
 }
 
+/// Credential Offer as described in https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-offer
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 #[serde(rename_all = "snake_case")]
-pub enum CredentialOfferQuery<CFC = CredentialFormats<WithParameters>>
-where
-    CFC: CredentialFormatCollection,
-{
+pub enum CredentialOffer {
     CredentialOfferUri(Url),
-    CredentialOffer(CredentialOffer<CFC>),
+    CredentialOffer(Box<CredentialOfferParameters>),
 }
 
-impl std::str::FromStr for CredentialOfferQuery {
+impl std::str::FromStr for CredentialOffer {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self> {
@@ -59,10 +73,10 @@ impl std::str::FromStr for CredentialOfferQuery {
     }
 }
 
-impl<CFC: CredentialFormatCollection> std::fmt::Display for CredentialOfferQuery<CFC> {
+impl std::fmt::Display for CredentialOffer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CredentialOfferQuery::CredentialOfferUri(uri) => {
+            CredentialOffer::CredentialOfferUri(uri) => {
                 let mut url = Url::parse("openid-credential-offer://").map_err(|_| std::fmt::Error)?;
                 url.query_pairs_mut().append_pair(
                     "credential_offer_uri",
@@ -70,7 +84,7 @@ impl<CFC: CredentialFormatCollection> std::fmt::Display for CredentialOfferQuery
                 );
                 write!(f, "{}", url)
             }
-            CredentialOfferQuery::CredentialOffer(offer) => {
+            CredentialOffer::CredentialOffer(offer) => {
                 let mut url = Url::parse("openid-credential-offer://").map_err(|_| std::fmt::Error)?;
                 url.query_pairs_mut()
                     .append_pair("credential_offer", &to_query_value(offer).map_err(|_| std::fmt::Error)?);
@@ -80,17 +94,7 @@ impl<CFC: CredentialFormatCollection> std::fmt::Display for CredentialOfferQuery
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
-#[serde(untagged)]
-pub enum CredentialsObject<CFC = CredentialFormats<WithParameters>>
-where
-    CFC: CredentialFormatCollection,
-{
-    ByReference(String),
-    ByValue(CFC),
-}
-
-/// Grants as described in https://openid.bitbucket.io/connect/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer-parameters.
+/// Grants as described in https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#section-4.1.1-2.3
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 pub struct Grants {
@@ -104,10 +108,6 @@ mod tests {
     use std::{fs::File, path::Path};
 
     use super::*;
-    use crate::credential_format_profiles::{
-        w3c_verifiable_credentials::{jwt_vc_json, ldp_vc},
-        CredentialFormats, Parameters,
-    };
     use serde::de::DeserializeOwned;
     use serde_json::json;
 
@@ -124,45 +124,35 @@ mod tests {
     fn test_credential_offer_serde() {
         let json = json!({
            "credential_issuer": "https://credential-issuer.example.com/",
-           "credentials": [
+           "credential_configuration_ids": [
               "UniversityDegree_JWT",
-              {
-                 "format": "mso_mdoc",
-                 "doctype": "org.iso.18013.5.1.mDL"
-              }
            ],
            "grants": {
               "authorization_code": {
                  "issuer_state": "eyJhbGciOiJSU0Et...FYUaBy"
               },
               "urn:ietf:params:oauth:grant-type:pre-authorized_code": {
-                 "pre-authorized_code": "adhjhdjajkdkhjhdj",
-                 "user_pin_required": true
+                 "pre-authorized_code": "adhjhdjajkdkhjhdj"
               }
            }
         });
 
-        let credential_offer: CredentialOffer = serde_json::from_value(json.clone()).unwrap();
+        let credential_offer: CredentialOfferParameters = serde_json::from_value(json.clone()).unwrap();
 
         // Assert that the json Value is deserialized into the correct type.
         assert_eq!(
             credential_offer,
-            CredentialOffer {
+            CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec![
-                    CredentialsObject::ByReference("UniversityDegree_JWT".to_string()),
-                    CredentialsObject::ByValue(CredentialFormats::MsoMdoc(Parameters {
-                        parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
-                    }))
-                ],
+                credential_configuration_ids: vec!["UniversityDegree_JWT".to_string(),],
                 grants: Some(Grants {
                     pre_authorized_code: Some(PreAuthorizedCode {
                         pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
-                        user_pin_required: true,
                         ..Default::default()
                     }),
                     authorization_code: Some(AuthorizationCode {
-                        issuer_state: Some("eyJhbGciOiJSU0Et...FYUaBy".to_string())
+                        issuer_state: Some("eyJhbGciOiJSU0Et...FYUaBy".to_string()),
+                        authorization_server: None
                     })
                 })
             }
@@ -175,142 +165,67 @@ mod tests {
     #[test]
     fn test_oid4vci_examples() {
         // Examples from
-        // https://bitbucket.org/openid/connect/src/master/openid-4-verifiable-credential-issuance/examples/.
+        // https://github.com/openid/OpenID4VCI/tree/80b2214814106e55e5fd09af3415ba4fc124b6be/examples
 
         assert_eq!(
-            CredentialOffer {
+            CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec![CredentialsObject::ByReference("UniversityDegree_LDP".to_string()),],
+                credential_configuration_ids: vec!["UniversityDegree_LDP_VC".to_string(),],
                 grants: Some(Grants {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
                         pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
-                        user_pin_required: true,
+                        tx_code: Some(TransactionCode::default()),
                         ..Default::default()
                     })
                 })
             },
-            json_example::<CredentialOffer>("tests/examples/credential_offer_by_reference.json")
+            json_example::<CredentialOfferParameters>("tests/examples/credential_offer_by_reference.json")
         );
 
         assert_eq!(
-            CredentialOffer {
+            CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec![CredentialsObject::ByValue(CredentialFormats::JwtVcJson(Parameters {
-                    parameters: (
-                        jwt_vc_json::CredentialDefinition {
-                            type_: vec![
-                                "VerifiableCredential".to_string(),
-                                "UniversityDegreeCredential".to_string()
-                            ],
-                            credential_subject: None
-                        },
-                        None
-                    )
-                        .into()
-                })),],
-                grants: Some(Grants {
-                    authorization_code: Some(AuthorizationCode {
-                        issuer_state: Some("eyJhbGciOiJSU0Et...FYUaBy".to_string())
-                    }),
-                    pre_authorized_code: None
-                })
-            },
-            json_example::<CredentialOffer>("tests/examples/credential_offer_jwt_vc_json.json")
-        );
-
-        assert_eq!(
-            CredentialOffer {
-                credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec![CredentialsObject::ByValue(CredentialFormats::LdpVc(Parameters {
-                    parameters: (
-                        ldp_vc::CredentialDefinition {
-                            context: vec![
-                                "https://www.w3.org/2018/credentials/v1".to_string(),
-                                "https://www.w3.org/2018/credentials/examples/v1".to_string()
-                            ],
-                            type_: vec![
-                                "VerifiableCredential".to_string(),
-                                "UniversityDegreeCredential".to_string()
-                            ],
-                            credential_subject: None
-                        },
-                        None
-                    )
-                        .into()
-                })),],
-                grants: None
-            },
-            json_example::<CredentialOffer>("tests/examples/credential_offer_ldp_vc.json")
-        );
-
-        assert_eq!(
-            CredentialOffer {
-                credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec![CredentialsObject::ByValue(CredentialFormats::MsoMdoc(Parameters {
-                    parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
-                })),],
-                grants: Some(Grants {
-                    authorization_code: None,
-                    pre_authorized_code: Some(PreAuthorizedCode {
-                        pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
-                        user_pin_required: true,
-                        ..Default::default()
-                    })
-                })
-            },
-            json_example::<CredentialOffer>("tests/examples/credential_offer_mso_mdoc.json")
-        );
-
-        assert_eq!(
-            CredentialOffer {
-                credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec![
-                    CredentialsObject::ByReference("UniversityDegree_JWT".to_string()),
-                    CredentialsObject::ByValue(CredentialFormats::MsoMdoc(Parameters {
-                        parameters: ("org.iso.18013.5.1.mDL".to_string(), None, None).into()
-                    })),
+                credential_configuration_ids: vec![
+                    "UniversityDegreeCredential".to_string(),
+                    "org.iso.18013.5.1.mDL".to_string(),
                 ],
                 grants: Some(Grants {
-                    authorization_code: Some(AuthorizationCode {
-                        issuer_state: Some("eyJhbGciOiJSU0Et...FYUaBy".to_string())
-                    }),
+                    authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
-                        pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
-                        user_pin_required: true,
+                        pre_authorized_code: "oaKazRN8I0IbtZ0C7JuMn5".to_string(),
+                        tx_code: Some(TransactionCode {
+                            length: Some(4),
+                            input_mode: Some(InputMode::Numeric),
+                            description: Some("Please provide the one-time code that was sent via e-mail".to_string()),
+                        }),
                         ..Default::default()
                     })
                 })
             },
-            json_example::<CredentialOffer>("tests/examples/credential_offer_multiple_credentials.json")
+            json_example::<CredentialOfferParameters>("tests/examples/credential_offer_multiple_credentials.json")
         );
 
         assert_eq!(
-            CredentialOffer {
+            CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credentials: vec![CredentialsObject::ByValue(CredentialFormats::JwtVcJson(Parameters {
-                    parameters: (
-                        jwt_vc_json::CredentialDefinition {
-                            type_: vec![
-                                "VerifiableCredential".to_string(),
-                                "UniversityDegreeCredential".to_string()
-                            ],
-                            credential_subject: None
-                        },
-                        None
-                    )
-                        .into()
-                })),],
+                credential_configuration_ids: vec!["UniversityDegreeCredential".to_string()],
                 grants: Some(Grants {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
                         pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
-                        user_pin_required: true,
+                        tx_code: Some(TransactionCode {
+                            description: Some(
+                                "Please provide the one-time code which was sent to your mobile phone via SMS"
+                                    .to_string()
+                            ),
+                            ..Default::default()
+                        }),
                         ..Default::default()
                     })
                 })
             },
-            json_example::<CredentialOffer>("tests/examples/credential_offer_pre-authz_code.json")
+            json_example::<CredentialOfferParameters>("tests/examples/credential_offer_pre-authz_code.json")
         );
     }
 }
