@@ -7,7 +7,7 @@ use oid4vc_core::{
     authorization_response::AuthorizationResponse,
     jwt,
     openid4vc_extension::{Extension, ResponseHandle},
-    Decoder,
+    Validator,
 };
 use std::collections::HashMap;
 
@@ -15,14 +15,16 @@ pub struct RelyingParty {
     // TODO: Strictly speaking a relying party doesn't need to have a [`Subject`]. It just needs methods to
     // sign and verify tokens. For simplicity we use a [`Subject`] here for now but we should consider a cleaner solution.
     pub subject: SigningSubject,
+    pub default_did_method: String,
     pub sessions: HashMap<(String, String), AuthorizationRequest<Object<SIOPv2>>>,
 }
 
 impl RelyingParty {
     // TODO: Use RelyingPartyBuilder instead.
-    pub fn new(subject: SigningSubject) -> Result<Self> {
+    pub fn new(subject: SigningSubject, default_did_method: String) -> Result<Self> {
         Ok(RelyingParty {
             subject,
+            default_did_method,
             sessions: HashMap::new(),
         })
     }
@@ -32,6 +34,7 @@ impl RelyingParty {
             self.subject.clone(),
             Header::new(Algorithm::EdDSA),
             authorization_request,
+            &self.default_did_method,
         )
     }
 
@@ -40,8 +43,7 @@ impl RelyingParty {
     pub async fn validate_response<E: Extension>(
         &self,
         authorization_response: &AuthorizationResponse<E>,
-        decoder: Decoder,
     ) -> Result<<E::ResponseHandle as ResponseHandle>::ResponseItem> {
-        E::decode_authorization_response(decoder, authorization_response).await
+        E::decode_authorization_response(Validator::Subject(self.subject.clone()), authorization_response).await
     }
 }

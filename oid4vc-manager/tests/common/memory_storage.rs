@@ -125,6 +125,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
                             .verifiable_credential(verifiable_credential)
                             .build()
                             .ok(),
+                        "did:key",
                     )
                     .ok(),
                 )

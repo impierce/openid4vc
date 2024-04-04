@@ -38,10 +38,10 @@ async fn test_authorization_code_flow() {
 
     // Create a new subject.
     let subject = KeySubject::new();
-    let subject_did = subject.identifier().unwrap();
+    let subject_did = subject.identifier("did:key").unwrap();
 
     // Create a new wallet.
-    let wallet = Wallet::new(Arc::new(subject));
+    let wallet = Wallet::new(Arc::new(subject), "did:key".to_string());
 
     // Get the credential issuer url.
     let credential_issuer_url = credential_issuer

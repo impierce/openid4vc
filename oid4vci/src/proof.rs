@@ -32,6 +32,7 @@ pub struct ProofBuilder {
     rfc7519_claims: RFC7519Claims,
     nonce: Option<String>,
     signer: Option<Arc<dyn Subject>>,
+    did_method: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -47,6 +48,8 @@ impl ProofBuilder {
         anyhow::ensure!(self.rfc7519_claims.iat.is_some(), "iat claim is required");
         anyhow::ensure!(self.nonce.is_some(), "nonce claim is required");
 
+        let did_method = self.did_method.ok_or(anyhow::anyhow!("did_method is required"))?;
+
         match self.proof_type {
             Some(ProofType::Jwt) => Ok(Proof::Jwt {
                 jwt: jwt::encode(
@@ -60,6 +63,7 @@ impl ProofBuilder {
                         rfc7519_claims: self.rfc7519_claims,
                         nonce: self.nonce.ok_or(anyhow::anyhow!("No nonce found"))?,
                     },
+                    &did_method,
                 )?,
             }),
             Some(ProofType::Cwt) => todo!(),
@@ -79,4 +83,5 @@ impl ProofBuilder {
     builder_fn!(rfc7519_claims, exp, i64);
     builder_fn!(rfc7519_claims, iat, i64);
     builder_fn!(nonce, String);
+    builder_fn!(did_method, String);
 }

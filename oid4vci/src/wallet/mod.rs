@@ -23,18 +23,20 @@ where
     CFC: CredentialFormatCollection,
 {
     pub subject: SigningSubject,
+    pub default_did_method: String,
     pub client: ClientWithMiddleware,
     phantom: std::marker::PhantomData<CFC>,
 }
 
 impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
-    pub fn new(subject: SigningSubject) -> Self {
+    pub fn new(subject: SigningSubject, default_did_method: String) -> Self {
         let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
         let client = ClientBuilder::new(reqwest::Client::new())
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
             .build();
         Self {
             subject,
+            default_did_method,
             client,
             phantom: std::marker::PhantomData,
         }
@@ -105,7 +107,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             // TODO: must be `form`, but `AuthorizationRequest needs to be able to serilalize properly.
             .json(&AuthorizationRequest {
                 response_type: "code".to_string(),
-                client_id: self.subject.identifier()?,
+                client_id: self.subject.identifier(&self.default_did_method)?,
                 redirect_uri: None,
                 scope: None,
                 state: None,
@@ -141,7 +143,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
                 Proof::builder()
                     .proof_type(ProofType::Jwt)
                     .signer(self.subject.clone())
-                    .iss(self.subject.identifier()?)
+                    .iss(self.subject.identifier(&self.default_did_method)?)
                     .aud(credential_issuer_metadata.credential_issuer)
                     .iat(1571324800)
                     .exp(9999999999i64)
@@ -153,6 +155,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
                             .ok_or(anyhow::anyhow!("No c_nonce found."))?
                             .clone(),
                     )
+                    .did_method(&self.default_did_method)
                     .build()?,
             ),
         };
@@ -178,7 +181,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             Proof::builder()
                 .proof_type(ProofType::Jwt)
                 .signer(self.subject.clone())
-                .iss(self.subject.identifier()?)
+                .iss(self.subject.identifier(&self.default_did_method)?)
                 .aud(credential_issuer_metadata.credential_issuer)
                 .iat(1571324800)
                 .exp(9999999999i64)
@@ -190,6 +193,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
                         .ok_or(anyhow::anyhow!("No c_nonce found."))?
                         .clone(),
                 )
+                .did_method(&self.default_did_method)
                 .build()?,
         );
 

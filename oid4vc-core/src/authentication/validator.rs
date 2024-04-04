@@ -1,5 +1,6 @@
-use crate::{Collection, Subject, Subjects, Verify};
+use crate::{jwt, Collection, Subject, Subjects, Verify};
 use anyhow::Result;
+use serde::de::DeserializeOwned;
 use std::sync::Arc;
 
 pub type Validators = Collection<Validator>;
@@ -31,5 +32,12 @@ impl Validator {
             Validator::Subject(subject) => subject.public_key(kid).await,
             Validator::Verifier(verifier) => verifier.public_key(kid).await,
         }
+    }
+
+    pub async fn decode<T: DeserializeOwned>(&self, jwt: String) -> Result<T> {
+        let (kid, algorithm) = jwt::extract_header(&jwt)?;
+
+        let public_key = self.public_key(&kid).await?;
+        jwt::decode(&jwt, public_key, algorithm)
     }
 }

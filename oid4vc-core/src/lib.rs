@@ -3,7 +3,6 @@ pub mod authorization_request;
 pub mod authorization_response;
 pub mod client_metadata;
 pub mod collection;
-pub mod decoder;
 pub mod jwt;
 pub mod openid4vc_extension;
 pub mod rfc7519_claims;
@@ -17,7 +16,6 @@ pub use authentication::{
     verify::Verify,
 };
 pub use collection::Collection;
-pub use decoder::Decoder;
 use rand::{distributions::Alphanumeric, Rng};
 pub use rfc7519_claims::RFC7519Claims;
 use serde::Serialize;

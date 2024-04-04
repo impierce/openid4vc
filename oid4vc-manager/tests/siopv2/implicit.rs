@@ -1,13 +1,16 @@
 use crate::common::{MemoryStorage, Storage, TestSubject};
+use axum::async_trait;
+use did_key::{generate, Ed25519KeyPair};
 use lazy_static::lazy_static;
 use oid4vc_core::{
+    authentication::sign::ExternalSign,
     authorization_request::{AuthorizationRequest, ByReference, Object},
     authorization_response::AuthorizationResponse,
     client_metadata::ClientMetadataResource,
     scope::{Scope, ScopeValue},
-    DidMethod, SubjectSyntaxType,
+    DidMethod, Sign, Subject, SubjectSyntaxType, Verify,
 };
-use oid4vc_manager::{ProviderManager, RelyingPartyManager};
+use oid4vc_manager::{methods::key_method::KeySubject, ProviderManager, RelyingPartyManager};
 use siopv2::{
     authorization_request::ClientMetadataParameters,
     claims::{Address, IndividualClaimRequest},
@@ -20,6 +23,50 @@ use wiremock::{
     matchers::{method, path},
     Mock, MockServer, ResponseTemplate,
 };
+
+pub struct MultiDidMethodSubject {
+    pub test_subject: TestSubject,
+    pub key_subject: KeySubject,
+}
+
+impl Sign for MultiDidMethodSubject {
+    fn key_id(&self, did_method: &str) -> Option<String> {
+        match did_method {
+            "did:test" => self.test_subject.key_id(did_method),
+            "did:key" => self.key_subject.key_id(did_method),
+            _ => None,
+        }
+    }
+
+    fn sign(&self, message: &str, _did_method: &str) -> anyhow::Result<Vec<u8>> {
+        self.test_subject.sign(message, _did_method)
+    }
+
+    fn external_signer(&self) -> Option<Arc<dyn ExternalSign>> {
+        None
+    }
+}
+
+#[async_trait]
+impl Verify for MultiDidMethodSubject {
+    async fn public_key(&self, kid: &str) -> anyhow::Result<Vec<u8>> {
+        match kid {
+            _ if kid.contains("did:test") => self.test_subject.public_key(kid).await,
+            _ if kid.contains("did:key") => self.key_subject.public_key(kid).await,
+            _ => Err(anyhow::anyhow!("Unsupported DID method.")),
+        }
+    }
+}
+
+impl Subject for MultiDidMethodSubject {
+    fn identifier(&self, did_method: &str) -> anyhow::Result<String> {
+        match did_method {
+            "did:test" => self.test_subject.identifier(did_method),
+            "did:key" => self.key_subject.identifier(did_method),
+            _ => Err(anyhow::anyhow!("Unsupported DID method.")),
+        }
+    }
+}
 
 lazy_static! {
     pub static ref USER_CLAIMS: serde_json::Value = serde_json::json!(
@@ -55,14 +102,17 @@ async fn test_implicit_flow() {
     let server_url = mock_server.uri();
 
     // Create a new subject.
-    let subject = TestSubject::new(
-        "did:test:relying_party".to_string(),
-        "did:test:relying_party#key_id".to_string(),
-    )
-    .unwrap();
+    let subject = MultiDidMethodSubject {
+        test_subject: TestSubject::new(
+            "did:test:relying_party".to_string(),
+            "did:test:relying_party#key_id".to_string(),
+        )
+        .unwrap(),
+        key_subject: KeySubject::from_keypair(generate::<Ed25519KeyPair>(None), None),
+    };
 
     // Create a new relying party manager.
-    let relying_party_manager = RelyingPartyManager::new([Arc::new(subject)]).unwrap();
+    let relying_party_manager = RelyingPartyManager::new([Arc::new(subject)], "did:test".to_string()).unwrap();
 
     // Create a new RequestUrl with response mode `direct_post` for cross-device communication.
     let authorization_request: AuthorizationRequest<Object<SIOPv2>> = AuthorizationRequest::<Object<SIOPv2>>::builder()
@@ -116,7 +166,7 @@ async fn test_implicit_flow() {
     let subject = TestSubject::new("did:test:subject".to_string(), "did:test:subject#key_id".to_string()).unwrap();
 
     // Create a new provider manager.
-    let provider_manager = ProviderManager::new([Arc::new(subject)]).unwrap();
+    let provider_manager = ProviderManager::new([Arc::new(subject)], "did:test".to_string()).unwrap();
 
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
     let authorization_request = AuthorizationRequest::<ByReference> {
