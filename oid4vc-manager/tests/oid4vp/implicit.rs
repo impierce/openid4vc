@@ -89,7 +89,7 @@ async fn test_implicit_flow() {
     // Create a new relying party.
     let relying_party = Arc::new(KeySubject::new());
     let relying_party_did = relying_party.identifier("did:key").unwrap();
-    let relying_party_manager = RelyingPartyManager::new(relying_party, "did:key".to_string()).unwrap();
+    let relying_party_manager = RelyingPartyManager::new(relying_party, "did:key").unwrap();
 
     // Create authorization request with response_type `id_token vp_token`
     let authorization_request = AuthorizationRequest::<Object<OID4VP>>::builder()
@@ -134,7 +134,7 @@ async fn test_implicit_flow() {
     // Create presentation submission using the presentation definition and the verifiable credential.
     let presentation_submission = create_presentation_submission(
         &PRESENTATION_DEFINITION,
-        vec![serde_json::to_value(&verifiable_credential).unwrap()],
+        &vec![serde_json::to_value(&verifiable_credential).unwrap()],
     )
     .unwrap();
 

@@ -151,8 +151,7 @@ mod tests {
             .unwrap();
 
         // Let the relying party validate the authorization_response.
-        let relying_party_manager =
-            RelyingPartyManager::new(Arc::new(KeySubject::new()), "did:key".to_string()).unwrap();
+        let relying_party_manager = RelyingPartyManager::new(Arc::new(KeySubject::new()), "did:key").unwrap();
         assert!(relying_party_manager
             .validate_response(&authorization_response)
             .await

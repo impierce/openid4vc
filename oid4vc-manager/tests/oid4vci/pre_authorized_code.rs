@@ -45,7 +45,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
     let subject_did = subject.identifier("did:key").unwrap();
 
     // Create a new wallet.
-    let wallet: Wallet = Wallet::new(Arc::new(subject), "did:key".to_string());
+    let wallet: Wallet = Wallet::new(Arc::new(subject), "did:key").unwrap();
 
     // Get the credential offer url.
     let credential_offer_query = credential_issuer

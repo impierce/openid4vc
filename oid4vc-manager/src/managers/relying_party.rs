@@ -3,7 +3,7 @@ use oid4vc_core::{
     authorization_request::{AuthorizationRequest, Object},
     authorization_response::AuthorizationResponse,
     openid4vc_extension::{Extension, ResponseHandle},
-    Subject,
+    Subject, SubjectSyntaxType,
 };
 use siopv2::RelyingParty;
 use std::sync::Arc;
@@ -14,9 +14,12 @@ pub struct RelyingPartyManager {
 }
 
 impl RelyingPartyManager {
-    pub fn new(subject: Arc<dyn Subject>, subject_syntax_type: String) -> Result<Self> {
+    pub fn new(
+        subject: Arc<dyn Subject>,
+        default_subject_syntax_type: impl TryInto<SubjectSyntaxType>,
+    ) -> Result<Self> {
         Ok(Self {
-            relying_party: RelyingParty::new(subject, subject_syntax_type)?,
+            relying_party: RelyingParty::new(subject, default_subject_syntax_type)?,
         })
     }
 

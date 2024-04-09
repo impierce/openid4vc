@@ -24,6 +24,7 @@ use wiremock::{
     Mock, MockServer, ResponseTemplate,
 };
 
+/// A Subject that can sign and verify messages with multiple different DID Methods.
 pub struct MultiDidMethodSubject {
     pub test_subject: TestSubject,
     pub key_subject: KeySubject,
@@ -38,8 +39,12 @@ impl Sign for MultiDidMethodSubject {
         }
     }
 
-    fn sign(&self, message: &str, _subject_syntax_type: &str) -> anyhow::Result<Vec<u8>> {
-        self.test_subject.sign(message, _subject_syntax_type)
+    fn sign(&self, message: &str, subject_syntax_type: &str) -> anyhow::Result<Vec<u8>> {
+        match subject_syntax_type {
+            "did:test" => self.test_subject.sign(message, subject_syntax_type),
+            "did:key" => self.key_subject.sign(message, subject_syntax_type),
+            _ => Err(anyhow::anyhow!("Unsupported DID method.")),
+        }
     }
 
     fn external_signer(&self) -> Option<Arc<dyn ExternalSign>> {
@@ -95,8 +100,11 @@ lazy_static! {
     );
 }
 
+#[rstest::rstest]
+#[case("did:key")]
+#[case("did:test")]
 #[tokio::test]
-async fn test_implicit_flow() {
+async fn test_implicit_flow(#[case] did_method: &str) {
     // Create a new mock server and retreive it's url.
     let mock_server = MockServer::start().await;
     let server_url = mock_server.uri();
@@ -111,12 +119,14 @@ async fn test_implicit_flow() {
         key_subject: KeySubject::from_keypair(generate::<Ed25519KeyPair>(None), None),
     };
 
+    let client_id = subject.identifier(did_method).unwrap();
+
     // Create a new relying party manager.
-    let relying_party_manager = RelyingPartyManager::new(Arc::new(subject), "did:test".to_string()).unwrap();
+    let relying_party_manager = RelyingPartyManager::new(Arc::new(subject), did_method).unwrap();
 
     // Create a new RequestUrl with response mode `direct_post` for cross-device communication.
     let authorization_request: AuthorizationRequest<Object<SIOPv2>> = AuthorizationRequest::<Object<SIOPv2>>::builder()
-        .client_id("did:test:relyingparty".to_string())
+        .client_id(&client_id)
         .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
         .redirect_uri(format!("{server_url}/redirect_uri").parse::<url::Url>().unwrap())
         .response_mode("direct_post".to_string())
@@ -124,7 +134,7 @@ async fn test_implicit_flow() {
             client_name: None,
             logo_uri: None,
             extension: ClientMetadataParameters {
-                subject_syntax_types_supported: vec![SubjectSyntaxType::Did(DidMethod::from_str("did:test").unwrap())],
+                subject_syntax_types_supported: vec![SubjectSyntaxType::Did(DidMethod::from_str(did_method).unwrap())],
             },
         })
         .claims(
@@ -162,17 +172,20 @@ async fn test_implicit_flow() {
     // Create a new storage for the user's claims.
     let storage = MemoryStorage::new(serde_json::from_value(USER_CLAIMS.clone()).unwrap());
 
-    // Create a new subject and validator.
-    let subject = TestSubject::new("did:test:subject".to_string(), "did:test:subject#key_id".to_string()).unwrap();
+    // Create a new subject.
+    let subject = MultiDidMethodSubject {
+        test_subject: TestSubject::new("did:test:subject".to_string(), "did:test:subject#key_id".to_string()).unwrap(),
+        key_subject: KeySubject::from_keypair(generate::<Ed25519KeyPair>(None), None),
+    };
 
     // Create a new provider manager.
-    let provider_manager = ProviderManager::new(Arc::new(subject), "did:test").unwrap();
+    let provider_manager = ProviderManager::new(Arc::new(subject), did_method).unwrap();
 
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
     let authorization_request = AuthorizationRequest::<ByReference> {
         custom_url_scheme: "openid".to_string(),
         body: ByReference {
-            client_id: "did:test:relyingparty".to_string(),
+            client_id,
             request_uri: format!("{server_url}/request_uri").parse::<url::Url>().unwrap(),
         },
     };
