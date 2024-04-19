@@ -42,4 +42,8 @@ impl ProviderManager {
     ) -> Result<StatusCode> {
         self.provider.send_response(authorization_response).await
     }
+
+    pub fn default_subject_syntax_type(&self) -> &SubjectSyntaxType {
+        &self.provider.default_subject_syntax_type
+    }
 }

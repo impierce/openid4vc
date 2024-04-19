@@ -33,4 +33,8 @@ impl RelyingPartyManager {
     ) -> Result<<E::ResponseHandle as ResponseHandle>::ResponseItem> {
         self.relying_party.validate_response(authorization_response).await
     }
+
+    pub fn default_subject_syntax_type(&self) -> &SubjectSyntaxType {
+        &self.relying_party.default_subject_syntax_type
+    }
 }
