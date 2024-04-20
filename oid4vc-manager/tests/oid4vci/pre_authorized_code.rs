@@ -26,12 +26,12 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         CredentialIssuerManager::new(
             None,
             MemoryStorage,
-            [Arc::new(KeySubject::from_keypair(
+            Arc::new(KeySubject::from_keypair(
                 generate::<Ed25519KeyPair>(Some(
                     "this-is-a-very-UNSAFE-issuer-secret-key".as_bytes().try_into().unwrap(),
                 )),
                 None,
-            ))],
+            )),
         )
         .unwrap(),
         None,
@@ -42,10 +42,10 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
 
     // Create a new subject.
     let subject = KeySubject::new();
-    let subject_did = subject.identifier().unwrap();
+    let subject_did = subject.identifier("did:key").unwrap();
 
     // Create a new wallet.
-    let wallet: Wallet<CredentialFormats<WithParameters>> = Wallet::new(Arc::new(subject));
+    let wallet: Wallet = Wallet::new(Arc::new(subject), "did:key").unwrap();
 
     // Get the credential offer url.
     let credential_offer_query = credential_issuer

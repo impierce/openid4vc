@@ -6,7 +6,7 @@ use oid4vc_core::{
     authorization_request::{AuthorizationRequest, Body, ByReference, ByValue, Object},
     authorization_response::AuthorizationResponse,
     openid4vc_extension::{Extension, ResponseHandle},
-    Decoder,
+    SubjectSyntaxType, Validator,
 };
 use reqwest::StatusCode;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -17,28 +17,33 @@ use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 /// the user who is trying to authenticate.
 pub struct Provider {
     pub subject: SigningSubject,
+    pub default_subject_syntax_type: SubjectSyntaxType,
     client: ClientWithMiddleware,
 }
 
 impl Provider {
     // TODO: Use ProviderBuilder instead.
-    pub fn new(subject: SigningSubject) -> Result<Self> {
+    pub fn new(subject: SigningSubject, default_subject_syntax_type: impl TryInto<SubjectSyntaxType>) -> Result<Self> {
         let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
         let client = ClientBuilder::new(reqwest::Client::new())
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
             .build();
-        Ok(Provider { subject, client })
+        Ok(Provider {
+            subject,
+            client,
+            default_subject_syntax_type: default_subject_syntax_type
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Invalid did method."))?,
+        })
     }
 
     /// TODO: Add more validation rules.
     /// Takes a String and tries to parse it into an [`AuthorizationRequest<Object>`]. If the parsing fails, it tries to
     /// parse the [`AuthorizationRequest<Object>`] from the `request` parameter of the [`AuthorizationRequest<ByValue>`]
     /// or from the `request_uri` parameter of the [`AuthorizationRequest<ByReference>`].
-    pub async fn validate_request(
-        &self,
-        authorization_request: String,
-        decoder: Decoder,
-    ) -> Result<AuthorizationRequest<Object>> {
+    pub async fn validate_request(&self, authorization_request: String) -> Result<AuthorizationRequest<Object>> {
+        let validator = Validator::Subject(self.subject.clone());
+
         let authorization_request = if let Ok(authorization_request) =
             authorization_request.parse::<AuthorizationRequest<Object>>()
         {
@@ -47,7 +52,7 @@ impl Provider {
             let (client_id, authorization_request) =
                 if let Ok(authorization_request) = AuthorizationRequest::<ByValue>::from_str(&authorization_request) {
                     let client_id = authorization_request.body.client_id().clone();
-                    let authorization_request: AuthorizationRequest<Object> = decoder
+                    let authorization_request: AuthorizationRequest<Object> = validator
                         .decode(authorization_request.body.request.to_owned())
                         .await
                         .unwrap();
@@ -59,7 +64,7 @@ impl Provider {
                     let client_id = authorization_request.body.client_id().clone();
                     let builder = self.client.get(authorization_request.body.request_uri.clone());
                     let request_value = builder.send().await?.text().await?;
-                    let authorization_request: AuthorizationRequest<Object> = decoder.decode(request_value).await?;
+                    let authorization_request: AuthorizationRequest<Object> = validator.decode(request_value).await?;
 
                     (client_id, authorization_request)
                 } else {
@@ -90,6 +95,7 @@ impl Provider {
             &authorization_request.body.client_id,
             &authorization_request.body.extension,
             &input,
+            self.default_subject_syntax_type.clone(),
         )?;
 
         E::build_authorization_response(jwts, input, redirect_uri, state)
@@ -113,8 +119,7 @@ impl Provider {
 mod tests {
     use super::*;
     use crate::{siopv2::SIOPv2, test_utils::TestSubject};
-    use oid4vc_core::{Subject, SubjectSyntaxType, Validator, Validators};
-    use std::{str::FromStr, sync::Arc};
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_provider() {
@@ -122,7 +127,7 @@ mod tests {
         let subject = TestSubject::new("did:test:123".to_string(), "key_id".to_string()).unwrap();
 
         // Create a new provider.
-        let provider = Provider::new(Arc::new(subject)).unwrap();
+        let provider = Provider::new(Arc::new(subject), "did:test").unwrap();
 
         // Get a new SIOP authorization_request with response mode `direct_post` for cross-device communication.
         let request_url = "\
@@ -139,18 +144,8 @@ mod tests {
             ";
 
         // Let the provider validate the authorization_request.
-        let authorization_request: AuthorizationRequest<Object> = provider
-            .validate_request(
-                request_url.to_string(),
-                Decoder {
-                    validators: Validators::from([(
-                        SubjectSyntaxType::from_str("did:test").unwrap(),
-                        Arc::new(Validator::Subject(Arc::new(TestSubject::default()) as Arc<dyn Subject>)),
-                    )]),
-                },
-            )
-            .await
-            .unwrap();
+        let authorization_request: AuthorizationRequest<Object> =
+            provider.validate_request(request_url.to_string()).await.unwrap();
 
         let authorization_request =
             AuthorizationRequest::<Object<SIOPv2>>::from_generic(&authorization_request).unwrap();

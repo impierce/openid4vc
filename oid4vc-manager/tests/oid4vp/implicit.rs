@@ -77,19 +77,19 @@ async fn test_implicit_flow() {
         )),
         None,
     );
-    let issuer_did = issuer.identifier().unwrap();
+    let issuer_did = issuer.identifier("did:key").unwrap();
 
     // Create a new subject.
     let subject = Arc::new(KeySubject::from_keypair(
         generate::<Ed25519KeyPair>(Some("this-is-a-very-UNSAFE-secret-key".as_bytes().try_into().unwrap())),
         None,
     ));
-    let subject_did = subject.identifier().unwrap();
+    let subject_did = subject.identifier("did:key").unwrap();
 
     // Create a new relying party.
     let relying_party = Arc::new(KeySubject::new());
-    let relying_party_did = relying_party.identifier().unwrap();
-    let relying_party_manager = RelyingPartyManager::new([relying_party]).unwrap();
+    let relying_party_did = relying_party.identifier("did:key").unwrap();
+    let relying_party_manager = RelyingPartyManager::new(relying_party, "did:key").unwrap();
 
     // Create authorization request with response_type `id_token vp_token`
     let authorization_request = AuthorizationRequest::<Object<OID4VP>>::builder()
@@ -101,7 +101,7 @@ async fn test_implicit_flow() {
         .unwrap();
 
     // Create a provider manager and validate the authorization request.
-    let provider_manager = ProviderManager::new([subject]).unwrap();
+    let provider_manager = ProviderManager::new(subject, "did:key").unwrap();
 
     // Create a new verifiable credential.
     let verifiable_credential = VerifiableCredentialJwt::builder()
@@ -134,7 +134,7 @@ async fn test_implicit_flow() {
     // Create presentation submission using the presentation definition and the verifiable credential.
     let presentation_submission = create_presentation_submission(
         &PRESENTATION_DEFINITION,
-        vec![serde_json::to_value(&verifiable_credential).unwrap()],
+        &vec![serde_json::to_value(&verifiable_credential).unwrap()],
     )
     .unwrap();
 
@@ -146,6 +146,7 @@ async fn test_implicit_flow() {
             ..Default::default()
         },
         &verifiable_credential,
+        "did:key",
     )
     .unwrap();
 

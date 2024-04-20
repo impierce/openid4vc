@@ -4,9 +4,8 @@ use crate::token::id_token::IdToken;
 use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};
-use oid4vc_core::{
-    authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension, Decoder, Subject,
-};
+use oid4vc_core::{authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension, Subject};
+use oid4vc_core::{SubjectSyntaxType, Validator};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -40,8 +39,13 @@ impl Extension for SIOPv2 {
         client_id: &str,
         extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
         user_input: &<Self::ResponseHandle as ResponseHandle>::Input,
+        subject_syntax_type: impl TryInto<SubjectSyntaxType>,
     ) -> anyhow::Result<Vec<String>> {
-        let subject_identifier = subject.identifier()?;
+        let subject_syntax_type_string = subject_syntax_type
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("Failed to convert the subject syntax type"))?
+            .to_string();
+        let subject_identifier = subject.identifier(&subject_syntax_type_string)?;
 
         let id_token = IdToken::builder()
             .iss(subject_identifier.clone())
@@ -54,7 +58,12 @@ impl Extension for SIOPv2 {
             .claims(user_input.clone())
             .build()?;
 
-        let jwt = jwt::encode(subject.clone(), Header::new(Algorithm::EdDSA), id_token)?;
+        let jwt = jwt::encode(
+            subject.clone(),
+            Header::new(Algorithm::EdDSA),
+            id_token,
+            &subject_syntax_type_string,
+        )?;
 
         Ok(vec![jwt])
     }
@@ -77,11 +86,11 @@ impl Extension for SIOPv2 {
     }
 
     async fn decode_authorization_response(
-        decoder: Decoder,
+        validator: Validator,
         authorization_response: &AuthorizationResponse<Self>,
     ) -> anyhow::Result<<Self::ResponseHandle as ResponseHandle>::ResponseItem> {
         let token = authorization_response.extension.id_token.clone();
-        decoder.decode(token).await
+        validator.decode(token).await
     }
 }
 

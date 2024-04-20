@@ -1,6 +1,6 @@
 use crate::storage::Storage;
 use anyhow::Result;
-use oid4vc_core::{Subject, Subjects};
+use oid4vc_core::Subject;
 use oid4vci::{
     credential_format_profiles::CredentialFormatCollection,
     credential_issuer::{
@@ -15,26 +15,19 @@ use std::{net::TcpListener, sync::Arc};
 #[derive(Clone)]
 pub struct CredentialIssuerManager<S: Storage<CFC>, CFC: CredentialFormatCollection> {
     pub credential_issuer: CredentialIssuer<CFC>,
-    pub subjects: Arc<Subjects>,
+    pub subject: Arc<dyn Subject>,
     pub storage: S,
     pub listener: Arc<TcpListener>,
 }
 
 impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S, CFC> {
-    pub fn new<const N: usize>(
-        listener: Option<TcpListener>,
-        storage: S,
-        subjects: [Arc<dyn Subject>; N],
-    ) -> Result<Self> {
+    pub fn new(listener: Option<TcpListener>, storage: S, subject: Arc<dyn Subject>) -> Result<Self> {
         // `TcpListener::bind("127.0.0.1:0")` will bind to a random port.
         let listener = listener.unwrap_or_else(|| TcpListener::bind("127.0.0.1:0").unwrap());
         let issuer_url: Url = format!("http://{:?}", listener.local_addr()?).parse()?;
         Ok(Self {
             credential_issuer: CredentialIssuer {
-                subject: subjects
-                    .first()
-                    .ok_or_else(|| anyhow::anyhow!("No subjects found."))?
-                    .clone(),
+                subject: subject.clone(),
                 metadata: CredentialIssuerMetadata {
                     credential_issuer: issuer_url.clone(),
                     authorization_servers: vec![],
@@ -56,7 +49,7 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
                     ..Default::default()
                 },
             },
-            subjects: Arc::new(Subjects::try_from(subjects)?),
+            subject,
             storage,
             listener: Arc::new(listener),
         })

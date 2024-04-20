@@ -10,7 +10,7 @@ use axum::{
     Form, Json, Router,
 };
 use axum_auth::AuthBearer;
-use oid4vc_core::{Decoder, Subjects};
+use oid4vc_core::Validator;
 use oid4vci::{
     authorization_request::AuthorizationRequest,
     credential_format_profiles::CredentialFormatCollection,
@@ -178,7 +178,7 @@ async fn credential<S: Storage<CFC>, CFC: CredentialFormatCollection>(
         .credential_issuer
         .validate_proof(
             credential_request.proof.unwrap(),
-            Decoder::from(&Subjects::try_from([credential_issuer_manager.credential_issuer.subject.clone()]).unwrap()),
+            Validator::Subject(credential_issuer_manager.credential_issuer.subject.clone()),
         )
         .await
         .unwrap();
@@ -216,9 +216,7 @@ async fn batch_credential<S: Storage<CFC>, CFC: CredentialFormatCollection>(
             .credential_issuer
             .validate_proof(
                 credential_request.proof.unwrap(),
-                Decoder::from(
-                    &Subjects::try_from([credential_issuer_manager.credential_issuer.subject.clone()]).unwrap(),
-                ),
+                Validator::Subject(credential_issuer_manager.credential_issuer.subject.clone()),
             )
             .await
             .unwrap();

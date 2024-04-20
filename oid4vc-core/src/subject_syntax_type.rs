@@ -21,6 +21,23 @@ impl FromStr for SubjectSyntaxType {
     }
 }
 
+impl Display for SubjectSyntaxType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SubjectSyntaxType::JwkThumbprint => write!(f, "urn:ietf:params:oauth:jwk-thumbprint"),
+            SubjectSyntaxType::Did(did_method) => write!(f, "{}", did_method),
+        }
+    }
+}
+
+impl TryFrom<&str> for SubjectSyntaxType {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        SubjectSyntaxType::from_str(value)
+    }
+}
+
 impl From<DidMethod> for SubjectSyntaxType {
     fn from(did_method: DidMethod) -> Self {
         SubjectSyntaxType::Did(did_method)

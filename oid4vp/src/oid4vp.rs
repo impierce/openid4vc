@@ -10,9 +10,8 @@ use futures::{executor::block_on, future::join_all};
 use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};
-use oid4vc_core::{
-    authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension, Decoder, Subject,
-};
+use oid4vc_core::{authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension, Subject};
+use oid4vc_core::{SubjectSyntaxType, Validator};
 use oid4vci::VerifiableCredentialJwt;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -47,8 +46,13 @@ impl Extension for OID4VP {
         client_id: &str,
         extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
         user_input: &<Self::ResponseHandle as ResponseHandle>::Input,
+        subject_syntax_type: impl TryInto<SubjectSyntaxType>,
     ) -> anyhow::Result<Vec<String>> {
-        let subject_identifier = subject.identifier()?;
+        let subject_syntax_type_string = subject_syntax_type
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("Failed to convert the subject syntax type"))?
+            .to_string();
+        let subject_identifier = subject.identifier(&subject_syntax_type_string)?;
 
         let vp_token = VpToken::builder()
             .iss(subject_identifier.clone())
@@ -61,7 +65,12 @@ impl Extension for OID4VP {
             .verifiable_presentation(user_input.verifiable_presentation.clone())
             .build()?;
 
-        let jwt = jwt::encode(subject.clone(), Header::new(Algorithm::EdDSA), vp_token)?;
+        let jwt = jwt::encode(
+            subject.clone(),
+            Header::new(Algorithm::EdDSA),
+            vp_token,
+            &subject_syntax_type_string,
+        )?;
         Ok(vec![jwt])
     }
 
@@ -84,12 +93,12 @@ impl Extension for OID4VP {
     }
 
     async fn decode_authorization_response(
-        decoder: Decoder,
+        validator: Validator,
         response: &AuthorizationResponse<Self>,
     ) -> anyhow::Result<<Self::ResponseHandle as ResponseHandle>::ResponseItem> {
         let vp_token: VpToken = match &response.extension.oid4vp_parameters {
             Oid4vpParams::Jwt { .. } => todo!(),
-            Oid4vpParams::Params { vp_token, .. } => block_on(decoder.decode(vp_token.to_owned()))?,
+            Oid4vpParams::Params { vp_token, .. } => block_on(validator.decode(vp_token.to_owned()))?,
         };
 
         join_all(
@@ -97,7 +106,7 @@ impl Extension for OID4VP {
                 .verifiable_presentation()
                 .verifiable_credential
                 .iter()
-                .map(|vc| decoder.decode(vc.as_str().to_owned()))
+                .map(|vc| validator.decode(vc.as_str().to_owned()))
                 .collect::<Vec<_>>(),
         )
         .await

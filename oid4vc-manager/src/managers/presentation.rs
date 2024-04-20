@@ -9,7 +9,7 @@ use oid4vp::{
 // TODO: make VP/VC fromat agnostic. In current form only jwt_vp_json + jwt_vc_json are supported.
 pub fn create_presentation_submission(
     presentation_definition: &PresentationDefinition,
-    credentials: Vec<serde_json::Value>,
+    credentials: &[serde_json::Value],
 ) -> Result<PresentationSubmission> {
     let id = "Submission ID".to_string();
     let definition_id = presentation_definition.id().clone();
