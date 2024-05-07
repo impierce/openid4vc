@@ -77,18 +77,18 @@ async fn test_implicit_flow() {
         )),
         None,
     );
-    let issuer_did = issuer.identifier("did:key").unwrap();
+    let issuer_did = issuer.identifier("did:key").await.unwrap();
 
     // Create a new subject.
     let subject = Arc::new(KeySubject::from_keypair(
         generate::<Ed25519KeyPair>(Some("this-is-a-very-UNSAFE-secret-key".as_bytes().try_into().unwrap())),
         None,
     ));
-    let subject_did = subject.identifier("did:key").unwrap();
+    let subject_did = subject.identifier("did:key").await.unwrap();
 
     // Create a new relying party.
     let relying_party = Arc::new(KeySubject::new());
-    let relying_party_did = relying_party.identifier("did:key").unwrap();
+    let relying_party_did = relying_party.identifier("did:key").await.unwrap();
     let relying_party_manager = RelyingPartyManager::new(relying_party, "did:key").unwrap();
 
     // Create authorization request with response_type `id_token vp_token`
@@ -148,6 +148,7 @@ async fn test_implicit_flow() {
         &verifiable_credential,
         "did:key",
     )
+    .await
     .unwrap();
 
     // Create a verifiable presentation using the JWT.
@@ -166,6 +167,7 @@ async fn test_implicit_flow() {
                 presentation_submission,
             },
         )
+        .await
         .unwrap();
 
     // Validate the authorization_response.

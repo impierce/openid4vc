@@ -113,7 +113,10 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             // TODO: must be `form`, but `AuthorizationRequest needs to be able to serilalize properly.
             .json(&AuthorizationRequest {
                 response_type: "code".to_string(),
-                client_id: self.subject.identifier(&self.default_subject_syntax_type.to_string())?,
+                client_id: self
+                    .subject
+                    .identifier(&self.default_subject_syntax_type.to_string())
+                    .await?,
                 redirect_uri: None,
                 scope: None,
                 state: None,
@@ -149,7 +152,11 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
                 KeyProofType::builder()
                     .proof_type(ProofType::Jwt)
                     .signer(self.subject.clone())
-                    .iss(self.subject.identifier(&self.default_subject_syntax_type.to_string())?)
+                    .iss(
+                        self.subject
+                            .identifier(&self.default_subject_syntax_type.to_string())
+                            .await?,
+                    )
                     .aud(credential_issuer_metadata.credential_issuer)
                     .iat(1571324800)
                     .exp(9999999999i64)
@@ -162,7 +169,8 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
                             .clone(),
                     )
                     .subject_syntax_type(self.default_subject_syntax_type.to_string())
-                    .build()?,
+                    .build()
+                    .await?,
             ),
         };
 
@@ -187,7 +195,11 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             KeyProofType::builder()
                 .proof_type(ProofType::Jwt)
                 .signer(self.subject.clone())
-                .iss(self.subject.identifier(&self.default_subject_syntax_type.to_string())?)
+                .iss(
+                    self.subject
+                        .identifier(&self.default_subject_syntax_type.to_string())
+                        .await?,
+                )
                 .aud(credential_issuer_metadata.credential_issuer)
                 .iat(1571324800)
                 .exp(9999999999i64)
@@ -200,7 +212,8 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
                         .clone(),
                 )
                 .subject_syntax_type(self.default_subject_syntax_type.to_string())
-                .build()?,
+                .build()
+                .await?,
         );
 
         let batch_credential_request = BatchCredentialRequest {

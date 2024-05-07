@@ -34,7 +34,7 @@ impl Extension for SIOPv2 {
     type RequestHandle = RequestHandler;
     type ResponseHandle = ResponseHandler;
 
-    fn generate_token(
+    async fn generate_token(
         subject: Arc<dyn Subject>,
         client_id: &str,
         extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
@@ -45,7 +45,7 @@ impl Extension for SIOPv2 {
             .try_into()
             .map_err(|_| anyhow::anyhow!("Failed to convert the subject syntax type"))?
             .to_string();
-        let subject_identifier = subject.identifier(&subject_syntax_type_string)?;
+        let subject_identifier = subject.identifier(&subject_syntax_type_string).await?;
 
         let id_token = IdToken::builder()
             .iss(subject_identifier.clone())
@@ -63,7 +63,8 @@ impl Extension for SIOPv2 {
             Header::new(Algorithm::EdDSA),
             id_token,
             &subject_syntax_type_string,
-        )?;
+        )
+        .await?;
 
         Ok(vec![jwt])
     }

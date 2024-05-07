@@ -37,11 +37,11 @@ impl TestSubject {
 
 #[async_trait]
 impl Sign for TestSubject {
-    fn key_id(&self, _subject_syntax_type: &str) -> Option<String> {
+    async fn key_id(&self, _subject_syntax_type: &str) -> Option<String> {
         Some(self.key_id.clone())
     }
 
-    fn sign(&self, message: &str, _subject_syntax_type: &str) -> Result<Vec<u8>> {
+    async fn sign(&self, message: &str, _subject_syntax_type: &str) -> Result<Vec<u8>> {
         let signature: Signature = TEST_KEYPAIR.sign(message.as_bytes());
         Ok(signature.to_bytes().to_vec())
     }
@@ -58,8 +58,9 @@ impl Verify for TestSubject {
     }
 }
 
+#[async_trait]
 impl Subject for TestSubject {
-    fn identifier(&self, _subject_syntax_type: &str) -> Result<String> {
+    async fn identifier(&self, _subject_syntax_type: &str) -> Result<String> {
         Ok(self.did.to_string())
     }
 }

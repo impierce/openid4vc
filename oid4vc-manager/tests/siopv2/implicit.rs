@@ -30,19 +30,20 @@ pub struct MultiDidMethodSubject {
     pub key_subject: KeySubject,
 }
 
+#[async_trait]
 impl Sign for MultiDidMethodSubject {
-    fn key_id(&self, subject_syntax_type: &str) -> Option<String> {
+    async fn key_id(&self, subject_syntax_type: &str) -> Option<String> {
         match subject_syntax_type {
-            "did:test" => self.test_subject.key_id(subject_syntax_type),
-            "did:key" => self.key_subject.key_id(subject_syntax_type),
+            "did:test" => self.test_subject.key_id(subject_syntax_type).await,
+            "did:key" => self.key_subject.key_id(subject_syntax_type).await,
             _ => None,
         }
     }
 
-    fn sign(&self, message: &str, subject_syntax_type: &str) -> anyhow::Result<Vec<u8>> {
+    async fn sign(&self, message: &str, subject_syntax_type: &str) -> anyhow::Result<Vec<u8>> {
         match subject_syntax_type {
-            "did:test" => self.test_subject.sign(message, subject_syntax_type),
-            "did:key" => self.key_subject.sign(message, subject_syntax_type),
+            "did:test" => self.test_subject.sign(message, subject_syntax_type).await,
+            "did:key" => self.key_subject.sign(message, subject_syntax_type).await,
             _ => Err(anyhow::anyhow!("Unsupported DID method.")),
         }
     }
@@ -63,11 +64,12 @@ impl Verify for MultiDidMethodSubject {
     }
 }
 
+#[async_trait]
 impl Subject for MultiDidMethodSubject {
-    fn identifier(&self, subject_syntax_type: &str) -> anyhow::Result<String> {
+    async fn identifier(&self, subject_syntax_type: &str) -> anyhow::Result<String> {
         match subject_syntax_type {
-            "did:test" => self.test_subject.identifier(subject_syntax_type),
-            "did:key" => self.key_subject.identifier(subject_syntax_type),
+            "did:test" => self.test_subject.identifier(subject_syntax_type).await,
+            "did:key" => self.key_subject.identifier(subject_syntax_type).await,
             _ => Err(anyhow::anyhow!("Unsupported DID method.")),
         }
     }
@@ -119,7 +121,7 @@ async fn test_implicit_flow(#[case] did_method: &str) {
         key_subject: KeySubject::from_keypair(generate::<Ed25519KeyPair>(None), None),
     };
 
-    let client_id = subject.identifier(did_method).unwrap();
+    let client_id = subject.identifier(did_method).await.unwrap();
 
     // Create a new relying party manager.
     let relying_party_manager = RelyingPartyManager::new(Arc::new(subject), did_method).unwrap();
@@ -157,7 +159,8 @@ async fn test_implicit_flow(#[case] did_method: &str) {
     Mock::given(method("GET"))
         .and(path("/request_uri"))
         .respond_with(
-            ResponseTemplate::new(200).set_body_string(relying_party_manager.encode(&authorization_request).unwrap()),
+            ResponseTemplate::new(200)
+                .set_body_string(relying_party_manager.encode(&authorization_request).await.unwrap()),
         )
         .mount(&mock_server)
         .await;
@@ -228,6 +231,7 @@ async fn test_implicit_flow(#[case] did_method: &str) {
     // encoded as a JWT.
     let authorization_response: AuthorizationResponse<SIOPv2> = provider_manager
         .generate_response(&authorization_request, response_claims)
+        .await
         .unwrap();
 
     // The provider manager sends it's authorization_response to the mock server's `redirect_uri` endpoint.

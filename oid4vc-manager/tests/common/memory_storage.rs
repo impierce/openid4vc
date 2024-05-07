@@ -1,5 +1,6 @@
 use std::{collections::HashMap, fs::File};
 
+use futures::executor::block_on;
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
 use oid4vc_core::{authentication::subject::SigningSubject, generate_authorization_code, jwt};
@@ -122,7 +123,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
 
         (access_token == ACCESS_TOKEN.clone()).then_some(CredentialResponse {
             credential: CredentialResponseType::Immediate {
-                credential: serde_json::to_value(
+                credential: serde_json::to_value(block_on(async {
                     jwt::encode(
                         signer.clone(),
                         Header::new(Algorithm::EdDSA),
@@ -136,8 +137,9 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
                             .ok(),
                         "did:key",
                     )
-                    .ok(),
-                )
+                    .await
+                    .ok()
+                }))
                 .unwrap(),
                 notification_id: None,
             },

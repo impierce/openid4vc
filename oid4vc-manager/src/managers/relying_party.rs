@@ -23,8 +23,11 @@ impl RelyingPartyManager {
         })
     }
 
-    pub fn encode<E: Extension>(&self, authorization_request: &AuthorizationRequest<Object<E>>) -> Result<String> {
-        self.relying_party.encode(authorization_request)
+    pub async fn encode<E: Extension>(
+        &self,
+        authorization_request: &AuthorizationRequest<Object<E>>,
+    ) -> Result<String> {
+        self.relying_party.encode(authorization_request).await
     }
 
     pub async fn validate_response<E: Extension>(
