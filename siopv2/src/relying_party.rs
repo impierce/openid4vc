@@ -31,13 +31,17 @@ impl RelyingParty {
         })
     }
 
-    pub fn encode<E: Extension>(&self, authorization_request: &AuthorizationRequest<Object<E>>) -> Result<String> {
+    pub async fn encode<E: Extension>(
+        &self,
+        authorization_request: &AuthorizationRequest<Object<E>>,
+    ) -> Result<String> {
         jwt::encode(
             self.subject.clone(),
             Header::new(Algorithm::EdDSA),
             authorization_request,
             &self.default_subject_syntax_type.to_string(),
         )
+        .await
     }
 
     /// Validates a [`AuthorizationResponse`] by decoding the header of the id_token, fetching the public key corresponding to

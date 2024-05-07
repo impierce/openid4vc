@@ -43,14 +43,14 @@ impl Default for KeySubject {
 
 #[async_trait]
 impl Sign for KeySubject {
-    fn key_id(&self, _subject_syntax_type: &str) -> Option<String> {
+    async fn key_id(&self, _subject_syntax_type: &str) -> Option<String> {
         self.document
             .authentication
             .as_ref()
             .and_then(|authentication_methods| authentication_methods.first().cloned())
     }
 
-    fn sign(&self, message: &str, _subject_syntax_type: &str) -> Result<Vec<u8>> {
+    async fn sign(&self, message: &str, _subject_syntax_type: &str) -> Result<Vec<u8>> {
         match self.external_signer() {
             Some(external_signer) => external_signer.sign(message),
             None => Ok(self.keypair.sign(message.as_bytes())),
@@ -69,8 +69,9 @@ impl Verify for KeySubject {
     }
 }
 
+#[async_trait]
 impl Subject for KeySubject {
-    fn identifier(&self, _subject_syntax_type: &str) -> Result<String> {
+    async fn identifier(&self, _subject_syntax_type: &str) -> Result<String> {
         Ok(self.document.id.clone())
     }
 }
@@ -148,6 +149,7 @@ mod tests {
         // Test whether the provider manager can generate a authorization_response for the authorization_request succesfully.
         let authorization_response = provider_manager
             .generate_response(&authorization_request, Default::default())
+            .await
             .unwrap();
 
         // Let the relying party validate the authorization_response.

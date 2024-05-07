@@ -28,12 +28,12 @@ impl ProviderManager {
         self.provider.validate_request(authorization_request).await
     }
 
-    pub fn generate_response<E: Extension + OpenID4VC>(
+    pub async fn generate_response<E: Extension + OpenID4VC>(
         &self,
         authorization_request: &AuthorizationRequest<Object<E>>,
         input: <E::ResponseHandle as ResponseHandle>::Input,
     ) -> Result<AuthorizationResponse<E>> {
-        self.provider.generate_response(authorization_request, input)
+        self.provider.generate_response(authorization_request, input).await
     }
 
     pub async fn send_response<E: Extension>(

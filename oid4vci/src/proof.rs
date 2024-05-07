@@ -49,7 +49,7 @@ pub struct ProofOfPossession {
 }
 
 impl ProofBuilder {
-    pub fn build(self) -> anyhow::Result<KeyProofType> {
+    pub async fn build(self) -> anyhow::Result<KeyProofType> {
         anyhow::ensure!(self.rfc7519_claims.aud.is_some(), "aud claim is required");
         anyhow::ensure!(self.rfc7519_claims.iat.is_some(), "iat claim is required");
         anyhow::ensure!(self.nonce.is_some(), "nonce claim is required");
@@ -72,7 +72,8 @@ impl ProofBuilder {
                         nonce: self.nonce.ok_or(anyhow::anyhow!("No nonce found"))?,
                     },
                     &subject_syntax_type,
-                )?,
+                )
+                .await?,
             }),
             Some(ProofType::Cwt) => todo!(),
             None => Err(anyhow::anyhow!("proof_type is required")),

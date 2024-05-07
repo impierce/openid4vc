@@ -6,7 +6,7 @@ pub use dif_presentation_exchange::{
     evaluate_input, ClaimFormatDesignation, InputDescriptor, InputDescriptorMappingObject, PathNested,
     PresentationDefinition, PresentationSubmission,
 };
-use futures::{executor::block_on, future::join_all};
+use futures::future::join_all;
 use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};
@@ -41,7 +41,7 @@ impl Extension for OID4VP {
     type RequestHandle = RequestHandler;
     type ResponseHandle = ResponseHandler;
 
-    fn generate_token(
+    async fn generate_token(
         subject: Arc<dyn Subject>,
         client_id: &str,
         extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
@@ -52,7 +52,7 @@ impl Extension for OID4VP {
             .try_into()
             .map_err(|_| anyhow::anyhow!("Failed to convert the subject syntax type"))?
             .to_string();
-        let subject_identifier = subject.identifier(&subject_syntax_type_string)?;
+        let subject_identifier = subject.identifier(&subject_syntax_type_string).await?;
 
         let vp_token = VpToken::builder()
             .iss(subject_identifier.clone())
@@ -70,7 +70,8 @@ impl Extension for OID4VP {
             Header::new(Algorithm::EdDSA),
             vp_token,
             &subject_syntax_type_string,
-        )?;
+        )
+        .await?;
         Ok(vec![jwt])
     }
 
@@ -98,7 +99,7 @@ impl Extension for OID4VP {
     ) -> anyhow::Result<<Self::ResponseHandle as ResponseHandle>::ResponseItem> {
         let vp_token: VpToken = match &response.extension.oid4vp_parameters {
             Oid4vpParams::Jwt { .. } => todo!(),
-            Oid4vpParams::Params { vp_token, .. } => block_on(validator.decode(vp_token.to_owned()))?,
+            Oid4vpParams::Params { vp_token, .. } => validator.decode(vp_token.to_owned()).await?,
         };
 
         join_all(

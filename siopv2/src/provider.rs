@@ -82,7 +82,7 @@ impl Provider {
 
     /// Generates an [`AuthorizationResponse`] in response to an [`AuthorizationRequest`] and the user's claims. The [`AuthorizationResponse`]
     /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
-    pub fn generate_response<E: Extension>(
+    pub async fn generate_response<E: Extension>(
         &self,
         authorization_request: &AuthorizationRequest<Object<E>>,
         input: <E::ResponseHandle as ResponseHandle>::Input,
@@ -96,7 +96,8 @@ impl Provider {
             &authorization_request.body.extension,
             &input,
             self.default_subject_syntax_type.clone(),
-        )?;
+        )
+        .await?;
 
         E::build_authorization_response(jwts, input, redirect_uri, state)
     }
@@ -153,6 +154,7 @@ mod tests {
         // Test whether the provider can generate a authorization_response for the authorization_request succesfully.
         assert!(provider
             .generate_response(&authorization_request, Default::default())
+            .await
             .is_ok());
     }
 }
