@@ -68,11 +68,40 @@ pub mod serde_unit_variant {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, DeserializeFromStr, SerializeDisplay)]
-pub struct DidMethod(String);
+pub struct DidMethod {
+    method_name: String,
+    namespace: Option<String>,
+}
+
+impl DidMethod {
+    pub fn from_str_with_namespace(s: &str) -> Result<Self, serde_json::Error> {
+        let mut did_scheme = s.splitn(3, ':');
+
+        match (
+            did_scheme.next(),
+            did_scheme.next(),
+            did_scheme.next(),
+            did_scheme.next(),
+        ) {
+            (Some("did"), Some(method), Some(namespace), None)
+                if !method.is_empty() && !namespace.is_empty() && method.chars().all(char::is_alphanumeric) =>
+            {
+                Ok(DidMethod {
+                    method_name: method.to_owned(),
+                    namespace: Some(namespace.to_owned()),
+                })
+            }
+            _ => Err(Error::custom("Invalid DID method")),
+        }
+    }
+}
 
 impl From<did_url::DID> for DidMethod {
     fn from(did: did_url::DID) -> Self {
-        DidMethod(did.method().to_owned())
+        DidMethod {
+            method_name: did.method().to_owned(),
+            namespace: None,
+        }
     }
 }
 
@@ -89,7 +118,10 @@ impl FromStr for DidMethod {
             did_scheme.next(),
         ) {
             (Some("did"), Some(method), _, None) if !method.is_empty() && method.chars().all(char::is_alphanumeric) => {
-                Ok(DidMethod(method.to_owned()))
+                Ok(DidMethod {
+                    method_name: method.to_owned(),
+                    namespace: None,
+                })
             }
             _ => Err(Error::custom("Invalid DID method")),
         }
@@ -98,7 +130,11 @@ impl FromStr for DidMethod {
 
 impl Display for DidMethod {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "did:{}", self.0.as_str())
+        write!(f, "did:{}", self.method_name.as_str())?;
+        if let Some(namespace) = &self.namespace {
+            write!(f, ":{}", namespace.as_str())?;
+        };
+        Ok(())
     }
 }
 
@@ -114,6 +150,16 @@ mod tests {
         assert!(DidMethod::from_str("invalid:").is_err());
         assert!(DidMethod::from_str("did:example_").is_err());
         assert!(DidMethod::from_str("did:example").is_ok());
+
+        assert_eq!(DidMethod::from_str("did:example").unwrap().to_string(), "did:example");
+        assert_eq!(
+            DidMethod::from_str_with_namespace("did:example:namespace")
+                .unwrap()
+                .to_string(),
+            "did:example:namespace"
+        );
+        assert!(DidMethod::from_str_with_namespace("did:example:namespace:").is_err());
+        assert!(DidMethod::from_str_with_namespace("did:example:namespace:123").is_err());
     }
 
     #[test]
