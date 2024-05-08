@@ -77,7 +77,7 @@ pub struct DidMethod {
 
 impl DidMethod {
     pub fn from_str_with_namespace(s: &str) -> Result<Self, serde_json::Error> {
-        let mut did_scheme = s.splitn(3, ':');
+        let mut did_scheme = s.splitn(4, ':');
 
         match (
             did_scheme.next(),
@@ -113,13 +113,8 @@ impl FromStr for DidMethod {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut did_scheme = s.splitn(3, ':');
 
-        match (
-            did_scheme.next(),
-            did_scheme.next(),
-            did_scheme.next(),
-            did_scheme.next(),
-        ) {
-            (Some("did"), Some(method), _, None) if !method.is_empty() && method.chars().all(char::is_alphanumeric) => {
+        match (did_scheme.next(), did_scheme.next(), did_scheme.next()) {
+            (Some("did"), Some(method), None) if !method.is_empty() && method.chars().all(char::is_alphanumeric) => {
                 Ok(DidMethod {
                     method_name: method.to_owned(),
                     namespace: None,
@@ -152,6 +147,7 @@ mod tests {
         assert!(DidMethod::from_str("invalid:").is_err());
         assert!(DidMethod::from_str("did:example_").is_err());
         assert!(DidMethod::from_str("did:example").is_ok());
+        assert!(DidMethod::from_str("did:example:").is_err());
 
         assert_eq!(DidMethod::from_str("did:example").unwrap().to_string(), "did:example");
         assert_eq!(
