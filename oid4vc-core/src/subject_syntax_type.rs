@@ -76,6 +76,10 @@ pub struct DidMethod {
 }
 
 impl DidMethod {
+    // TODO(selv): SIOPv2 has a (probably unintended) restriction on how to communicate support for DID Methods in a
+    // Providers Metadata where namespaces are not allowed. So strictly speaking namespaces should not be allowed. An
+    // issue has been opened to address this problem. For more information, see:
+    // https://github.com/openid/SIOPv2/issues/22
     pub fn from_str_with_namespace(s: &str) -> Result<Self, serde_json::Error> {
         let mut did_scheme = s.splitn(4, ':');
 
