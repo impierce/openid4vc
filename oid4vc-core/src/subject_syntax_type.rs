@@ -16,7 +16,9 @@ impl FromStr for SubjectSyntaxType {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "urn:ietf:params:oauth:jwk-thumbprint" => Ok(SubjectSyntaxType::JwkThumbprint),
-            _ => Ok(SubjectSyntaxType::Did(DidMethod::from_str(s)?)),
+            _ => Ok(SubjectSyntaxType::Did(
+                DidMethod::from_str_with_namespace(s).or_else(|_| DidMethod::from_str(s))?,
+            )),
         }
     }
 }
