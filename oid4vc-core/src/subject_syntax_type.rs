@@ -1,5 +1,5 @@
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
-use serde_with::{DeserializeFromStr, SerializeDisplay};
+use serde_with::SerializeDisplay;
 use std::{fmt::Display, str::FromStr};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -69,7 +69,7 @@ pub mod serde_unit_variant {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, DeserializeFromStr, SerializeDisplay)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, SerializeDisplay)]
 pub struct DidMethod {
     method_name: String,
     namespace: Option<String>,
@@ -99,6 +99,18 @@ impl DidMethod {
             }
             _ => Err(Error::custom("Invalid DID method")),
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for DidMethod {
+    fn deserialize<D>(deserializer: D) -> Result<DidMethod, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s: String = Deserialize::deserialize(deserializer)?;
+        DidMethod::from_str_with_namespace(&s)
+            .or_else(|_| DidMethod::from_str(&s))
+            .map_err(D::Error::custom)
     }
 }
 
