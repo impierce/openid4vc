@@ -1,5 +1,5 @@
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
-use serde_with::{DeserializeFromStr, SerializeDisplay};
+use serde_with::SerializeDisplay;
 use std::{fmt::Display, str::FromStr};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -16,7 +16,9 @@ impl FromStr for SubjectSyntaxType {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "urn:ietf:params:oauth:jwk-thumbprint" => Ok(SubjectSyntaxType::JwkThumbprint),
-            _ => Ok(SubjectSyntaxType::Did(DidMethod::from_str(s)?)),
+            _ => Ok(SubjectSyntaxType::Did(
+                DidMethod::from_str_with_namespace(s).or_else(|_| DidMethod::from_str(s))?,
+            )),
         }
     }
 }
@@ -67,12 +69,57 @@ pub mod serde_unit_variant {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, DeserializeFromStr, SerializeDisplay)]
-pub struct DidMethod(String);
+#[derive(Debug, Clone, PartialEq, Eq, Hash, SerializeDisplay)]
+pub struct DidMethod {
+    method_name: String,
+    namespace: Option<String>,
+}
+
+impl DidMethod {
+    // TODO(selv): SIOPv2 has a (probably unintended) restriction on how to communicate support for DID Methods in a
+    // Providers Metadata where namespaces are not allowed. So strictly speaking namespaces should not be allowed. An
+    // issue has been opened to address this problem. For more information, see:
+    // https://github.com/openid/SIOPv2/issues/22
+    pub fn from_str_with_namespace(s: &str) -> Result<Self, serde_json::Error> {
+        let mut did_scheme = s.splitn(4, ':');
+
+        match (
+            did_scheme.next(),
+            did_scheme.next(),
+            did_scheme.next(),
+            did_scheme.next(),
+        ) {
+            (Some("did"), Some(method), Some(namespace), None)
+                if !method.is_empty() && !namespace.is_empty() && method.chars().all(char::is_alphanumeric) =>
+            {
+                Ok(DidMethod {
+                    method_name: method.to_owned(),
+                    namespace: Some(namespace.to_owned()),
+                })
+            }
+            _ => Err(Error::custom("Invalid DID method")),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for DidMethod {
+    fn deserialize<D>(deserializer: D) -> Result<DidMethod, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s: String = Deserialize::deserialize(deserializer)?;
+        DidMethod::from_str_with_namespace(&s)
+            .or_else(|_| DidMethod::from_str(&s))
+            .map_err(D::Error::custom)
+    }
+}
 
 impl From<did_url::DID> for DidMethod {
     fn from(did: did_url::DID) -> Self {
-        DidMethod(did.method().to_owned())
+        DidMethod {
+            method_name: did.method().to_owned(),
+            namespace: None,
+        }
     }
 }
 
@@ -82,14 +129,12 @@ impl FromStr for DidMethod {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut did_scheme = s.splitn(3, ':');
 
-        match (
-            did_scheme.next(),
-            did_scheme.next(),
-            did_scheme.next(),
-            did_scheme.next(),
-        ) {
-            (Some("did"), Some(method), _, None) if !method.is_empty() && method.chars().all(char::is_alphanumeric) => {
-                Ok(DidMethod(method.to_owned()))
+        match (did_scheme.next(), did_scheme.next(), did_scheme.next()) {
+            (Some("did"), Some(method), None) if !method.is_empty() && method.chars().all(char::is_alphanumeric) => {
+                Ok(DidMethod {
+                    method_name: method.to_owned(),
+                    namespace: None,
+                })
             }
             _ => Err(Error::custom("Invalid DID method")),
         }
@@ -98,7 +143,11 @@ impl FromStr for DidMethod {
 
 impl Display for DidMethod {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "did:{}", self.0.as_str())
+        write!(f, "did:{}", self.method_name.as_str())?;
+        if let Some(namespace) = &self.namespace {
+            write!(f, ":{}", namespace.as_str())?;
+        };
+        Ok(())
     }
 }
 
@@ -114,6 +163,17 @@ mod tests {
         assert!(DidMethod::from_str("invalid:").is_err());
         assert!(DidMethod::from_str("did:example_").is_err());
         assert!(DidMethod::from_str("did:example").is_ok());
+        assert!(DidMethod::from_str("did:example:").is_err());
+
+        assert_eq!(DidMethod::from_str("did:example").unwrap().to_string(), "did:example");
+        assert_eq!(
+            DidMethod::from_str_with_namespace("did:example:namespace")
+                .unwrap()
+                .to_string(),
+            "did:example:namespace"
+        );
+        assert!(DidMethod::from_str_with_namespace("did:example:namespace:").is_err());
+        assert!(DidMethod::from_str_with_namespace("did:example:namespace:123").is_err());
     }
 
     #[test]
