@@ -1,4 +1,5 @@
 use anyhow::Result;
+use jsonwebtoken::Algorithm;
 use oid4vc_core::{
     authorization_request::{AuthorizationRequest, Object},
     authorization_response::AuthorizationResponse,
@@ -18,9 +19,10 @@ impl ProviderManager {
     pub fn new(
         subject: Arc<dyn Subject>,
         default_subject_syntax_type: impl TryInto<SubjectSyntaxType>,
+        supported_signing_algorithms: Vec<Algorithm>,
     ) -> Result<Self> {
         Ok(Self {
-            provider: Provider::new(subject, default_subject_syntax_type)?,
+            provider: Provider::new(subject, default_subject_syntax_type, supported_signing_algorithms)?,
         })
     }
 

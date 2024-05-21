@@ -3,6 +3,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use derivative::{self, Derivative};
 use ed25519_dalek::{Signature, Signer, SigningKey};
+use jsonwebtoken::Algorithm;
 use lazy_static::lazy_static;
 use oid4vc_core::{authentication::sign::ExternalSign, Sign, Subject, Verify};
 use rand::rngs::OsRng;
@@ -32,11 +33,11 @@ impl TestSubject {
 
 #[async_trait]
 impl Sign for TestSubject {
-    async fn key_id(&self, _subject_syntax_type: &str) -> Option<String> {
+    async fn key_id(&self, _subject_syntax_type: &str, _algorithm: Algorithm) -> Option<String> {
         Some(self.key_id.clone())
     }
 
-    async fn sign(&self, message: &str, _subject_syntax_type: &str) -> Result<Vec<u8>> {
+    async fn sign(&self, message: &str, _subject_syntax_type: &str, _algorithm: Algorithm) -> Result<Vec<u8>> {
         let signature: Signature = TEST_KEYPAIR.sign(message.as_bytes());
         Ok(signature.to_bytes().to_vec())
     }
@@ -55,7 +56,7 @@ impl Verify for TestSubject {
 
 #[async_trait]
 impl Subject for TestSubject {
-    async fn identifier(&self, _subject_syntax_type: &str) -> Result<String> {
+    async fn identifier(&self, _subject_syntax_type: &str, _algorithm: Algorithm) -> Result<String> {
         Ok(self.did.to_string())
     }
 }

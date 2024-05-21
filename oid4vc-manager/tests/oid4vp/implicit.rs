@@ -5,6 +5,7 @@ use lazy_static::lazy_static;
 use oid4vc_core::{
     authorization_request::{AuthorizationRequest, Object},
     authorization_response::AuthorizationResponse,
+    client_metadata::ClientMetadataResource,
     jwt, Subject,
 };
 use oid4vc_manager::{
@@ -13,8 +14,9 @@ use oid4vc_manager::{
 };
 use oid4vci::VerifiableCredentialJwt;
 use oid4vp::{
+    authorization_request::ClientMetadataParameters,
     oid4vp::{AuthorizationResponseInput, OID4VP},
-    PresentationDefinition,
+    ClaimFormatDesignation, ClaimFormatProperty, PresentationDefinition,
 };
 use serde_json::json;
 use std::sync::Arc;
@@ -77,31 +79,43 @@ async fn test_implicit_flow() {
         )),
         None,
     );
-    let issuer_did = issuer.identifier("did:key").await.unwrap();
+    let issuer_did = issuer.identifier("did:key", Algorithm::EdDSA).await.unwrap();
 
     // Create a new subject.
     let subject = Arc::new(KeySubject::from_keypair(
         generate::<Ed25519KeyPair>(Some("this-is-a-very-UNSAFE-secret-key".as_bytes().try_into().unwrap())),
         None,
     ));
-    let subject_did = subject.identifier("did:key").await.unwrap();
+    let subject_did = subject.identifier("did:key", Algorithm::EdDSA).await.unwrap();
 
     // Create a new relying party.
     let relying_party = Arc::new(KeySubject::new());
-    let relying_party_did = relying_party.identifier("did:key").await.unwrap();
-    let relying_party_manager = RelyingPartyManager::new(relying_party, "did:key").unwrap();
+    let relying_party_did = relying_party.identifier("did:key", Algorithm::EdDSA).await.unwrap();
+    let relying_party_manager = RelyingPartyManager::new(relying_party, "did:key", vec![Algorithm::EdDSA]).unwrap();
 
     // Create authorization request with response_type `id_token vp_token`
     let authorization_request = AuthorizationRequest::<Object<OID4VP>>::builder()
         .client_id(relying_party_did)
         .redirect_uri("https://example.com".parse::<url::Url>().unwrap())
         .presentation_definition(PRESENTATION_DEFINITION.clone())
+        .client_metadata(ClientMetadataResource::ClientMetadata {
+            client_name: None,
+            logo_uri: None,
+            extension: ClientMetadataParameters {
+                vp_formats: vec![(
+                    ClaimFormatDesignation::JwtVcJson,
+                    ClaimFormatProperty::Alg(vec![Algorithm::EdDSA]),
+                )]
+                .into_iter()
+                .collect(),
+            },
+        })
         .nonce("nonce".to_string())
         .build()
         .unwrap();
 
     // Create a provider manager and validate the authorization request.
-    let provider_manager = ProviderManager::new(subject, "did:key").unwrap();
+    let provider_manager = ProviderManager::new(subject, "did:key", vec![Algorithm::EdDSA]).unwrap();
 
     // Create a new verifiable credential.
     let verifiable_credential = VerifiableCredentialJwt::builder()

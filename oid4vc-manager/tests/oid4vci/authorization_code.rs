@@ -1,5 +1,6 @@
 use crate::common::{get_jwt_claims, memory_storage::MemoryStorage};
 use did_key::{generate, Ed25519KeyPair};
+use jsonwebtoken::Algorithm;
 use oid4vc_core::Subject;
 use oid4vc_manager::{
     managers::credential_issuer::CredentialIssuerManager, methods::key_method::KeySubject,
@@ -38,10 +39,10 @@ async fn test_authorization_code_flow() {
 
     // Create a new subject.
     let subject = KeySubject::new();
-    let subject_did = subject.identifier("did:key").await.unwrap();
+    let subject_did = subject.identifier("did:key", Algorithm::EdDSA).await.unwrap();
 
     // Create a new wallet.
-    let wallet = Wallet::new(Arc::new(subject), "did:key").unwrap();
+    let wallet: Wallet = Wallet::new(Arc::new(subject), "did:key", vec![Algorithm::EdDSA]).unwrap();
 
     // Get the credential issuer url.
     let credential_issuer_url = credential_issuer
@@ -62,12 +63,11 @@ async fn test_authorization_code_flow() {
         .unwrap();
 
     // Get the credential format for a university degree.
-    let university_degree_credential_format: CredentialFormats<WithParameters> = credential_issuer_metadata
+    let university_degree_credential_format = credential_issuer_metadata
         .credential_configurations_supported
         .get("UniversityDegree_JWT")
         .unwrap()
-        .clone()
-        .credential_format;
+        .clone();
 
     // Get the authorization code.
     let authorization_response = wallet
@@ -77,7 +77,7 @@ async fn test_authorization_code_flow() {
                 r#type: OpenidCredential::Type,
                 locations: None,
                 credential_configuration_or_format: CredentialConfigurationOrFormat::CredentialFormat(
-                    university_degree_credential_format.clone(),
+                    university_degree_credential_format.credential_format.clone(),
                 ),
             }
             .into()],
@@ -102,7 +102,7 @@ async fn test_authorization_code_flow() {
         .get_credential(
             credential_issuer_metadata,
             &token_response,
-            university_degree_credential_format,
+            &university_degree_credential_format,
         )
         .await
         .unwrap();

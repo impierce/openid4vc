@@ -2,6 +2,7 @@ use crate::authorization_details::AuthorizationDetailsObject;
 use crate::authorization_request::AuthorizationRequest;
 use crate::authorization_response::AuthorizationResponse;
 use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters};
+use crate::credential_issuer::credential_configurations_supported::CredentialConfigurationsSupportedObject;
 use crate::credential_issuer::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
 };
@@ -11,6 +12,7 @@ use crate::credential_response::BatchCredentialResponse;
 use crate::proof::{KeyProofType, ProofType};
 use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
 use anyhow::Result;
+use jsonwebtoken::Algorithm;
 use oid4vc_core::authentication::subject::SigningSubject;
 use oid4vc_core::SubjectSyntaxType;
 use reqwest::Url;
@@ -26,6 +28,7 @@ where
     pub subject: SigningSubject,
     pub default_subject_syntax_type: SubjectSyntaxType,
     pub client: ClientWithMiddleware,
+    pub proof_signing_alg_values_supported: Vec<Algorithm>,
     phantom: std::marker::PhantomData<CFC>,
 }
 
@@ -33,6 +36,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
     pub fn new(
         subject: SigningSubject,
         default_subject_syntax_type: impl TryInto<SubjectSyntaxType>,
+        proof_signing_alg_values_supported: Vec<Algorithm>,
     ) -> anyhow::Result<Self> {
         let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
         let client = ClientBuilder::new(reqwest::Client::new())
@@ -44,6 +48,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
                 .try_into()
                 .map_err(|_| anyhow::anyhow!("Invalid did method"))?,
             client,
+            proof_signing_alg_values_supported,
             phantom: std::marker::PhantomData,
         })
     }
@@ -115,7 +120,10 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
                 response_type: "code".to_string(),
                 client_id: self
                     .subject
-                    .identifier(&self.default_subject_syntax_type.to_string())
+                    .identifier(
+                        &self.default_subject_syntax_type.to_string(),
+                        self.proof_signing_alg_values_supported[0],
+                    )
                     .await?,
                 redirect_uri: None,
                 scope: None,
@@ -144,22 +152,39 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         &self,
         credential_issuer_metadata: CredentialIssuerMetadata<CFC>,
         token_response: &TokenResponse,
-        credential_format: CFC,
+        credential_configuration: &CredentialConfigurationsSupportedObject,
     ) -> Result<CredentialResponse> {
+        let credential_format = credential_configuration.credential_format.to_owned();
+        let credential_issuer_proof_signing_alg_values_supported = &credential_configuration
+            .proof_types_supported
+            .get(&ProofType::Jwt)
+            .ok_or(anyhow::anyhow!(
+                "`jwt` proof type is missing from the `proof_types_supported` parameter"
+            ))?
+            .proof_signing_alg_values_supported;
+
+        let signing_algorithm = self
+            .proof_signing_alg_values_supported
+            .iter()
+            .find(|supported_algorithm| {
+                credential_issuer_proof_signing_alg_values_supported.contains(supported_algorithm)
+            })
+            .ok_or(anyhow::anyhow!("No supported signing algorithm found."))?;
         let credential_request = CredentialRequest {
             credential_format,
             proof: Some(
                 KeyProofType::builder()
                     .proof_type(ProofType::Jwt)
+                    // FIX THIS
+                    .algorithm(*signing_algorithm)
                     .signer(self.subject.clone())
                     .iss(
                         self.subject
-                            .identifier(&self.default_subject_syntax_type.to_string())
+                            .identifier(&self.default_subject_syntax_type.to_string(), *signing_algorithm)
                             .await?,
                     )
                     .aud(credential_issuer_metadata.credential_issuer)
                     .iat(1571324800)
-                    .exp(9999999999i64)
                     // TODO: so is this REQUIRED or OPTIONAL?
                     .nonce(
                         token_response
@@ -189,20 +214,39 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         &self,
         credential_issuer_metadata: CredentialIssuerMetadata<CFC>,
         token_response: &TokenResponse,
-        credential_formats: Vec<CFC>,
+        credential_configurations: &[CredentialConfigurationsSupportedObject],
     ) -> Result<BatchCredentialResponse> {
+        // FIX THIS: This assumes that for all credentials the same Proof Type is supported.
+        let credential_issuer_proof_signing_alg_values_supported = &credential_configurations
+            .first()
+            .ok_or(anyhow::anyhow!("No credential configurations found."))?
+            .proof_types_supported
+            .get(&ProofType::Jwt)
+            .ok_or(anyhow::anyhow!(
+                "`jwt` proof type is missing from the `proof_types_supported` parameter"
+            ))?
+            .proof_signing_alg_values_supported;
+
+        let signing_algorithm = self
+            .proof_signing_alg_values_supported
+            .iter()
+            .find(|supported_algorithm| {
+                credential_issuer_proof_signing_alg_values_supported.contains(supported_algorithm)
+            })
+            .ok_or(anyhow::anyhow!("No supported signing algorithm found."))?;
+
         let proof = Some(
             KeyProofType::builder()
                 .proof_type(ProofType::Jwt)
+                .algorithm(*signing_algorithm)
                 .signer(self.subject.clone())
                 .iss(
                     self.subject
-                        .identifier(&self.default_subject_syntax_type.to_string())
+                        .identifier(&self.default_subject_syntax_type.to_string(), *signing_algorithm)
                         .await?,
                 )
                 .aud(credential_issuer_metadata.credential_issuer)
                 .iat(1571324800)
-                .exp(9999999999i64)
                 // TODO: so is this REQUIRED or OPTIONAL?
                 .nonce(
                     token_response
@@ -217,10 +261,10 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         );
 
         let batch_credential_request = BatchCredentialRequest {
-            credential_requests: credential_formats
+            credential_requests: credential_configurations
                 .iter()
-                .map(|credential_format| CredentialRequest {
-                    credential_format: credential_format.to_owned(),
+                .map(|credential_configuration| CredentialRequest {
+                    credential_format: credential_configuration.credential_format.to_owned(),
                     proof: proof.clone(),
                 })
                 .collect(),

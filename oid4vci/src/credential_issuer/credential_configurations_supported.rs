@@ -37,6 +37,7 @@ mod tests {
         w3c_verifiable_credentials::{jwt_vc_json, ldp_vc, CredentialSubject},
         CredentialFormats, Parameters,
     };
+    use jsonwebtoken::Algorithm;
     use serde::de::DeserializeOwned;
     use serde_json::json;
     use std::{collections::HashMap, fs::File, path::Path};
@@ -112,7 +113,7 @@ mod tests {
                         proof_types_supported: vec![(
                             ProofType::Jwt,
                             KeyProofMetadata {
-                                proof_signing_alg_values_supported: vec!["ES256".to_string()]
+                                proof_signing_alg_values_supported: vec![Algorithm::ES256]
                             }
                         )]
                         .into_iter()

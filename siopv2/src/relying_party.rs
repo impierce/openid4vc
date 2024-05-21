@@ -34,10 +34,15 @@ impl RelyingParty {
     pub async fn encode<E: Extension>(
         &self,
         authorization_request: &AuthorizationRequest<Object<E>>,
+        signing_algorithm: impl TryInto<Algorithm>,
     ) -> Result<String> {
         jwt::encode(
             self.subject.clone(),
-            Header::new(Algorithm::EdDSA),
+            Header::new(
+                signing_algorithm
+                    .try_into()
+                    .map_err(|_| anyhow::anyhow!("Invalid signing algorithm."))?,
+            ),
             authorization_request,
             &self.default_subject_syntax_type.to_string(),
         )

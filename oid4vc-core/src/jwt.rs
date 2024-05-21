@@ -43,11 +43,17 @@ pub fn decode<T>(jwt: &str, public_key: Vec<u8>, algorithm: Algorithm) -> Result
 where
     T: DeserializeOwned,
 {
-    let key = DecodingKey::from_ed_der(public_key.as_slice());
+    let decoding_key = match algorithm {
+        Algorithm::EdDSA => DecodingKey::from_ed_der(public_key.as_slice()),
+        Algorithm::ES256 => DecodingKey::from_ec_der(public_key.as_slice()),
+        _ => return Err(anyhow!("Unsupported algorithm.")),
+    };
+
     let mut validation = Validation::new(algorithm);
     validation.validate_exp = false;
+    validation.validate_aud = false;
     validation.required_spec_claims.clear();
-    Ok(jsonwebtoken::decode::<T>(jwt, &key, &validation)?.claims)
+    Ok(jsonwebtoken::decode::<T>(jwt, &decoding_key, &validation)?.claims)
 }
 
 pub async fn encode<C, S>(signer: Arc<S>, header: Header, claims: C, subject_syntax_type: &str) -> Result<String>
@@ -55,8 +61,9 @@ where
     C: Serialize,
     S: Sign + ?Sized,
 {
+    let algorithm = header.alg;
     let kid = signer
-        .key_id(subject_syntax_type)
+        .key_id(subject_syntax_type, algorithm)
         .await
         .ok_or(anyhow!("No key identifier found."))?;
 
@@ -64,7 +71,7 @@ where
 
     let message = [base64_url_encode(&jwt.header)?, base64_url_encode(&jwt.payload)?].join(".");
 
-    let proof_value = signer.sign(&message, subject_syntax_type).await?;
+    let proof_value = signer.sign(&message, subject_syntax_type, algorithm).await?;
     let signature = base64_url::encode(proof_value.as_slice());
     let message = [message, signature].join(".");
     Ok(message)

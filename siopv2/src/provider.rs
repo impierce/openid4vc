@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use anyhow::Result;
+use jsonwebtoken::Algorithm;
 use oid4vc_core::{
     authentication::subject::SigningSubject,
     authorization_request::{AuthorizationRequest, Body, ByReference, ByValue, Object},
@@ -18,12 +19,17 @@ use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 pub struct Provider {
     pub subject: SigningSubject,
     pub default_subject_syntax_type: SubjectSyntaxType,
+    pub supported_sigining_alogrithms: Vec<Algorithm>,
     client: ClientWithMiddleware,
 }
 
 impl Provider {
     // TODO: Use ProviderBuilder instead.
-    pub fn new(subject: SigningSubject, default_subject_syntax_type: impl TryInto<SubjectSyntaxType>) -> Result<Self> {
+    pub fn new(
+        subject: SigningSubject,
+        default_subject_syntax_type: impl TryInto<SubjectSyntaxType>,
+        supported_sigining_alogrithms: Vec<Algorithm>,
+    ) -> Result<Self> {
         let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
         let client = ClientBuilder::new(reqwest::Client::new())
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
@@ -34,6 +40,7 @@ impl Provider {
             default_subject_syntax_type: default_subject_syntax_type
                 .try_into()
                 .map_err(|_| anyhow::anyhow!("Invalid did method."))?,
+            supported_sigining_alogrithms,
         })
     }
 
@@ -90,12 +97,22 @@ impl Provider {
         let redirect_uri = authorization_request.body.redirect_uri.to_string();
         let state = authorization_request.body.state.clone();
 
+        let relying_party_supported_algorithms =
+            E::get_relying_party_supported_algorithms(&authorization_request.body.extension).await?;
+
+        let signing_algorithm = self
+            .supported_sigining_alogrithms
+            .iter()
+            .find(|supported_algorithm| relying_party_supported_algorithms.contains(supported_algorithm))
+            .ok_or(anyhow::anyhow!("No supported signing algorithms found."))?;
+
         let jwts = E::generate_token(
             self.subject.clone(),
             &authorization_request.body.client_id,
             &authorization_request.body.extension,
             &input,
             self.default_subject_syntax_type.clone(),
+            *signing_algorithm,
         )
         .await?;
 
@@ -128,7 +145,7 @@ mod tests {
         let subject = TestSubject::new("did:test:123".to_string(), "key_id".to_string()).unwrap();
 
         // Create a new provider.
-        let provider = Provider::new(Arc::new(subject), "did:test").unwrap();
+        let provider = Provider::new(Arc::new(subject), "did:test", vec![Algorithm::EdDSA]).unwrap();
 
         // Get a new SIOP authorization_request with response mode `direct_post` for cross-device communication.
         let request_url = "\

@@ -1,6 +1,7 @@
 use crate::common::{MemoryStorage, Storage, TestSubject};
 use axum::async_trait;
 use did_key::{generate, Ed25519KeyPair};
+use jsonwebtoken::Algorithm;
 use lazy_static::lazy_static;
 use oid4vc_core::{
     authentication::sign::ExternalSign,
@@ -32,18 +33,18 @@ pub struct MultiDidMethodSubject {
 
 #[async_trait]
 impl Sign for MultiDidMethodSubject {
-    async fn key_id(&self, subject_syntax_type: &str) -> Option<String> {
+    async fn key_id(&self, subject_syntax_type: &str, algorithm: Algorithm) -> Option<String> {
         match subject_syntax_type {
-            "did:test" => self.test_subject.key_id(subject_syntax_type).await,
-            "did:key" => self.key_subject.key_id(subject_syntax_type).await,
+            "did:test" => self.test_subject.key_id(subject_syntax_type, algorithm).await,
+            "did:key" => self.key_subject.key_id(subject_syntax_type, algorithm).await,
             _ => None,
         }
     }
 
-    async fn sign(&self, message: &str, subject_syntax_type: &str) -> anyhow::Result<Vec<u8>> {
+    async fn sign(&self, message: &str, subject_syntax_type: &str, algorithm: Algorithm) -> anyhow::Result<Vec<u8>> {
         match subject_syntax_type {
-            "did:test" => self.test_subject.sign(message, subject_syntax_type).await,
-            "did:key" => self.key_subject.sign(message, subject_syntax_type).await,
+            "did:test" => self.test_subject.sign(message, subject_syntax_type, algorithm).await,
+            "did:key" => self.key_subject.sign(message, subject_syntax_type, algorithm).await,
             _ => Err(anyhow::anyhow!("Unsupported DID method.")),
         }
     }
@@ -66,10 +67,10 @@ impl Verify for MultiDidMethodSubject {
 
 #[async_trait]
 impl Subject for MultiDidMethodSubject {
-    async fn identifier(&self, subject_syntax_type: &str) -> anyhow::Result<String> {
+    async fn identifier(&self, subject_syntax_type: &str, algorithm: Algorithm) -> anyhow::Result<String> {
         match subject_syntax_type {
-            "did:test" => self.test_subject.identifier(subject_syntax_type).await,
-            "did:key" => self.key_subject.identifier(subject_syntax_type).await,
+            "did:test" => self.test_subject.identifier(subject_syntax_type, algorithm).await,
+            "did:key" => self.key_subject.identifier(subject_syntax_type, algorithm).await,
             _ => Err(anyhow::anyhow!("Unsupported DID method.")),
         }
     }
@@ -121,10 +122,11 @@ async fn test_implicit_flow(#[case] did_method: &str) {
         key_subject: KeySubject::from_keypair(generate::<Ed25519KeyPair>(None), None),
     };
 
-    let client_id = subject.identifier(did_method).await.unwrap();
+    let client_id = subject.identifier(did_method, Algorithm::EdDSA).await.unwrap();
 
     // Create a new relying party manager.
-    let relying_party_manager = RelyingPartyManager::new(Arc::new(subject), did_method).unwrap();
+    let relying_party_manager =
+        RelyingPartyManager::new(Arc::new(subject), did_method, vec![Algorithm::EdDSA]).unwrap();
 
     // Create a new RequestUrl with response mode `direct_post` for cross-device communication.
     let authorization_request: AuthorizationRequest<Object<SIOPv2>> = AuthorizationRequest::<Object<SIOPv2>>::builder()
@@ -137,6 +139,7 @@ async fn test_implicit_flow(#[case] did_method: &str) {
             logo_uri: None,
             extension: ClientMetadataParameters {
                 subject_syntax_types_supported: vec![SubjectSyntaxType::Did(DidMethod::from_str(did_method).unwrap())],
+                id_token_signed_response_alg: Some(Algorithm::EdDSA),
             },
         })
         .claims(
@@ -182,7 +185,7 @@ async fn test_implicit_flow(#[case] did_method: &str) {
     };
 
     // Create a new provider manager.
-    let provider_manager = ProviderManager::new(Arc::new(subject), did_method).unwrap();
+    let provider_manager = ProviderManager::new(Arc::new(subject), did_method, vec![Algorithm::EdDSA]).unwrap();
 
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
     let authorization_request = AuthorizationRequest::<ByReference> {

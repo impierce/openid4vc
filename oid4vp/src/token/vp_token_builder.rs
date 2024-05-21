@@ -19,10 +19,12 @@ impl VpTokenBuilder {
     pub fn build(self) -> Result<VpToken> {
         anyhow::ensure!(self.rfc7519_claims.iss.is_some(), "iss claim is required");
         anyhow::ensure!(self.rfc7519_claims.sub.is_some(), "sub claim is required");
-        anyhow::ensure!(
-            self.rfc7519_claims.sub.as_ref().filter(|s| s.len() <= 255).is_some(),
-            "sub claim MUST NOT exceed 255 ASCII characters in length"
-        );
+        // TODO: According to https://openid.net/specs/openid-connect-core-1_0.html#IDToken, the sub claim MUST NOT
+        // exceed 255 ASCII characters in length. However, for `did:jwk` it can be longer.
+        // anyhow::ensure!(
+        //     self.rfc7519_claims.sub.as_ref().filter(|s| s.len() <= 255).is_some(),
+        //     "sub claim MUST NOT exceed 255 ASCII characters in length"
+        // );
         anyhow::ensure!(self.rfc7519_claims.aud.is_some(), "aud claim is required");
         anyhow::ensure!(self.rfc7519_claims.exp.is_some(), "exp claim is required");
         anyhow::ensure!(self.rfc7519_claims.iat.is_some(), "iat claim is required");

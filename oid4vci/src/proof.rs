@@ -14,14 +14,14 @@ pub enum KeyProofType {
 }
 
 impl KeyProofType {
-    pub fn builder() -> ProofBuilder {
-        ProofBuilder::default()
+    pub fn builder() -> KeyProofTypeBuilder {
+        KeyProofTypeBuilder::default()
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct KeyProofMetadata {
-    pub proof_signing_alg_values_supported: Vec<String>,
+    pub proof_signing_alg_values_supported: Vec<Algorithm>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
@@ -33,8 +33,9 @@ pub enum ProofType {
 }
 
 #[derive(Default)]
-pub struct ProofBuilder {
+pub struct KeyProofTypeBuilder {
     proof_type: Option<ProofType>,
+    algorithm: Option<Algorithm>,
     rfc7519_claims: RFC7519Claims,
     nonce: Option<String>,
     signer: Option<Arc<dyn Subject>>,
@@ -48,7 +49,7 @@ pub struct ProofOfPossession {
     pub nonce: String,
 }
 
-impl ProofBuilder {
+impl KeyProofTypeBuilder {
     pub async fn build(self) -> anyhow::Result<KeyProofType> {
         anyhow::ensure!(self.rfc7519_claims.aud.is_some(), "aud claim is required");
         anyhow::ensure!(self.rfc7519_claims.iat.is_some(), "iat claim is required");
@@ -63,7 +64,7 @@ impl ProofBuilder {
                 jwt: jwt::encode(
                     self.signer.ok_or(anyhow::anyhow!("No subject found"))?.clone(),
                     Header {
-                        alg: Algorithm::EdDSA,
+                        alg: self.algorithm.ok_or(anyhow::anyhow!("algorithm is required"))?,
                         typ: Some("openid4vci-proof+jwt".to_string()),
                         ..Default::default()
                     },
@@ -86,10 +87,9 @@ impl ProofBuilder {
     }
 
     builder_fn!(proof_type, ProofType);
+    builder_fn!(algorithm, Algorithm);
     builder_fn!(rfc7519_claims, iss, String);
     builder_fn!(rfc7519_claims, aud, String);
-    // TODO: fix this, required by jsonwebtoken crate.
-    builder_fn!(rfc7519_claims, exp, i64);
     builder_fn!(rfc7519_claims, iat, i64);
     builder_fn!(nonce, String);
     builder_fn!(subject_syntax_type, String);

@@ -1,5 +1,6 @@
 use crate::common::{get_jwt_claims, memory_storage::MemoryStorage};
 use did_key::{generate, Ed25519KeyPair};
+use jsonwebtoken::Algorithm;
 use oid4vc_core::Subject;
 use oid4vc_manager::{
     managers::credential_issuer::CredentialIssuerManager, methods::key_method::KeySubject,
@@ -42,10 +43,10 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
 
     // Create a new subject.
     let subject = KeySubject::new();
-    let subject_did = subject.identifier("did:key").await.unwrap();
+    let subject_did = subject.identifier("did:key", Algorithm::EdDSA).await.unwrap();
 
     // Create a new wallet.
-    let wallet: Wallet = Wallet::new(Arc::new(subject), "did:key").unwrap();
+    let wallet: Wallet = Wallet::new(Arc::new(subject), "did:key", vec![Algorithm::EdDSA]).unwrap();
 
     // Get the credential offer url.
     let credential_offer_query = credential_issuer
@@ -109,7 +110,6 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
                 .credential_configurations_supported
                 .get(credential)
                 .unwrap()
-                .credential_format
                 .clone()
         })
         .collect();
@@ -122,7 +122,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             .get_credential(
                 credential_issuer_metadata,
                 &token_response,
-                university_degree_credential_format,
+                &university_degree_credential_format,
             )
             .await
             .unwrap();
@@ -162,7 +162,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
     } else if batch {
         // Get the credentials.
         let batch_credential_response: BatchCredentialResponse = wallet
-            .get_batch_credential(credential_issuer_metadata, &token_response, credentials)
+            .get_batch_credential(credential_issuer_metadata, &token_response, &credentials)
             .await
             .unwrap();
 

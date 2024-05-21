@@ -1,11 +1,17 @@
-use crate::authorization_request::{AuthorizationRequestBuilder, AuthorizationRequestParameters};
+use crate::authorization_request::{
+    AuthorizationRequestBuilder, AuthorizationRequestParameters, ClientMetadataParameters,
+};
 use crate::claims::StandardClaimsValues;
 use crate::token::id_token::IdToken;
 use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, Header};
+use oid4vc_core::client_metadata::ClientMetadataResource;
 use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};
 use oid4vc_core::{authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension, Subject};
 use oid4vc_core::{SubjectSyntaxType, Validator};
+use reqwest_middleware::ClientBuilder;
+use reqwest_retry::policies::ExponentialBackoff;
+use reqwest_retry::RetryTransientMiddleware;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -40,12 +46,20 @@ impl Extension for SIOPv2 {
         extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
         user_input: &<Self::ResponseHandle as ResponseHandle>::Input,
         subject_syntax_type: impl TryInto<SubjectSyntaxType>,
+        signing_algorithm: impl TryInto<Algorithm>,
     ) -> anyhow::Result<Vec<String>> {
+        let signing_algorithm = signing_algorithm
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("Failed to convert the signing algorithm"))?;
+
         let subject_syntax_type_string = subject_syntax_type
             .try_into()
             .map_err(|_| anyhow::anyhow!("Failed to convert the subject syntax type"))?
             .to_string();
-        let subject_identifier = subject.identifier(&subject_syntax_type_string).await?;
+
+        let subject_identifier = subject
+            .identifier(&subject_syntax_type_string, signing_algorithm)
+            .await?;
 
         let id_token = IdToken::builder()
             .iss(subject_identifier.clone())
@@ -60,13 +74,41 @@ impl Extension for SIOPv2 {
 
         let jwt = jwt::encode(
             subject.clone(),
-            Header::new(Algorithm::EdDSA),
+            Header::new(signing_algorithm),
             id_token,
             &subject_syntax_type_string,
         )
         .await?;
 
         Ok(vec![jwt])
+    }
+
+    async fn get_relying_party_supported_algorithms(
+        authorization_request: &<Self::RequestHandle as RequestHandle>::Parameters,
+    ) -> anyhow::Result<Vec<Algorithm>> {
+        let client_metadata = match &authorization_request.client_metadata {
+            ClientMetadataResource::ClientMetadataUri(client_metadata_uri) => {
+                let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
+                let client = ClientBuilder::new(reqwest::Client::new())
+                    .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+                    .build();
+                let client_metadata: ClientMetadataResource<ClientMetadataParameters> =
+                    client.get(client_metadata_uri).send().await?.json().await?;
+                client_metadata
+            }
+            client_metadata => client_metadata.clone(),
+        };
+
+        match client_metadata {
+            ClientMetadataResource::ClientMetadataUri(_) => unreachable!(),
+            ClientMetadataResource::ClientMetadata { extension, .. } => {
+                match extension.id_token_signed_response_alg {
+                    Some(alg) => Ok(vec![alg]),
+                    // TODO: default to RS256
+                    None => Ok(vec![Algorithm::EdDSA]),
+                }
+            }
+        }
     }
 
     fn build_authorization_response(

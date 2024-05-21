@@ -37,7 +37,7 @@ pub struct AuthorizationRequestParameters {
     pub scope: Option<Scope>,
     pub nonce: String,
     #[serde(flatten)]
-    pub client_metadata: Option<ClientMetadataResource<ClientMetadataParameters>>,
+    pub client_metadata: ClientMetadataResource<ClientMetadataParameters>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -45,7 +45,7 @@ pub struct ClientMetadataParameters {
     /// Object defining the formats and proof types of Verifiable Presentations and Verifiable Credentials that a
     /// Verifier supports.
     /// As described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-20.html#name-additional-verifier-metadat
-    vp_formats: HashMap<ClaimFormatDesignation, ClaimFormatProperty>,
+    pub vp_formats: HashMap<ClaimFormatDesignation, ClaimFormatProperty>,
 }
 
 #[derive(Debug, Default, IsEmpty)]
@@ -99,7 +99,10 @@ impl AuthorizationRequestBuilder {
                         .nonce
                         .take()
                         .ok_or_else(|| anyhow!("nonce parameter is required."))?,
-                    client_metadata: self.client_metadata.take(),
+                    client_metadata: self
+                        .client_metadata
+                        .take()
+                        .ok_or_else(|| anyhow!("client_metadata or client_metadata_uri is required."))?,
                 };
 
                 Ok(AuthorizationRequest::<Object<OID4VP>> {
@@ -127,6 +130,7 @@ impl AuthorizationRequestBuilder {
 mod tests {
     use std::{fs::File, path::Path};
 
+    use jsonwebtoken::Algorithm;
     use serde::de::DeserializeOwned;
 
     use super::*;
@@ -209,7 +213,7 @@ mod tests {
                         vp_formats: vec![
                             (
                                 ClaimFormatDesignation::JwtVpJson,
-                                ClaimFormatProperty::Alg(vec!["EdDSA".to_string(), "ES256K".to_string(),])
+                                ClaimFormatProperty::Alg(vec![Algorithm::EdDSA, Algorithm::ES256,])
                             ),
                             (
                                 ClaimFormatDesignation::LdpVp,
