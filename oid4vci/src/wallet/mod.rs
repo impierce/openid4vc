@@ -175,7 +175,6 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             proof: Some(
                 KeyProofType::builder()
                     .proof_type(ProofType::Jwt)
-                    // FIX THIS
                     .algorithm(*signing_algorithm)
                     .signer(self.subject.clone())
                     .iss(
@@ -216,7 +215,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         token_response: &TokenResponse,
         credential_configurations: &[CredentialConfigurationsSupportedObject],
     ) -> Result<BatchCredentialResponse> {
-        // FIX THIS: This assumes that for all credentials the same Proof Type is supported.
+        // TODO: This needs to be fixed since this current implementation assumes that for all credentials the same Proof Type is supported.
         let credential_issuer_proof_signing_alg_values_supported = &credential_configurations
             .first()
             .ok_or(anyhow::anyhow!("No credential configurations found."))?
