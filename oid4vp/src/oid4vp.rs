@@ -21,6 +21,7 @@ use reqwest_middleware::ClientBuilder;
 use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use std::sync::Arc;
 
 /// This is the [`RequestHandle`] for the [`OID4VP`] extension.
@@ -89,10 +90,12 @@ impl Extension for OID4VP {
         Ok(vec![jwt])
     }
 
+    // TODO: combine this function with `get_relying_party_supported_syntax_types`.
     async fn get_relying_party_supported_algorithms(
         authorization_request: &<Self::RequestHandle as RequestHandle>::Parameters,
     ) -> anyhow::Result<Vec<Algorithm>> {
         let client_metadata = match &authorization_request.client_metadata {
+            // Fetch the client metadata from the given URI.
             ClientMetadataResource::ClientMetadataUri(client_metadata_uri) => {
                 let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
                 let client = ClientBuilder::new(reqwest::Client::new())
@@ -106,8 +109,10 @@ impl Extension for OID4VP {
         };
 
         // TODO: in this current solution we assume that if there is a`ClaimFormatDesignation::JwtVcJson` `alg` present
-        // in the client_metadata that this same `alg` will apply for the signing of all the credentials and the VP.
+        // in the client_metadata that this same `alg` will apply for the signing of all the credentials and the VP as
+        // well as the Proof of Possession.
         match client_metadata {
+            // Fetch the client metadata from the given URI.
             ClientMetadataResource::ClientMetadataUri(_) => unreachable!(),
             ClientMetadataResource::ClientMetadata { extension, .. } => extension
                 .vp_formats
@@ -118,6 +123,48 @@ impl Extension for OID4VP {
                     ClaimFormatProperty::ProofType(_) => None,
                 })
                 .ok_or(anyhow::anyhow!("No supported algorithms found.")),
+        }
+    }
+
+    async fn get_relying_party_supported_syntax_types(
+        authorization_request: &<Self::RequestHandle as RequestHandle>::Parameters,
+    ) -> anyhow::Result<Vec<SubjectSyntaxType>> {
+        let client_metadata = match &authorization_request.client_metadata {
+            ClientMetadataResource::ClientMetadataUri(client_metadata_uri) => {
+                let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
+                let client = ClientBuilder::new(reqwest::Client::new())
+                    .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+                    .build();
+                let client_metadata: ClientMetadataResource<ClientMetadataParameters> =
+                    client.get(client_metadata_uri).send().await?.json().await?;
+                client_metadata
+            }
+            client_metadata => client_metadata.clone(),
+        };
+
+        match client_metadata {
+            ClientMetadataResource::ClientMetadataUri(_) => unreachable!(),
+            ClientMetadataResource::ClientMetadata { other, .. } => {
+                let subject_syntax_types_supported: Vec<SubjectSyntaxType> = other
+                    .get("subject_syntax_types_supported")
+                    .and_then(|subject_syntax_types_supported| {
+                        subject_syntax_types_supported
+                            .as_array()
+                            .and_then(|subject_syntax_types_supported| {
+                                subject_syntax_types_supported
+                                    .iter()
+                                    .map(|subject_syntax_type| {
+                                        subject_syntax_type.as_str().map(|subject_syntax_type| {
+                                            SubjectSyntaxType::from_str(subject_syntax_type).unwrap()
+                                        })
+                                    })
+                                    .collect()
+                            })
+                    })
+                    .unwrap_or_default();
+
+                Ok(subject_syntax_types_supported)
+            }
         }
     }
 

@@ -43,6 +43,13 @@ pub trait Extension: Serialize + PartialEq + Sized + std::fmt::Debug + Clone + S
         async { Err(anyhow::anyhow!("Not implemented.")) }
     }
 
+    fn get_relying_party_supported_syntax_types(
+        _authorization_request: &<Self::RequestHandle as RequestHandle>::Parameters,
+    ) -> impl Future<Output = anyhow::Result<Vec<SubjectSyntaxType>>> {
+        // Will be overwritten by the extension.
+        async { Err(anyhow::anyhow!("Not implemented.")) }
+    }
+
     fn build_authorization_response(
         _jwts: Vec<String>,
         _user_input: <Self::ResponseHandle as ResponseHandle>::Input,

@@ -123,7 +123,8 @@ mod tests {
         let subject = KeySubject::new();
 
         // Create a new provider manager.
-        let provider_manager = ProviderManager::new(Arc::new(subject), "did:key", vec![Algorithm::EdDSA]).unwrap();
+        let provider_manager =
+            ProviderManager::new(Arc::new(subject), vec!["did:key"], vec![Algorithm::EdDSA]).unwrap();
 
         // Get a new SIOP authorization_request with response mode `direct_post` for cross-device communication.
         let request_url = "\

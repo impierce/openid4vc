@@ -40,6 +40,14 @@ impl TryFrom<&str> for SubjectSyntaxType {
     }
 }
 
+impl TryFrom<String> for SubjectSyntaxType {
+    type Error = anyhow::Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        SubjectSyntaxType::from_str(value.as_str())
+    }
+}
+
 impl From<DidMethod> for SubjectSyntaxType {
     fn from(did_method: DidMethod) -> Self {
         SubjectSyntaxType::Did(did_method)

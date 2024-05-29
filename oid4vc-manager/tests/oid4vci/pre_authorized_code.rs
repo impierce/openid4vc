@@ -46,7 +46,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
     let subject_did = subject.identifier("did:key", Algorithm::EdDSA).await.unwrap();
 
     // Create a new wallet.
-    let wallet: Wallet = Wallet::new(Arc::new(subject), "did:key", vec![Algorithm::EdDSA]).unwrap();
+    let wallet: Wallet = Wallet::new(Arc::new(subject), vec!["did:key"], vec![Algorithm::EdDSA]).unwrap();
 
     // Get the credential offer url.
     let credential_offer_query = credential_issuer

@@ -141,6 +141,7 @@ async fn test_implicit_flow(#[case] did_method: &str) {
                 subject_syntax_types_supported: vec![SubjectSyntaxType::Did(DidMethod::from_str(did_method).unwrap())],
                 id_token_signed_response_alg: Some(Algorithm::EdDSA),
             },
+            other: Default::default(),
         })
         .claims(
             r#"{
@@ -185,7 +186,7 @@ async fn test_implicit_flow(#[case] did_method: &str) {
     };
 
     // Create a new provider manager.
-    let provider_manager = ProviderManager::new(Arc::new(subject), did_method, vec![Algorithm::EdDSA]).unwrap();
+    let provider_manager = ProviderManager::new(Arc::new(subject), vec![did_method], vec![Algorithm::EdDSA]).unwrap();
 
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
     let authorization_request = AuthorizationRequest::<ByReference> {

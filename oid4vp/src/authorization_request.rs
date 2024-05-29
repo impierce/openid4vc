@@ -222,7 +222,8 @@ mod tests {
                         ]
                         .into_iter()
                         .collect()
-                    }
+                    },
+                    other: HashMap::from_iter(vec![("application_type".to_string(), serde_json::json!("web"))]),
                 }),
             },
             json_example::<ExampleAuthorizationRequest>("tests/examples/client_metadata/client_client_id_did.json")

@@ -19,7 +19,7 @@ use oid4vp::{
     ClaimFormatDesignation, ClaimFormatProperty, PresentationDefinition,
 };
 use serde_json::json;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 lazy_static! {
     pub static ref PRESENTATION_DEFINITION: PresentationDefinition = serde_json::from_value(json!(
@@ -109,13 +109,17 @@ async fn test_implicit_flow() {
                 .into_iter()
                 .collect(),
             },
+            other: HashMap::from_iter(vec![(
+                "subject_syntax_types_supported".to_string(),
+                json!(vec!["did:key".to_string(),]),
+            )]),
         })
         .nonce("nonce".to_string())
         .build()
         .unwrap();
 
     // Create a provider manager and validate the authorization request.
-    let provider_manager = ProviderManager::new(subject, "did:key", vec![Algorithm::EdDSA]).unwrap();
+    let provider_manager = ProviderManager::new(subject, vec!["did:key"], vec![Algorithm::EdDSA]).unwrap();
 
     // Create a new verifiable credential.
     let verifiable_credential = VerifiableCredentialJwt::builder()

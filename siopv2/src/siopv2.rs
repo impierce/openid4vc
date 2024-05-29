@@ -83,10 +83,12 @@ impl Extension for SIOPv2 {
         Ok(vec![jwt])
     }
 
+    // TODO: combine this function with `get_relying_party_supported_syntax_types`.
     async fn get_relying_party_supported_algorithms(
         authorization_request: &<Self::RequestHandle as RequestHandle>::Parameters,
     ) -> anyhow::Result<Vec<Algorithm>> {
         let client_metadata = match &authorization_request.client_metadata {
+            // Fetch the client metadata from the given URI.
             ClientMetadataResource::ClientMetadataUri(client_metadata_uri) => {
                 let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
                 let client = ClientBuilder::new(reqwest::Client::new())
@@ -108,6 +110,36 @@ impl Extension for SIOPv2 {
                     None => Ok(vec![Algorithm::EdDSA]),
                 }
             }
+        }
+    }
+
+    async fn get_relying_party_supported_syntax_types(
+        authorization_request: &<Self::RequestHandle as RequestHandle>::Parameters,
+    ) -> anyhow::Result<Vec<SubjectSyntaxType>> {
+        let client_metadata = match &authorization_request.client_metadata {
+            // Fetch the client metadata from the given URI.
+            ClientMetadataResource::ClientMetadataUri(client_metadata_uri) => {
+                let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
+                let client = ClientBuilder::new(reqwest::Client::new())
+                    .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+                    .build();
+                let client_metadata: ClientMetadataResource<ClientMetadataParameters> =
+                    client.get(client_metadata_uri).send().await?.json().await?;
+                client_metadata
+            }
+            client_metadata => client_metadata.clone(),
+        };
+
+        match client_metadata {
+            ClientMetadataResource::ClientMetadataUri(_) => unreachable!(),
+            ClientMetadataResource::ClientMetadata {
+                extension:
+                    ClientMetadataParameters {
+                        subject_syntax_types_supported,
+                        ..
+                    },
+                ..
+            } => Ok(subject_syntax_types_supported),
         }
     }
 
