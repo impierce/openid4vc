@@ -146,6 +146,9 @@ impl Extension for OID4VP {
             ClientMetadataResource::ClientMetadataUri(_) => unreachable!(),
             ClientMetadataResource::ClientMetadata { other, .. } => {
                 let subject_syntax_types_supported: Vec<SubjectSyntaxType> = other
+                    // TODO(ngdil): this is a custom implementation at the moment as `subject_syntax_types_supported` is
+                    // strictly a `SIOPv2` Client Metadata parameter and is not mentioned in the `OID4VP` documentation. It
+                    // is expected that that a similar parameter will be added to the `OID4VP` Client Metadata.
                     .get("subject_syntax_types_supported")
                     .and_then(|subject_syntax_types_supported| {
                         subject_syntax_types_supported
