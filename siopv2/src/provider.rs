@@ -28,7 +28,7 @@ impl Provider {
     pub fn new(
         subject: SigningSubject,
         supported_subject_syntax_types: Vec<impl TryInto<SubjectSyntaxType>>,
-        supported_sigining_alogrithms: Vec<Algorithm>,
+        supported_signing_algorithms: Vec<Algorithm>,
     ) -> Result<Self> {
         let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
         let client = ClientBuilder::new(reqwest::Client::new())
@@ -46,7 +46,7 @@ impl Provider {
                         .map_err(|_| anyhow::anyhow!("Invalid did method."))
                 })
                 .collect::<Result<_>>()?,
-            supported_signing_algorithms: supported_sigining_alogrithms,
+            supported_signing_algorithms,
         })
     }
 
