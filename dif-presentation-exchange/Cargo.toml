@@ -12,6 +12,7 @@ repository.workspace = true
 getset.workspace = true
 jsonpath_lib = "0.3"
 jsonschema = "0.17"
+jsonwebtoken.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true

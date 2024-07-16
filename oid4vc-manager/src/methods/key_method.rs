@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use did_key::{generate, resolve, Config, CoreSign, DIDCore, Document, Ed25519KeyPair, KeyMaterial, PatchedKeyPair};
+use jsonwebtoken::Algorithm;
 use oid4vc_core::{authentication::sign::ExternalSign, Sign, Subject, Verify};
 use std::sync::Arc;
 
@@ -43,14 +44,14 @@ impl Default for KeySubject {
 
 #[async_trait]
 impl Sign for KeySubject {
-    async fn key_id(&self, _subject_syntax_type: &str) -> Option<String> {
+    async fn key_id(&self, _subject_syntax_type: &str, _algorithm: Algorithm) -> Option<String> {
         self.document
             .authentication
             .as_ref()
             .and_then(|authentication_methods| authentication_methods.first().cloned())
     }
 
-    async fn sign(&self, message: &str, _subject_syntax_type: &str) -> Result<Vec<u8>> {
+    async fn sign(&self, message: &str, _subject_syntax_type: &str, _algorithm: Algorithm) -> Result<Vec<u8>> {
         match self.external_signer() {
             Some(external_signer) => external_signer.sign(message),
             None => Ok(self.keypair.sign(message.as_bytes())),
@@ -71,7 +72,7 @@ impl Verify for KeySubject {
 
 #[async_trait]
 impl Subject for KeySubject {
-    async fn identifier(&self, _subject_syntax_type: &str) -> Result<String> {
+    async fn identifier(&self, _subject_syntax_type: &str, _algorithm: Algorithm) -> Result<String> {
         Ok(self.document.id.clone())
     }
 }
@@ -111,6 +112,7 @@ async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
 mod tests {
     use super::*;
     use crate::{ProviderManager, RelyingPartyManager};
+    use jsonwebtoken::Algorithm;
     use oid4vc_core::authorization_request::{AuthorizationRequest, Object};
     use siopv2::siopv2::SIOPv2;
     use std::sync::Arc;
@@ -121,7 +123,8 @@ mod tests {
         let subject = KeySubject::new();
 
         // Create a new provider manager.
-        let provider_manager = ProviderManager::new(Arc::new(subject), "did:key").unwrap();
+        let provider_manager =
+            ProviderManager::new(Arc::new(subject), vec!["did:key"], vec![Algorithm::EdDSA]).unwrap();
 
         // Get a new SIOP authorization_request with response mode `direct_post` for cross-device communication.
         let request_url = "\
@@ -153,7 +156,8 @@ mod tests {
             .unwrap();
 
         // Let the relying party validate the authorization_response.
-        let relying_party_manager = RelyingPartyManager::new(Arc::new(KeySubject::new()), "did:key").unwrap();
+        let relying_party_manager =
+            RelyingPartyManager::new(Arc::new(KeySubject::new()), "did:key", vec![Algorithm::EdDSA]).unwrap();
         assert!(relying_party_manager
             .validate_response(&authorization_response)
             .await

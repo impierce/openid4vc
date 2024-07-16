@@ -16,6 +16,7 @@
     "proof_types_supported": {
         "jwt": {
             "proof_signing_alg_values_supported": [
+                "EdDSA",
                 "ES256"
             ]
         }

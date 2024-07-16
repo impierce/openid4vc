@@ -1,6 +1,7 @@
 use crate::{siopv2::SIOPv2, ClaimRequests, StandardClaimsRequests};
 use anyhow::{anyhow, Result};
 use is_empty::IsEmpty;
+use jsonwebtoken::Algorithm;
 use monostate::MustBe;
 use oid4vc_core::authorization_request::Object;
 use oid4vc_core::builder_fn;
@@ -22,14 +23,16 @@ pub struct AuthorizationRequestParameters {
     pub nonce: String,
     pub claims: Option<ClaimRequests>,
     #[serde(flatten)]
-    pub client_metadata: Option<ClientMetadataResource<ClientMetadataParameters>>,
+    pub client_metadata: ClientMetadataResource<ClientMetadataParameters>,
 }
 
+#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct ClientMetadataParameters {
     /// Represents the URI scheme identifiers of supported Subject Syntax Types.
     /// As described here: https://openid.net/specs/openid-connect-self-issued-v2-1_0.html#section-7.5-2.1.1
     pub subject_syntax_types_supported: Vec<SubjectSyntaxType>,
+    pub id_token_signed_response_alg: Option<Algorithm>,
 }
 
 impl AuthorizationRequestParameters {
@@ -38,13 +41,13 @@ impl AuthorizationRequestParameters {
     }
 
     pub fn subject_syntax_types_supported(&self) -> Option<&Vec<SubjectSyntaxType>> {
-        self.client_metadata.as_ref().and_then(|r| match r {
+        match &self.client_metadata {
             ClientMetadataResource::ClientMetadata { extension, .. } => {
                 Some(extension.subject_syntax_types_supported.as_ref())
             }
             // TODO: impl client_metadata_uri.
             ClientMetadataResource::ClientMetadataUri(_) => None,
-        })
+        }
     }
 
     /// Returns the `id_token` claims from the `claims` parameter including those from the request's scope values.
@@ -111,7 +114,10 @@ impl AuthorizationRequestBuilder {
                         .take()
                         .ok_or_else(|| anyhow!("nonce parameter is required."))?,
                     claims: self.claims.take().transpose()?,
-                    client_metadata: self.client_metadata.take(),
+                    client_metadata: self
+                        .client_metadata
+                        .take()
+                        .ok_or_else(|| anyhow!("client_metadata or client_metadata_uri is required."))?,
                 };
 
                 Ok(AuthorizationRequest::<Object<SIOPv2>> {
@@ -182,6 +188,9 @@ mod tests {
                     }
                 }"#,
             )
+            .client_metadata(ClientMetadataResource::ClientMetadataUri(
+                "https://example.com".to_string(),
+            ))
             .build()
             .unwrap();
 
@@ -206,7 +215,7 @@ mod tests {
                             }),
                             ..Default::default()
                         }),
-                        client_metadata: None,
+                        client_metadata: ClientMetadataResource::ClientMetadataUri("https://example.com".to_string(),),
                     },
                 }
             }

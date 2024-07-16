@@ -1,4 +1,5 @@
 use crate::{authorization_response::AuthorizationResponse, Subject, SubjectSyntaxType, Validator};
+use jsonwebtoken::Algorithm;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{future::Future, sync::Arc};
 
@@ -29,7 +30,22 @@ pub trait Extension: Serialize + PartialEq + Sized + std::fmt::Debug + Clone + S
         _extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
         _user_input: &<Self::ResponseHandle as ResponseHandle>::Input,
         _subject_syntax_type: impl TryInto<SubjectSyntaxType>,
+        _signing_algorithm: impl TryInto<Algorithm>,
     ) -> impl Future<Output = anyhow::Result<Vec<String>>> {
+        // Will be overwritten by the extension.
+        async { Err(anyhow::anyhow!("Not implemented.")) }
+    }
+
+    fn get_relying_party_supported_algorithms(
+        _authorization_request: &<Self::RequestHandle as RequestHandle>::Parameters,
+    ) -> impl Future<Output = anyhow::Result<Vec<Algorithm>>> {
+        // Will be overwritten by the extension.
+        async { Err(anyhow::anyhow!("Not implemented.")) }
+    }
+
+    fn get_relying_party_supported_syntax_types(
+        _authorization_request: &<Self::RequestHandle as RequestHandle>::Parameters,
+    ) -> impl Future<Output = anyhow::Result<Vec<SubjectSyntaxType>>> {
         // Will be overwritten by the extension.
         async { Err(anyhow::anyhow!("Not implemented.")) }
     }

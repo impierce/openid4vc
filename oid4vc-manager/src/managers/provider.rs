@@ -1,4 +1,5 @@
 use anyhow::Result;
+use jsonwebtoken::Algorithm;
 use oid4vc_core::{
     authorization_request::{AuthorizationRequest, Object},
     authorization_response::AuthorizationResponse,
@@ -17,15 +18,34 @@ pub struct ProviderManager {
 impl ProviderManager {
     pub fn new(
         subject: Arc<dyn Subject>,
-        default_subject_syntax_type: impl TryInto<SubjectSyntaxType>,
+        supported_subject_syntax_types: Vec<impl TryInto<SubjectSyntaxType>>,
+        supported_signing_algorithms: Vec<Algorithm>,
     ) -> Result<Self> {
         Ok(Self {
-            provider: Provider::new(subject, default_subject_syntax_type)?,
+            provider: Provider::new(subject, supported_subject_syntax_types, supported_signing_algorithms)?,
         })
     }
 
     pub async fn validate_request(&self, authorization_request: String) -> Result<AuthorizationRequest<Object>> {
         self.provider.validate_request(authorization_request).await
+    }
+
+    pub async fn get_matching_signing_algorithm<E: Extension>(
+        &self,
+        authorization_request: &AuthorizationRequest<Object<E>>,
+    ) -> Result<Algorithm> {
+        self.provider
+            .get_matching_signing_algorithm(authorization_request)
+            .await
+    }
+
+    pub async fn get_matching_subject_syntax_type<E: Extension>(
+        &self,
+        authorization_request: &AuthorizationRequest<Object<E>>,
+    ) -> Result<SubjectSyntaxType> {
+        self.provider
+            .get_matching_subject_syntax_type(authorization_request)
+            .await
     }
 
     pub async fn generate_response<E: Extension + OpenID4VC>(
@@ -43,7 +63,7 @@ impl ProviderManager {
         self.provider.send_response(authorization_response).await
     }
 
-    pub fn default_subject_syntax_type(&self) -> &SubjectSyntaxType {
-        &self.provider.default_subject_syntax_type
+    pub fn default_subject_syntax_types(&self) -> &Vec<SubjectSyntaxType> {
+        &self.provider.supported_subject_syntax_types
     }
 }

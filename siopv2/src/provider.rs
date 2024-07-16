@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use anyhow::Result;
+use jsonwebtoken::Algorithm;
 use oid4vc_core::{
     authentication::subject::SigningSubject,
     authorization_request::{AuthorizationRequest, Body, ByReference, ByValue, Object},
@@ -17,23 +18,35 @@ use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 /// the user who is trying to authenticate.
 pub struct Provider {
     pub subject: SigningSubject,
-    pub default_subject_syntax_type: SubjectSyntaxType,
+    pub supported_subject_syntax_types: Vec<SubjectSyntaxType>,
+    pub supported_signing_algorithms: Vec<Algorithm>,
     client: ClientWithMiddleware,
 }
 
 impl Provider {
     // TODO: Use ProviderBuilder instead.
-    pub fn new(subject: SigningSubject, default_subject_syntax_type: impl TryInto<SubjectSyntaxType>) -> Result<Self> {
+    pub fn new(
+        subject: SigningSubject,
+        supported_subject_syntax_types: Vec<impl TryInto<SubjectSyntaxType>>,
+        supported_signing_algorithms: Vec<Algorithm>,
+    ) -> Result<Self> {
         let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
         let client = ClientBuilder::new(reqwest::Client::new())
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
             .build();
+
         Ok(Provider {
             subject,
             client,
-            default_subject_syntax_type: default_subject_syntax_type
-                .try_into()
-                .map_err(|_| anyhow::anyhow!("Invalid did method."))?,
+            supported_subject_syntax_types: supported_subject_syntax_types
+                .into_iter()
+                .map(|subject_syntax_type| {
+                    subject_syntax_type
+                        .try_into()
+                        .map_err(|_| anyhow::anyhow!("Invalid did method."))
+                })
+                .collect::<Result<_>>()?,
+            supported_signing_algorithms,
         })
     }
 
@@ -80,6 +93,34 @@ impl Provider {
         Ok(authorization_request)
     }
 
+    pub async fn get_matching_signing_algorithm<E: Extension>(
+        &self,
+        authorization_request: &AuthorizationRequest<Object<E>>,
+    ) -> Result<Algorithm> {
+        let relying_party_supported_algorithms =
+            E::get_relying_party_supported_algorithms(&authorization_request.body.extension).await?;
+
+        self.supported_signing_algorithms
+            .iter()
+            .find(|supported_algorithm| relying_party_supported_algorithms.contains(supported_algorithm))
+            .cloned()
+            .ok_or(anyhow::anyhow!("No supported signing algorithms found."))
+    }
+
+    pub async fn get_matching_subject_syntax_type<E: Extension>(
+        &self,
+        authorization_request: &AuthorizationRequest<Object<E>>,
+    ) -> Result<SubjectSyntaxType> {
+        let relying_party_supported_syntax_types =
+            E::get_relying_party_supported_syntax_types(&authorization_request.body.extension).await?;
+
+        self.supported_subject_syntax_types
+            .iter()
+            .find(|supported_syntax_type| relying_party_supported_syntax_types.contains(supported_syntax_type))
+            .cloned()
+            .ok_or(anyhow::anyhow!("No supported subject syntax types found."))
+    }
+
     /// Generates an [`AuthorizationResponse`] in response to an [`AuthorizationRequest`] and the user's claims. The [`AuthorizationResponse`]
     /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
     pub async fn generate_response<E: Extension>(
@@ -90,12 +131,16 @@ impl Provider {
         let redirect_uri = authorization_request.body.redirect_uri.to_string();
         let state = authorization_request.body.state.clone();
 
+        let signing_algorithm = self.get_matching_signing_algorithm(authorization_request).await?;
+        let subject_syntax_type = self.get_matching_subject_syntax_type(authorization_request).await?;
+
         let jwts = E::generate_token(
             self.subject.clone(),
             &authorization_request.body.client_id,
             &authorization_request.body.extension,
             &input,
-            self.default_subject_syntax_type.clone(),
+            subject_syntax_type.clone(),
+            signing_algorithm,
         )
         .await?;
 
@@ -128,7 +173,7 @@ mod tests {
         let subject = TestSubject::new("did:test:123".to_string(), "key_id".to_string()).unwrap();
 
         // Create a new provider.
-        let provider = Provider::new(Arc::new(subject), "did:test").unwrap();
+        let provider = Provider::new(Arc::new(subject), vec!["did:test"], vec![Algorithm::EdDSA]).unwrap();
 
         // Get a new SIOP authorization_request with response mode `direct_post` for cross-device communication.
         let request_url = "\

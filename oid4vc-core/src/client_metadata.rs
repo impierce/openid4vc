@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
+use std::collections::HashMap;
 use url::Url;
 
 /// [`ClientMetadata`] is a request parameter used by a [`crate::RelyingParty`] to communicate its capabilities to a
@@ -16,6 +17,8 @@ pub enum ClientMetadataResource<T = ()> {
         /// expanded with Extensions and profiles.
         #[serde(flatten)]
         extension: T,
+        #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
+        other: HashMap<String, serde_json::Value>,
     },
     ClientMetadataUri(String),
 }

@@ -1,4 +1,5 @@
 use getset::Getters;
+use jsonwebtoken::Algorithm;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::HashMap;
@@ -59,7 +60,7 @@ pub enum ClaimFormatDesignation {
 #[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ClaimFormatProperty {
-    Alg(Vec<String>),
+    Alg(Vec<Algorithm>),
     ProofType(Vec<String>),
 }
 
@@ -268,7 +269,7 @@ mod tests {
                     purpose: None,
                     format: Some(HashMap::from_iter(vec![(
                         ClaimFormatDesignation::MsoMdoc,
-                        ClaimFormatProperty::Alg(vec!["EdDSA".to_string(), "ES256".to_string()])
+                        ClaimFormatProperty::Alg(vec![Algorithm::EdDSA, Algorithm::ES256])
                     )])),
                     constraints: Constraints {
                         limit_disclosure: Some(LimitDisclosure::Required),

@@ -51,6 +51,7 @@ mod tests {
         proof::KeyProofMetadata,
         ProofType,
     };
+    use jsonwebtoken::Algorithm;
     use serde::de::DeserializeOwned;
     use serde_json::json;
     use std::{fs::File, path::Path};
@@ -151,7 +152,7 @@ mod tests {
                         proof_types_supported: vec![(
                             ProofType::Jwt,
                             KeyProofMetadata {
-                                proof_signing_alg_values_supported: vec!["ES256".to_string()]
+                                proof_signing_alg_values_supported: vec![Algorithm::ES256]
                             }
                         )]
                         .into_iter()
