@@ -3,7 +3,7 @@ use serde_with::skip_serializing_none;
 
 /// Token Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-token-request
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(tag = "grant_type")]
 pub enum TokenRequest {
     #[serde(rename = "authorization_code")]

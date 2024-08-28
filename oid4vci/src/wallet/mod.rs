@@ -233,7 +233,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
                             .ok_or(anyhow::anyhow!("No c_nonce found."))?
                             .clone(),
                     )
-                    .subject_syntax_type(&subject_syntax_type.to_string())
+                    .subject_syntax_type(subject_syntax_type.to_string())
                     .build()
                     .await?,
             ),
