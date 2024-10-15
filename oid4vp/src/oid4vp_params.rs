@@ -1,6 +1,13 @@
 use dif_presentation_exchange::PresentationSubmission;
 use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
+pub enum OneOrManyVpToken {
+    One(String),
+    Many(Vec<String>),
+}
+
 /// Represents the parameters of an OpenID4VP response. It can hold a Verifiable Presentation Token and a Presentation
 /// Submission, or a JWT containing them.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -10,7 +17,7 @@ pub enum Oid4vpParams {
         response: String,
     },
     Params {
-        vp_token: String,
+        vp_token: OneOrManyVpToken,
         presentation_submission: PresentationSubmission,
     },
 }

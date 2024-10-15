@@ -33,6 +33,8 @@ pub fn evaluate_input(input_descriptor: &InputDescriptor, value: &serde_json::Va
             let results: Vec<FieldQueryResult> = fields
                 .iter()
                 .map(|field| {
+                    tracing::info!("Field: {:?}", field);
+                    tracing::info!("Value: {:?}", value);
                     let filter = field
                         .filter()
                         .as_ref()

@@ -207,8 +207,14 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
     ) -> Result<CredentialResponse> {
         let credential_format = credential_configuration.credential_format.to_owned();
 
-        let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
+        tracing::info!("credential_format: {:?}", credential_format);
+        // let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
+        let signing_algorithm = Algorithm::ES256;
+
+        tracing::info!("signing_algorithm: {:?}", signing_algorithm);
         let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
+
+        tracing::info!("subject_syntax_type: {:?}", subject_syntax_type);
 
         let credential_request = CredentialRequest {
             credential_format,
@@ -239,15 +245,32 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             ),
         };
 
-        self.client
+        tracing::info!(
+            "credential_request: {}",
+            serde_json::to_string_pretty(&credential_request).unwrap()
+        );
+
+        let response: Result<serde_json::Value, _> = self
+            .client
             .post(credential_issuer_metadata.credential_endpoint)
             .bearer_auth(token_response.access_token.clone())
             .json(&credential_request)
             .send()
-            .await?
-            .json()
             .await
-            .map_err(|e| e.into())
+            .inspect_err(|e| tracing::error!("Error1: {:?}", e))?
+            .json::<serde_json::Value>()
+            .await
+            .inspect_err(|e| tracing::error!("Error2: {:?}", e));
+        // .map_err(|e| e.into());
+
+        tracing::info!("response: {:?}", response);
+
+        response.map(|value| {
+            serde_json::from_value(value).map_err(|e| {
+                tracing::error!("Error3: {:?}", e);
+                e.into()
+            })
+        })?
     }
 
     pub async fn get_batch_credential(

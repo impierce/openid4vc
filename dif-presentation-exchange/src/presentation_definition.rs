@@ -54,6 +54,8 @@ pub enum ClaimFormatDesignation {
     AcVc,
     AcVp,
     MsoMdoc,
+    #[serde(rename = "vc+sd-jwt")]
+    VcSdJwt,
 }
 
 #[allow(dead_code)]
@@ -62,6 +64,34 @@ pub enum ClaimFormatDesignation {
 pub enum ClaimFormatProperty {
     Alg(Vec<Algorithm>),
     ProofType(Vec<String>),
+    #[serde(untagged)]
+    SdJwt {
+        #[serde(rename = "sd-jwt_alg_values", default)]
+        sd_jwt_alg_values: Vec<Algorithm>,
+        #[serde(rename = "kb-jwt_alg_values", default)]
+        kb_jwt_alg_values: Vec<Algorithm>,
+    },
+}
+
+#[test]
+fn test_claim_format_property() {
+    assert_eq!(
+        ClaimFormatProperty::Alg(vec![Algorithm::EdDSA, Algorithm::ES256]),
+        serde_json::from_str(r#"{"alg":["EdDSA","ES256"]}"#).unwrap()
+    );
+
+    assert_eq!(
+        ClaimFormatProperty::ProofType(vec!["JsonWebSignature2020".to_string()]),
+        serde_json::from_str(r#"{"proof_type":["JsonWebSignature2020"]}"#).unwrap()
+    );
+
+    assert_eq!(
+        ClaimFormatProperty::SdJwt {
+            sd_jwt_alg_values: vec![Algorithm::EdDSA],
+            kb_jwt_alg_values: vec![Algorithm::ES256],
+        },
+        serde_json::from_str(r#"{"sd-jwt_alg_values":["EdDSA"],"kb-jwt_alg_values":["ES256"]}"#).unwrap()
+    );
 }
 
 #[allow(dead_code)]

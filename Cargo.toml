@@ -28,9 +28,9 @@ bls12_381_plus = { version = "0.8.17" }
 chrono = "0.4"
 getset = "0.1"
 # identity_core = { git = "https://github.com/iotaledger/identity.rs", branch = "feat/sd-jwt-vc" }
-identity_core = { path = "../identity.rs/identity_core" }
+identity_core = { git = "https://github.com/impierce/identity.rs", branch = "fix/compile-fixes" }
 # identity_credential = { git = "https://github.com/iotaledger/identity.rs", branch = "feat/sd-jwt-vc", default-features = false, features = ["validator", "credential", "presentation"] }
-identity_credential = { path = "../identity.rs/identity_credential", default-features = false, features = ["validator", "credential", "presentation", "sd-jwt-vc"] }
+identity_credential = { git = "https://github.com/impierce/identity.rs", branch = "fix/compile-fixes", default-features = false, features = ["validator", "credential", "presentation", "sd-jwt-vc"] }
 is_empty = "0.2"
 jsonwebtoken = "9.3"
 monostate = "0.1"
