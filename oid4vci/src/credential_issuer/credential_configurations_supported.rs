@@ -288,5 +288,73 @@ mod tests {
             },
             json_example::<TestWrapper>("tests/examples/credential_metadata_mso_mdoc.json")
         );
+
+        assert_eq!(
+            TestWrapper {
+                credential_configurations_supported: vec![(
+                    "SD_JWT_VC_example_in_OpenID4VCI".to_string(),
+                    CredentialConfigurationsSupportedObject {
+                        credential_format: CredentialFormats::VcSdJwt(Parameters {
+                            parameters: (
+                                "SD_JWT_VC_example_in_OpenID4VCI".to_string(),
+                                Some(json!({
+                                  "given_name": {
+                                    "display": [
+                                      {
+                                        "name": "Given Name",
+                                        "locale": "en-US"
+                                      },
+                                      {
+                                        "name": "Vorname",
+                                        "locale": "de-DE"
+                                      }
+                                    ]
+                                  },
+                                  "family_name": {
+                                    "display": [
+                                      {
+                                        "name": "Surname",
+                                        "locale": "en-US"
+                                      },
+                                      {
+                                        "name": "Nachname",
+                                        "locale": "de-DE"
+                                      }
+                                    ]
+                                  },
+                                  "email": {},
+                                  "phone_number": {},
+                                  "address": {
+                                    "street_address": {},
+                                    "locality": {},
+                                    "region": {},
+                                    "country": {}
+                                  },
+                                  "birthdate": {},
+                                  "is_over_18": {},
+                                  "is_over_21": {},
+                                  "is_over_65": {}
+                                })),
+                                None
+                            )
+                                .into()
+                        }),
+                        scope: Some("SD_JWT_VC_example_in_OpenID4VCI".to_string()),
+                        cryptographic_binding_methods_supported: vec!["jwk".to_string()],
+                        credential_signing_alg_values_supported: vec!["ES256".to_string()],
+                        proof_types_supported: HashMap::new(),
+                        display: vec![json!(        {
+                          "name": "IdentityCredential",
+                          "locale": "en-US",
+                          "background_color": "#12107c",
+                          "text_color": "#FFFFFF"
+                        })]
+                    }
+                )]
+                .into_iter()
+                .collect()
+            },
+            json_example::<TestWrapper>("tests/examples/credential_metadata_sd_jwt_vc.json")
+        );
     }
 }

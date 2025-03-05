@@ -185,6 +185,19 @@ mod tests {
         assert_eq!(
             vec![AuthorizationDetailsObject {
                 r#type: OpenidCredential::Type,
+                locations: None,
+                credential_configuration_or_format: CredentialConfigurationOrFormat::CredentialFormat(
+                    CredentialFormats::VcSdJwt(Parameters {
+                        parameters: ("SD_JWT_VC_example_in_OpenID4VCI".to_string(), None, None).into(),
+                    }),
+                ),
+            }],
+            json_example::<Vec<AuthorizationDetailsObject>>("tests/examples/authorization_details_sd_jwt_vc.json")
+        );
+
+        assert_eq!(
+            vec![AuthorizationDetailsObject {
+                r#type: OpenidCredential::Type,
                 locations: Some(vec!["https://credential-issuer.example.com".parse().unwrap()]),
                 credential_configuration_or_format: CredentialConfigurationOrFormat::CredentialConfigurationId {
                     credential_configuration_id: "UniversityDegreeCredential".to_string(),
