@@ -151,6 +151,7 @@ async fn test_implicit_flow() {
 
     // Create presentation submission using the presentation definition and the verifiable credential.
     let presentation_submission = create_presentation_submission(
+        "example_jwt_vc_presentation_submission".to_string(),
         &PRESENTATION_DEFINITION,
         &vec![serde_json::to_value(&verifiable_credential).unwrap()],
     )
@@ -176,7 +177,7 @@ async fn test_implicit_flow() {
             .build()
             .unwrap();
 
-    let verifiable_presentation_input = PresentationInputType::Unsigned(verifiable_presentation);
+    let verifiable_presentation_input = PresentationInputType::Presentation(verifiable_presentation);
 
     // Generate the authorization_response. It will include both an IdToken and a VpToken.
     let authorization_response: AuthorizationResponse<OID4VP> = provider_manager
