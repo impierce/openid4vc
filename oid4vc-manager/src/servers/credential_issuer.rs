@@ -252,7 +252,6 @@ async fn batch_credential<S: Storage<CFC>, CFC: CredentialFormatCollection>(
         }),
     )
 }
-//encountered issue here, had to use CFC otherwise it would not compile properly. claude says cuz the entire router needs CFC...
 async fn notification(
     AuthBearer(_access_token): AuthBearer,
     Json(_notification_request): Json<NotificationRequest>,
