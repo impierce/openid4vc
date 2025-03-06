@@ -10,6 +10,7 @@ use oid4vci::{
     credential_format_profiles::{CredentialFormats, WithParameters},
     credential_offer::{CredentialOffer, CredentialOfferParameters, Grants},
     credential_response::{BatchCredentialResponse, CredentialResponse, CredentialResponseType},
+    notification_request::NotificationEvent,
     token_request::TokenRequest,
     Wallet,
 };
@@ -158,7 +159,25 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
                     "birthdate": "1985-05-21"
                 }
             })
-        )
+        );
+
+        let notification_endpoint = credential_issuer_url.join("/notification").unwrap();
+        let notification_id = "test-test-test".to_string();
+        let access_token = token_response.access_token.clone();
+        let event = NotificationEvent::CredentialAccepted;
+        let event_description = None;
+
+        assert!(wallet
+            .send_notification_request(
+                notification_endpoint,
+                notification_id,
+                access_token,
+                event,
+                event_description,
+            )
+            .await
+            .is_ok());
+        
     } else if batch {
         // Get the credentials.
         let batch_credential_response: BatchCredentialResponse = wallet
