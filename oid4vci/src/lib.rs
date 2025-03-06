@@ -7,6 +7,7 @@ pub mod credential_issuer;
 pub mod credential_offer;
 pub mod credential_request;
 pub mod credential_response;
+pub mod notification_request;
 pub mod proof;
 pub mod token_request;
 pub mod token_response;

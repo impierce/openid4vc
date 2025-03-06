@@ -9,6 +9,7 @@ use crate::credential_issuer::{
 use crate::credential_offer::CredentialOfferParameters;
 use crate::credential_request::{BatchCredentialRequest, CredentialRequest};
 use crate::credential_response::BatchCredentialResponse;
+use crate::notification_request::{NotificationEvent, NotificationRequest};
 use crate::proof::{KeyProofType, ProofType};
 use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
 use anyhow::{anyhow, Result};
@@ -327,6 +328,34 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .json()
             .await
             .map_err(|e| e.into())
+    }
+
+    pub async fn send_notification_request(
+        &self,
+        notification_endpoint: Url,
+        notification_id: String,
+        access_token: String,
+        event: NotificationEvent,
+        event_description: Option<String>,
+    ) -> Result<()> {
+        let notification_request = NotificationRequest {
+            notification_id,
+            event,
+            event_description,
+        };
+        let response = self
+            .client
+            .post(notification_endpoint)
+            .bearer_auth(access_token)
+            .json(&notification_request)
+            .send()
+            .await?;
+
+        if response.status() == 204 {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to send notification: {}", response.status()))
+        }
     }
 }
 

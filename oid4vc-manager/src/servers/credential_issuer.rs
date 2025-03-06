@@ -16,6 +16,7 @@ use oid4vci::{
     credential_format_profiles::CredentialFormatCollection,
     credential_request::{BatchCredentialRequest, CredentialRequest},
     credential_response::BatchCredentialResponse,
+    notification_request::NotificationRequest,
     token_request::TokenRequest,
 };
 use serde::de::DeserializeOwned;
@@ -70,6 +71,7 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection + Clone + Deserial
                     .route("/token", post(token))
                     .route("/credential", post(credential))
                     .route("/batch_credential", post(batch_credential))
+                    .route("/notification", post(notification))
                     .merge(extension.unwrap_or_default())
                     .layer(
                         tower_http::cors::CorsLayer::new()
@@ -245,4 +247,10 @@ async fn batch_credential<S: Storage<CFC>, CFC: CredentialFormatCollection>(
             c_nonce_expires_in: None,
         }),
     )
+}
+async fn notification(
+    AuthBearer(_access_token): AuthBearer,
+    Json(_notification_request): Json<NotificationRequest>,
+) -> impl IntoResponse {
+    StatusCode::NO_CONTENT
 }
