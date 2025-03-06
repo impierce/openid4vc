@@ -177,7 +177,6 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             )
             .await
             .is_ok());
-        
     } else if batch {
         // Get the credentials.
         let batch_credential_response: BatchCredentialResponse = wallet
