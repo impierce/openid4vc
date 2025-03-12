@@ -9,6 +9,7 @@ pub struct CredentialResponse {
     pub credential: CredentialResponseType,
     pub c_nonce: Option<String>,
     pub c_nonce_expires_in: Option<u64>,
+    pub notification_id: Option<String>,
 }
 
 /// Batch Credential Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-batch-credential-response
