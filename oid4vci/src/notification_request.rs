@@ -5,7 +5,10 @@ pub enum NotificationEvent {
     CredentialFailure,
     CredentialDeleted,
 }
+
 #[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
+#[skip_serializing_none]
+/// Notification Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-notification-request
 pub struct NotificationRequest {
     pub notification_id: String,
     pub event: NotificationEvent,
