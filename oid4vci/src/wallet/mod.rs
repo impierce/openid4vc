@@ -331,7 +331,6 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
     }
 
     pub async fn send_notification_request(
-        //put this in mod.rs
         &self,
         notification_endpoint: Url,
         notification_id: String,

@@ -47,6 +47,7 @@ mod tests {
             },
             c_nonce: Some("456".to_string()),
             c_nonce_expires_in: Some(789),
+            notification_id: None,
         };
         let serialized = serde_json::to_value(&credential_response).unwrap();
         assert_eq!(
