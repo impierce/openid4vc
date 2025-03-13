@@ -1,6 +1,6 @@
 use serde_with::skip_serializing_none;
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum NotificationEvent {
     CredentialAccepted,
