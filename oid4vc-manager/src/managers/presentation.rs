@@ -6,7 +6,8 @@ use oid4vp::{
 
 /// Takes a [`PresentationDefinition`] and a credential and creates a [`PresentationSubmission`] from it if the
 /// credential meets the requirements.
-// TODO: make VP/VC format agnostic. In current form only jwt_vp_json + jwt_vc_json are supported.
+// TODO: make VP/VC format agnostic. In current form only jwt_vp_json + jwt_vc_json are supported. Also, make sure that
+// an error is returned if the credentials do not meet the requirements in the `PresentationDefinition`.
 pub fn create_presentation_submission(
     id: String,
     presentation_definition: &PresentationDefinition,
