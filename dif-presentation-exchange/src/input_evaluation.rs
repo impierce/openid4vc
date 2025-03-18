@@ -89,17 +89,7 @@ mod tests {
         presentation_definition::{Constraints, Field},
         InputDescriptor,
     };
-    use serde::de::DeserializeOwned;
-    use std::{fs::File, path::Path};
-
-    fn json_example<T>(path: &str) -> T
-    where
-        T: DeserializeOwned,
-    {
-        let file_path = Path::new(path);
-        let file = File::open(file_path).expect("file does not exist");
-        serde_json::from_reader::<_, T>(file).expect("could not parse json")
-    }
+    use serde_json::{from_str, Value};
 
     fn input_descriptor(constraints: Constraints) -> InputDescriptor {
         InputDescriptor {
@@ -114,7 +104,8 @@ mod tests {
 
     #[test]
     fn test_constraints() {
-        let credential = json_example::<serde_json::Value>("../oid4vp/tests/examples/credentials/jwt_vc.json");
+        let credential =
+            from_str::<Value>(include_str!("../../oid4vp/tests/examples/credentials/jwt_vc.json")).unwrap();
 
         // Has NO fields.
         assert!(!evaluate_input(&input_descriptor(Constraints::default()), &credential));
@@ -131,7 +122,7 @@ mod tests {
             &credential
         ));
 
-        // // Has ONE INVALID field.
+        // Has ONE INVALID field.
         assert!(!evaluate_input(
             &input_descriptor(Constraints {
                 fields: Some(vec![Field {
@@ -201,7 +192,8 @@ mod tests {
 
     #[test]
     fn test_field() {
-        let credential = json_example::<serde_json::Value>("../oid4vp/tests/examples/credentials/jwt_vc.json");
+        let credential =
+            from_str::<Value>(include_str!("../../oid4vp/tests/examples/credentials/jwt_vc.json")).unwrap();
 
         // Has NO path.
         assert!(!evaluate_input(

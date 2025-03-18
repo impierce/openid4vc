@@ -147,11 +147,7 @@ async fn token<S: Storage<CFC>, CFC: CredentialFormatCollection>(
     State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
     Form(token_request): Form<TokenRequest>,
 ) -> impl IntoResponse {
-    match credential_issuer_manager
-        .storage
-        .get_token_response(token_request)
-        .take()
-    {
+    match credential_issuer_manager.storage.get_token_response(token_request) {
         Some(token_response) => (
             StatusCode::OK,
             AppendHeaders([("Cache-Control", "no-store")]),

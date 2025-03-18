@@ -49,18 +49,7 @@ mod tests {
         w3c_verifiable_credentials::{jwt_vc_json, CredentialSubject},
         Parameters,
     };
-    use serde::de::DeserializeOwned;
-    use serde_json::json;
-    use std::{fs::File, path::Path};
-
-    fn json_example<T>(path: &str) -> T
-    where
-        T: DeserializeOwned,
-    {
-        let file_path = Path::new(path);
-        let file = File::open(file_path).expect("file does not exist");
-        serde_json::from_reader::<_, T>(file).expect("could not parse json")
-    }
+    use serde_json::{from_str, json};
 
     #[test]
     fn test_authorization_details_object_with_format() {
@@ -116,7 +105,10 @@ mod tests {
                     })),
                 }
             }],
-            json_example::<Vec<AuthorizationDetailsObject>>("tests/examples/authorization_details_jwt_vc_json.json")
+            from_str::<Vec<AuthorizationDetailsObject>>(include_str!(
+                "../tests/examples/authorization_details_jwt_vc_json.json"
+            ))
+            .unwrap()
         );
 
         assert_eq!(
@@ -134,7 +126,10 @@ mod tests {
                     })),
                 }
             }],
-            json_example::<Vec<AuthorizationDetailsObject>>("tests/examples/authorization_details_ldp_vc.json")
+            from_str::<Vec<AuthorizationDetailsObject>>(include_str!(
+                "../tests/examples/authorization_details_ldp_vc.json"
+            ))
+            .unwrap()
         );
 
         assert_eq!(
@@ -155,7 +150,10 @@ mod tests {
                     })))),
                 }
             }],
-            json_example::<Vec<AuthorizationDetailsObject>>("tests/examples/authorization_details_mso_mdoc.json")
+            from_str::<Vec<AuthorizationDetailsObject>>(include_str!(
+                "../tests/examples/authorization_details_mso_mdoc.json"
+            ))
+            .unwrap()
         );
 
         assert_eq!(
@@ -177,9 +175,26 @@ mod tests {
                     }
                 }
             ],
-            json_example::<Vec<AuthorizationDetailsObject>>(
-                "tests/examples/authorization_details_multiple_credentials.json"
-            )
+            from_str::<Vec<AuthorizationDetailsObject>>(include_str!(
+                "../tests/examples/authorization_details_multiple_credentials.json"
+            ))
+            .unwrap()
+        );
+
+        assert_eq!(
+            vec![AuthorizationDetailsObject {
+                r#type: OpenidCredential::Type,
+                locations: None,
+                credential_configuration_or_format: CredentialConfigurationOrFormat::CredentialFormat(
+                    CredentialFormats::VcSdJwt(Parameters {
+                        parameters: ("SD_JWT_VC_example_in_OpenID4VCI".to_string(), None, None).into(),
+                    }),
+                ),
+            }],
+            from_str::<Vec<AuthorizationDetailsObject>>(include_str!(
+                "../tests/examples/authorization_details_sd_jwt_vc.json"
+            ))
+            .unwrap()
         );
 
         assert_eq!(
@@ -191,7 +206,10 @@ mod tests {
                     parameters: None,
                 }
             }],
-            json_example::<Vec<AuthorizationDetailsObject>>("tests/examples/authorization_details_with_as.json")
+            from_str::<Vec<AuthorizationDetailsObject>>(include_str!(
+                "../tests/examples/authorization_details_with_as.json"
+            ))
+            .unwrap()
         );
 
         assert_eq!(
@@ -203,7 +221,8 @@ mod tests {
                     parameters: None,
                 },
             }],
-            json_example::<Vec<AuthorizationDetailsObject>>("tests/examples/authorization_details.json")
+            from_str::<Vec<AuthorizationDetailsObject>>(include_str!("../tests/examples/authorization_details.json"))
+                .unwrap()
         );
     }
 }

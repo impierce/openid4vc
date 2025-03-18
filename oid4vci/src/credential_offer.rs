@@ -105,20 +105,8 @@ pub struct Grants {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::File, path::Path};
-
     use super::*;
-    use serde::de::DeserializeOwned;
-    use serde_json::json;
-
-    fn json_example<T>(path: &str) -> T
-    where
-        T: DeserializeOwned,
-    {
-        let file_path = Path::new(path);
-        let file = File::open(file_path).expect("file does not exist");
-        serde_json::from_reader::<_, T>(file).expect("could not parse json")
-    }
+    use serde_json::{from_str, json};
 
     #[test]
     fn test_credential_offer_serde() {
@@ -180,7 +168,8 @@ mod tests {
                     })
                 })
             },
-            json_example::<CredentialOfferParameters>("tests/examples/credential_offer_by_reference.json")
+            from_str::<CredentialOfferParameters>(include_str!("../tests/examples/credential_offer_by_reference.json"))
+                .unwrap()
         );
 
         assert_eq!(
@@ -203,7 +192,10 @@ mod tests {
                     })
                 })
             },
-            json_example::<CredentialOfferParameters>("tests/examples/credential_offer_multiple_credentials.json")
+            from_str::<CredentialOfferParameters>(include_str!(
+                "../tests/examples/credential_offer_multiple_credentials.json"
+            ))
+            .unwrap()
         );
 
         assert_eq!(
@@ -225,7 +217,10 @@ mod tests {
                     })
                 })
             },
-            json_example::<CredentialOfferParameters>("tests/examples/credential_offer_pre-authz_code.json")
+            from_str::<CredentialOfferParameters>(include_str!(
+                "../tests/examples/credential_offer_pre-authz_code.json"
+            ))
+            .unwrap()
         );
     }
 }
