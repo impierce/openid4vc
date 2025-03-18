@@ -41,18 +41,9 @@ pub struct PathNested {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use serde::de::DeserializeOwned;
-    use std::{fs::File, path::Path};
+    use serde_json::from_str;
 
-    fn json_example<T>(path: &str) -> T
-    where
-        T: DeserializeOwned,
-    {
-        let file_path = Path::new(path);
-        let file = File::open(file_path).expect("file does not exist");
-        serde_json::from_reader::<_, T>(file).expect("could not parse json")
-    }
+    use super::*;
 
     #[test]
     fn test_deserialize_presentation_submission() {
@@ -85,9 +76,10 @@ mod tests {
                     }
                 ]
             },
-            json_example::<PresentationSubmission>(
-                "../oid4vp/tests/examples/response/presentation_submission_multiple_vps.json"
-            )
+            from_str::<PresentationSubmission>(include_str!(
+                "../../oid4vp/tests/examples/response/presentation_submission_multiple_vps.json"
+            ))
+            .unwrap()
         );
 
         assert_eq!(
@@ -106,7 +98,10 @@ mod tests {
                     })
                 }]
             },
-            json_example::<PresentationSubmission>("../oid4vp/tests/examples/response/presentation_submission.json")
+            from_str::<PresentationSubmission>(include_str!(
+                "../../oid4vp/tests/examples/response/presentation_submission.json"
+            ))
+            .unwrap()
         );
 
         assert_eq!(
@@ -125,7 +120,8 @@ mod tests {
                     })
                 }]
             },
-            json_example::<PresentationSubmission>("../oid4vp/tests/examples/response/ps_ac_vc_sd.json")
+            from_str::<PresentationSubmission>(include_str!("../../oid4vp/tests/examples/response/ps_ac_vc_sd.json"))
+                .unwrap()
         );
 
         assert_eq!(
@@ -144,7 +140,8 @@ mod tests {
                     })
                 }]
             },
-            json_example::<PresentationSubmission>("../oid4vp/tests/examples/response/ps_jwt_vc.json")
+            from_str::<PresentationSubmission>(include_str!("../../oid4vp/tests/examples/response/ps_jwt_vc.json"))
+                .unwrap()
         );
 
         assert_eq!(
@@ -163,7 +160,8 @@ mod tests {
                     })
                 }]
             },
-            json_example::<PresentationSubmission>("../oid4vp/tests/examples/response/ps_ldp_vc.json")
+            from_str::<PresentationSubmission>(include_str!("../../oid4vp/tests/examples/response/ps_ldp_vc.json"))
+                .unwrap()
         );
 
         assert_eq!(
@@ -177,7 +175,10 @@ mod tests {
                     path_nested: None
                 }]
             },
-            json_example::<PresentationSubmission>("../oid4vp/tests/examples/response/ps_mdl_iso_cbor.json")
+            from_str::<PresentationSubmission>(include_str!(
+                "../../oid4vp/tests/examples/response/ps_mdl_iso_cbor.json"
+            ))
+            .unwrap()
         );
     }
 }

@@ -38,22 +38,12 @@ mod tests {
         CredentialFormats, Parameters,
     };
     use jsonwebtoken::Algorithm;
-    use serde::de::DeserializeOwned;
-    use serde_json::json;
-    use std::{collections::HashMap, fs::File, path::Path};
+    use serde_json::{from_str, json};
+    use std::collections::HashMap;
 
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     struct TestWrapper {
         credential_configurations_supported: HashMap<String, CredentialConfigurationsSupportedObject>,
-    }
-
-    fn json_example<T>(path: &str) -> T
-    where
-        T: DeserializeOwned,
-    {
-        let file_path = Path::new(path);
-        let file = File::open(file_path).expect("file does not exist");
-        serde_json::from_reader::<_, T>(file).expect("could not parse json")
     }
 
     #[test]
@@ -133,7 +123,10 @@ mod tests {
                 .into_iter()
                 .collect()
             },
-            json_example::<TestWrapper>("tests/examples/credential_metadata_jwt_vc_json.json")
+            from_str::<TestWrapper>(include_str!(
+                "../../tests/examples/credential_metadata_jwt_vc_json.json"
+            ))
+            .unwrap()
         );
 
         assert_eq!(
@@ -206,7 +199,7 @@ mod tests {
                 .into_iter()
                 .collect()
             },
-            json_example::<TestWrapper>("tests/examples/credential_metadata_ldp_vc.json")
+            from_str::<TestWrapper>(include_str!("../../tests/examples/credential_metadata_ldp_vc.json")).unwrap()
         );
 
         assert_eq!(
@@ -286,7 +279,7 @@ mod tests {
                 .into_iter()
                 .collect()
             },
-            json_example::<TestWrapper>("tests/examples/credential_metadata_mso_mdoc.json")
+            from_str::<TestWrapper>(include_str!("../../tests/examples/credential_metadata_mso_mdoc.json")).unwrap()
         );
 
         assert_eq!(
@@ -354,7 +347,7 @@ mod tests {
                 .into_iter()
                 .collect()
             },
-            json_example::<TestWrapper>("tests/examples/credential_metadata_sd_jwt_vc.json")
+            from_str::<TestWrapper>(include_str!("../../tests/examples/credential_metadata_sd_jwt_vc.json")).unwrap()
         );
     }
 }
