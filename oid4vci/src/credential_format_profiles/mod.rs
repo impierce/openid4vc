@@ -9,7 +9,7 @@ use self::{
         jwt_vc_json::JwtVcJson, jwt_vc_json_ld::JwtVcJsonLd, ldp_vc::LdpVc, CredentialSubject,
     },
 };
-use ietf_sd_jwt_vc::VcSdJwt;
+use ietf_sd_jwt_vc::vc_sd_jwt::VcSdJwt;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
