@@ -6,7 +6,7 @@ use super::CredentialSubject;
 
 credential_format!("ldp_vc", LdpVc, {
     credential_definition: CredentialDefinition,
-    order: Option<String>
+    order: Option<Vec<String>>
 });
 
 #[skip_serializing_none]
