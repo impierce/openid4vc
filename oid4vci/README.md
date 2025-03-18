@@ -57,9 +57,9 @@ This specification list is based off draft 13 of the OpenID4VCI document, though
 | 5 | **Authorization Endpoint** | ✅ |
 | 5.1.1 | Authorization Request using `authorization_details` parameter | ❌ |
 | 5.1.2 | Authorization Request using `scope` parameter | ❌ |
-| 5.1.3 | Request Parameter: wallet_issuer | ❌ |
-| 5.1.3 | Request Parameter: user_hint | ❌ |
-| 5.1.3 | Request Parameter: issuer_state | ❌ |
+| 5.1.3 | Request Parameter: `wallet_issuer` | ❌ |
+| 5.1.3 | Request Parameter: `user_hint` | ❌ |
+| 5.1.3 | Request Parameter: `issuer_state` | ❌ |
 | 5.1.1 | Support for Authorization Code Grant | ❌ |
 | 5.1.1 | Support for PKCE | ❌ |
 | 5.1.2 | Support for Pre-Authorized Code Grant | ✅ |
@@ -104,7 +104,7 @@ This specification list is based off draft 13 of the OpenID4VCI document, though
 | 7.3.1.2 | `invalid_encryption_parameters` Error Parameter | ❌ |
 | 7.3.1.2 | `credential_request_denied` Error Parameter | ❌ |
 | 7.3.1.2 | Support for `error_description` parameter | ❌ |
-| 7.3.2 | Credential Issuer provided Nonce (`invalid_proof` error code) |  |
+| 7.3.2 | Credential Issuer provided Nonce (`invalid_proof` error code) | ❌ |
 | **Draft 15 Additions** |  |  |
 | **7** | **Nonce Endpoint*** | ❌ |
 | **7.1** | **Nonce Request using HTTP Post** | ❌ |
