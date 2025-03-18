@@ -29,7 +29,7 @@ This specification list is based off draft 13 of the OpenID4VCI document, though
 |  | Support for Authorization Code Flow | ❌ |
 |  | Implementation of Authorization Server role (if separate from Issuer) | ❌ |
 |  | Support for multiple Credential formats | ❌ |
-| 3.1 | Metadata endpoint implementation (/.well-known/openid-credential-issuer) | ✅ |
+| 3.1 | Metadata endpoint implementation `/.well-known/openid-credential-issuer` | ✅ |
 | 3.1.1 | Support for `credential_issuer` field | ✅ |
 | 3.1.1 | Support for `credential_endpoint` field | ✅ |
 | 3.1.1 | Support for `batch_credential_endpoint` field† | ✅ |
@@ -130,15 +130,15 @@ This specification list is based off draft 13 of the OpenID4VCI document, though
 | 10.3 | Notification Error Reponse with `invalid_notifcation_request` parameter | ❌ |
 | 11 | **Metadata** | ❌ |
 | 11.1 | credential_offer_endpoint (for Wallets) | ❌ |
-| 11.2.2 | usage of /.well-known/openid-credential-issuer for Credential Issuers | ✅ |
-| 11.2.3 | credential_issuer parameter | ✅ |
-| 11.2.3 | authorization_servers parameter | ✅ |
-| 11.2.3 | credential_endpoint parameter | ✅ |
-| 11.2.3 | batch_credential_endpoint parameter | ✅ |
-| 11.2.3 | deferred_credential_endpoint parameter | ✅ |
-| 11.2.3 | notification_endpoint parameter | ✅ |
-| 11.2.3 | credential_response_encryption parameter | ❌ |
-| 11.2.3 | credential_identifiers_supported parameter | ❌ |
+| 11.2.2 | usage of `/.well-known/openid-credential-issuer` for Credential Issuers | ✅ |
+| 11.2.3 | `credential_issuer` parameter | ✅ |
+| 11.2.3 | `authorization_servers` parameter | ✅ |
+| 11.2.3 | `credential_endpoint` parameter | ✅ |
+| 11.2.3 | `batch_credential_endpoint` parameter | ✅ |
+| 11.2.3 | `deferred_credential_endpoint` parameter | ✅ |
+| 11.2.3 | `notification_endpoint` parameter | ✅ |
+| 11.2.3 | `credential_response_encryption` parameter | ❌ |
+| 11.2.3 | `credential_identifiers_supported` parameter | ❌ |
 | 11.2.3 | signed_metadata parameter | ❌ |
 | 11.2.3 | display parameters | ✅ |
 | 11.2.3 | credential_configurations_supported: `parameter` | ✅ |
