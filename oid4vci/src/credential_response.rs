@@ -9,7 +9,6 @@ pub struct CredentialResponse {
     pub credential: CredentialResponseType,
     pub c_nonce: Option<String>,
     pub c_nonce_expires_in: Option<u64>,
-    pub notification_id: Option<String>,
 }
 
 /// Batch Credential Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-batch-credential-response
@@ -25,8 +24,13 @@ pub struct BatchCredentialResponse {
 #[derive(Serialize, Debug, PartialEq, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum CredentialResponseType {
-    Deferred { transaction_id: String },
-    Immediate { credential: serde_json::Value },
+    Deferred {
+        transaction_id: String,
+    },
+    Immediate {
+        credential: serde_json::Value,
+        notification_id: Option<String>,
+    },
 }
 
 #[cfg(test)]
@@ -42,7 +46,6 @@ mod tests {
             },
             c_nonce: Some("456".to_string()),
             c_nonce_expires_in: Some(789),
-            notification_id: None,
         };
         let serialized = serde_json::to_value(&credential_response).unwrap();
         assert_eq!(
@@ -78,6 +81,7 @@ mod tests {
                             }
                         }
                     }),
+                    notification_id: None,
                 },
             ],
             c_nonce: Some("456".to_string()),
