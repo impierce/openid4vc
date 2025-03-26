@@ -12,6 +12,7 @@ repository.workspace = true
 oid4vc-core = { path = "../oid4vc-core" }
 dif-presentation-exchange = { path = "../dif-presentation-exchange" }
 
+axum.workspace = true
 anyhow = "1.0"
 derivative = "2.2.0"
 getset.workspace = true
@@ -26,6 +27,7 @@ serde_json.workspace = true
 serde_urlencoded.workspace = true
 serde_with.workspace = true
 tokio.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }

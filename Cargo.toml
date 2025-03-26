@@ -24,6 +24,7 @@ license = "Apache-2.0"
 repository = "https://github.com/impierce/openid4vc"
 
 [workspace.dependencies]
+axum = { version = "0.7", features = ["tracing"] }
 chrono = "0.4"
 getset = "0.1"
 identity_core = "1.5"
@@ -39,6 +40,7 @@ serde_json = "1.0"
 serde_urlencoded = "0.7"
 serde_with = "3.0"
 tokio = { version = "1.26.0", features = ["rt", "macros", "rt-multi-thread"] }
+thiserror = "1.0"
 url = { version = "2", features = ["serde"] }
 
 # TODO: Fix these dependencies once publishing to crates.io is automated.
