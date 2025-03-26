@@ -73,7 +73,7 @@ This specification list is based off draft 13 of the OpenID4VCI document, though
 | 6 | **Token Endpoint** | ✅ |
 | 6.1 | Support for Token Requests | ✅ |
 | 6.1 | Use of `pre-authorized_code` in Token Requests | ✅ |
-| 6.1 | Use of `tx_code` in Token Requests | ❌ |
+| 6.1 | Use of `tx_code` in Token Requests | ✅ |
 | 6.2 | Successful Token Response | ✅ |
 | 6.3 | Token Error Response | ❌ |
 | 7 | **Credential Endpoint** | ✅ |
@@ -126,8 +126,8 @@ This specification list is based off draft 13 of the OpenID4VCI document, though
 | 10.1 | Support for `notification_id` Parameter | ✅ |
 | 10.1 | Support for event parameter (credential_accepted/failure/deleted) | ✅ |
 | 10.2 | Successful Notification Response | ✅ |
-| 10.3 | Notification Error Reponse with `invalid_notifcation_id` parameter | ❌ |
-| 10.3 | Notification Error Reponse with `invalid_notifcation_request` parameter | ❌ |
+| 10.3 | Notification Error Reponse with `invalid_notifcation_id` parameter | ✅ |
+| 10.3 | Notification Error Reponse with `invalid_notifcation_request` parameter | ✅ |
 | 11 | **Metadata** | ❌ |
 | 11.1 | credential_offer_endpoint (for Wallets) | ❌ |
 | 11.2.2 | usage of `/.well-known/openid-credential-issuer` for Credential Issuers | ✅ |
