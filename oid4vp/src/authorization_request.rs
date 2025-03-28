@@ -128,21 +128,9 @@ impl AuthorizationRequestBuilder {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::File, path::Path};
-
-    use jsonwebtoken::Algorithm;
-    use serde::de::DeserializeOwned;
-
     use super::*;
-
-    fn json_example<T>(path: &str) -> T
-    where
-        T: DeserializeOwned,
-    {
-        let file_path = Path::new(path);
-        let file = File::open(file_path).expect("file does not exist");
-        serde_json::from_reader::<_, T>(file).expect("could not parse json")
-    }
+    use jsonwebtoken::Algorithm;
+    use serde_json::from_str;
 
     #[test]
     fn test_client_id_scheme() {
@@ -226,7 +214,10 @@ mod tests {
                     other: HashMap::from_iter(vec![("application_type".to_string(), serde_json::json!("web"))]),
                 }),
             },
-            json_example::<ExampleAuthorizationRequest>("tests/examples/client_metadata/client_client_id_did.json")
+            from_str::<ExampleAuthorizationRequest>(include_str!(
+                "../tests/examples/client_metadata/client_client_id_did.json"
+            ))
+            .unwrap()
         );
     }
 }

@@ -38,18 +38,7 @@ mod tests {
         },
         CredentialFormats, Parameters,
     };
-    use serde::de::DeserializeOwned;
-    use serde_json::json;
-    use std::{fs::File, path::Path};
-
-    fn json_example<T>(path: &str) -> T
-    where
-        T: DeserializeOwned,
-    {
-        let file_path = Path::new(path);
-        let file = File::open(file_path).expect("file does not exist");
-        serde_json::from_reader::<_, T>(file).expect("could not parse json")
-    }
+    use serde_json::{from_str, json};
 
     #[test]
     fn test_credential_request_serde_jwt_vc_json() {
@@ -192,7 +181,10 @@ mod tests {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
-            json_example::<CredentialRequest>("tests/examples/credential_request_iso_mdl_with_claims.json")
+            from_str::<CredentialRequest>(include_str!(
+                "../tests/examples/credential_request_iso_mdl_with_claims.json"
+            ))
+            .unwrap()
         );
 
         assert_eq!(
@@ -224,7 +216,8 @@ mod tests {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
-            json_example::<CredentialRequest>("tests/examples/credential_request_jwt_vc_json-ld.json")
+            from_str::<CredentialRequest>(include_str!("../tests/examples/credential_request_jwt_vc_json-ld.json"))
+                .unwrap()
         );
 
         assert_eq!(
@@ -252,9 +245,8 @@ mod tests {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJzNkJoZFJrcXQzIiwiYXVkIjoiaHR0cHM6Ly9zZXJ2ZXIuZXhhbXBsZS5jb20iLCJpYXQiOiIyMDE4LTA5LTE0VDIxOjE5OjEwWiIsIm5vbmNlIjoidFppZ25zbkZicCJ9.ewdkIkPV50iOeBUqMXCC_aZKPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
-            json_example::<CredentialRequest>(
-                "tests/examples/credential_request_jwt_vc_json_with_claims.json"
-            )
+            from_str::<CredentialRequest>(include_str!("../tests/examples/credential_request_jwt_vc_json_with_claims.json"))
+                .unwrap()
         );
 
         assert_eq!(
@@ -286,7 +278,20 @@ mod tests {
                     jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
                 })
             },
-            json_example::<CredentialRequest>("tests/examples/credential_request_ldp_vc.json")
+            from_str::<CredentialRequest>(include_str!("../tests/examples/credential_request_ldp_vc.json")).unwrap()
+        );
+
+        assert_eq!(
+            CredentialRequest {
+                credential_format: CredentialFormats::VcSdJwt(Parameters {
+                    parameters: ("SD_JWT_VC_example_in_OpenID4VCI".to_string(), None, None).into(),
+                }),
+                proof: Some(KeyProofType::Jwt {
+                    jwt: "eyJ0eXAiOiJvcGVuaWQ0dmNpLXByb29mK2p3dCIsImFsZyI6IkVTMjU2IiwiandrIjp7Imt0eSI6IkVDIiwiY3J2IjoiUC0yNTYiLCJ4IjoiblVXQW9BdjNYWml0aDhFN2kxOU9kYXhPTFlGT3dNLVoyRXVNMDJUaXJUNCIsInkiOiJIc2tIVThCalVpMVU5WHFpN1N3bWo4Z3dBS18weGtjRGpFV183MVNvc0VZIn19.eyJhdWQiOiJodHRwczovL2NyZWRlbnRpYWwtaXNzdWVyLmV4YW1wbGUuY29tIiwiaWF0IjoxNzAxOTYwNDQ0LCJub25jZSI6IkxhclJHU2JtVVBZdFJZTzZCUTR5bjgifQ.-a3EDsxClUB4O3LeDD5DVGEnNMT01FCQW4P6-2-BNBqc_Zxf0Qw4CWayLEpqkAomlkLb9zioZoipdP-jvh1WlA".to_string()
+                })
+            },
+            from_str::<CredentialRequest>(include_str!("../tests/examples/credential_request_sd_jwt_vc.json")).unwrap()
+
         );
     }
 }

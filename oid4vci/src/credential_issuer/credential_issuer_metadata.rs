@@ -52,18 +52,7 @@ mod tests {
         ProofType,
     };
     use jsonwebtoken::Algorithm;
-    use serde::de::DeserializeOwned;
-    use serde_json::json;
-    use std::{fs::File, path::Path};
-
-    fn json_example<T>(path: &str) -> T
-    where
-        T: DeserializeOwned,
-    {
-        let file_path = Path::new(path);
-        let file = File::open(file_path).expect("file does not exist");
-        serde_json::from_reader::<_, T>(file).expect("could not parse json")
-    }
+    use serde_json::{from_str, json};
 
     #[test]
     fn test_oid4vci_examples() {
@@ -172,7 +161,10 @@ mod tests {
                 .into_iter()
                 .collect(),
             },
-            json_example::<CredentialIssuerMetadata>("tests/examples/credential_issuer_metadata_jwt_vc_json.json")
+            from_str::<CredentialIssuerMetadata>(include_str!(
+                "../../tests/examples/credential_issuer_metadata_jwt_vc_json.json"
+            ))
+            .unwrap()
         );
     }
 }

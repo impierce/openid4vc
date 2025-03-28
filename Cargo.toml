@@ -28,7 +28,7 @@ axum = { version = "0.7", features = ["tracing"] }
 chrono = "0.4"
 getset = "0.1"
 identity_core = "1.5"
-identity_credential = { version = "1.5", default-features = false, features = ["validator", "credential", "presentation"] }
+identity_credential = { version = "1.5", default-features = false, features = ["validator", "credential", "presentation", "sd-jwt-vc"] }
 is_empty = "0.2"
 jsonwebtoken = "9.3"
 monostate = "0.1"
