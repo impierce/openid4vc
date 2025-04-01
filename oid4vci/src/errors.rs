@@ -4,11 +4,13 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::{Deserialize, Serialize};
+use strum_macros::AsRefStr;
 use thiserror::Error;
 
 /// The HTTP response MUST use the HTTP status code 400 (Bad Request) and set the content type to application/json
-#[derive(Debug, Error, Serialize, Deserialize)]
+#[derive(Debug, Error, Serialize, Deserialize, AsRefStr)]
 #[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 pub enum NotificationError {
     #[error("The notification value is invalid")]
     InvalidNotificationRequest,
@@ -29,13 +31,8 @@ impl NotificationError {
             Self::InvalidToken => StatusCode::UNAUTHORIZED,
         }
     }
-    pub fn error_code(&self) -> &'static str {
-        match self {
-            Self::InvalidNotificationRequest => "invalid_notification_request",
-            Self::InvalidNotificationId => "invalid_notification_id",
-            Self::MissingNotificationParameter => "missing_notification_parameter",
-            Self::InvalidToken => "invalid_token",
-        }
+    pub fn error_code(&self) -> &str {
+        self.as_ref()
     }
 }
 
@@ -49,7 +46,7 @@ impl IntoResponse for NotificationError {
     }
 }
 /// The HTTP response MUST use the HTTP status code 400 (Bad Request) and set the content type to application/json
-#[derive(Debug, Error, Serialize, Deserialize)]
+#[derive(Debug, Error, Serialize, Deserialize, AsRefStr)]
 #[serde(rename_all = "snake_case")]
 pub enum CredentialRequestError {
     #[error("The Credential Request is missing a required parameter, includes an unsupported parameter or parameter value, repeats the same parameter, or is otherwise malformed.")]
@@ -75,14 +72,8 @@ impl CredentialRequestError {
         }
     }
 
-    pub fn error_code(&self) -> &'static str {
-        match self {
-            Self::InvalidCredentialRequest => "invalid_credential_request",
-            Self::UnsupportedCredentialType => "unsupported_credential_type",
-            Self::UnsupportedCredentialFormat => "unsupported_credential_format",
-            Self::InvalidProof => "invalid_proof",
-            Self::InvalidEncryptionParameters => "invalid_encryption_parameters",
-        }
+    pub fn error_code(&self) -> &str {
+        self.as_ref()
     }
 }
 
