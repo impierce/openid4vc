@@ -41,7 +41,7 @@ This specification list is based off draft 13 of the OpenID4VCI document, though
 | 3.1.1                  | Support for `credential_endpoint` field                                          |     ✅      |
 | 3.1.1                  | Support for `batch_credential_endpoint` field†                                   |     ✅      |
 | 3.1.1                  | Support for `deferred_credential_endpoint` field                                 |     ❌      |
-| 3.1.1                  | Support for `notification_endpoints_supported` field                             |     ✅      |
+| 3.1.1                  | Support for `notification_endpoint_supported` field                             |     ✅      |
 | 3.1.1                  | Support for `credential_configurations_supported` array                          |     ✅      |
 | 3.1.1                  | Support for `credential_identifiers_supported` field                             |     ❌      |
 | 3.1.1                  | Support for `authorization_servers` array                                        |     ❌      |
