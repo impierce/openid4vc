@@ -1,29 +1,72 @@
-use axum::{
-    extract::Json,
-    http::StatusCode,
-    response::{IntoResponse, Response},
-};
+use http::{Response, StatusCode};
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
+use std::fmt::Display;
 use strum_macros::AsRefStr;
 use thiserror::Error;
 
-/// The HTTP response MUST use the HTTP status code 400 (Bad Request) and set the content type to application/json
-#[derive(Debug, Error, Serialize, Deserialize, AsRefStr)]
+pub trait ResponseErrorType {}
+pub trait ErrorStatusCode {
+    fn status_code(&self) -> StatusCode;
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Error)]
+pub struct OID4VCError<T>
+where
+    T: ResponseErrorType,
+{
+    pub error: T,
+    pub error_description: Option<String>,
+}
+
+impl<T> OID4VCError<T>
+where
+    T: ResponseErrorType,
+{
+    pub fn new(error: T) -> Self {
+        Self {
+            error,
+            error_description: None,
+        }
+    }
+
+    pub fn new_with_description(self, error_description: &str) -> Self {
+        Self {
+            error_description: Some(error_description.to_string()),
+            ..self
+        }
+    }
+}
+
+impl<T> Display for OID4VCError<T>
+where
+    T: ResponseErrorType + std::fmt::Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Error: {:?}", self.error)?;
+        if let Some(desc) = &self.error_description {
+            write!(f, " - {}", desc)?;
+        }
+        Ok(())
+    }
+}
+
+// - - - Notification Error Type !
+
+#[derive(Debug, Serialize, Deserialize, AsRefStr)]
 #[serde(rename_all = "snake_case")]
-#[strum(serialize_all = "snake_case")]
-pub enum NotificationError {
-    #[error("The notification value is invalid")]
+pub enum NotificationRequestErrorResponse {
     InvalidNotificationRequest,
-    #[error("The `notification_id` value is missing or invalid")]
     InvalidNotificationId,
-    #[error("A required parameter is missing")]
     MissingNotificationParameter,
-    #[error("Your access token is invalid or expired")]
     InvalidToken,
 }
 
-impl NotificationError {
-    pub fn status_code(&self) -> StatusCode {
+impl ResponseErrorType for NotificationRequestErrorResponse {}
+
+impl ErrorStatusCode for NotificationRequestErrorResponse {
+    fn status_code(&self) -> StatusCode {
         match self {
             Self::InvalidNotificationRequest => StatusCode::BAD_REQUEST,
             Self::InvalidNotificationId => StatusCode::BAD_REQUEST,
@@ -31,38 +74,24 @@ impl NotificationError {
             Self::InvalidToken => StatusCode::UNAUTHORIZED,
         }
     }
-    pub fn error_code(&self) -> &str {
-        self.as_ref()
-    }
 }
 
-impl IntoResponse for NotificationError {
-    fn into_response(self) -> Response {
-        let body = Json(serde_json::json!({
-            "error": self.error_code(),
-            "error_description": self.to_string(), // uses the #[error] message from thiserror
-        }));
-        (self.status_code(), body).into_response()
-    }
-}
-/// The HTTP response MUST use the HTTP status code 400 (Bad Request) and set the content type to application/json
-#[derive(Debug, Error, Serialize, Deserialize, AsRefStr)]
+// - - - Credential Error Type !
+
+#[derive(Debug, Serialize, Deserialize, AsRefStr)]
 #[serde(rename_all = "snake_case")]
-pub enum CredentialRequestError {
-    #[error("The Credential Request is missing a required parameter, includes an unsupported parameter or parameter value, repeats the same parameter, or is otherwise malformed.")]
+pub enum CredentialRequestErrorResponse {
     InvalidCredentialRequest,
-    #[error("The requested credential type is not supported")]
     UnsupportedCredentialType,
-    #[error("The reqeusted credential format is not supported")]
     UnsupportedCredentialFormat,
-    #[error("The proof in the Credential Request is invalid. The proof field is not present or the provided key proof is invalid or not bound to a nonce provided by the Credential Issuer.")]
     InvalidProof,
-    #[error("The encryption parameters are invalid")]
     InvalidEncryptionParameters,
 }
 
-impl CredentialRequestError {
-    pub fn status_code(&self) -> StatusCode {
+impl ResponseErrorType for CredentialRequestErrorResponse {}
+
+impl ErrorStatusCode for CredentialRequestErrorResponse {
+    fn status_code(&self) -> StatusCode {
         match self {
             Self::InvalidCredentialRequest => StatusCode::BAD_REQUEST,
             Self::UnsupportedCredentialType => StatusCode::BAD_REQUEST,
@@ -71,18 +100,24 @@ impl CredentialRequestError {
             Self::InvalidEncryptionParameters => StatusCode::BAD_REQUEST,
         }
     }
-
-    pub fn error_code(&self) -> &str {
-        self.as_ref()
-    }
 }
+/// The HTTP response MUST use the HTTP status code 400 (Bad Request) and set the content type to application/json
+pub fn to_http_response<T, B>(error: OID4VCError<T>) -> Response<B>
+where
+    T: ResponseErrorType + ErrorStatusCode + Serialize,
+    B: From<Vec<u8>>,
+{
+    let status = error.error.status_code();
+    let body = serde_json::to_vec(&error).unwrap_or_default();
 
-impl IntoResponse for CredentialRequestError {
-    fn into_response(self) -> Response {
-        let body = Json(serde_json::json!({
-            "error": self.error_code(),
-            "error_description": self.to_string(),
-        }));
-        (self.status_code(), body).into_response()
-    }
+    Response::builder()
+        .status(status)
+        .header("Content-Type", "application/json")
+        .body(B::from(body))
+        .unwrap_or_else(|_| {
+            Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(B::from(Vec::new()))
+                .unwrap()
+        })
 }
