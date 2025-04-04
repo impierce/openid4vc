@@ -48,9 +48,54 @@ where
         Ok(())
     }
 }
+/// Authorizatio Error Response as defined in OpenID4VCI - draft 13 - Section 5.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-authorization-error-respons
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AuthorizationErrorResponse {
+    AccessDenied,
+    InvalidRequest,
+    UnauthorizedClient,
+    UnsupportedResponseType,
+    InvalidScope,
+    ServerError,
+    TemporarilyUnavailable,
+}
+impl ErrorStatusCode for AuthorizationErrorResponse {
+    fn status_code(&self) -> StatusCode {
+        match self {
+            Self::AccessDenied => StatusCode::FORBIDDEN,
+            Self::InvalidRequest => StatusCode::BAD_REQUEST,
+            Self::UnauthorizedClient => StatusCode::UNAUTHORIZED,
+            Self::UnsupportedResponseType => StatusCode::BAD_REQUEST,
+            Self::InvalidScope => StatusCode::BAD_REQUEST,
+            Self::ServerError => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::TemporarilyUnavailable => StatusCode::SERVICE_UNAVAILABLE,
+        }
+    }
+}
 
+/// Token Error Response as defined in OpenID4VCI - draft 13 - Section 6.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-token-error-response
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TokenErrorResponse {
+    InvalidRequest,
+    InvalidClient,
+    InvalidGrant,
+    AuthorizationPending,
+    SlowDown,
+}
+impl ErrorStatusCode for TokenErrorResponse {
+    fn status_code(&self) -> StatusCode {
+        match self {
+            Self::InvalidRequest => StatusCode::BAD_REQUEST,
+            Self::InvalidClient => StatusCode::UNAUTHORIZED,
+            Self::InvalidGrant => StatusCode::BAD_REQUEST,
+            Self::AuthorizationPending => StatusCode::BAD_REQUEST,
+            Self::SlowDown => StatusCode::TOO_MANY_REQUESTS,
+        }
+    }
+}
 /// Credential Error Response as defined in OpenID4VCI - draft 13 - Section 7.3.1: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-ID1.html#name-credential-error-response
-
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CredentialErrorResponse {
@@ -72,6 +117,55 @@ impl ErrorStatusCode for CredentialErrorResponse {
         }
     }
 }
+
+/// Batch Credential Error Response as defined in OpenID4VCI - draft 13 - Section 8.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-batch-credential-error-resp
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BatchCredentialErrorResponse {
+    InvalidCredentialRequest,
+    UnsupportedCredentialType,
+    UnsupportedCredentialFormat,
+    InvalidProof,
+    InvalidEncryptionParameters,
+}
+impl ErrorStatusCode for BatchCredentialErrorResponse {
+    fn status_code(&self) -> StatusCode {
+        match self {
+            Self::InvalidCredentialRequest => StatusCode::BAD_REQUEST,
+            Self::UnsupportedCredentialType => StatusCode::BAD_REQUEST,
+            Self::UnsupportedCredentialFormat => StatusCode::BAD_REQUEST,
+            Self::InvalidProof => StatusCode::BAD_REQUEST,
+            Self::InvalidEncryptionParameters => StatusCode::BAD_REQUEST,
+        }
+    }
+}
+/// Deferred Credential Error Response as defined in OpenID4VCI - draft 13 - Section 9.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-deferred-credential-error-r
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DeferredCredentialErrorResponse {
+    InvalidCredentialRequest,
+    UnsupportedCredentialType,
+    UnsupportedCredentialFormat,
+    InvalidProof,
+    InvalidEncryptionParameters,
+    IssuancePending,
+    InvalidTransactionId,
+}
+
+impl ErrorStatusCode for DeferredCredentialErrorResponse {
+    fn status_code(&self) -> StatusCode {
+        match self {
+            Self::InvalidCredentialRequest => StatusCode::BAD_REQUEST,
+            Self::UnsupportedCredentialType => StatusCode::BAD_REQUEST,
+            Self::UnsupportedCredentialFormat => StatusCode::BAD_REQUEST,
+            Self::InvalidProof => StatusCode::BAD_REQUEST,
+            Self::InvalidEncryptionParameters => StatusCode::BAD_REQUEST,
+            Self::IssuancePending => StatusCode::BAD_REQUEST,
+            Self::InvalidTransactionId => StatusCode::BAD_REQUEST,
+        }
+    }
+}
+
 /// Notification Error Response as defined in OpenID4VCI - draft 13 - Section 10.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-ID1.html#name-notification-error-response
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
