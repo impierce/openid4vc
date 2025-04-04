@@ -48,6 +48,7 @@ where
         Ok(())
     }
 }
+
 /// Authorizatio Error Response as defined in OpenID4VCI - draft 13 - Section 5.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-authorization-error-respons
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -60,6 +61,7 @@ pub enum AuthorizationErrorResponse {
     ServerError,
     TemporarilyUnavailable,
 }
+
 impl ErrorStatusCode for AuthorizationErrorResponse {
     fn status_code(&self) -> StatusCode {
         match self {
@@ -84,6 +86,7 @@ pub enum TokenErrorResponse {
     AuthorizationPending,
     SlowDown,
 }
+
 impl ErrorStatusCode for TokenErrorResponse {
     fn status_code(&self) -> StatusCode {
         match self {
@@ -95,6 +98,7 @@ impl ErrorStatusCode for TokenErrorResponse {
         }
     }
 }
+
 /// Credential Error Response as defined in OpenID4VCI - draft 13 - Section 7.3.1: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-ID1.html#name-credential-error-response
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -128,6 +132,7 @@ pub enum BatchCredentialErrorResponse {
     InvalidProof,
     InvalidEncryptionParameters,
 }
+
 impl ErrorStatusCode for BatchCredentialErrorResponse {
     fn status_code(&self) -> StatusCode {
         match self {
@@ -139,6 +144,7 @@ impl ErrorStatusCode for BatchCredentialErrorResponse {
         }
     }
 }
+
 /// Deferred Credential Error Response as defined in OpenID4VCI - draft 13 - Section 9.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-deferred-credential-error-r
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
