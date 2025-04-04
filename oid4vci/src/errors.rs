@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::fmt::Display;
 use thiserror::Error;
+
 pub trait ErrorStatusCode {
     fn status_code(&self) -> StatusCode;
 }
@@ -49,7 +50,7 @@ where
     }
 }
 
-/// Authorizatio Error Response as defined in OpenID4VCI - draft 13 - Section 5.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-authorization-error-respons
+/// Authorization Error Response as defined in OpenID4VCI - draft 13 - Section 5.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-authorization-error-respons
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthorizationErrorResponse {
@@ -65,13 +66,13 @@ pub enum AuthorizationErrorResponse {
 impl ErrorStatusCode for AuthorizationErrorResponse {
     fn status_code(&self) -> StatusCode {
         match self {
-            Self::AccessDenied => StatusCode::FORBIDDEN,
-            Self::InvalidRequest => StatusCode::BAD_REQUEST,
-            Self::UnauthorizedClient => StatusCode::UNAUTHORIZED,
-            Self::UnsupportedResponseType => StatusCode::BAD_REQUEST,
-            Self::InvalidScope => StatusCode::BAD_REQUEST,
-            Self::ServerError => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::TemporarilyUnavailable => StatusCode::SERVICE_UNAVAILABLE,
+            Self::AccessDenied => StatusCode::FOUND,
+            Self::InvalidRequest => StatusCode::FOUND,
+            Self::UnauthorizedClient => StatusCode::FOUND,
+            Self::UnsupportedResponseType => StatusCode::FOUND,
+            Self::InvalidScope => StatusCode::FOUND,
+            Self::ServerError => StatusCode::FOUND,
+            Self::TemporarilyUnavailable => StatusCode::FOUND,
         }
     }
 }
@@ -83,11 +84,9 @@ pub enum TokenErrorResponse {
     InvalidRequest,
     InvalidClient,
     InvalidGrant,
-    AuthorizationPending,
     UnauthorizedClient,
-    UnauthorizedGrantType,
+    UnsupportedGrantType,
     InvalidScope,
-    SlowDown,
 }
 
 impl ErrorStatusCode for TokenErrorResponse {
@@ -96,10 +95,8 @@ impl ErrorStatusCode for TokenErrorResponse {
             Self::InvalidRequest => StatusCode::BAD_REQUEST,
             Self::InvalidClient => StatusCode::UNAUTHORIZED,
             Self::InvalidGrant => StatusCode::BAD_REQUEST,
-            Self::AuthorizationPending => StatusCode::BAD_REQUEST,
-            Self::SlowDown => StatusCode::TOO_MANY_REQUESTS,
             Self::UnauthorizedClient => StatusCode::UNAUTHORIZED,
-            Self::UnauthorizedGrantType => StatusCode::BAD_REQUEST,
+            Self::UnsupportedGrantType => StatusCode::BAD_REQUEST,
             Self::InvalidScope => StatusCode::BAD_REQUEST,
         }
     }

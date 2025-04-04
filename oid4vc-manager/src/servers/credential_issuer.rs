@@ -245,7 +245,6 @@ async fn batch_credential<S: Storage<CFC>, CFC: CredentialFormatCollection>(
             credential_responses,
             c_nonce: None,
             c_nonce_expires_in: None,
-            notification_id: None,
         }),
     )
 }

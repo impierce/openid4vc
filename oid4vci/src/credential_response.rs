@@ -18,7 +18,6 @@ pub struct BatchCredentialResponse {
     pub credential_responses: Vec<CredentialResponseType>,
     pub c_nonce: Option<String>,
     pub c_nonce_expires_in: Option<u64>,
-    pub notification_id: Option<String>,
 }
 
 #[skip_serializing_none]
@@ -87,7 +86,6 @@ mod tests {
             ],
             c_nonce: Some("456".to_string()),
             c_nonce_expires_in: Some(789),
-            notification_id: None,
         };
         let serialized = serde_json::to_value(&batch_credential_response).unwrap();
         assert_eq!(
