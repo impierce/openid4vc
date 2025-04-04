@@ -178,7 +178,6 @@ impl ErrorStatusCode for DeferredCredentialErrorResponse {
 pub enum NotificationErrorResponse {
     InvalidNotificationRequest,
     InvalidNotificationId,
-    MissingNotificationParameter,
     InvalidToken,
 }
 
@@ -187,7 +186,6 @@ impl ErrorStatusCode for NotificationErrorResponse {
         match self {
             Self::InvalidNotificationRequest => StatusCode::BAD_REQUEST,
             Self::InvalidNotificationId => StatusCode::BAD_REQUEST,
-            Self::MissingNotificationParameter => StatusCode::BAD_REQUEST,
             Self::InvalidToken => StatusCode::UNAUTHORIZED,
         }
     }
