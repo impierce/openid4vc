@@ -107,3 +107,31 @@ where
     );
     response
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_oid4vc_error() {
+        let response =
+            to_http_response(OID4VCError::new(CredentialErrorResponse::InvalidProof).with_description("Invalid proof"));
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            json!({
+                "error": "invalid_proof",
+                "error_description": "Invalid proof"
+            }),
+            json!(response.body())
+        );
+        assert!(
+            response
+                .headers()
+                .get("Content-Type")
+                .and_then(|v| v.to_str().ok())
+                .map_or(false, |content_type| content_type == "application/json"),
+            "Content-Type header should be application/json"
+        );
+    }
+}
