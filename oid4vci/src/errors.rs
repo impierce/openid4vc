@@ -84,6 +84,9 @@ pub enum TokenErrorResponse {
     InvalidClient,
     InvalidGrant,
     AuthorizationPending,
+    UnauthorizedClient,
+    UnauthorizedGrantType,
+    InvalidScope,
     SlowDown,
 }
 
@@ -95,6 +98,9 @@ impl ErrorStatusCode for TokenErrorResponse {
             Self::InvalidGrant => StatusCode::BAD_REQUEST,
             Self::AuthorizationPending => StatusCode::BAD_REQUEST,
             Self::SlowDown => StatusCode::TOO_MANY_REQUESTS,
+            Self::UnauthorizedClient => StatusCode::UNAUTHORIZED,
+            Self::UnauthorizedGrantType => StatusCode::BAD_REQUEST,
+            Self::InvalidScope => StatusCode::BAD_REQUEST,
         }
     }
 }
@@ -106,8 +112,9 @@ pub enum CredentialErrorResponse {
     InvalidCredentialRequest,
     UnsupportedCredentialType,
     UnsupportedCredentialFormat,
-    InvalidProof,
     InvalidEncryptionParameters,
+    InvalidProof,
+    InvalidToken,
 }
 
 impl ErrorStatusCode for CredentialErrorResponse {
@@ -118,6 +125,7 @@ impl ErrorStatusCode for CredentialErrorResponse {
             Self::UnsupportedCredentialFormat => StatusCode::BAD_REQUEST,
             Self::InvalidProof => StatusCode::BAD_REQUEST,
             Self::InvalidEncryptionParameters => StatusCode::BAD_REQUEST,
+            Self::InvalidToken => StatusCode::UNAUTHORIZED,
         }
     }
 }
@@ -130,6 +138,7 @@ pub enum BatchCredentialErrorResponse {
     UnsupportedCredentialType,
     UnsupportedCredentialFormat,
     InvalidProof,
+    InvalidToken,
     InvalidEncryptionParameters,
 }
 
@@ -140,6 +149,7 @@ impl ErrorStatusCode for BatchCredentialErrorResponse {
             Self::UnsupportedCredentialType => StatusCode::BAD_REQUEST,
             Self::UnsupportedCredentialFormat => StatusCode::BAD_REQUEST,
             Self::InvalidProof => StatusCode::BAD_REQUEST,
+            Self::InvalidToken => StatusCode::UNAUTHORIZED,
             Self::InvalidEncryptionParameters => StatusCode::BAD_REQUEST,
         }
     }
@@ -153,6 +163,7 @@ pub enum DeferredCredentialErrorResponse {
     UnsupportedCredentialType,
     UnsupportedCredentialFormat,
     InvalidProof,
+    InvalidToken,
     InvalidEncryptionParameters,
     IssuancePending,
     InvalidTransactionId,
@@ -168,6 +179,7 @@ impl ErrorStatusCode for DeferredCredentialErrorResponse {
             Self::InvalidEncryptionParameters => StatusCode::BAD_REQUEST,
             Self::IssuancePending => StatusCode::BAD_REQUEST,
             Self::InvalidTransactionId => StatusCode::BAD_REQUEST,
+            Self::InvalidToken => StatusCode::UNAUTHORIZED,
         }
     }
 }
