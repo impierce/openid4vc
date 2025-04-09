@@ -101,6 +101,19 @@ impl ErrorStatusCode for TokenErrorResponse {
         }
     }
 }
+impl std::error::Error for TokenErrorResponse {}
+impl Display for TokenErrorResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidRequest => write!(f, "Invalid Request"),
+            Self::InvalidClient => write!(f, "Invalid Client"),
+            Self::InvalidGrant => write!(f, "Invalid Grant"),
+            Self::UnauthorizedClient => write!(f, "Unauthorized Client"),
+            Self::UnsupportedGrantType => write!(f, "Unsupported Grant Type"),
+            Self::InvalidScope => write!(f, "Invalid Scope"),
+        }
+    }
+}
 
 /// Credential Error Response as defined in OpenID4VCI - draft 13 - Section 7.3.1: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-ID1.html#name-credential-error-response
 #[derive(Debug, Serialize, Deserialize)]
@@ -127,6 +140,19 @@ impl ErrorStatusCode for CredentialErrorResponse {
     }
 }
 
+impl std::error::Error for CredentialErrorResponse {}
+impl Display for CredentialErrorResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidCredentialRequest => write!(f, "Invalid Credential Request"),
+            Self::UnsupportedCredentialType => write!(f, "Unsupported Credential Type"),
+            Self::UnsupportedCredentialFormat => write!(f, "Unsupported Credential Format"),
+            Self::InvalidEncryptionParameters => write!(f, "Invalid Encryption Parameters"),
+            Self::InvalidProof => write!(f, "Invalid Proof"),
+            Self::InvalidToken => write!(f, "Invalid Token"),
+        }
+    }
+}
 /// Batch Credential Error Response as defined in OpenID4VCI - draft 13 - Section 8.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-batch-credential-error-resp
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
