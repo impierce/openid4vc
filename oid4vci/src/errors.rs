@@ -77,6 +77,20 @@ impl ErrorStatusCode for AuthorizationErrorResponse {
     }
 }
 
+impl std::error::Error for AuthorizationErrorResponse {}
+impl Display for AuthorizationErrorResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::AccessDenied => write!(f, "Access Denied"),
+            Self::InvalidRequest => write!(f, "Invalid Request"),
+            Self::UnauthorizedClient => write!(f, "Unauthorized Client"),
+            Self::UnsupportedResponseType => write!(f, "Unsupported Response Type"),
+            Self::InvalidScope => write!(f, "Invalid Scope"),
+            Self::ServerError => write!(f, "Server Error"),
+            Self::TemporarilyUnavailable => write!(f, "Temporarily Unavailable"),
+        }
+    }
+}
 /// Token Error Response as defined in OpenID4VCI - draft 13 - Section 6.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-token-error-response
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -177,6 +191,19 @@ impl ErrorStatusCode for BatchCredentialErrorResponse {
         }
     }
 }
+impl std::error::Error for BatchCredentialErrorResponse {}
+impl Display for BatchCredentialErrorResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidCredentialRequest => write!(f, "Invalid Credential Request"),
+            Self::UnsupportedCredentialType => write!(f, "Unsupported Credential Type"),
+            Self::UnsupportedCredentialFormat => write!(f, "Unsupported Credential Format"),
+            Self::InvalidProof => write!(f, "Invalid Proof"),
+            Self::InvalidToken => write!(f, "Invalid Token"),
+            Self::InvalidEncryptionParameters => write!(f, "Invalid Encryption Parameters"),
+        }
+    }
+}
 
 /// Deferred Credential Error Response as defined in OpenID4VCI - draft 13 - Section 9.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-deferred-credential-error-r
 #[derive(Debug, Serialize, Deserialize)]
@@ -207,6 +234,21 @@ impl ErrorStatusCode for DeferredCredentialErrorResponse {
     }
 }
 
+impl std::error::Error for DeferredCredentialErrorResponse {}
+impl Display for DeferredCredentialErrorResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidCredentialRequest => write!(f, "Invalid Credential Request"),
+            Self::UnsupportedCredentialType => write!(f, "Unsupported Credential Type"),
+            Self::UnsupportedCredentialFormat => write!(f, "Unsupported Credential Format"),
+            Self::InvalidProof => write!(f, "Invalid Proof"),
+            Self::InvalidToken => write!(f, "Invalid Token"),
+            Self::InvalidEncryptionParameters => write!(f, "Invalid Encryption Parameters"),
+            Self::IssuancePending => write!(f, "Issuance Pending"),
+            Self::InvalidTransactionId => write!(f, "Invalid Transaction ID"),
+        }
+    }
+}
 /// Notification Error Response as defined in OpenID4VCI - draft 13 - Section 10.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-ID1.html#name-notification-error-response
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
