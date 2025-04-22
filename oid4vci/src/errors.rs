@@ -1,4 +1,4 @@
-use http::{Response, StatusCode};
+use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::fmt::Display;
@@ -268,21 +268,6 @@ impl ErrorStatusCode for NotificationErrorResponse {
     }
 }
 
-pub fn to_http_response<T>(error: OID4VCError<T>) -> Response<OID4VCError<T>>
-where
-    T: ErrorStatusCode + Serialize,
-{
-    let status = error.error.status_code();
-
-    let mut response = Response::new(error);
-    *response.status_mut() = status;
-    response.headers_mut().insert(
-        "Content-Type",
-        http::header::HeaderValue::from_static("application/json"),
-    );
-    response
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -290,16 +275,28 @@ mod tests {
 
     #[test]
     fn test_oid4vc_error() {
-        let response =
-            to_http_response(OID4VCError::new(CredentialErrorResponse::InvalidProof).with_description("Invalid proof"));
+        let error = OID4VCError::new(CredentialErrorResponse::InvalidProof).with_description("Invalid proof");
+        let status = error.error.status_code();
+        let json_body = serde_json::to_string(&error).unwrap();
+
+        let response = http::Response::builder()
+            .status(status)
+            .header("Content-Type", "application/json")
+            .body(json_body)
+            .unwrap();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let body = response.body();
+        let body_value: serde_json::Value = serde_json::from_str(body).unwrap();
+
         assert_eq!(
             json!({
                 "error": "invalid_proof",
                 "error_description": "Invalid proof"
             }),
-            json!(response.body())
+            body_value
         );
+
         assert!(
             response
                 .headers()
