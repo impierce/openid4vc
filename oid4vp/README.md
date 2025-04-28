@@ -120,6 +120,7 @@ This table tracks implementation progress toward full OpenID for Verifiable Pres
 | B.3                   | Support for ISO mdoc                                                           |     ✅      |
 | B.4                   | Support for IETF SD-JWT VC                                                     |     ⚠️      |
 | B.5                   | Support for combining with SIOPv2                                              |     ✅      |
+|                       |                                                                                |             |
 | **Security Features** | Below are suggested security implementations:                                  |             |
 | 13.1                  | Implementation of VP Token replay prevention                                   |     ❌      |
 | 13.2                  | Protection against session fixation attacks                                    |     ❌      |
