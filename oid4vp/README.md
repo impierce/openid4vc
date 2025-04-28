@@ -22,7 +22,7 @@ It's worth noting that this specification can also be used in conjunction with [
 
 # OpenID4VP Implementation Checklist 📋
 
-This table tracks implementation progress toward full OpenID for Verifiable Presentations (OpenID4VP) compliance and references [Draft 20](https://openid.net/specs/openid-4-verifiable-presentations-1_0-20.html) adjacent to [Draft 23](https://openid.net/specs/openid-4-verifiable-presentations-1_0-ID3.html#name-introduction)
+This table tracks implementation progress toward full OpenID for Verifiable Presentations (OpenID4VP) compliance and references [Draft 20](https://openid.net/specs/openid-4-verifiable-presentations-1_0-20.html) in adjacent to [Draft 23](https://openid.net/specs/openid-4-verifiable-presentations-1_0-ID3.html#name-introduction)
 
 **Legend:**
 
