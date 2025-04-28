@@ -84,12 +84,6 @@ This table tracks implementation progress toward full OpenID for Verifiable Pres
 | 7.3.1                 | Support for Response Mode `direct_post.jwt`                                    |     ❌      |
 | 7.4                   | Support for transaction data mechanism **★**                                   |     ❌      |
 | 7.5                   | Error response handling (invalid_scope, invalid_request, invalid_client, etc.) |     ❌      |
-| 7.5                   | Support for `vp_formats_not_supported` error code                              |     ❌      |
-| 7.5                   | Support for `invalid_presentation_definition_uri` error code                   |     ❌      |
-| 7.5                   | Support for `invalid_presentation_definition_reference` error code             |     ❌      |
-| 7.5                   | Support for `invalid_request_uri_method` error code **★**                      |     ❌      |
-| 7.5                   | Support for `invalid_transaction_data` error code **★**                        |     ❌      |
-| 7.5                   | Support for `wallet_unavailable` error code **★**                              |     ❌      |
 | 7.6                   | Implementation of VP Token validation                                          |     ❌      |
 | **8**                 | **Wallet Invocation**                                                          |             |
 | 8                     | Support for custom URL scheme (e.g., `openid4vp://`)                           |     ✅      |
