@@ -34,7 +34,7 @@ This table tracks implementation progress toward full OpenID for Verifiable Pres
 | 📖                    | Support for Same Device Flow                                                   |     ❌      |
 |                       | Support for Cross Device Flow                                                  |     ✅      |
 |                       | Support for Response Type `vp_token`                                           |     ✅      |
-|                       | Support for Response Type `vp_token id_token`                                  |     ✅      |
+|                       | Support for Response Type `vp_token id_token`                                  |     ❌      |
 |                       | Support for DCQL (Digital Credentials Query Language) **★**                    |     ❌      |
 |                       | Support for Presentation Exchange                                              |     ✅      |
 | **5**                 | **Authorization Request**                                                      |             |
@@ -46,22 +46,22 @@ This table tracks implementation progress toward full OpenID for Verifiable Pres
 | 5.1                   | Support for `request_uri_method` parameter **★**                               |     ❌      |
 | 5.1                   | Support for `transaction_data` parameter **★**                                 |     ❌      |
 | 5.2                   | Support for required `nonce` parameter                                         |     ✅      |
-| 5.2                   | Support for `scope` parameter for requesting VCs                               |     ✅      |
+| 5.2                   | Support for `scope` parameter for requesting VCs                               |     ❌      |
 | 5.2                   | Support for `response_mode` parameter                                          |     ✅      |
 | 5.2                   | Support for `client_id` parameter with Client Identifier Schemes               |     ✅      |
 | 5.4                   | Ability to process Presentation Definition JSON object                         |     ✅      |
 | 5.5                   | Ability to retrieve Presentation Definition via URI                            |     ❌      |
-| 5.6                   | Support for requesting VCs using `scope` values                                |     ✅      |
+| 5.6                   | Support for requesting VCs using `scope` values                                |     ❌      |
 | 5.7                   | Support for Response Type `vp_token`                                           |     ✅      |
 | 5.8                   | Support for passing Authorization Request across devices (QR code)             |     ✅      |
 | 5.9                   | Handling `aud` claim in Request Objects                                        |     ✅      |
 | 5.10                  | Support for Client Identifier Schemes                                          |     ✅      |
 | 5.10.4                | Support for `redirect_uri` Client Identifier Scheme                            |     ✅      |
-| 5.10.4                | Support for `https` Client Identifier Scheme **★**                             |     ❌      |
+| 5.10.4                | Support for `https` Client Identifier Scheme **★**                             |     ✅      |
 | 5.10.4                | Support for `did` Client Identifier Scheme                                     |     ✅      |
-| 5.10.4                | Support for `verifier_attestation` Client Identifier Scheme                    |     ✅      |
-| 5.10.4                | Support for `x509_san_dns` Client Identifier Scheme                            |     ✅      |
-| 5.10.4                | Support for `x509_san_uri` Client Identifier Scheme                            |     ✅      |
+| 5.10.4                | Support for `verifier_attestation` Client Identifier Scheme                    |     ❌      |
+| 5.10.4                | Support for `x509_san_dns` Client Identifier Scheme                            |     ❌      |
+| 5.10.4                | Support for `x509_san_uri` Client Identifier Scheme                            |     ❌      |
 | 5.10.4                | Support for `entity_id` Client Identifier Scheme **†**                         |     ❌      |
 | 5.10.4                | Support for `pre-registered` Client Identifier Scheme **†**                    |     ❌      |
 | 5.10.4                | Support for `web-origin` Client Identifier Scheme **★**                        |     ❌      |
@@ -86,7 +86,7 @@ This table tracks implementation progress toward full OpenID for Verifiable Pres
 | 7.5                   | Error response handling (invalid_scope, invalid_request, invalid_client, etc.) |     ❌      |
 | 7.6                   | Implementation of VP Token validation                                          |     ❌      |
 | **8**                 | **Wallet Invocation**                                                          |             |
-| 8                     | Support for custom URL scheme (e.g., `openid4vp://`)                           |     ✅      |
+| 8                     | Support for custom URL scheme (e.g., `openid4vp://`)                           |     ❌      |
 | 8                     | Support for domain-bound Universal Links/App link                              |     ❌      |
 | 8                     | Support for QR code scanning                                                   |     ✅      |
 | **9**                 | **Wallet Metadata (Authorization Server Metadata)**                            |             |
@@ -116,10 +116,10 @@ This table tracks implementation progress toward full OpenID for Verifiable Pres
 | B.1                   | Support for W3C Verifiable Credentials                                         |     ✅      |
 | B.1.1                 | Support for VC signed as JWT, not using JSON-LD                                |     ✅      |
 | B.1.2                 | Support for LDP VCs                                                            |     ✅      |
-| B.2                   | Support for AnonCreds                                                          |     ✅      |
-| B.3                   | Support for ISO mdoc                                                           |     ✅      |
+| B.2                   | Support for AnonCreds                                                          |     ❌      |
+| B.3                   | Support for ISO mdoc                                                           |     ❌      |
 | B.4                   | Support for IETF SD-JWT VC                                                     |     ⚠️      |
-| B.5                   | Support for combining with SIOPv2                                              |     ✅      |
+| B.5                   | Support for combining with SIOPv2                                              |     ❌      |
 |                       |                                                                                |             |
 | **Security Features** | Below are suggested security implementations:                                  |             |
 | 13.1                  | Implementation of VP Token replay prevention                                   |     ❌      |
