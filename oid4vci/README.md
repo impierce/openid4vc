@@ -24,7 +24,13 @@ OpenID Connect OPs to extend their functionality to become Credential Issuers.
 # OpenID4VCI Implementation Checklist 📋
 
 This table tracks our implementation progress toward full OpenID for Verifiable Credential Issuance (OpenID4VCI) compliance.
-This specification list is based off draft 13 of the OpenID4VCI document, though important additions from the latest specifications have also been added.
+This specification list is based off draft 13 of the OpenID4VCI document, though important additions from draft 15 have also been added.
+
+**Legend:**
+
+- **★** Addition in draft 15
+- **†** Removed since draft 13
+
 
 | Spec. Reference        | Feature                                                                          | Implemented |
 | ---------------------- | -------------------------------------------------------------------------------- | :---------: |
@@ -154,8 +160,3 @@ This specification list is based off draft 13 of the OpenID4VCI document, though
 | 11.2.3                 | credential_configurations_supported: `credential_signing_alg_values_supported`   |     ✅      |
 | 11.2.3                 | credential_configurations_supported: `proof_types_supported`                     |     ✅      |
 | 11.3                   | `pre-authorized_grant_anonymous_access_supported` parameter                      |     ❌      |
-
-**Legend:**
-
-- **★** Addition in draft 15
-- **†** Removed since draft 13
