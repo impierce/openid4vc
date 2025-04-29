@@ -39,7 +39,7 @@ This specification list is based off draft 13 of the OpenID4VCI document, though
 | 3.1                    | Metadata endpoint implementation `/.well-known/openid-credential-issuer`         |     ✅      |
 | 3.1.1                  | Support for `credential_issuer` field                                            |     ✅      |
 | 3.1.1                  | Support for `credential_endpoint` field                                          |     ✅      |
-| 3.1.1                  | Support for `batch_credential_endpoint` field†                                   |     ✅      |
+| 3.1.1                  | Support for `batch_credential_endpoint` field **†**                                   |     ✅      |
 | 3.1.1                  | Support for `deferred_credential_endpoint` field                                 |     ❌      |
 | 3.1.1                  | Support for `notification_endpoint_supported` field                             |     ✅      |
 | 3.1.1                  | Support for `credential_configurations_supported` array                          |     ✅      |
@@ -83,6 +83,9 @@ This specification list is based off draft 13 of the OpenID4VCI document, though
 | 6.1                    | Use of `tx_code` in Token Requests                                               |     ✅      |
 | 6.2                    | Successful Token Response                                                        |     ✅      |
 | 6.3                    | Token Error Response                                                             |     ❌      |
+| **7**                  | **Nonce Endpoint ★**                                                             |     ❌      |
+| **7.1**                | **Nonce Request using HTTP Post ★**                                                |     ❌      |
+| **7.1**                | **Nonce Response ★** (incl. `c_nonce`)                                             |     ❌      |
 | 7                      | **Credential Endpoint**                                                          |     ✅      |
 | 7.2                    | Support for credential request with `format` parameter                           |     ✅      |
 | 7.2                    | Support for credential request with `credential_identifier` parameter            |     ❌      |
@@ -93,7 +96,7 @@ This specification list is based off draft 13 of the OpenID4VCI document, though
 | 7.2.1.1                | Proof type: jwt                                                                  |     ✅      |
 | 7.2.1.1                | Proof type: cwt†                                                                 |     ❌      |
 | 7.2.1.2                | Proof type: ldp_vp                                                               |     ❌      |
-| 7.2.1.3                | Proof type: attestation\*                                                        |     ❌      |
+| 7.2.1.3                | Proof type: attestation ★                                                       |     ❌      |
 | 7.2.2                  | Proof verification support                                                       |     ❌      |
 | 7.2.2                  | Support for proof nonce generation and validation                                |     ❌      |
 | 7.3                    | Support for Credential Response                                                  |     ✅      |
@@ -112,16 +115,12 @@ This specification list is based off draft 13 of the OpenID4VCI document, though
 | 7.3.1.2                | `credential_request_denied` Error Parameter                                      |     ❌      |
 | 7.3.1.2                | Support for `error_description` parameter                                        |     ❌      |
 | 7.3.2                  | Credential Issuer provided Nonce (`invalid_proof` error code)                    |     ❌      |
-| **Draft 15 Additions** |                                                                                  |             |
-| **7**                  | **Nonce Endpoint\***                                                             |     ❌      |
-| **7.1**                | **Nonce Request using HTTP Post**                                                |     ❌      |
-| **7.1**                | **Nonce Response** (incl. `c_nonce`)                                             |     ❌      |
-| 8                      | **Batch Credential Endpoint†**                                                   |     ✅      |
-| 8.1                    | Batch Credential Request using `credential_request` parameter                    |     ❌      |
-| 8.2                    | Batch Credential Response using `credential_responses` parameter                 |     ✅      |
-| 8.2                    | Batch Credential Response using `c_nonce` parameter                              |     ✅      |
-| 8.2                    | Batch Credential Response using `c_nonce_expires_in` parameter                   |     ✅      |
-| 8.3                    | Batch Credential Error Response - Bad Request status code                        |     ❌      |
+| 8                      | **Batch Credential Endpoint †**                                                   |     ✅      |
+| 8.1                    | Batch Credential Request using `credential_request` parameter †                   |     ❌      |
+| 8.2                    | Batch Credential Response using `credential_responses` parameter †                |     ✅      |
+| 8.2                    | Batch Credential Response using `c_nonce` parameter †                             |     ✅      |
+| 8.2                    | Batch Credential Response using `c_nonce_expires_in` parameter †                  |     ✅      |
+| 8.3                    | Batch Credential Error Response - Bad Request status code †                        |     ❌      |
 | 9                      | **Deferred Credential Endpoint**                                                 |     ❌      |
 | 9.1                    | Support for Deferred Credential Requests                                         |     ❌      |
 | 9.2                    | Support for Deferred Credential Responses                                        |     ❌      |
@@ -156,4 +155,7 @@ This specification list is based off draft 13 of the OpenID4VCI document, though
 | 11.2.3                 | credential_configurations_supported: `proof_types_supported`                     |     ✅      |
 | 11.3                   | `pre-authorized_grant_anonymous_access_supported` parameter                      |     ❌      |
 
-_Addition in Draft 15_ | Deprecated in Draft 15†\*
+**Legend:**
+
+- **★** Addition in draft 15
+- **†** Removed since draft 13
