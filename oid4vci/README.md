@@ -100,7 +100,7 @@ This specification list is based off draft 13 of the OpenID4VCI document, though
 | 7.2                    | Support for `credential_response_encryption` parameter                           |     ❌      |
 | 7.2                    | Support for JWT-secured credential requests                                      |     ✅      |
 | 7.2.1.1                | Proof type: jwt                                                                  |     ✅      |
-| 7.2.1.1                | Proof type: cwt†                                                                 |     ❌      |
+| 7.2.1.1                | Proof type: cwt **†**                                                                 |     ❌      |
 | 7.2.1.2                | Proof type: ldp_vp                                                               |     ❌      |
 | 7.2.1.3                | Proof type: attestation ★                                                       |     ❌      |
 | 7.2.2                  | Proof verification support                                                       |     ❌      |
