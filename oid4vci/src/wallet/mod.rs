@@ -9,6 +9,7 @@ use crate::credential_issuer::{
 use crate::credential_offer::CredentialOfferParameters;
 use crate::credential_request::{BatchCredentialRequest, CredentialRequest};
 use crate::credential_response::BatchCredentialResponse;
+use crate::notification_request::{NotificationEvent, NotificationRequest};
 use crate::proof::{KeyProofType, ProofType};
 use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
 use anyhow::{anyhow, Result};
@@ -79,8 +80,8 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         // TODO(NGDIL): remove this NGDIL specific code. This is a temporary fix to get the authorization server metadata.
         oauth_authorization_server_endpoint
             .path_segments_mut()
-            .map_err(|_| anyhow::anyhow!("unable to parse credential issuer url"))
-            .unwrap()
+            .map_err(|_| anyhow::anyhow!("unable to parse credential issuer url"))?
+            .pop_if_empty()
             .push(".well-known")
             .push("oauth-authorization-server");
 
@@ -103,6 +104,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         openid_credential_issuer_endpoint
             .path_segments_mut()
             .map_err(|_| anyhow::anyhow!("unable to parse credential issuer url"))?
+            .pop_if_empty()
             .push(".well-known")
             .push("openid-credential-issuer");
 
@@ -329,6 +331,34 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .await
             .map_err(|e| e.into())
     }
+
+    pub async fn send_notification_request(
+        &self,
+        notification_endpoint: Url,
+        notification_id: String,
+        access_token: String,
+        event: NotificationEvent,
+        event_description: Option<String>,
+    ) -> Result<()> {
+        let notification_request = NotificationRequest {
+            notification_id,
+            event,
+            event_description,
+        };
+        let response = self
+            .client
+            .post(notification_endpoint)
+            .bearer_auth(access_token)
+            .json(&notification_request)
+            .send()
+            .await?;
+
+        if response.status() == 204 {
+            Ok(())
+        } else {
+            Err(anyhow!("Failed to send notification: {}", response.status()))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -337,6 +367,10 @@ pub mod tests {
     use crate::proof::KeyProofMetadata;
     use oid4vc_core::test_utils::TestSubject;
     use std::{collections::HashMap, sync::Arc};
+    use wiremock::{
+        matchers::{method, path},
+        Mock, MockServer, ResponseTemplate,
+    };
 
     #[test]
     fn select_signing_algorithm_returns_first_supported_signing_algorithm_when_no_proof_types_supported() {
@@ -436,5 +470,71 @@ pub mod tests {
             .unwrap();
 
         assert_eq!(signing_algorithm, Algorithm::EdDSA);
+    }
+
+    #[tokio::test]
+    async fn wallet_successfully_retrieves_authorization_server_metadata() {
+        // Create a new Wallet.
+        let wallet: Wallet = Wallet::new(
+            Arc::new(TestSubject::default()),
+            vec!["did:test"],
+            vec![Algorithm::EdDSA],
+        )
+        .unwrap();
+
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/some/path/.well-known/oauth-authorization-server"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(AuthorizationServerMetadata::default()))
+            .mount(&mock_server)
+            .await;
+
+        // Assert that the Wallet can get the Authorization Server Metadata from the Credential Issuer URL with or without a trailing slash.
+        let credential_issuer_url = format!("{}/some/path/", mock_server.uri()).parse().unwrap();
+        assert!(wallet
+            .get_authorization_server_metadata(credential_issuer_url)
+            .await
+            .is_ok());
+
+        let credential_issuer_url = format!("{}/some/path", mock_server.uri()).parse().unwrap();
+        assert!(wallet
+            .get_authorization_server_metadata(credential_issuer_url)
+            .await
+            .is_ok());
+    }
+
+    #[tokio::test]
+    async fn wallet_successfully_retrieves_credential_issuer_metadata() {
+        // Create a new Wallet.
+        let wallet: Wallet = Wallet::new(
+            Arc::new(TestSubject::default()),
+            vec!["did:test"],
+            vec![Algorithm::EdDSA],
+        )
+        .unwrap();
+
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/some/path/.well-known/openid-credential-issuer"))
+            .respond_with(
+                ResponseTemplate::new(200).set_body_json(CredentialIssuerMetadata::<CredentialFormats>::default()),
+            )
+            .mount(&mock_server)
+            .await;
+
+        // Assert that the Wallet can get the Credential Issuer Metadata from the Credential Issuer URL with or without a trailing slash.
+        let credential_issuer_url = format!("{}/some/path/", mock_server.uri()).parse().unwrap();
+        assert!(wallet
+            .get_credential_issuer_metadata(credential_issuer_url)
+            .await
+            .is_ok());
+
+        let credential_issuer_url = format!("{}/some/path", mock_server.uri()).parse().unwrap();
+        assert!(wallet
+            .get_credential_issuer_metadata(credential_issuer_url)
+            .await
+            .is_ok());
     }
 }

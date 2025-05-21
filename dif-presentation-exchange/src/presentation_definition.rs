@@ -64,7 +64,7 @@ pub enum ClaimFormatDesignation {
 pub enum ClaimFormatProperty {
     Alg(Vec<Algorithm>),
     ProofType(Vec<String>),
-    // TODO: removed serde(untagged) line here to fix error, i've not checked consequences
+    #[serde(untagged)]
     SdJwt {
         #[serde(rename = "sd-jwt_alg_values", default, skip_serializing_if = "Vec::is_empty")]
         sd_jwt_alg_values: Vec<Algorithm>,
@@ -114,17 +114,7 @@ pub struct Field {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde::de::DeserializeOwned;
-    use std::{fs::File, path::Path};
-
-    fn json_example<T>(path: &str) -> T
-    where
-        T: DeserializeOwned,
-    {
-        let file_path = Path::new(path);
-        let file = File::open(file_path).expect("file does not exist");
-        serde_json::from_reader::<_, T>(file).expect("could not parse json")
-    }
+    use serde_json::from_str;
 
     #[test]
     fn test_deserialize_presentation_definition() {
@@ -166,7 +156,8 @@ mod tests {
                 }],
                 purpose: None,
             },
-            json_example::<PresentationDefinition>("../oid4vp/tests/examples/request/pd_ac_vc_sd.json")
+            from_str::<PresentationDefinition>(include_str!("../../oid4vp/tests/examples/request/pd_ac_vc_sd.json"))
+                .unwrap()
         );
 
         assert_eq!(
@@ -197,7 +188,8 @@ mod tests {
                 }],
                 purpose: None,
             },
-            json_example::<PresentationDefinition>("../oid4vp/tests/examples/request/pd_ac_vc.json")
+            from_str::<PresentationDefinition>(include_str!("../../oid4vp/tests/examples/request/pd_ac_vc.json"))
+                .unwrap()
         );
 
         assert_eq!(
@@ -230,7 +222,8 @@ mod tests {
                 }],
                 purpose: None,
             },
-            json_example::<PresentationDefinition>("../oid4vp/tests/examples/request/pd_jwt_vc.json")
+            from_str::<PresentationDefinition>(include_str!("../../oid4vp/tests/examples/request/pd_jwt_vc.json"))
+                .unwrap()
         );
 
         assert_eq!(
@@ -263,7 +256,8 @@ mod tests {
                 }],
                 purpose: None,
             },
-            json_example::<PresentationDefinition>("../oid4vp/tests/examples/request/pd_ldp_vc.json")
+            from_str::<PresentationDefinition>(include_str!("../../oid4vp/tests/examples/request/pd_ldp_vc.json"))
+                .unwrap()
         );
 
         // TODO: report json file bug + add retention feature: https://identity.foundation/presentation-exchange/spec/v2.0.0/#retention-feature
@@ -317,7 +311,10 @@ mod tests {
                 }],
                 purpose: None,
             },
-            json_example::<PresentationDefinition>("../oid4vp/tests/examples/request/pd_mdl_iso_cbor.json")
+            from_str::<PresentationDefinition>(include_str!(
+                "../../oid4vp/tests/examples/request/pd_mdl_iso_cbor.json"
+            ))
+            .unwrap()
         );
 
         assert_eq!(
@@ -362,7 +359,10 @@ mod tests {
                 }],
                 purpose: None,
             },
-            json_example::<PresentationDefinition>("../oid4vp/tests/examples/request/vp_token_type_and_claims.json")
+            from_str::<PresentationDefinition>(include_str!(
+                "../../oid4vp/tests/examples/request/vp_token_type_and_claims.json"
+            ))
+            .unwrap()
         );
 
         assert_eq!(
@@ -393,7 +393,10 @@ mod tests {
                 }],
                 purpose: None,
             },
-            json_example::<PresentationDefinition>("../oid4vp/tests/examples/request/vp_token_type_only.json")
+            from_str::<PresentationDefinition>(include_str!(
+                "../../oid4vp/tests/examples/request/vp_token_type_only.json"
+            ))
+            .unwrap()
         );
     }
 

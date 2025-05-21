@@ -71,10 +71,10 @@ impl Extension for OID4VP {
 
         let mut jwts = vec![];
         match &user_input.verifiable_presentation_input {
-            PresentationInputType::Unsigned(verifiable_presentation) => {
+            PresentationInputType::Presentation(verifiable_presentation) => {
                 let vp_token = VpToken::builder()
                     .iss(subject_identifier.clone())
-                    .sub(subject_identifier.clone())
+                    .sub(subject_identifier)
                     .aud(client_id)
                     .nonce(extension_parameters.nonce.to_owned())
                     // TODO: make this configurable.
@@ -93,7 +93,7 @@ impl Extension for OID4VP {
 
                 jwts.push(jwt);
             }
-            PresentationInputType::Signed(jwt) => {
+            PresentationInputType::SdJwtVc(jwt) => {
                 jwts.push(jwt.to_owned());
             }
         }
@@ -243,6 +243,6 @@ pub struct AuthorizationResponseInput {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum PresentationInputType {
-    Unsigned(Presentation<Jwt>),
-    Signed(String),
+    Presentation(Presentation<Jwt>),
+    SdJwtVc(String),
 }

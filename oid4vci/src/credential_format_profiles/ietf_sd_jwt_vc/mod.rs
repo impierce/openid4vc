@@ -1,7 +1,1 @@
-use crate::credential_format;
-
-credential_format!("vc+sd-jwt", VcSdJwt, {
-    vct: String,
-    claims: Option<serde_json::Value>,
-    order: Option<Vec<String>>
-});
+pub mod vc_sd_jwt;

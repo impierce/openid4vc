@@ -12,6 +12,6 @@ pub trait Sign: Send + Sync {
     fn external_signer(&self) -> Option<Arc<dyn ExternalSign>>;
 }
 
-pub trait ExternalSign: Send + Sync + Debug{
+pub trait ExternalSign: Send + Sync + Debug {
     fn sign(&self, message: &str) -> Result<Vec<u8>>;
 }
