@@ -80,7 +80,7 @@ impl Extension for OID4VP {
                     // TODO: make this configurable.
                     .exp((Utc::now() + Duration::minutes(10)).timestamp())
                     .iat((Utc::now()).timestamp())
-                    .verifiable_presentation(verifiable_presentation.clone())
+                    .verifiable_presentation(*verifiable_presentation.clone())
                     .build()?;
 
                 let jwt = jwt::encode(
@@ -243,6 +243,6 @@ pub struct AuthorizationResponseInput {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum PresentationInputType {
-    Presentation(Presentation<Jwt>),
+    Presentation(Box<Presentation<Jwt>>),
     SdJwtVc(String),
 }
