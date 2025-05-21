@@ -136,7 +136,6 @@ async fn test_implicit_flow(#[case] did_method: &str) {
         .redirect_uri(format!("{server_url}/redirect_uri").parse::<url::Url>().unwrap())
         .response_mode("direct_post".to_string())
         .client_metadata(ClientMetadataResource::ClientMetadata {
-            // TODO: removed <ClientMetadataParameters>::, not sure of the consequences
             client_name: None,
             logo_uri: None,
             extension: ClientMetadataParameters {
