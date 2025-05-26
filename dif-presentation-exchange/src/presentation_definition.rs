@@ -114,14 +114,14 @@ pub struct Field {
     pub(crate) optional: Option<bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Validate, PartialEq, Clone)]
 pub struct DcqlQuery {
     pub credentials: Vec<CredentialQuery>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub credential_sets: Option<Vec<CredentialSetQuery>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Validate, PartialEq, Clone)]
 pub struct CredentialQuery {
     #[validate(
         length(min = 1, message = "Credential ID must not be empty"),
@@ -144,7 +144,7 @@ pub struct CredentialQuery {
     pub claim_sets: Option<Vec<Vec<String>>>,
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum MetaTypes {
     W3CFormatMeta { type_values: Vec<Vec<String>> },
@@ -186,21 +186,21 @@ impl CredentialQuery {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct CredentialSetQuery {
     pub options: Vec<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub required: Option<bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct TrustedAuthority {
     #[serde(rename = "type")]
     pub type_: String,
     pub values: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Validate)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Validate, Clone)]
 pub struct ClaimQuery {
     pub id: Option<String>,
     #[validate(custom(function = "validate_claim_path"))]
@@ -210,7 +210,7 @@ pub struct ClaimQuery {
     pub values: Option<Vec<ClaimValue>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum ClaimPathElement {
     String(String),
@@ -218,7 +218,7 @@ pub enum ClaimPathElement {
     Null,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum ClaimValue {
     String(String),

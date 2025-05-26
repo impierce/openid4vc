@@ -1,9 +1,8 @@
 use crate::oid4vp::OID4VP;
-
 use anyhow::{anyhow, Result};
 use dif_presentation_exchange::presentation_definition::ClaimFormatProperty;
 use dif_presentation_exchange::presentation_definition::DcqlQuery;
-use dif_presentation_exchange::{ClaimFormatDesignation, PresentationDefinition};
+use dif_presentation_exchange::ClaimFormatDesignation;
 use is_empty::IsEmpty;
 use monostate::MustBe;
 use oid4vc_core::authorization_request::Object;
