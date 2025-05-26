@@ -1,5 +1,5 @@
 use super::claims::{validate_claim_path, validate_claim_values, validate_claims, ClaimsContext};
-use super::meta::{validate_format, validate_meta, MetaContext};
+use super::meta::{validate_meta, MetaContext};
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationError, ValidationErrors};
 
@@ -17,8 +17,7 @@ pub struct CredentialQuery {
         custom(function = "validate_credential_id")
     )]
     pub id: String,
-    #[validate(custom(function = "validate_format"))]
-    pub format: String,
+    pub format: Format,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub multiple: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -41,6 +40,17 @@ pub enum MetaTypes {
     MsoMdocMeta { doctype_value: String },
 }
 
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+pub enum Format {
+    #[serde(rename = "ldp_vc")]
+    LdpVc,
+    #[serde(rename = "jwt_vc_json")]
+    JwtVcJson,
+    #[serde(rename = "dc+sd-jwt")]
+    DcSdJwt,
+    #[serde(rename = "mso_mdoc")]
+    MsoMdoc,
+}
 fn validate_credential_id(id: &str) -> Result<(), ValidationError> {
     if !id.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
         return Err(ValidationError::new("credential_id_invalid_chars")
@@ -127,7 +137,7 @@ mod tests {
             DcqlQuery {
                 credentials: vec![CredentialQuery {
                     id: "my_credential".to_string(),
-                    format: "mso_mdoc".to_string(),
+                    format: Format::MsoMdoc,
                     multiple: None,
                     meta: Some(MetaTypes::MsoMdocMeta {
                         doctype_value: "org.iso.7367.1.mVRC".to_string()
@@ -166,7 +176,7 @@ mod tests {
             DcqlQuery {
                 credentials: vec![CredentialQuery {
                     id: "my_credential".to_string(),
-                    format: "dc+sd-jwt".to_string(),
+                    format: Format::DcSdJwt,
                     multiple: None,
                     meta: Some(MetaTypes::SdJwtMeta {
                         vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
@@ -207,7 +217,7 @@ mod tests {
             DcqlQuery {
                 credentials: vec![CredentialQuery {
                     id: "my_credential".to_string(),
-                    format: "dc+sd-jwt".to_string(),
+                    format: Format::DcSdJwt,
                     multiple: None,
                     meta: Some(MetaTypes::SdJwtMeta {
                         vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
@@ -259,7 +269,7 @@ mod tests {
             DcqlQuery {
                 credentials: vec![CredentialQuery {
                     id: "pid".to_string(),
-                    format: "dc+sd-jwt".to_string(),
+                    format: Format::DcSdJwt,
                     multiple: None,
                     meta: Some(MetaTypes::SdJwtMeta {
                         vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
@@ -310,7 +320,7 @@ mod tests {
                 credentials: vec![
                     CredentialQuery {
                         id: "pid".to_string(),
-                        format: "dc+sd-jwt".to_string(),
+                        format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
@@ -341,7 +351,7 @@ mod tests {
                     },
                     CredentialQuery {
                         id: "mdl".to_string(),
-                        format: "mso_mdoc".to_string(),
+                        format: Format::MsoMdoc,
                         multiple: None,
                         meta: Some(MetaTypes::MsoMdocMeta {
                             doctype_value: "org.iso.7367.1.mVRC".to_string(),
@@ -383,7 +393,7 @@ mod tests {
                 credentials: vec![
                     CredentialQuery {
                         id: "mdl-id".to_string(),
-                        format: "mso_mdoc".to_string(),
+                        format: Format::MsoMdoc,
                         multiple: None,
                         meta: Some(MetaTypes::MsoMdocMeta {
                             doctype_value: "org.iso.18013.5.1.mDL".to_string(),
@@ -420,7 +430,7 @@ mod tests {
                     },
                     CredentialQuery {
                         id: "mdl-address".to_string(),
-                        format: "mso_mdoc".to_string(),
+                        format: Format::MsoMdoc,
                         multiple: None,
                         meta: Some(MetaTypes::MsoMdocMeta {
                             doctype_value: "org.iso.18013.5.1.mDL".to_string(),
@@ -449,7 +459,7 @@ mod tests {
                     },
                     CredentialQuery {
                         id: "photo_card-id".to_string(),
-                        format: "mso_mdoc".to_string(),
+                        format: Format::MsoMdoc,
                         multiple: None,
                         meta: Some(MetaTypes::MsoMdocMeta {
                             doctype_value: "org.iso.23220.photoid.1".to_string(),
@@ -486,7 +496,7 @@ mod tests {
                     },
                     CredentialQuery {
                         id: "photo_card-address".to_string(),
-                        format: "mso_mdoc".to_string(),
+                        format: Format::MsoMdoc,
                         multiple: None,
                         meta: Some(MetaTypes::MsoMdocMeta {
                             doctype_value: "org.iso.23220.photoid.1".to_string(),
@@ -536,7 +546,7 @@ mod tests {
                 credentials: vec![
                     CredentialQuery {
                         id: "pid".to_string(),
-                        format: "dc+sd-jwt".to_string(),
+                        format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://credentials.example.com/identity_credential".to_string()],
@@ -567,7 +577,7 @@ mod tests {
                     },
                     CredentialQuery {
                         id: "other_pid".to_string(),
-                        format: "dc+sd-jwt".to_string(),
+                        format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://othercredentials.example/pid".to_string()],
@@ -598,7 +608,7 @@ mod tests {
                     },
                     CredentialQuery {
                         id: "pid_reduced_cred_1".to_string(),
-                        format: "dc+sd-jwt".to_string(),
+                        format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://credentials.example.com/reduced_identity_credential".to_string()],
@@ -621,7 +631,7 @@ mod tests {
                     },
                     CredentialQuery {
                         id: "pid_reduced_cred_2".to_string(),
-                        format: "dc+sd-jwt".to_string(),
+                        format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://cred.example/residence_credential".to_string()],
@@ -649,7 +659,7 @@ mod tests {
                     },
                     CredentialQuery {
                         id: "nice_to_have".to_string(),
-                        format: "dc+sd-jwt".to_string(),
+                        format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://company.example/company_rewards".to_string()],
@@ -711,7 +721,7 @@ mod tests {
         // The ID field is empty
         let credential = CredentialQuery {
             id: "".to_string(),
-            format: "ldp_vc".to_string(),
+            format: Format::LdpVc,
             multiple: None,
             meta: Some(MetaTypes::W3CFormatMeta {
                 type_values: vec![vec!["https://example.com/credential".to_string()]],
@@ -735,7 +745,7 @@ mod tests {
         // The ID field contains invalid characters/formatting
         let credential = CredentialQuery {
             id: "abc!23*".to_string(),
-            format: "ldp_vc".to_string(),
+            format: Format::LdpVc,
             multiple: None,
             meta: Some(MetaTypes::W3CFormatMeta {
                 type_values: vec![vec!["https://example.com/credential".to_string()]],
@@ -852,7 +862,7 @@ mod tests {
         let temporary = DcqlQuery {
             credentials: vec![CredentialQuery {
                 id: "my_credential".to_string(),
-                format: "mso_mdoc".to_string(),
+                format: Format::MsoMdoc,
                 multiple: None,
                 meta: Some(MetaTypes::SdJwtMeta {
                     vct_values: vec!["https://credentials.example.com/identity_credential".to_string()],
@@ -911,7 +921,7 @@ mod tests {
     fn test_credential_query_serialization_round_trip() {
         let original_credential = CredentialQuery {
             id: "basho".to_string(),
-            format: "ldp_vc".to_string(),
+            format: Format::LdpVc,
             multiple: None,
             meta: Some(MetaTypes::W3CFormatMeta {
                 type_values: vec![vec!["https://example.com/credential".to_string()]],
@@ -934,7 +944,7 @@ mod tests {
     fn test_credential_query_serialization() {
         let credential_query = CredentialQuery {
             id: "robbie".to_string(),
-            format: "dc+sd-jwt".to_string(),
+            format: Format::DcSdJwt,
             multiple: None,
             meta: Some(MetaTypes::SdJwtMeta {
                 vct_values: vec!["https://credentials.example.com/identity_credential".to_string()],
