@@ -1,8 +1,7 @@
 use crate::oid4vp::OID4VP;
 use anyhow::{anyhow, Result};
 use dif_presentation_exchange::presentation_definition::ClaimFormatProperty;
-use dif_presentation_exchange::presentation_definition::DcqlQuery;
-use dif_presentation_exchange::ClaimFormatDesignation;
+use dif_presentation_exchange::{ClaimFormatDesignation, PresentationDefinition};
 use is_empty::IsEmpty;
 use monostate::MustBe;
 use oid4vc_core::authorization_request::Object;
@@ -32,7 +31,7 @@ pub enum ClientIdScheme {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationRequestParameters {
     pub response_type: MustBe!("vp_token"),
-    pub presentation_definition: DcqlQuery,
+    pub presentation_definition: PresentationDefinition,
     pub client_id_scheme: Option<ClientIdScheme>,
     pub response_mode: Option<String>,
     pub scope: Option<Scope>,
@@ -52,7 +51,7 @@ pub struct ClientMetadataParameters {
 #[derive(Debug, Default, IsEmpty)]
 pub struct AuthorizationRequestBuilder {
     rfc7519_claims: RFC7519Claims,
-    presentation_definition: Option<DcqlQuery>,
+    presentation_definition: Option<PresentationDefinition>,
     client_id_scheme: Option<ClientIdScheme>,
     client_id: Option<String>,
     redirect_uri: Option<url::Url>,
@@ -79,7 +78,7 @@ impl AuthorizationRequestBuilder {
     builder_fn!(nonce, String);
     builder_fn!(client_metadata, ClientMetadataResource<ClientMetadataParameters>);
     builder_fn!(state, String);
-    builder_fn!(presentation_definition, DcqlQuery);
+    builder_fn!(presentation_definition, PresentationDefinition);
     builder_fn!(client_id_scheme, ClientIdScheme);
     builder_fn!(custom_url_scheme, String);
 

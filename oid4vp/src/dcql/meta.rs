@@ -1,4 +1,4 @@
-use crate::presentation_definition::MetaTypes;
+use super::dcql_query::MetaTypes;
 use serde_json::Value;
 use std::collections::HashMap;
 use validator::ValidationError;

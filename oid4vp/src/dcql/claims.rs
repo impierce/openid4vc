@@ -1,4 +1,4 @@
-use crate::presentation_definition::{ClaimPathElement, ClaimQuery, ClaimValue};
+use super::dcql_query::{ClaimPathElement, ClaimQuery, ClaimValue};
 
 use validator::ValidationError;
 
