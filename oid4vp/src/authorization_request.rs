@@ -1,7 +1,8 @@
+use crate::dcql::dcql_query::DcqlQuery;
 use crate::oid4vp::OID4VP;
 use anyhow::{anyhow, Result};
 use dif_presentation_exchange::presentation_definition::ClaimFormatProperty;
-use dif_presentation_exchange::{ClaimFormatDesignation, PresentationDefinition};
+use dif_presentation_exchange::ClaimFormatDesignation;
 use is_empty::IsEmpty;
 use monostate::MustBe;
 use oid4vc_core::authorization_request::Object;
@@ -12,27 +13,33 @@ use oid4vc_core::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// The Client ID Scheme enables the use of different mechanisms to obtain and validate the Verifier's metadata. As
-/// described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-20.html#name-verifier-metadata-managemen
+/// Client Identifier Prefixes as defined in the OpenID4VP specification
+/// See: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-client-identifier-prefix-an
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "snake_case")]
-pub enum ClientIdScheme {
+pub enum ClientIdPrefix {
     #[serde(rename = "pre-registered")]
     PreRegistered,
+    #[serde(rename = "redirect_uri")]
     RedirectUri,
-    EntityId,
-    Did,
+    #[serde(rename = "openid_federation")]
+    OpenIDFederation,
+    #[serde(rename = "decentralized_identifier")]
+    DecentralizedIdentifier,
+    #[serde(rename = "verifier_attestation")]
     VerifierAttestation,
+    #[serde(rename = "x509_san_dns")]
     X509SanDns,
-    X509SanUri,
+    #[serde(rename = "x509_hash")]
+    X509Hash,
 }
 
 /// [`AuthorizationRequest`] claims specific to [`OID4VP`].
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationRequestParameters {
     pub response_type: MustBe!("vp_token"),
-    pub presentation_definition: PresentationDefinition,
-    pub client_id_scheme: Option<ClientIdScheme>,
+    pub dcql_query: Option<DcqlQuery>,
+    pub client_id_prefix: Option<ClientIdPrefix>,
     pub response_mode: Option<String>,
     pub scope: Option<Scope>,
     pub nonce: String,
@@ -51,8 +58,8 @@ pub struct ClientMetadataParameters {
 #[derive(Debug, Default, IsEmpty)]
 pub struct AuthorizationRequestBuilder {
     rfc7519_claims: RFC7519Claims,
-    presentation_definition: Option<PresentationDefinition>,
-    client_id_scheme: Option<ClientIdScheme>,
+    dcql_query: Option<DcqlQuery>,
+    client_id_prefix: Option<ClientIdPrefix>,
     client_id: Option<String>,
     redirect_uri: Option<url::Url>,
     state: Option<String>,
@@ -78,8 +85,8 @@ impl AuthorizationRequestBuilder {
     builder_fn!(nonce, String);
     builder_fn!(client_metadata, ClientMetadataResource<ClientMetadataParameters>);
     builder_fn!(state, String);
-    builder_fn!(presentation_definition, PresentationDefinition);
-    builder_fn!(client_id_scheme, ClientIdScheme);
+    builder_fn!(dcql_query, DcqlQuery);
+    builder_fn!(client_id_prefix, ClientIdPrefix);
     builder_fn!(custom_url_scheme, String);
 
     pub fn build(mut self) -> Result<AuthorizationRequest<Object<OID4VP>>> {
@@ -88,11 +95,8 @@ impl AuthorizationRequestBuilder {
             (Some(client_id), false) => {
                 let extension = AuthorizationRequestParameters {
                     response_type: MustBe!("vp_token"),
-                    presentation_definition: self
-                        .presentation_definition
-                        .take()
-                        .ok_or_else(|| anyhow!("presentation_definition parameter is required."))?,
-                    client_id_scheme: self.client_id_scheme.take(),
+                    dcql_query: self.dcql_query.take(),
+                    client_id_prefix: self.client_id_prefix.take(),
                     scope: self.scope.take(),
                     response_mode: self.response_mode.take(),
                     nonce: self
@@ -135,32 +139,32 @@ mod tests {
     #[test]
     fn test_client_id_scheme() {
         assert_eq!(
-            ClientIdScheme::PreRegistered,
-            serde_json::from_str::<ClientIdScheme>("\"pre-registered\"").unwrap()
+            ClientIdPrefix::PreRegistered,
+            serde_json::from_str::<ClientIdPrefix>("\"pre-registered\"").unwrap()
         );
         assert_eq!(
-            ClientIdScheme::RedirectUri,
-            serde_json::from_str::<ClientIdScheme>("\"redirect_uri\"").unwrap()
+            ClientIdPrefix::RedirectUri,
+            serde_json::from_str::<ClientIdPrefix>("\"redirect_uri\"").unwrap()
         );
         assert_eq!(
-            ClientIdScheme::EntityId,
-            serde_json::from_str::<ClientIdScheme>("\"entity_id\"").unwrap()
+            ClientIdPrefix::OpenIDFederation,
+            serde_json::from_str::<ClientIdPrefix>("\"openid_federation\"").unwrap()
         );
         assert_eq!(
-            ClientIdScheme::Did,
-            serde_json::from_str::<ClientIdScheme>("\"did\"").unwrap()
+            ClientIdPrefix::DecentralizedIdentifier,
+            serde_json::from_str::<ClientIdPrefix>("\"did\"").unwrap()
         );
         assert_eq!(
-            ClientIdScheme::VerifierAttestation,
-            serde_json::from_str::<ClientIdScheme>("\"verifier_attestation\"").unwrap()
+            ClientIdPrefix::VerifierAttestation,
+            serde_json::from_str::<ClientIdPrefix>("\"verifier_attestation\"").unwrap()
         );
         assert_eq!(
-            ClientIdScheme::X509SanDns,
-            serde_json::from_str::<ClientIdScheme>("\"x509_san_dns\"").unwrap()
+            ClientIdPrefix::X509SanDns,
+            serde_json::from_str::<ClientIdPrefix>("\"x509_san_dns\"").unwrap()
         );
         assert_eq!(
-            ClientIdScheme::X509SanUri,
-            serde_json::from_str::<ClientIdScheme>("\"x509_san_uri\"").unwrap()
+            ClientIdPrefix::X509Hash,
+            serde_json::from_str::<ClientIdPrefix>("\"x509_hash\"").unwrap()
         );
     }
 
