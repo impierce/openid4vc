@@ -12,6 +12,7 @@ use oid4vc_core::{
 use reqwest::StatusCode;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
+use tracing::info;
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
 /// [`AuthorizationRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
@@ -56,29 +57,51 @@ impl Provider {
     /// parse the [`AuthorizationRequest<Object>`] from the `request` parameter of the [`AuthorizationRequest<ByValue>`]
     /// or from the `request_uri` parameter of the [`AuthorizationRequest<ByReference>`].
     pub async fn validate_request(&self, authorization_request: String) -> Result<AuthorizationRequest<Object>> {
+        info!("Validating authorization request: {}", authorization_request);
         let validator = Validator::Subject(self.subject.clone());
+
+        info!("Using validator");
 
         let authorization_request = if let Ok(authorization_request) =
             authorization_request.parse::<AuthorizationRequest<Object>>()
         {
+            info!("Parsed authorization request as Object");
             authorization_request
         } else {
+            info!("Parsing authorization request as ByValue or ByReference");
             let (client_id, authorization_request) =
                 if let Ok(authorization_request) = AuthorizationRequest::<ByValue>::from_str(&authorization_request) {
+                    info!("Parsed authorization request as ByValue");
                     let client_id = authorization_request.body.client_id().clone();
+
+                    info!("Fetching request from client: {}", authorization_request.body.request);
                     let authorization_request: AuthorizationRequest<Object> = validator
                         .decode(authorization_request.body.request.to_owned())
                         .await
                         .unwrap();
 
+                    info!("Returning authorization request with client_id: {}", client_id);
+
                     (client_id, authorization_request)
                 } else if let Ok(authorization_request) =
                     AuthorizationRequest::<ByReference>::from_str(&authorization_request)
                 {
+                    info!("Parsed authorization request as ByReference");
                     let client_id = authorization_request.body.client_id().clone();
+
+                    info!("Fetching request from URI: {}", authorization_request.body.request_uri);
+
                     let builder = self.client.get(authorization_request.body.request_uri.clone());
+
+                    info!("Sending request to fetch authorization request.");
+
                     let request_value = builder.send().await?.text().await?;
+
+                    info!("Decoding authorization request from fetched value.");
+
                     let authorization_request: AuthorizationRequest<Object> = validator.decode(request_value).await?;
+
+                    info!("Returning authorization request with client_id: {}", client_id);
 
                     (client_id, authorization_request)
                 } else {
