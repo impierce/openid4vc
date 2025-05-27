@@ -95,9 +95,11 @@ impl Provider {
 
                     info!("Sending request to fetch authorization request.");
 
-                    let request_value = builder.send().await?.text().await?;
+                    let temp = builder.send().await.unwrap();
+                    info!("Received response with status: {}", temp.status());
+                    let request_value = temp.text().await.unwrap();
 
-                    info!("Decoding authorization request from fetched value.");
+                    info!("Decoding authorization request from fetched value: {}", request_value);
 
                     let authorization_request: AuthorizationRequest<Object> = validator.decode(request_value).await?;
 

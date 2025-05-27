@@ -2,6 +2,7 @@ use crate::{jwt, Subject, Verify};
 use anyhow::Result;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
+use tracing::info;
 
 pub enum Validator {
     Subject(Arc<dyn Subject>),
@@ -17,9 +18,15 @@ impl Validator {
     }
 
     pub async fn decode<T: DeserializeOwned>(&self, jwt: String) -> Result<T> {
+        info!("Decoding JWT: {}", jwt);
         let (kid, algorithm) = jwt::extract_header(&jwt)?;
 
+        info!("Extracted KID: {}, Algorithm: {:?}", kid, algorithm);
+
         let public_key = self.public_key(&kid).await?;
+
+        info!("Public key retrieved for KID: {}", kid);
+
         jwt::decode(&jwt, public_key, algorithm)
     }
 }

@@ -5,6 +5,7 @@ use jsonwebtoken::{Algorithm, DecodingKey, Header, Validation};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::sync::Arc;
+use tracing::info;
 
 #[derive(Debug, Serialize, Getters)]
 pub struct JsonWebToken<C>
@@ -43,16 +44,22 @@ pub fn decode<T>(jwt: &str, public_key: Vec<u8>, algorithm: Algorithm) -> Result
 where
     T: DeserializeOwned,
 {
+    info!("Decoding JWT: {}", jwt);
     let decoding_key = match algorithm {
         Algorithm::EdDSA => DecodingKey::from_ed_der(public_key.as_slice()),
         Algorithm::ES256 => DecodingKey::from_ec_der(public_key.as_slice()),
         _ => return Err(anyhow!("Unsupported algorithm.")),
     };
 
+    info!("Decoding key created for algorithm: {:?}", algorithm);
+
     let mut validation = Validation::new(algorithm);
     validation.validate_exp = false;
     validation.validate_aud = false;
     validation.required_spec_claims.clear();
+
+    info!("Validation settings: {:?}", validation);
+
     Ok(jsonwebtoken::decode::<T>(jwt, &decoding_key, &validation)?.claims)
 }
 
