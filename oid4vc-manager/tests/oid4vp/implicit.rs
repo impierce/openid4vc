@@ -13,11 +13,16 @@ use oid4vc_manager::{
     RelyingPartyManager,
 };
 use oid4vci::VerifiableCredentialJwt;
+use oid4vp::dcql::dcql_query::Format;
+use oid4vp::dcql::dcql_query::{
+    ClaimPath, ClaimPathElement, ClaimQuery, CredentialId, CredentialQuery, DcqlQuery, MetaTypes,
+};
 use oid4vp::{
     authorization_request::ClientMetadataParameters,
     oid4vp::{AuthorizationResponseInput, PresentationInputType, OID4VP},
     ClaimFormatDesignation, ClaimFormatProperty, PresentationDefinition,
 };
+
 use serde_json::json;
 use std::{collections::HashMap, sync::Arc};
 
@@ -70,6 +75,72 @@ lazy_static! {
     .unwrap();
 }
 
+lazy_static! {
+    pub static ref DCQL_QUERY: DcqlQuery = DcqlQuery {
+        credentials: vec![CredentialQuery {
+            id: CredentialId::try_new("beautiful_dcql".to_string()).unwrap(),
+            format: Format::JwtVcJson,
+            multiple: None,
+            meta: Some(MetaTypes::W3CFormatMeta {
+                type_values: vec![vec![
+                    "https://example.com/credential".to_string(),
+                    "https://example.com/another_credential".to_string()
+                ]],
+            }),
+            trusted_authorities: None,
+            require_cryptographic_holder_binding: None,
+            claims: vec![
+                ClaimQuery {
+                    id: Some("given_name".to_string()),
+                    path: ClaimPath::try_new(vec![
+                        ClaimPathElement::String("credentialSubject".to_string()),
+                        ClaimPathElement::String("givenName".to_string())
+                    ])
+                    .unwrap(),
+                    values: None,
+                },
+                ClaimQuery {
+                    id: Some("family_name".to_string()),
+                    path: ClaimPath::try_new(vec![
+                        ClaimPathElement::String("credentialSubject".to_string()),
+                        ClaimPathElement::String("familyName".to_string())
+                    ])
+                    .unwrap(),
+                    values: None,
+                },
+                ClaimQuery {
+                    id: Some("email".to_string()),
+                    path: ClaimPath::try_new(vec![
+                        ClaimPathElement::String("credentialSubject".to_string()),
+                        ClaimPathElement::String("email".to_string())
+                    ])
+                    .unwrap(),
+                    values: None,
+                },
+                ClaimQuery {
+                    id: Some("birthdate".to_string()),
+                    path: ClaimPath::try_new(vec![
+                        ClaimPathElement::String("credentialSubject".to_string()),
+                        ClaimPathElement::String("birthdate".to_string())
+                    ])
+                    .unwrap(),
+                    values: None,
+                },
+            ],
+            claim_sets: Some(vec![
+                vec!["given_name".to_string(), "family_name".to_string()],
+                vec![
+                    "given_name".to_string(),
+                    "family_name".to_string(),
+                    "email".to_string(),
+                    "birthdate".to_string()
+                ],
+            ]),
+        }],
+        credential_sets: None,
+    };
+}
+
 #[tokio::test]
 async fn test_implicit_flow() {
     // Create a new issuer.
@@ -97,7 +168,32 @@ async fn test_implicit_flow() {
     let authorization_request = AuthorizationRequest::<Object<OID4VP>>::builder()
         .client_id(relying_party_did)
         .redirect_uri("https://example.com".parse::<url::Url>().unwrap())
-        .presentation_definition(PRESENTATION_DEFINITION.clone())
+        .dcql_query(DcqlQuery {
+            credentials: vec![CredentialQuery {
+                id: CredentialId::try_new("identity_credential".to_string()).unwrap(),
+                format: Format::DcSdJwt,
+                multiple: None,
+                meta: Some(MetaTypes::SdJwtMeta {
+                    vct_values: vec!["https://example.com/identity_credential".to_string()],
+                }),
+                trusted_authorities: None,
+                require_cryptographic_holder_binding: None,
+                claims: vec![
+                    ClaimQuery {
+                        id: Some("given_name".to_string()),
+                        path: ClaimPath::try_new(vec![ClaimPathElement::String("given_name".to_string())]).unwrap(),
+                        values: None,
+                    },
+                    ClaimQuery {
+                        id: Some("family_name".to_string()),
+                        path: ClaimPath::try_new(vec![ClaimPathElement::String("family_name".to_string())]).unwrap(),
+                        values: None,
+                    },
+                ],
+                claim_sets: None,
+            }],
+            credential_sets: None,
+        })
         .client_metadata(ClientMetadataResource::ClientMetadata {
             client_name: None,
             logo_uri: None,

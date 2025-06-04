@@ -1,4 +1,4 @@
-use super::dcql_query::{ClaimPathElement, ClaimQuery, ClaimValue};
+use super::dcql_query::ClaimQuery;
 
 use validator::ValidationError;
 
@@ -38,19 +38,6 @@ pub fn validate_claims_with_sets(claims: &[ClaimQuery], claim_sets: &[Vec<String
                     .with_message(format!("Claim ID '{}' not found in claims at claim_set[{}][{}]", id, i, j).into()));
             }
         }
-    }
-    Ok(())
-}
-
-pub fn validate_claim_path(path: &[ClaimPathElement]) -> Result<(), ValidationError> {
-    if path.is_empty() {
-        return Err(ValidationError::new("empty_claim_path").with_message("Claim path cannot be empty".into()));
-    }
-    Ok(())
-}
-pub fn validate_claim_values(values: &[ClaimValue]) -> Result<(), ValidationError> {
-    if values.is_empty() {
-        return Err(ValidationError::new("empty_claim_values").with_message("Claim values cannot be empty".into()));
     }
     Ok(())
 }

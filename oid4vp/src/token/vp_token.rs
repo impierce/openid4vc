@@ -1,4 +1,5 @@
 use super::vp_token_builder::{DcqlVpTokenBuilder, VpTokenBuilder};
+use crate::dcql::dcql_query::CredentialId;
 use getset::Getters;
 use identity_credential::{credential::Jwt, presentation::Presentation};
 use oid4vc_core::RFC7519Claims;
@@ -26,7 +27,7 @@ impl VpToken {
 pub struct DcqlQueryVpToken {
     #[serde(flatten)]
     #[getset(get = "pub")]
-    pub(super) presentations: HashMap<String, Vec<PresentationFormat>>,
+    pub(super) presentations: HashMap<CredentialId, Vec<PresentationFormat>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -48,23 +49,3 @@ impl DcqlQueryVpToken {
         DcqlVpTokenBuilder::new()
     }
 }
-
-// #[test]
-// fn test_dcql_vp_token_new() {
-//     let vp_token = DcqlQueryVpToken::new();
-//     assert!(vp_token.presentations().is_empty());
-// }
-
-// #[test]
-// fn test_dcql_vp_token_getters() {
-//     let mut presentations = HashMap::new();
-//     presentations.insert(
-//         "test_cred".to_string(),
-//         vec![create_mock_json_presentation("test")]
-//     );
-
-//     let vp_token = DcqlQueryVpToken { presentations };
-
-//     assert_eq!(vp_token.presentations().len(), 1);
-//     assert!(vp_token.presentations().contains_key("test_cred"));
-// }

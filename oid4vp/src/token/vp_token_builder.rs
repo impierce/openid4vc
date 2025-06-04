@@ -1,4 +1,4 @@
-use crate::dcql::dcql_query::{CredentialQuery, DcqlQuery};
+use crate::dcql::dcql_query::{CredentialId, CredentialQuery, DcqlQuery};
 use crate::token::vp_token::{DcqlQueryVpToken, PresentationFormat, VpToken};
 use anyhow::{anyhow, Result};
 use identity_credential::{credential::Jwt, presentation::Presentation};
@@ -58,7 +58,7 @@ impl VpTokenBuilder {
 
 #[derive(Default, Validate)]
 pub struct DcqlVpTokenBuilder {
-    presentations: HashMap<String, Vec<PresentationFormat>>,
+    presentations: HashMap<CredentialId, Vec<PresentationFormat>>,
     dcql_query: Option<DcqlQuery>,
 }
 
@@ -74,7 +74,7 @@ impl DcqlVpTokenBuilder {
         }
     }
 
-    pub fn add_presentation(mut self, credential_id: String, presentation: PresentationFormat) -> Self {
+    pub fn add_presentation(mut self, credential_id: CredentialId, presentation: PresentationFormat) -> Self {
         self.presentations
             .entry(credential_id)
             .or_insert_with(Vec::new)
@@ -83,7 +83,7 @@ impl DcqlVpTokenBuilder {
     }
 
     /// for multiple presentations for the same credential_id
-    pub fn add_presentations(mut self, credential_id: String, presentations: Vec<PresentationFormat>) -> Self {
+    pub fn add_presentations(mut self, credential_id: CredentialId, presentations: Vec<PresentationFormat>) -> Self {
         self.presentations.insert(credential_id, presentations);
         self
     }
@@ -103,7 +103,7 @@ impl DcqlVpTokenBuilder {
     fn validate_against_dcql(&self, dcql_query: &DcqlQuery) -> Result<(), ValidationErrors> {
         let mut errors = ValidationErrors::new();
 
-        let credential_queries: HashMap<String, &CredentialQuery> =
+        let credential_queries: HashMap<CredentialId, &CredentialQuery> =
             dcql_query.credentials.iter().map(|cq| (cq.id.clone(), cq)).collect();
 
         // Check to see if all required credentials are present.
@@ -161,27 +161,5 @@ impl DcqlVpTokenBuilder {
         } else {
             return Err(errors);
         }
-
-        // fn validate_presentations(
-        //     presentations: &HashMap<String, Vec<PresentationFormat>>,
-        // ) -> Result<(), ValidationError> {
-        //     // check taht each credential ID is not empty and has presentations
-        //     for (credential_id, presentation_list) in presentations {
-        //         if credential_id.is_empty() {
-        //             let mut error = ValidationError::new("empty_credential_id");
-        //             error.message = Some("Credential ID cannot be empty".into());
-        //             return Err(error);
-        //         }
-
-        //         if presentation_list.is_empty() {
-        //             let mut error = ValidationError::new("empty_presentations");
-        //             error.message =
-        //                 Some(format!("Credential '{}' must have at least one presentation", credential_id).into());
-        //             return Err(error);
-        //         }
-        //     }
-
-        //     Ok(())
-        // }
     }
 }

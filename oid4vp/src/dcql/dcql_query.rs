@@ -1,22 +1,39 @@
-use super::claims::{validate_claim_path, validate_claim_values, validate_claims, ClaimsContext};
+use super::claims::{validate_claims, ClaimsContext};
 use super::meta::{validate_meta, MetaContext};
+use nutype::nutype;
 use serde::{Deserialize, Serialize};
-use validator::{Validate, ValidationError, ValidationErrors};
+use validator::{Validate, ValidationErrors};
 
-#[derive(Debug, Serialize, Deserialize, Validate, PartialEq, Clone)]
+#[nutype(
+    validate(not_empty, predicate = valid_credential_id),
+    derive(Debug, Clone, PartialEq, Serialize, Deserialize, Hash, Eq, Display)
+)]
+pub struct CredentialId(String);
+fn valid_credential_id(s: &str) -> bool {
+    s.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-')
+}
+
+#[nutype(validate(predicate = claim_path_not_empty), derive(Debug, Clone, PartialEq, Serialize, Deserialize))]
+pub struct ClaimPath(Vec<ClaimPathElement>);
+fn claim_path_not_empty(path: &Vec<ClaimPathElement>) -> bool {
+    !path.is_empty()
+}
+
+#[nutype(validate(predicate = claim_values_not_empty), derive(Debug, Clone, PartialEq, Serialize, Deserialize))]
+pub struct ClaimValues(Vec<ClaimValue>);
+fn claim_values_not_empty(values: &Vec<ClaimValue>) -> bool {
+    !values.is_empty()
+}
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Validate)]
 pub struct DcqlQuery {
     pub credentials: Vec<CredentialQuery>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub credential_sets: Option<Vec<CredentialSetQuery>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Validate)]
 pub struct CredentialQuery {
-    #[validate(
-        length(min = 1, message = "Credential ID must not be empty"),
-        custom(function = "validate_credential_id")
-    )]
-    pub id: String,
+    pub id: CredentialId,
     pub format: Format,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub multiple: Option<bool>,
@@ -50,13 +67,6 @@ pub enum Format {
     DcSdJwt,
     #[serde(rename = "mso_mdoc")]
     MsoMdoc,
-}
-fn validate_credential_id(id: &str) -> Result<(), ValidationError> {
-    if !id.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
-        return Err(ValidationError::new("credential_id_invalid_chars")
-            .with_message("Credential id must contain only alphanumeric, underscore, or hyphen characters".into()));
-    }
-    Ok(())
 }
 
 impl CredentialQuery {
@@ -102,11 +112,9 @@ pub struct TrustedAuthority {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Validate, Clone)]
 pub struct ClaimQuery {
     pub id: Option<String>,
-    #[validate(custom(function = "validate_claim_path"))]
-    pub path: Vec<ClaimPathElement>,
+    pub path: ClaimPath,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[validate(custom(function = "validate_claim_values"))]
-    pub values: Option<Vec<ClaimValue>>,
+    pub values: Option<ClaimValues>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -131,12 +139,24 @@ mod tests {
     use serde_json::from_str;
     // OID4VP Credential Test Examples from
     // https://github.com/openid/OpenID4VP/tree/main/examples/query_lang
+
+    fn test_credential_id(id: &str) -> CredentialId {
+        CredentialId::try_new(id.to_string()).unwrap()
+    }
+
+    fn test_claim_path(elements: Vec<ClaimPathElement>) -> ClaimPath {
+        ClaimPath::try_new(elements).unwrap()
+    }
+
+    fn test_claim_values(values: Vec<ClaimValue>) -> ClaimValues {
+        ClaimValues::try_new(values).unwrap()
+    }
     #[test]
     fn test_oid4vp_example_simple_mdoc() {
         assert_eq!(
             DcqlQuery {
                 credentials: vec![CredentialQuery {
-                    id: "my_credential".to_string(),
+                    id: test_credential_id("my_credential"),
                     format: Format::MsoMdoc,
                     multiple: None,
                     meta: Some(MetaTypes::MsoMdocMeta {
@@ -147,18 +167,18 @@ mod tests {
                     claims: vec![
                         ClaimQuery {
                             id: None,
-                            path: vec![
+                            path: test_claim_path(vec![
                                 ClaimPathElement::String("org.iso.7367.1".to_string()),
                                 ClaimPathElement::String("vehicle_holder".to_string())
-                            ],
+                            ]),
                             values: None
                         },
                         ClaimQuery {
                             id: None,
-                            path: vec![
+                            path: test_claim_path(vec![
                                 ClaimPathElement::String("org.iso.18013.5.1".to_string()),
                                 ClaimPathElement::String("first_name".to_string())
-                            ],
+                            ]),
                             values: None
                         }
                     ],
@@ -175,7 +195,7 @@ mod tests {
         assert_eq!(
             DcqlQuery {
                 credentials: vec![CredentialQuery {
-                    id: "my_credential".to_string(),
+                    id: test_credential_id("my_credential"),
                     format: Format::DcSdJwt,
                     multiple: None,
                     meta: Some(MetaTypes::SdJwtMeta {
@@ -186,20 +206,20 @@ mod tests {
                     claims: vec![
                         ClaimQuery {
                             id: None,
-                            path: vec![ClaimPathElement::String("last_name".to_string())],
+                            path: test_claim_path(vec![ClaimPathElement::String("last_name".to_string())]),
                             values: None
                         },
                         ClaimQuery {
                             id: None,
-                            path: vec![ClaimPathElement::String("first_name".to_string())],
+                            path: test_claim_path(vec![ClaimPathElement::String("first_name".to_string())]),
                             values: None
                         },
                         ClaimQuery {
                             id: None,
-                            path: vec![
+                            path: test_claim_path(vec![
                                 ClaimPathElement::String("address".to_string()),
                                 ClaimPathElement::String("street_address".to_string())
-                            ],
+                            ]),
                             values: None
                         }
                     ],
@@ -216,7 +236,7 @@ mod tests {
         assert_eq!(
             DcqlQuery {
                 credentials: vec![CredentialQuery {
-                    id: "my_credential".to_string(),
+                    id: test_credential_id("my_credential"),
                     format: Format::DcSdJwt,
                     multiple: None,
                     meta: Some(MetaTypes::SdJwtMeta {
@@ -227,29 +247,29 @@ mod tests {
                     claims: vec![
                         ClaimQuery {
                             id: None,
-                            path: vec![ClaimPathElement::String("last_name".to_string())],
-                            values: Some(vec![ClaimValue::String("Doe".to_string())])
+                            path: test_claim_path(vec![ClaimPathElement::String("last_name".to_string())]),
+                            values: Some(test_claim_values(vec![ClaimValue::String("Doe".to_string())]))
                         },
                         ClaimQuery {
                             id: None,
-                            path: vec![ClaimPathElement::String("first_name".to_string())],
+                            path: test_claim_path(vec![ClaimPathElement::String("first_name".to_string())]),
                             values: None
                         },
                         ClaimQuery {
                             id: None,
-                            path: vec![
+                            path: test_claim_path(vec![
                                 ClaimPathElement::String("address".to_string()),
                                 ClaimPathElement::String("street_address".to_string())
-                            ],
+                            ]),
                             values: None
                         },
                         ClaimQuery {
                             id: None,
-                            path: vec![ClaimPathElement::String("postal_code".to_string())],
-                            values: Some(vec![
+                            path: test_claim_path(vec![ClaimPathElement::String("postal_code".to_string())]),
+                            values: Some(test_claim_values(vec![
                                 ClaimValue::String("90210".to_string()),
                                 ClaimValue::String("90211".to_string())
-                            ]),
+                            ])),
                         },
                     ],
                     claim_sets: None
@@ -268,7 +288,7 @@ mod tests {
         assert_eq!(
             DcqlQuery {
                 credentials: vec![CredentialQuery {
-                    id: "pid".to_string(),
+                    id: test_credential_id("pid"),
                     format: Format::DcSdJwt,
                     multiple: None,
                     meta: Some(MetaTypes::SdJwtMeta {
@@ -279,27 +299,27 @@ mod tests {
                     claims: vec![
                         ClaimQuery {
                             id: Some("a".to_string()),
-                            path: vec![ClaimPathElement::String("last_name".to_string())],
+                            path: test_claim_path(vec![ClaimPathElement::String("last_name".to_string())]),
                             values: None
                         },
                         ClaimQuery {
                             id: Some("b".to_string()),
-                            path: vec![ClaimPathElement::String("postal_code".to_string())],
+                            path: test_claim_path(vec![ClaimPathElement::String("postal_code".to_string())]),
                             values: None
                         },
                         ClaimQuery {
                             id: Some("c".to_string()),
-                            path: vec![ClaimPathElement::String("locality".to_string())],
+                            path: test_claim_path(vec![ClaimPathElement::String("locality".to_string())]),
                             values: None
                         },
                         ClaimQuery {
                             id: Some("d".to_string()),
-                            path: vec![ClaimPathElement::String("region".to_string())],
+                            path: test_claim_path(vec![ClaimPathElement::String("region".to_string())]),
                             values: None
                         },
                         ClaimQuery {
                             id: Some("e".to_string()),
-                            path: vec![ClaimPathElement::String("date_of_birth".to_string())],
+                            path: test_claim_path(vec![ClaimPathElement::String("date_of_birth".to_string())]),
                             values: None
                         },
                     ],
@@ -319,7 +339,7 @@ mod tests {
             DcqlQuery {
                 credentials: vec![
                     CredentialQuery {
-                        id: "pid".to_string(),
+                        id: test_credential_id("pid"),
                         format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
@@ -330,27 +350,27 @@ mod tests {
                         claims: vec![
                             ClaimQuery {
                                 id: None,
-                                path: vec![ClaimPathElement::String("given_name".to_string())],
+                                path: test_claim_path(vec![ClaimPathElement::String("given_name".to_string())]),
                                 values: None
                             },
                             ClaimQuery {
                                 id: None,
-                                path: vec![ClaimPathElement::String("family_name".to_string())],
+                                path: test_claim_path(vec![ClaimPathElement::String("family_name".to_string())]),
                                 values: None
                             },
                             ClaimQuery {
                                 id: None,
-                                path: vec![
+                                path: test_claim_path(vec![
                                     ClaimPathElement::String("address".to_string()),
                                     ClaimPathElement::String("street_address".to_string())
-                                ],
+                                ]),
                                 values: None
                             }
                         ],
                         claim_sets: None
                     },
                     CredentialQuery {
-                        id: "mdl".to_string(),
+                        id: test_credential_id("mdl"),
                         format: Format::MsoMdoc,
                         multiple: None,
                         meta: Some(MetaTypes::MsoMdocMeta {
@@ -361,18 +381,18 @@ mod tests {
                         claims: vec![
                             ClaimQuery {
                                 id: None,
-                                path: vec![
+                                path: test_claim_path(vec![
                                     ClaimPathElement::String("org.iso.7367.1".to_string()),
                                     ClaimPathElement::String("vehicle_holder".to_string())
-                                ],
+                                ]),
                                 values: None
                             },
                             ClaimQuery {
                                 id: None,
-                                path: vec![
+                                path: test_claim_path(vec![
                                     ClaimPathElement::String("org.iso.18013.5.1".to_string()),
                                     ClaimPathElement::String("first_name".to_string())
-                                ],
+                                ]),
                                 values: None
                             }
                         ],
@@ -392,7 +412,7 @@ mod tests {
             DcqlQuery {
                 credentials: vec![
                     CredentialQuery {
-                        id: "mdl-id".to_string(),
+                        id: test_credential_id("mdl-id"),
                         format: Format::MsoMdoc,
                         multiple: None,
                         meta: Some(MetaTypes::MsoMdocMeta {
@@ -403,33 +423,33 @@ mod tests {
                         claims: vec![
                             ClaimQuery {
                                 id: Some("given_name".to_string()),
-                                path: vec![
+                                path: test_claim_path(vec![
                                     ClaimPathElement::String("org.iso.18013.5.1".to_string()),
                                     ClaimPathElement::String("given_name".to_string())
-                                ],
+                                ]),
                                 values: None
                             },
                             ClaimQuery {
                                 id: Some("family_name".to_string()),
-                                path: vec![
+                                path: test_claim_path(vec![
                                     ClaimPathElement::String("org.iso.18013.5.1".to_string()),
                                     ClaimPathElement::String("family_name".to_string())
-                                ],
+                                ]),
                                 values: None
                             },
                             ClaimQuery {
                                 id: Some("portrait".to_string()),
-                                path: vec![
+                                path: test_claim_path(vec![
                                     ClaimPathElement::String("org.iso.18013.5.1".to_string()),
                                     ClaimPathElement::String("portrait".to_string())
-                                ],
+                                ]),
                                 values: None
                             }
                         ],
                         claim_sets: None
                     },
                     CredentialQuery {
-                        id: "mdl-address".to_string(),
+                        id: test_credential_id("mdl-address"),
                         format: Format::MsoMdoc,
                         multiple: None,
                         meta: Some(MetaTypes::MsoMdocMeta {
@@ -440,25 +460,25 @@ mod tests {
                         claims: vec![
                             ClaimQuery {
                                 id: Some("resident_address".to_string()),
-                                path: vec![
+                                path: test_claim_path(vec![
                                     ClaimPathElement::String("org.iso.18013.5.1".to_string()),
                                     ClaimPathElement::String("resident_address".to_string())
-                                ],
+                                ]),
                                 values: None
                             },
                             ClaimQuery {
                                 id: Some("resident_country".to_string()),
-                                path: vec![
+                                path: test_claim_path(vec![
                                     ClaimPathElement::String("org.iso.18013.5.1".to_string()),
                                     ClaimPathElement::String("resident_country".to_string())
-                                ],
+                                ]),
                                 values: None
                             }
                         ],
                         claim_sets: None
                     },
                     CredentialQuery {
-                        id: "photo_card-id".to_string(),
+                        id: test_credential_id("photo_card-id"),
                         format: Format::MsoMdoc,
                         multiple: None,
                         meta: Some(MetaTypes::MsoMdocMeta {
@@ -469,33 +489,33 @@ mod tests {
                         claims: vec![
                             ClaimQuery {
                                 id: Some("given_name".to_string()),
-                                path: vec![
+                                path: test_claim_path(vec![
                                     ClaimPathElement::String("org.iso.18013.5.1".to_string()),
                                     ClaimPathElement::String("given_name".to_string())
-                                ],
+                                ]),
                                 values: None
                             },
                             ClaimQuery {
                                 id: Some("family_name".to_string()),
-                                path: vec![
+                                path: test_claim_path(vec![
                                     ClaimPathElement::String("org.iso.18013.5.1".to_string()),
                                     ClaimPathElement::String("family_name".to_string())
-                                ],
+                                ]),
                                 values: None
                             },
                             ClaimQuery {
                                 id: Some("portrait".to_string()),
-                                path: vec![
+                                path: test_claim_path(vec![
                                     ClaimPathElement::String("org.iso.18013.5.1".to_string()),
                                     ClaimPathElement::String("portrait".to_string())
-                                ],
+                                ]),
                                 values: None
                             }
                         ],
                         claim_sets: None
                     },
                     CredentialQuery {
-                        id: "photo_card-address".to_string(),
+                        id: test_credential_id("photo_card-address"),
                         format: Format::MsoMdoc,
                         multiple: None,
                         meta: Some(MetaTypes::MsoMdocMeta {
@@ -506,18 +526,18 @@ mod tests {
                         claims: vec![
                             ClaimQuery {
                                 id: Some("resident_address".to_string()),
-                                path: vec![
+                                path: test_claim_path(vec![
                                     ClaimPathElement::String("org.iso.18013.5.1".to_string()),
                                     ClaimPathElement::String("resident_address".to_string())
-                                ],
+                                ]),
                                 values: None
                             },
                             ClaimQuery {
                                 id: Some("resident_country".to_string()),
-                                path: vec![
+                                path: test_claim_path(vec![
                                     ClaimPathElement::String("org.iso.18013.5.1".to_string()),
                                     ClaimPathElement::String("resident_country".to_string())
-                                ],
+                                ]),
                                 values: None
                             }
                         ],
@@ -545,7 +565,7 @@ mod tests {
             DcqlQuery {
                 credentials: vec![
                     CredentialQuery {
-                        id: "pid".to_string(),
+                        id: test_credential_id("pid"),
                         format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
@@ -556,27 +576,27 @@ mod tests {
                         claims: vec![
                             ClaimQuery {
                                 id: None,
-                                path: vec![ClaimPathElement::String("given_name".to_string())],
+                                path: test_claim_path(vec![ClaimPathElement::String("given_name".to_string())]),
                                 values: None
                             },
                             ClaimQuery {
                                 id: None,
-                                path: vec![ClaimPathElement::String("family_name".to_string())],
+                                path: test_claim_path(vec![ClaimPathElement::String("family_name".to_string())]),
                                 values: None
                             },
                             ClaimQuery {
                                 id: None,
-                                path: vec![
+                                path: test_claim_path(vec![
                                     ClaimPathElement::String("address".to_string()),
                                     ClaimPathElement::String("street_address".to_string())
-                                ],
+                                ]),
                                 values: None
                             }
                         ],
                         claim_sets: None
                     },
                     CredentialQuery {
-                        id: "other_pid".to_string(),
+                        id: test_credential_id("other_pid"),
                         format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
@@ -587,27 +607,27 @@ mod tests {
                         claims: vec![
                             ClaimQuery {
                                 id: None,
-                                path: vec![ClaimPathElement::String("given_name".to_string()),],
+                                path: test_claim_path(vec![ClaimPathElement::String("given_name".to_string())]),
                                 values: None
                             },
                             ClaimQuery {
                                 id: None,
-                                path: vec![ClaimPathElement::String("family_name".to_string()),],
+                                path: test_claim_path(vec![ClaimPathElement::String("family_name".to_string())]),
                                 values: None
                             },
                             ClaimQuery {
                                 id: None,
-                                path: vec![
+                                path: test_claim_path(vec![
                                     ClaimPathElement::String("address".to_string()),
                                     ClaimPathElement::String("street_address".to_string())
-                                ],
+                                ]),
                                 values: None
                             }
                         ],
                         claim_sets: None
                     },
                     CredentialQuery {
-                        id: "pid_reduced_cred_1".to_string(),
+                        id: test_credential_id("pid_reduced_cred_1"),
                         format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
@@ -618,19 +638,19 @@ mod tests {
                         claims: vec![
                             ClaimQuery {
                                 id: None,
-                                path: vec![ClaimPathElement::String("family_name".to_string())],
+                                path: test_claim_path(vec![ClaimPathElement::String("family_name".to_string())]),
                                 values: None
                             },
                             ClaimQuery {
                                 id: None,
-                                path: vec![ClaimPathElement::String("given_name".to_string())],
+                                path: test_claim_path(vec![ClaimPathElement::String("given_name".to_string())]),
                                 values: None
                             }
                         ],
                         claim_sets: None
                     },
                     CredentialQuery {
-                        id: "pid_reduced_cred_2".to_string(),
+                        id: test_credential_id("pid_reduced_cred_2"),
                         format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
@@ -641,24 +661,24 @@ mod tests {
                         claims: vec![
                             ClaimQuery {
                                 id: None,
-                                path: vec![ClaimPathElement::String("postal_code".to_string())],
+                                path: test_claim_path(vec![ClaimPathElement::String("postal_code".to_string())]),
                                 values: None
                             },
                             ClaimQuery {
                                 id: None,
-                                path: vec![ClaimPathElement::String("locality".to_string())],
+                                path: test_claim_path(vec![ClaimPathElement::String("locality".to_string())]),
                                 values: None
                             },
                             ClaimQuery {
                                 id: None,
-                                path: vec![ClaimPathElement::String("region".to_string()),],
+                                path: test_claim_path(vec![ClaimPathElement::String("region".to_string())]),
                                 values: None
                             }
                         ],
                         claim_sets: None
                     },
                     CredentialQuery {
-                        id: "nice_to_have".to_string(),
+                        id: test_credential_id("nice_to_have"),
                         format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
@@ -668,7 +688,7 @@ mod tests {
                         require_cryptographic_holder_binding: None,
                         claims: vec![ClaimQuery {
                             id: None,
-                            path: vec![ClaimPathElement::String("rewards_number".to_string())],
+                            path: test_claim_path(vec![ClaimPathElement::String("rewards_number".to_string())]),
                             values: None
                         }],
                         claim_sets: None
@@ -699,91 +719,43 @@ mod tests {
     #[test]
     fn test_invalid_w3c_meta() {
         let invalid_json = r#"{
-        "credentials": [
-            {
-                "id": "my_credential",
-                "format": "ldp_vc",
-                "meta": {
-                    "wrong_values": [
-                        ["https://example.com/credential"]
-                    ]
-                },
-                claims: []
-            }
-        ]
- }"#;
+            "credentials": [
+                {
+                    "id": "my_credential",
+                    "format": "ldp_vc",
+                    "meta": {
+                        "wrong_values": [
+                            ["https://example.com/credential"]
+                        ]
+                    },
+                    claims: []
+                }
+            ]
+     }"#;
         let result = from_str::<DcqlQuery>(invalid_json);
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_empty_id() {
-        // The ID field is empty
-        let credential = CredentialQuery {
-            id: "".to_string(),
-            format: Format::LdpVc,
-            multiple: None,
-            meta: Some(MetaTypes::W3CFormatMeta {
-                type_values: vec![vec!["https://example.com/credential".to_string()]],
-            }),
-            trusted_authorities: None,
-            require_cryptographic_holder_binding: None,
-            claims: vec![],
-            claim_sets: None,
-        };
-
-        let result = credential.validate();
-        assert!(result.is_err());
-
-        if let Err(errors) = result {
-            println!("Error: {:?}", errors);
-        }
-    }
-
-    #[test]
-    fn test_incorrect_id_format() {
-        // The ID field contains invalid characters/formatting
-        let credential = CredentialQuery {
-            id: "abc!23*".to_string(),
-            format: Format::LdpVc,
-            multiple: None,
-            meta: Some(MetaTypes::W3CFormatMeta {
-                type_values: vec![vec!["https://example.com/credential".to_string()]],
-            }),
-            trusted_authorities: None,
-            require_cryptographic_holder_binding: None,
-            claims: vec![],
-            claim_sets: None,
-        };
-
-        let result = credential.validate();
-        assert!(result.is_err());
-
-        if let Err(errors) = result {
-            println!("Error: {:?}", errors);
-        }
     }
 
     #[test]
     fn test_claim_without_id_when_claim_sets_present() {
         // A claim that has no ID, but claim_sets is present
         let invalid_json = r#"{
-        "id": "credential_id",
-        "format": "ldp_vc",
-        "meta": {
-            "type_values": [
-                ["https://example.com/credential"]
+            "id": "credential_id",
+            "format": "ldp_vc",
+            "meta": {
+                "type_values": [
+                    ["https://example.com/credential"]
+                ]
+            },
+            "claims": [
+                {
+                    "path": ["some_path"]
+                           }
+            ],
+            "claim_sets": [
+                ["some_claim_id"]
             ]
-        },
-        "claims": [
-            {
-                "path": ["some_path"] 
-                       }
-        ],
-        "claim_sets": [
-            ["some_claim_id"]
-        ]
-    }"#;
+        }"#;
         let result = serde_json::from_str::<CredentialQuery>(invalid_json);
         assert!(result.is_ok());
 
@@ -797,40 +769,40 @@ mod tests {
     fn test_claims_sets_references_unknown_id() {
         // A claim set that references an unknown claim ID
         let invalid_json = r#"
-        {
-            "id": "pid",
-            "format": "dc+sd-jwt",
-            "meta": {
-                "vct_values": ["https://credentials.example.com/identity_credential"]
-            },
-            "claims": [
-                {
-                    "id": "a",
-                    "path": ["last_name"]
+            {
+                "id": "pid",
+                "format": "dc+sd-jwt",
+                "meta": {
+                    "vct_values": ["https://credentials.example.com/identity_credential"]
                 },
-                {
-                "id": "b",
-                    "path": ["postal_code"]
-                },
-                {
-                    "id": "c",
-                    "path": ["locality"]
-                },
-                {
-                    "id": "d",
-                    "path": ["region"]
-                },
-                {
-                    "id": "e",
-                    "path": ["date_of_birth"]
-                }
-            ],
-            "claim_sets": [
-                ["a", "c", "d", "e"],
-                ["a", "b", "e", "unknown_id"]
-            ]
-        }
-        "#;
+                "claims": [
+                    {
+                        "id": "a",
+                        "path": ["last_name"]
+                    },
+                    {
+                    "id": "b",
+                        "path": ["postal_code"]
+                    },
+                    {
+                        "id": "c",
+                        "path": ["locality"]
+                    },
+                    {
+                        "id": "d",
+                        "path": ["region"]
+                    },
+                    {
+                        "id": "e",
+                        "path": ["date_of_birth"]
+                    }
+                ],
+                "claim_sets": [
+                    ["a", "c", "d", "e"],
+                    ["a", "b", "e", "unknown_id"]
+                ]
+            }
+            "#;
         let result = serde_json::from_str::<CredentialQuery>(invalid_json);
         assert!(result.is_ok(), "Deserialization failed: {}", result.unwrap_err());
 
@@ -849,10 +821,10 @@ mod tests {
     #[test]
     fn test_omitted_meta_is_ok() {
         let valid_json = r#"{
-        "id": "my_credential",
-        "format": "ldp_vc",
-        "claims": []
-    }"#;
+            "id": "my_credential",
+            "format": "ldp_vc",
+            "claims": []
+        }"#;
         let result = from_str::<CredentialQuery>(valid_json);
         assert!(result.is_ok());
     }
@@ -861,7 +833,7 @@ mod tests {
     fn test_dcql_query() {
         let temporary = DcqlQuery {
             credentials: vec![CredentialQuery {
-                id: "my_credential".to_string(),
+                id: test_credential_id("my_credential"),
                 format: Format::MsoMdoc,
                 multiple: None,
                 meta: Some(MetaTypes::SdJwtMeta {
@@ -881,15 +853,15 @@ mod tests {
     fn test_incorrect_metadata_format() {
         // The meta format does not correspond to the credential format
         let invalid_json = r#"{
-            "id": "my_credential",
-            "format": "dc+sd-jwt",
-            "meta": {
-                "type_values": [
-                    ["https://example.com/credential"]
-                ]
-            },
-            "claims": []
-        }"#;
+                "id": "my_credential",
+                "format": "dc+sd-jwt",
+                "meta": {
+                    "type_values": [
+                        ["https://example.com/credential"]
+                    ]
+                },
+                "claims": []
+            }"#;
 
         let result = serde_json::from_str::<CredentialQuery>(invalid_json);
         assert!(result.is_ok());
@@ -903,15 +875,15 @@ mod tests {
     fn test_invalid_meta_value() {
         // The credential format is correct, but the meta value format is not
         let invalid_json = r#"{
-            "id": "my_credential",
-            "format": "mso_mdoc",
-            "meta": {
-                "doctype_value": [
-                    ["https://example.com/credential"]
-                ]
-            },
-            "claims": []
-        }"#;
+                "id": "my_credential",
+                "format": "mso_mdoc",
+                "meta": {
+                    "doctype_value": [
+                        ["https://example.com/credential"]
+                    ]
+                },
+                "claims": []
+            }"#;
 
         let result = serde_json::from_str::<CredentialQuery>(invalid_json);
         assert!(result.is_err());
@@ -920,7 +892,7 @@ mod tests {
     #[test]
     fn test_credential_query_serialization_round_trip() {
         let original_credential = CredentialQuery {
-            id: "basho".to_string(),
+            id: test_credential_id("basho"),
             format: Format::LdpVc,
             multiple: None,
             meta: Some(MetaTypes::W3CFormatMeta {
@@ -930,7 +902,7 @@ mod tests {
             require_cryptographic_holder_binding: None,
             claims: vec![ClaimQuery {
                 id: None,
-                path: vec![ClaimPathElement::String("line_number".to_string())],
+                path: test_claim_path(vec![ClaimPathElement::String("line_number".to_string())]),
                 values: None,
             }],
             claim_sets: None,
@@ -943,7 +915,7 @@ mod tests {
     #[test]
     fn test_credential_query_serialization() {
         let credential_query = CredentialQuery {
-            id: "robbie".to_string(),
+            id: test_credential_id("robbie"),
             format: Format::DcSdJwt,
             multiple: None,
             meta: Some(MetaTypes::SdJwtMeta {
@@ -954,13 +926,13 @@ mod tests {
             claims: vec![
                 ClaimQuery {
                     id: Some("basho".to_string()),
-                    path: vec![ClaimPathElement::String("last_name".to_string())],
+                    path: test_claim_path(vec![ClaimPathElement::String("last_name".to_string())]),
                     values: None,
                 },
                 ClaimQuery {
                     id: Some("casho".to_string()),
-                    path: vec![ClaimPathElement::String("first_name".to_string())],
-                    values: Some(vec![ClaimValue::String("Matsuo".to_string())]),
+                    path: test_claim_path(vec![ClaimPathElement::String("first_name".to_string())]),
+                    values: Some(test_claim_values(vec![ClaimValue::String("Matsuo".to_string())])),
                 },
             ],
             claim_sets: Some(vec![vec!["basho".to_string(), "casho".to_string()]]),

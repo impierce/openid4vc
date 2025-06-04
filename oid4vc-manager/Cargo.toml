@@ -9,6 +9,8 @@ oid4vc-core = { path = "../oid4vc-core" }
 siopv2 = { path = "../siopv2" }
 oid4vp = { path = "../oid4vp" }
 oid4vci = { path = "../oid4vci" }
+dif-presentation-exchange = { path = "../dif-presentation-exchange" }
+
 
 anyhow = "1.0"
 async-trait = "0.1"

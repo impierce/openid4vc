@@ -32,3 +32,4 @@ serde_with.workspace = true
 tokio.workspace = true
 url.workspace = true
 validator.workspace = true
+nutype.workspace = true 
