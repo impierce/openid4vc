@@ -15,13 +15,13 @@ fn valid_credential_id(s: &str) -> bool {
 
 #[nutype(validate(predicate = claim_path_not_empty), derive(Debug, Clone, PartialEq, Serialize, Deserialize))]
 pub struct ClaimPath(Vec<ClaimPathElement>);
-fn claim_path_not_empty(path: &Vec<ClaimPathElement>) -> bool {
+fn claim_path_not_empty(path: &[ClaimPathElement]) -> bool {
     !path.is_empty()
 }
 
 #[nutype(validate(predicate = claim_values_not_empty), derive(Debug, Clone, PartialEq, Serialize, Deserialize))]
 pub struct ClaimValues(Vec<ClaimValue>);
-fn claim_values_not_empty(values: &Vec<ClaimValue>) -> bool {
+fn claim_values_not_empty(values: &[ClaimValue]) -> bool {
     !values.is_empty()
 }
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Validate)]

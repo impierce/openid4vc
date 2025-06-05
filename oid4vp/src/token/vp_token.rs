@@ -33,7 +33,7 @@ pub struct DcqlQueryVpToken {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum PresentationFormat {
-    Jwt(Presentation<Jwt>),
+    Jwt(Box<Presentation<Jwt>>),
     Json(serde_json::Value),
     Binary(String),
 }

@@ -62,6 +62,12 @@ pub struct DcqlVpTokenBuilder {
     dcql_query: Option<DcqlQuery>,
 }
 
+impl Default for DcqlQueryVpToken {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DcqlVpTokenBuilder {
     pub fn new() -> Self {
         Self::default()
@@ -75,10 +81,7 @@ impl DcqlVpTokenBuilder {
     }
 
     pub fn add_presentation(mut self, credential_id: CredentialId, presentation: PresentationFormat) -> Self {
-        self.presentations
-            .entry(credential_id)
-            .or_insert_with(Vec::new)
-            .push(presentation);
+        self.presentations.entry(credential_id).or_default().push(presentation);
         self
     }
 
@@ -157,9 +160,9 @@ impl DcqlVpTokenBuilder {
         }
 
         if errors.is_empty() {
-            return Ok(());
+            Ok(())
         } else {
-            return Err(errors);
+            Err(errors)
         }
     }
 }
