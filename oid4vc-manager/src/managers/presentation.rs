@@ -41,7 +41,7 @@ pub fn create_presentation_submission(
     })
 }
 
-// Creates a `PresentationSubmission` for a vc+sd-jwt presentation.
+// Creates a `PresentationSubmission` for a dc+sd-jwt presentation.
 // TODO:remove this function and make sure that `create_presentation_submission` can generate submissions regardless of
 // the VP/VC format.
 pub fn create_sd_jwt_presentation_submission(
@@ -57,7 +57,7 @@ pub fn create_sd_jwt_presentation_submission(
             credentials.iter().find_map(|credential| {
                 evaluate_input(input_descriptor, credential).then_some(InputDescriptorMappingObject {
                     id: input_descriptor.id().clone(),
-                    format: ClaimFormatDesignation::VcSdJwt,
+                    format: ClaimFormatDesignation::DcSdJwt,
                     path: "$".to_string(),
                     path_nested: None,
                 })
@@ -187,7 +187,7 @@ mod tests {
                     {
                         "id": "identity_credential",
                         "format": {
-                            "vc+sd-jwt": {
+                            "dc+sd-jwt": {
                                 "sd-jwt_alg_values": [
                                     "ES256",
                                     "ES384"
@@ -207,7 +207,7 @@ mod tests {
                                     ],
                                     "filter": {
                                         "type": "string",
-                                        "const": "pid_vc+sd-jwt"
+                                        "const": "pid_dc+sd-jwt"
                                     }
                                 },
                                 {
@@ -235,7 +235,7 @@ mod tests {
                 "iss": "did:example:123",
                 "nbf": 1741094882,
                 "exp": 1772630882,
-                "vct": "pid_vc+sd-jwt",
+                "vct": "pid_dc+sd-jwt",
                 "iat": 1741094882,
                 "family_name": "Ferris",
                 "given_name": "Crabman"
@@ -259,7 +259,7 @@ mod tests {
                         {
                             "id": "identity_credential",
                             "path": "$",
-                            "format": "vc+sd-jwt"
+                            "format": "dc+sd-jwt"
                         }
                     ]
                 }

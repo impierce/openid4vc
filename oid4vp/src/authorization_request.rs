@@ -45,7 +45,7 @@ pub struct ClientMetadataParameters {
     /// Object defining the formats and proof types of Verifiable Presentations and Verifiable Credentials that a
     /// Verifier supports.
     /// As described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-20.html#name-additional-verifier-metadat
-    pub vp_formats: HashMap<ClaimFormatDesignation, ClaimFormatProperty>,
+    pub vp_formats_supported: HashMap<ClaimFormatDesignation, ClaimFormatProperty>,
 }
 
 #[derive(Debug, Default, IsEmpty)]
@@ -198,7 +198,7 @@ mod tests {
                     client_name: Some("My Example (SIOP)".to_string()),
                     logo_uri: None,
                     extension: ClientMetadataParameters {
-                        vp_formats: vec![
+                        vp_formats_supported: vec![
                             (
                                 ClaimFormatDesignation::JwtVpJson,
                                 ClaimFormatProperty::Alg(vec![Algorithm::EdDSA, Algorithm::ES256,])

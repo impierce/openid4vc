@@ -102,7 +102,7 @@ async fn test_implicit_flow() {
             client_name: None,
             logo_uri: None,
             extension: ClientMetadataParameters {
-                vp_formats: vec![(
+                vp_formats_supported: vec![(
                     ClaimFormatDesignation::JwtVcJson,
                     ClaimFormatProperty::Alg(vec![Algorithm::EdDSA]),
                 )]

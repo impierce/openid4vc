@@ -126,9 +126,9 @@ impl Extension for OID4VP {
             // Fetch the client metadata from the given URI.
             ClientMetadataResource::ClientMetadataUri(_) => unreachable!(),
             ClientMetadataResource::ClientMetadata { extension, .. } => extension
-                .vp_formats
+                .vp_formats_supported
                 .get(&ClaimFormatDesignation::JwtVcJson)
-                .or_else(|| extension.vp_formats.get(&ClaimFormatDesignation::VcSdJwt))
+                .or_else(|| extension.vp_formats_supported.get(&ClaimFormatDesignation::DcSdJwt))
                 .and_then(|claim_format_property| match claim_format_property {
                     ClaimFormatProperty::Alg(algs) => Some(algs.clone()),
                     // TODO: implement `ProofType`.
