@@ -7,6 +7,7 @@ pub mod openid4vc_extension;
 pub mod rfc7519_claims;
 pub mod scope;
 pub mod subject_syntax_type;
+
 pub use authentication::{sign::Sign, subject::Subject, validator::Validator, verify::Verify};
 use rand::{distributions::Alphanumeric, Rng};
 pub use rfc7519_claims::RFC7519Claims;
