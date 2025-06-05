@@ -152,7 +152,7 @@ mod tests {
         );
         assert_eq!(
             ClientIdPrefix::DecentralizedIdentifier,
-            serde_json::from_str::<ClientIdPrefix>("\"did\"").unwrap()
+            serde_json::from_str::<ClientIdPrefix>("\"decentralized_identifier\"").unwrap()
         );
         assert_eq!(
             ClientIdPrefix::VerifierAttestation,
