@@ -1,5 +1,5 @@
 use anyhow::Result;
-use oid4vc_core::{to_query_value, url_to_query_value, JsonObject};
+use oid4vc_core::{to_query_value, JsonObject};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -78,10 +78,8 @@ impl std::fmt::Display for CredentialOffer {
         match self {
             CredentialOffer::CredentialOfferUri(uri) => {
                 let mut url = Url::parse("openid-credential-offer://").map_err(|_| std::fmt::Error)?;
-                url.query_pairs_mut().append_pair(
-                    "credential_offer_uri",
-                    &url_to_query_value(uri).map_err(|_| std::fmt::Error)?,
-                );
+                url.query_pairs_mut()
+                    .append_pair("credential_offer_uri", &uri.to_string());
                 write!(f, "{}", url)
             }
             CredentialOffer::CredentialOffer(offer) => {
