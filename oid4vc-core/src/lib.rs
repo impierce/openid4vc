@@ -7,12 +7,12 @@ pub mod openid4vc_extension;
 pub mod rfc7519_claims;
 pub mod scope;
 pub mod subject_syntax_type;
-
 pub use authentication::{sign::Sign, subject::Subject, validator::Validator, verify::Verify};
 use rand::{distributions::Alphanumeric, Rng};
 pub use rfc7519_claims::RFC7519Claims;
 use serde::Serialize;
 pub use subject_syntax_type::{DidMethod, SubjectSyntaxType};
+use url::Url;
 
 pub type JsonObject = serde_json::Map<String, serde_json::Value>;
 
@@ -43,6 +43,11 @@ pub fn to_query_value<T: Serialize>(value: &T) -> anyhow::Result<String> {
     serde_json::to_string(value)
         .map(|s| s.chars().filter(|c| !c.is_whitespace()).collect::<String>())
         .map_err(|e| e.into())
+}
+
+// Helper to skip JSON serialization for a URL.
+pub fn url_to_query_value(url: &Url) -> anyhow::Result<String> {
+    Ok(url.to_string())
 }
 
 pub fn generate_authorization_code(length: usize) -> String {
