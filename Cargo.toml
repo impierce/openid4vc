@@ -38,6 +38,7 @@ identity_credential = { version = "1.5", default-features = false, features = [
     "presentation",
     "sd-jwt-vc",
 ] }
+
 is_empty = "0.2"
 jsonwebtoken = "9.3"
 monostate = "0.1"

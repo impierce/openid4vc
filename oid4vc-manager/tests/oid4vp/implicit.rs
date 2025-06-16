@@ -177,7 +177,9 @@
 //             .build()
 //             .unwrap();
 
+
 //     let verifiable_presentation_input = PresentationInputType::Presentation(Box::new(verifiable_presentation));
+
 
 //     // Generate the authorization_response. It will include both an IdToken and a VpToken.
 //     let authorization_response: AuthorizationResponse<OID4VP> = provider_manager
