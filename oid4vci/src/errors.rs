@@ -1,4 +1,4 @@
-use http::{Response, StatusCode};
+use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::fmt::Display;
@@ -77,6 +77,20 @@ impl ErrorStatusCode for AuthorizationErrorResponse {
     }
 }
 
+impl std::error::Error for AuthorizationErrorResponse {}
+impl Display for AuthorizationErrorResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::AccessDenied => write!(f, "Access Denied"),
+            Self::InvalidRequest => write!(f, "Invalid Request"),
+            Self::UnauthorizedClient => write!(f, "Unauthorized Client"),
+            Self::UnsupportedResponseType => write!(f, "Unsupported Response Type"),
+            Self::InvalidScope => write!(f, "Invalid Scope"),
+            Self::ServerError => write!(f, "Server Error"),
+            Self::TemporarilyUnavailable => write!(f, "Temporarily Unavailable"),
+        }
+    }
+}
 /// Token Error Response as defined in OpenID4VCI - draft 13 - Section 6.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-token-error-response
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -98,6 +112,19 @@ impl ErrorStatusCode for TokenErrorResponse {
             Self::UnauthorizedClient => StatusCode::UNAUTHORIZED,
             Self::UnsupportedGrantType => StatusCode::BAD_REQUEST,
             Self::InvalidScope => StatusCode::BAD_REQUEST,
+        }
+    }
+}
+impl std::error::Error for TokenErrorResponse {}
+impl Display for TokenErrorResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidRequest => write!(f, "Invalid Request"),
+            Self::InvalidClient => write!(f, "Invalid Client"),
+            Self::InvalidGrant => write!(f, "Invalid Grant"),
+            Self::UnauthorizedClient => write!(f, "Unauthorized Client"),
+            Self::UnsupportedGrantType => write!(f, "Unsupported Grant Type"),
+            Self::InvalidScope => write!(f, "Invalid Scope"),
         }
     }
 }
@@ -127,6 +154,19 @@ impl ErrorStatusCode for CredentialErrorResponse {
     }
 }
 
+impl std::error::Error for CredentialErrorResponse {}
+impl Display for CredentialErrorResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidCredentialRequest => write!(f, "Invalid Credential Request"),
+            Self::UnsupportedCredentialType => write!(f, "Unsupported Credential Type"),
+            Self::UnsupportedCredentialFormat => write!(f, "Unsupported Credential Format"),
+            Self::InvalidEncryptionParameters => write!(f, "Invalid Encryption Parameters"),
+            Self::InvalidProof => write!(f, "Invalid Proof"),
+            Self::InvalidToken => write!(f, "Invalid Token"),
+        }
+    }
+}
 /// Batch Credential Error Response as defined in OpenID4VCI - draft 13 - Section 8.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-batch-credential-error-resp
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -148,6 +188,19 @@ impl ErrorStatusCode for BatchCredentialErrorResponse {
             Self::InvalidProof => StatusCode::BAD_REQUEST,
             Self::InvalidToken => StatusCode::UNAUTHORIZED,
             Self::InvalidEncryptionParameters => StatusCode::BAD_REQUEST,
+        }
+    }
+}
+impl std::error::Error for BatchCredentialErrorResponse {}
+impl Display for BatchCredentialErrorResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidCredentialRequest => write!(f, "Invalid Credential Request"),
+            Self::UnsupportedCredentialType => write!(f, "Unsupported Credential Type"),
+            Self::UnsupportedCredentialFormat => write!(f, "Unsupported Credential Format"),
+            Self::InvalidProof => write!(f, "Invalid Proof"),
+            Self::InvalidToken => write!(f, "Invalid Token"),
+            Self::InvalidEncryptionParameters => write!(f, "Invalid Encryption Parameters"),
         }
     }
 }
@@ -181,6 +234,21 @@ impl ErrorStatusCode for DeferredCredentialErrorResponse {
     }
 }
 
+impl std::error::Error for DeferredCredentialErrorResponse {}
+impl Display for DeferredCredentialErrorResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidCredentialRequest => write!(f, "Invalid Credential Request"),
+            Self::UnsupportedCredentialType => write!(f, "Unsupported Credential Type"),
+            Self::UnsupportedCredentialFormat => write!(f, "Unsupported Credential Format"),
+            Self::InvalidProof => write!(f, "Invalid Proof"),
+            Self::InvalidToken => write!(f, "Invalid Token"),
+            Self::InvalidEncryptionParameters => write!(f, "Invalid Encryption Parameters"),
+            Self::IssuancePending => write!(f, "Issuance Pending"),
+            Self::InvalidTransactionId => write!(f, "Invalid Transaction ID"),
+        }
+    }
+}
 /// Notification Error Response as defined in OpenID4VCI - draft 13 - Section 10.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-ID1.html#name-notification-error-response
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -200,21 +268,6 @@ impl ErrorStatusCode for NotificationErrorResponse {
     }
 }
 
-pub fn to_http_response<T>(error: OID4VCError<T>) -> Response<OID4VCError<T>>
-where
-    T: ErrorStatusCode + Serialize,
-{
-    let status = error.error.status_code();
-
-    let mut response = Response::new(error);
-    *response.status_mut() = status;
-    response.headers_mut().insert(
-        "Content-Type",
-        http::header::HeaderValue::from_static("application/json"),
-    );
-    response
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -222,16 +275,28 @@ mod tests {
 
     #[test]
     fn test_oid4vc_error() {
-        let response =
-            to_http_response(OID4VCError::new(CredentialErrorResponse::InvalidProof).with_description("Invalid proof"));
+        let error = OID4VCError::new(CredentialErrorResponse::InvalidProof).with_description("Invalid proof");
+        let status = error.error.status_code();
+        let json_body = serde_json::to_string(&error).unwrap();
+
+        let response = http::Response::builder()
+            .status(status)
+            .header("Content-Type", "application/json")
+            .body(json_body)
+            .unwrap();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let body = response.body();
+        let body_value: serde_json::Value = serde_json::from_str(body).unwrap();
+
         assert_eq!(
             json!({
                 "error": "invalid_proof",
                 "error_description": "Invalid proof"
             }),
-            json!(response.body())
+            body_value
         );
+
         assert!(
             response
                 .headers()

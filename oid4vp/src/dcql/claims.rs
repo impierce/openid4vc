@@ -1,5 +1,4 @@
 use super::dcql_query::ClaimQuery;
-
 use validator::ValidationError;
 
 #[derive(Debug)]

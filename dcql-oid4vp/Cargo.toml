@@ -1,0 +1,37 @@
+[package]
+name = "dcql-oid4vp"
+version = "0.1.0"
+edition = "2021"
+description = "Rust implementation of the OpenID Connect OpenID for Verifiable Presentations standard"
+homepage.workspace = true
+keywords = ["oid4vc", "openid4vc", "oid4vp", "OpenID"]
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Fix these dependencies once the crates arre automatically published to crates.io.
+oid4vc-core = { path = "../oid4vc-core" }
+dcql-oid4vc-core = { path = "../dcql-oid4vc-core" }
+dif-presentation-exchange = { path = "../dif-presentation-exchange" }
+oid4vci = { path = "../oid4vci" }
+
+anyhow = "1.0"
+chrono.workspace = true
+futures = "0.3"
+getset.workspace = true
+identity_core.workspace = true
+identity_credential.workspace = true
+is_empty.workspace = true
+jsonwebtoken.workspace = true
+monostate.workspace = true
+reqwest.workspace = true
+reqwest-middleware.workspace = true
+reqwest-retry.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_with.workspace = true
+strum.workspace = true
+tokio.workspace = true
+url.workspace = true
+nutype.workspace = true
+validator.workspace = true

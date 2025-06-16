@@ -1,0 +1,46 @@
+[package]
+name = "dcql-oid4vc-manager"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Fix these dependencies once the crates arre automatically published to crates.io.
+oid4vc-core = { path = "../oid4vc-core" }
+siopv2 = { path = "../siopv2" }
+oid4vp = { path = "../oid4vp" }
+oid4vci = { path = "../oid4vci" }
+dcql-oid4vc-core = { path = "../dcql-oid4vc-core" }
+dcql-oid4vp = { path = "../dcql-oid4vp" }
+
+anyhow = "1.0"
+async-trait = "0.1"
+axum = "0.6"
+axum-auth = "0.4"
+chrono = "0.4"
+derivative = "2.2"
+did-key = "0.2"
+did_url = "0.1"
+futures = "0.3"
+getset.workspace = true
+identity_core.workspace = true
+identity_credential.workspace = true
+jsonwebtoken.workspace = true
+paste = "1.0"
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_urlencoded.workspace = true
+serde_with.workspace = true
+tokio.workspace = true
+tower-http = { version = "0.4", features = ["cors"] }
+url.workspace = true
+
+[dev-dependencies]
+oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
+
+ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
+lazy_static = "1.4"
+rand = "0.8"
+rstest = "0.18"
+uuid = { version = "1.4", features = ["v4", "fast-rng"] }
+wiremock = "0.5"
