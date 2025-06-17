@@ -12,7 +12,7 @@ use oid4vc_manager::{methods::key_method::KeySubject, ProviderManager, RelyingPa
 use oid4vci::VerifiableCredentialJwt;
 use oid4vp::{
     authorization_request::{ClientId, ClientMetadataParameters},
-    oid4vp::DCQLOID4VP,
+    oid4vp::OID4VP,
     ClaimFormatDesignation, ClaimFormatProperty,
 };
 use oid4vp::{
@@ -68,7 +68,7 @@ async fn test_implicit_flow_friday() {
     let relying_party_manager = RelyingPartyManager::new(relying_party, "did:key", vec![Algorithm::EdDSA]).unwrap();
 
     // Create authorization request with response_type `id_token vp_token`
-    let authorization_request = AuthorizationRequest::<Object<DCQLOID4VP>>::builder()
+    let authorization_request = AuthorizationRequest::<Object<OID4VP>>::builder()
         .client_id(ClientId::parse(&relying_party_did).unwrap())
         .redirect_uri("https://example.com".parse::<url::Url>().unwrap())
         .dcql_query(DCQL_QUERY.clone())
@@ -144,7 +144,7 @@ async fn test_implicit_flow_friday() {
         .build()
         .unwrap();
 
-    let authorization_response: AuthorizationResponse<DCQLOID4VP> = provider_manager
+    let authorization_response: AuthorizationResponse<OID4VP> = provider_manager
         .generate_response(&authorization_request, vp_token)
         .await
         .unwrap();

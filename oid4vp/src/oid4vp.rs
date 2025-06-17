@@ -64,9 +64,9 @@ pub enum InputPresentation {
 
 /// This is the [`Extension`] implementation for the [`OID4VP`] extension.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct DCQLOID4VP;
-impl OpenID4VC for DCQLOID4VP {}
-impl Extension for DCQLOID4VP {
+pub struct OID4VP;
+impl OpenID4VC for OID4VP {}
+impl Extension for OID4VP {
     type RequestHandle = RequestHandler;
     type ResponseHandle = ResponseHandler;
 

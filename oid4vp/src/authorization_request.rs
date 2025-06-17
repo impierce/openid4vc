@@ -1,5 +1,5 @@
 use crate::dcql::dcql_query::DcqlQuery;
-use crate::oid4vp::DCQLOID4VP;
+use crate::oid4vp::OID4VP;
 
 use anyhow::{anyhow, Result};
 use dif_presentation_exchange::presentation_definition::ClaimFormatProperty;
@@ -136,7 +136,7 @@ impl AuthorizationRequestBuilder {
     builder_fn!(dcql_query, DcqlQuery);
     builder_fn!(custom_url_scheme, String);
 
-    pub fn build(mut self) -> Result<AuthorizationRequest<Object<DCQLOID4VP>>> {
+    pub fn build(mut self) -> Result<AuthorizationRequest<Object<OID4VP>>> {
         match (self.client_id.take(), self.is_empty()) {
             (None, _) => Err(anyhow!("client_id parameter is required.")),
             (Some(client_id), false) => {
@@ -159,9 +159,9 @@ impl AuthorizationRequestBuilder {
                         .ok_or_else(|| anyhow!("client_metadata or client_metadata_uri is required."))?,
                 };
 
-                Ok(AuthorizationRequest::<Object<DCQLOID4VP>> {
+                Ok(AuthorizationRequest::<Object<OID4VP>> {
                     custom_url_scheme: self.custom_url_scheme.take().unwrap_or("openid".to_string()),
-                    body: Object::<DCQLOID4VP> {
+                    body: Object::<OID4VP> {
                         rfc7519_claims: self.rfc7519_claims,
                         client_id: client_id.to_string(),
                         redirect_uri: self
