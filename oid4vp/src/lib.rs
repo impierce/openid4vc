@@ -1,8 +1,9 @@
+pub mod authorization_request;
 pub mod dcql;
-pub mod dcql_authorization_request;
-pub mod dcql_oid4vp;
 pub mod oid4vp;
 pub mod oid4vp_params;
+pub mod old_authorization_request;
+pub mod old_oid4vp;
 pub mod token;
 
 pub use dif_presentation_exchange::{
