@@ -16,8 +16,8 @@ pub struct VpToken {
 pub enum PresentationFormat {
     LdpVc,
     JwtVcJson(String),
-    DcSdJwt,
-    MsoMdoc,
+    DcSdJwt(String),
+    MsoMdoc(Vec<u8>),
 }
 
 impl VpToken {
