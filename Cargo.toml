@@ -13,12 +13,10 @@ members = [
     "oid4vc-core",
     "oid4vci",
     "oid4vp",
-    "dcql-oid4vp",
     "siopv2",
     "dif-presentation-exchange",
     "oid4vc-manager",
-    "dcql-oid4vc-core",
-    "dcql-oid4vc-manager",
+
 ]
 
 [workspace.package]
