@@ -13,7 +13,7 @@ fn valid_credential_id(s: &str) -> bool {
     s.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-')
 }
 
-#[nutype(validate(predicate = claim_path_not_empty), derive(Debug, Clone, PartialEq, Serialize, Deserialize))]
+#[nutype(validate(predicate = claim_path_not_empty), derive(Debug, Clone, PartialEq, Serialize, Deserialize, AsRef))]
 pub struct ClaimPath(Vec<ClaimPathElement>);
 fn claim_path_not_empty(path: &[ClaimPathElement]) -> bool {
     !path.is_empty()
@@ -120,8 +120,11 @@ pub struct ClaimQuery {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum ClaimPathElement {
+    /// To address a particular claim within an object, append the key (claim name) to the array.
     String(String),
+    /// To address an element within an array, append the index to the array (as a non-negative, 0-based integer).
     Integer(u64),
+    /// To address all elements within an array, append a null value to the array.
     Null,
 }
 
@@ -132,6 +135,31 @@ pub enum ClaimValue {
     Integer(i64),
     Boolean(bool),
 }
+
+//     for element in &self.0 {
+//         match element {
+//             ClaimPathElement::String(key) => {
+//                 current_selections = current_selections
+//                     .into_iter()
+//                     .filter_map(|v| v.get(key).cloned())
+//                     .collect();
+//             }
+//             ClaimPathElement::Integer(index) => {
+//                 current_selections = current_selections
+//                     .into_iter()
+//                     .filter_map(|v| v.get(*index).cloned())
+//                     .collect();
+//             }
+//             ClaimPathElement::Null => {
+//                 current_selections = current_selections
+//                     .into_iter()
+//                     .filter_map(|v| v.get(0).cloned())
+//                     .collect();
+//             }
+//         }
+//     }
+//     current_selections
+// }
 
 #[cfg(test)]
 mod tests {
