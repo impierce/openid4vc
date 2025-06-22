@@ -19,11 +19,21 @@ fn claim_path_not_empty(path: &[ClaimPathElement]) -> bool {
     !path.is_empty()
 }
 
-#[nutype(validate(predicate = claim_values_not_empty), derive(Debug, Clone, PartialEq, Serialize, Deserialize))]
+#[nutype(validate(predicate = claim_values_not_empty), derive(Debug, Clone, PartialEq, Serialize, AsRef, Deserialize))]
 pub struct ClaimValues(Vec<ClaimValue>);
 fn claim_values_not_empty(values: &[ClaimValue]) -> bool {
     !values.is_empty()
 }
+
+// impl ClaimValues {
+//     pub fn as_ref(&self) -> &Vec<String> {
+//         &self.0
+//     }
+//     pub fn into_inner(self) -> Vec<String> {
+//         self.0
+//     }
+// }
+
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Validate)]
 pub struct DcqlQuery {
     pub credentials: Vec<CredentialQuery>,
