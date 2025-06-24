@@ -89,7 +89,7 @@ pub fn evaluate_credential_query(credential_query: &CredentialQuery, credential_
                     .claims
                     .iter()
                     .find(|claim| claim.id.as_ref() == Some(claim_id))
-                    .map_or(false, |claim| evaluate_single_claim_query(claim, credential_json))
+                    .is_some_and(|claim| evaluate_single_claim_query(claim, credential_json))
             })
         }),
     }
