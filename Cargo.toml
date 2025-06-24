@@ -15,7 +15,7 @@ members = [
     "oid4vp",
     "siopv2",
     "dif-presentation-exchange",
-    "oid4vc-manager"
+    "oid4vc-manager",
 ]
 
 [workspace.package]
@@ -27,19 +27,27 @@ repository = "https://github.com/impierce/openid4vc"
 chrono = "0.4"
 getset = "0.1"
 http = "1.3.1"
-identity_core = { git  = "https://github.com/iotaledger/identity", tag = "v1.6.0-alpha.5" }
-identity_credential = { git  = "https://github.com/iotaledger/identity", tag = "v1.6.0-alpha.5", default-features = false, features = ["validator", "credential", "presentation", "sd-jwt-vc"] }
+identity_core = { git = "https://github.com/iotaledger/identity", tag = "v1.6.0-beta.2" }
+identity_credential = { git = "https://github.com/iotaledger/identity", tag = "v1.6.0-beta.2", default-features = false, features = [
+    "validator",
+    "credential",
+    "presentation",
+    "sd-jwt-vc",
+] }
 is_empty = "0.2"
 jsonwebtoken = "9.3"
 monostate = "0.1"
-reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { version = "0.11", default-features = false, features = [
+    "json",
+    "rustls-tls",
+] }
 reqwest-middleware = "0.2"
 reqwest-retry = "0.3"
-serde = { version = "1.0", features = ["derive"]}
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
 serde_with = "3.0"
-tokio = { version = "1.26.0", features = ["rt", "macros", "rt-multi-thread"] }
+tokio = { version = "=1.43", features = ["rt", "macros", "rt-multi-thread"] }
 thiserror = "1.0"
 url = { version = "2", features = ["serde"] }
 
