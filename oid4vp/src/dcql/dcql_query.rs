@@ -2,6 +2,7 @@ use super::claims::{validate_claims, ClaimsContext};
 use super::meta::{validate_meta, MetaContext};
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 use validator::{Validate, ValidationErrors};
 
 #[nutype(
@@ -119,11 +120,11 @@ pub struct TrustedAuthority {
     pub values: Vec<String>,
 }
 
+#[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Validate, Clone)]
 pub struct ClaimQuery {
     pub id: Option<String>,
     pub path: ClaimPath,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub values: Option<ClaimValues>,
 }
 

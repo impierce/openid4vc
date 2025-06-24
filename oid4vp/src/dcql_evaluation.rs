@@ -68,10 +68,9 @@ pub fn evaluate_single_claim_query(claim_query: &ClaimQuery, credential_json: &V
 
 /// Processing with claims_sets as described in OID4VP - draft 28 Section 6.4.1 Selecting Claims:
 /// https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-selecting-claims-and-credentials
-
 pub fn evaluate_credential_query(credential_query: &CredentialQuery, credential_json: &Value) -> bool {
     //If claims is absent, the Verifier is requesting no claims that are selectively disclosable;
-    // the Wallet MUST return only the claims that are mandatory to present (e.g., SD-JWT and Key Binding JWT for a Credential of format IETF SD-JWT VC).
+    //the Wallet MUST return only the claims that are mandatory to present (e.g., SD-JWT and Key Binding JWT for a Credential of format IETF SD-JWT VC).
     if credential_query.claims.is_empty() {
         return true;
     }
@@ -93,5 +92,26 @@ pub fn evaluate_credential_query(credential_query: &CredentialQuery, credential_
                     .map_or(false, |claim| evaluate_single_claim_query(claim, credential_json))
             })
         }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    const TESTCREDENTIAL: &str = include_str!("../tests/examples/credentials/jwt_vc.json");
+
+    #[test]
+    fn test_get_value_from_json() {
+        let testing_credential: Value = serde_json::from_str(TESTCREDENTIAL).unwrap();
+        let path = ClaimPath::try_new(vec![
+            ClaimPathElement::String("vc".to_string()),
+            ClaimPathElement::String("credentialSubject".to_string()),
+            ClaimPathElement::String("given_name".to_string()),
+        ])
+        .unwrap();
+        let values = path.get_values_from_json(&testing_credential);
+        assert_eq!(values, vec![json!("Max")]);
     }
 }

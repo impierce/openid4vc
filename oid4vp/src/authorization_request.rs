@@ -13,6 +13,7 @@ use oid4vc_core::{
     authorization_request::AuthorizationRequest, client_metadata::ClientMetadataResource, scope::Scope, RFC7519Claims,
 };
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 use std::collections::HashMap;
 use std::fmt;
 use strum::Display;
@@ -85,6 +86,7 @@ impl fmt::Display for ClientId {
 }
 
 /// [`AuthorizationRequest`] claims specific to [`OID4VP`].
+#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationRequestParameters {
     pub response_type: MustBe!("vp_token"),
