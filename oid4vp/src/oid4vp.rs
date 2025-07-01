@@ -33,11 +33,11 @@ pub enum PresentationInputType {
     SdJwtVc(String),
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct AuthorizationResponseInput {
-    pub verifiable_presentation_input: PresentationInputType,
-    pub presentation_submission: PresentationSubmission,
-}
+// #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+// pub struct AuthorizationResponseInput {
+//     pub verifiable_presentation_input: PresentationInputType,
+//     pub presentation_submission: PresentationSubmission,
+// }
 
 /// This is the [`RequestHandle`] for the [`OID4VP`] extension.
 #[derive(Debug, PartialEq, Clone)]

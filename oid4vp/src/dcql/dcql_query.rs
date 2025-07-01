@@ -7,7 +7,7 @@ use validator::{Validate, ValidationErrors};
 
 #[nutype(
     validate(not_empty, predicate = valid_credential_id),
-    derive(Debug, Clone, PartialEq, Serialize, Deserialize, Hash, Eq, Display)
+    derive(Debug, Clone, PartialEq, Serialize, Deserialize, Hash, Eq, Display, AsRef)
 )]
 pub struct CredentialId(String);
 fn valid_credential_id(s: &str) -> bool {
@@ -25,15 +25,6 @@ pub struct ClaimValues(Vec<ClaimValue>);
 fn claim_values_not_empty(values: &[ClaimValue]) -> bool {
     !values.is_empty()
 }
-
-// impl ClaimValues {
-//     pub fn as_ref(&self) -> &Vec<String> {
-//         &self.0
-//     }
-//     pub fn into_inner(self) -> Vec<String> {
-//         self.0
-//     }
-// }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Validate)]
 pub struct DcqlQuery {
