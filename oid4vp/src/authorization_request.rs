@@ -6,7 +6,6 @@ use dif_presentation_exchange::presentation_definition::ClaimFormatProperty;
 use dif_presentation_exchange::ClaimFormatDesignation;
 use is_empty::IsEmpty;
 use monostate::MustBe;
-// use nutype::nutype;
 use oid4vc_core::authorization_request::Object;
 use oid4vc_core::builder_fn;
 use oid4vc_core::{
@@ -300,7 +299,7 @@ mod tests {
             from_str::<ExampleAuthorizationRequest>(include_str!(
                 "../tests/examples/authorization_request_chayatest.json"
             ))
-            .unwrap()
+            .unwrap(),
         );
     }
 }
