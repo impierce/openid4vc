@@ -138,31 +138,6 @@ pub enum ClaimValue {
     Boolean(bool),
 }
 
-//     for element in &self.0 {
-//         match element {
-//             ClaimPathElement::String(key) => {
-//                 current_selections = current_selections
-//                     .into_iter()
-//                     .filter_map(|v| v.get(key).cloned())
-//                     .collect();
-//             }
-//             ClaimPathElement::Integer(index) => {
-//                 current_selections = current_selections
-//                     .into_iter()
-//                     .filter_map(|v| v.get(*index).cloned())
-//                     .collect();
-//             }
-//             ClaimPathElement::Null => {
-//                 current_selections = current_selections
-//                     .into_iter()
-//                     .filter_map(|v| v.get(0).cloned())
-//                     .collect();
-//             }
-//         }
-//     }
-//     current_selections
-// }
-
 #[cfg(test)]
 mod tests {
     use super::*;
