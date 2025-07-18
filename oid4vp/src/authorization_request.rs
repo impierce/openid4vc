@@ -15,7 +15,6 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::HashMap;
 use std::fmt;
-use strum::Display;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClientId {
@@ -25,17 +24,32 @@ pub struct ClientId {
 
 /// The Client ID Scheme enables the use of different mechanisms to obtain and validate the Verifier's metadata. As
 /// described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-20.html#name-verifier-metadata-managemen
-#[derive(Serialize, Deserialize, Debug, PartialEq, Display, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum ClientIdPrefix {
     #[serde(rename = "pre-registered")]
     PreRegistered,
     RedirectUri,
     OpenidFederation,
+    #[serde(rename = "did")]
     DecentralizedIdentifier,
     VerifierAttestation,
     X509SanDns,
     X509SanUri,
+}
+
+impl std::fmt::Display for ClientIdPrefix {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ClientIdPrefix::PreRegistered => write!(f, "pre-registered"),
+            ClientIdPrefix::RedirectUri => write!(f, "redirect_uri"),
+            ClientIdPrefix::OpenidFederation => write!(f, "openid_federation"),
+            ClientIdPrefix::DecentralizedIdentifier => write!(f, "did"),
+            ClientIdPrefix::VerifierAttestation => write!(f, "verifier_attestation"),
+            ClientIdPrefix::X509SanDns => write!(f, "x509_san_dns"),
+            ClientIdPrefix::X509SanUri => write!(f, "x509_san_uri"),
+        }
+    }
 }
 
 impl ClientId {
@@ -75,6 +89,9 @@ impl ClientId {
     }
 }
 
+//FIX!
+//FIX!
+
 impl fmt::Display for ClientId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.prefix {
@@ -83,7 +100,6 @@ impl fmt::Display for ClientId {
         }
     }
 }
-
 /// [`AuthorizationRequest`] claims specific to [`OID4VP`].
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
