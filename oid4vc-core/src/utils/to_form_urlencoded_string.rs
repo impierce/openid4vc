@@ -3,7 +3,6 @@ use serde_json::json;
 use serde_urlencoded;
 
 pub fn to_form_urlencoded_string<T: Serialize>(value: &T) -> anyhow::Result<String> {
-    // println!("Before: {:#?}", json!(value));
     let map: serde_json::Map<String, serde_json::Value> = json!(value)
         .as_object()
         .ok_or(anyhow::anyhow!(
@@ -15,11 +14,11 @@ pub fn to_form_urlencoded_string<T: Serialize>(value: &T) -> anyhow::Result<Stri
                 // If nested object or array, stringify it.
                 Some((k.to_owned(), serde_json::Value::String(serde_json::to_string(v).ok()?)))
             }
-            // For all other primitive types (String, Number, Boolean, etc.), clone them directly.
+            // For all other primitive types clone them directly.
             _ => Some((k.to_owned(), v.to_owned())),
         })
         .collect();
 
-    let encoded = serde_urlencoded::to_string(map).map_err(|e| anyhow::anyhow!("Failed to URL-encode map: {}", e))?; // Use anyhow::anyhow
+    let encoded = serde_urlencoded::to_string(map).map_err(|e| anyhow::anyhow!("Failed to URL-encode map: {}", e))?;
     Ok(encoded)
 }

@@ -76,13 +76,8 @@ impl VpTokenBuilder {
         for credential_id in self.presentations.keys() {
             if !credential_queries.contains_key(credential_id) {
                 let mut error = ValidationError::new("invalid_credential_id");
-                error.message = Some(
-                    format!(
-                        "Presentation provided for '{}' which was not requested for.",
-                        credential_id
-                    )
-                    .into(),
-                );
+                error.message =
+                    Some(format!("Presentation provided for '{credential_id}' which was not requested for.").into());
                 errors.add("presentations", error);
             }
         }

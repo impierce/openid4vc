@@ -17,7 +17,7 @@ pub fn validate_meta(meta: &Option<MetaTypes>, ctx: &MetaContext) -> Result<(), 
         (Format::DcSdJwt, MetaTypes::SdJwtMeta { vct_values }) => validate_sd_jwt_vct_values(vct_values),
         (Format::MsoMdoc, MetaTypes::MsoMdocMeta { doctype_value }) => validate_mso_mdoc_doctype(doctype_value),
         (format, meta_value) => Err(ValidationError::new("incorrect_meta_format")
-            .with_message(format!("{:?} is not compatible with format: {:?}", meta_value, format).into())),
+            .with_message(format!("{meta_value:?} is not compatible with format: {format:?}").into())),
     }
 }
 
@@ -29,13 +29,13 @@ fn validate_w3c_type_values(type_values: &[Vec<String>]) -> Result<(), Validatio
     for (i, inner_array) in type_values.iter().enumerate() {
         if inner_array.is_empty() {
             return Err(ValidationError::new("invalid_type_values")
-                .with_message(format!("type_values[{}] cannot be empty", i).into()));
+                .with_message(format!("type_values[{i}] cannot be empty").into()));
         }
 
         for (j, value) in inner_array.iter().enumerate() {
             if value.is_empty() {
                 return Err(ValidationError::new("invalid_type_values")
-                    .with_message(format!("type_values[{}][{}] cannot be empty", i, j).into()));
+                    .with_message(format!("type_values[{i}][{j}] cannot be empty").into()));
             }
         }
     }
@@ -51,7 +51,7 @@ fn validate_sd_jwt_vct_values(vct_values: &[String]) -> Result<(), ValidationErr
     for (i, value) in vct_values.iter().enumerate() {
         if value.is_empty() {
             return Err(ValidationError::new("invalid_vct_values")
-                .with_message(format!("vct_values[{}] cannot be empty", i).into()));
+                .with_message(format!("vct_values[{i}] cannot be empty").into()));
         }
     }
 

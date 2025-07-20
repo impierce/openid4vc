@@ -67,7 +67,7 @@ impl ClientId {
                 "verifier_attestation" => ClientIdPrefix::VerifierAttestation,
                 "x509_san_dns" => ClientIdPrefix::X509SanDns,
                 "x509_san_uri" => ClientIdPrefix::X509SanUri,
-                _ => return Err(format!("Unknown client ID prefix: {}", prefix_str)),
+                _ => return Err(format!("Unknown client ID prefix: {prefix_str}")),
             };
             Ok(Self {
                 prefix,
@@ -88,9 +88,6 @@ impl ClientId {
         &self.identifier
     }
 }
-
-//FIX!
-//FIX!
 
 impl fmt::Display for ClientId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

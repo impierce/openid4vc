@@ -24,7 +24,7 @@ pub fn validate_claims_with_sets(claims: &[ClaimQuery], claim_sets: &[Vec<String
     for (i, claim) in claims.iter().enumerate() {
         if claim.id.is_none() {
             return Err(ValidationError::new("missing_claim_id")
-                .with_message(format!("Claim ID is missing at index {}", i).into()));
+                .with_message(format!("Claim ID is missing at index {i}").into()));
         }
     }
 
@@ -34,7 +34,7 @@ pub fn validate_claims_with_sets(claims: &[ClaimQuery], claim_sets: &[Vec<String
         for (j, id) in set.iter().enumerate() {
             if !claim_ids.contains(&id) {
                 return Err(ValidationError::new("invalid_claim_id")
-                    .with_message(format!("Claim ID '{}' not found in claims at claim_set[{}][{}]", id, i, j).into()));
+                    .with_message(format!("Claim ID '{id}' not found in claims at claim_set[{i}][{j}]").into()));
             }
         }
     }
