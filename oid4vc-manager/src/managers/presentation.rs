@@ -26,7 +26,7 @@ pub fn create_presentation_submission(
                     path: "$".to_string(),
                     path_nested: Some(PathNested {
                         id: None,
-                        path: format!("$.vp.verifiableCredential[{}]", index),
+                        path: format!("$.vp.verifiableCredential[{index}]"),
                         format: ClaimFormatDesignation::JwtVcJson,
                         path_nested: None,
                     }),

@@ -1,77 +1,51 @@
 use did_key::{generate, Ed25519KeyPair};
-use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
+use oid4vc_core::authentication::subject::Subject;
 use oid4vc_core::{
     authorization_request::{AuthorizationRequest, Object},
     authorization_response::AuthorizationResponse,
     client_metadata::ClientMetadataResource,
-    jwt, Subject,
+    jwt,
 };
-use oid4vc_manager::{
-    managers::presentation::create_presentation_submission, methods::key_method::KeySubject, ProviderManager,
-    RelyingPartyManager,
-};
+use oid4vc_manager::{methods::key_method::KeySubject, ProviderManager, RelyingPartyManager};
 use oid4vci::VerifiableCredentialJwt;
 use oid4vp::{
-    authorization_request::ClientMetadataParameters,
-    oid4vp::{AuthorizationResponseInput, PresentationInputType, OID4VP},
-    ClaimFormatDesignation, ClaimFormatProperty, PresentationDefinition,
+    authorization_request::{ClientId, ClientMetadataParameters},
+    oid4vp::OID4VP,
+    ClaimFormatDesignation, ClaimFormatProperty,
+};
+use oid4vp::{
+    dcql::dcql_query::{CredentialId, DcqlQuery},
+    token::vp_token::PresentationFormat,
+    token::vp_token_builder::VpTokenBuilder,
 };
 use serde_json::json;
 use std::{collections::HashMap, sync::Arc};
 
 lazy_static! {
-    pub static ref PRESENTATION_DEFINITION: PresentationDefinition = serde_json::from_value(json!(
-        {
-            "id":"Verifiable Presentation request for sign-on",
-                "input_descriptors":[
-                {
-                    "id":"Request for Ferris's Verifiable Credential",
-                    "constraints":{
-                        "fields":[
-                            {
-                                "path":[
-                                    "$.vc.type"
-                                ],
-                                "filter":{
-                                    "type":"array",
-                                    "contains":{
-                                        "const":"PersonalInformation"
-                                    }
-                                }
-                            },
-                            {
-                                "path":[
-                                    "$.vc.credentialSubject.givenName"
-                                ]
-                            },
-                            {
-                                "path":[
-                                    "$.vc.credentialSubject.familyName"
-                                ]
-                            },
-                            {
-                                "path":[
-                                    "$.vc.credentialSubject.email"
-                                ]
-                            },
-                            {
-                                "path":[
-                                    "$.vc.credentialSubject.birthdate"
-                                ]
-                            }
-                        ]
-                    }
-                }
-            ]
-        }
-    ))
+    pub static ref DCQL_QUERY: DcqlQuery = serde_json::from_value(json!({
+        "credentials": [
+            {
+                "id": "my_credential",
+                "format": "jwt_vc_json",
+                "meta": {
+                    "vct_values": [ "https://www.w3.org/2018/credentials/examples/v1#PersonalInformation" ]
+                },
+                "claims": [
+                    {"path": ["credentialSubject", "familyName"]},
+                    {"path": ["credentialSubject", "givenName"]},
+                    {"path": ["credentialSubject", "email"]},
+                    {"path": ["credentialSubject", "birthdate"]},
+                ]
+            }
+        ]
+    }))
     .unwrap();
 }
 
 #[tokio::test]
-async fn test_implicit_flow() {
+async fn test_implicit_flow_friday() {
     // Create a new issuer.
     let issuer = KeySubject::from_keypair(
         generate::<Ed25519KeyPair>(Some(
@@ -95,9 +69,9 @@ async fn test_implicit_flow() {
 
     // Create authorization request with response_type `id_token vp_token`
     let authorization_request = AuthorizationRequest::<Object<OID4VP>>::builder()
-        .client_id(relying_party_did)
+        .client_id(ClientId::parse(&relying_party_did).unwrap())
         .redirect_uri("https://example.com".parse::<url::Url>().unwrap())
-        .presentation_definition(PRESENTATION_DEFINITION.clone())
+        .dcql_query(DCQL_QUERY.clone())
         .client_metadata(ClientMetadataResource::ClientMetadata {
             client_name: None,
             logo_uri: None,
@@ -149,14 +123,6 @@ async fn test_implicit_flow() {
         .build()
         .unwrap();
 
-    // Create presentation submission using the presentation definition and the verifiable credential.
-    let presentation_submission = create_presentation_submission(
-        "example_jwt_vc_presentation_submission".to_string(),
-        &PRESENTATION_DEFINITION,
-        &vec![serde_json::to_value(&verifiable_credential).unwrap()],
-    )
-    .unwrap();
-
     // Encode the verifiable credential as a JWT.
     let jwt = jwt::encode(
         Arc::new(issuer),
@@ -170,28 +136,19 @@ async fn test_implicit_flow() {
     .await
     .unwrap();
 
-    // Create a verifiable presentation using the JWT.
-    let verifiable_presentation =
-        Presentation::builder(subject_did.parse().unwrap(), identity_core::common::Object::new())
-            .credential(Jwt::from(jwt))
-            .build()
-            .unwrap();
-
-    let verifiable_presentation_input = PresentationInputType::Presentation(Box::new(verifiable_presentation));
-
-    // Generate the authorization_response. It will include both an IdToken and a VpToken.
-    let authorization_response: AuthorizationResponse<OID4VP> = provider_manager
-        .generate_response(
-            &authorization_request,
-            AuthorizationResponseInput {
-                verifiable_presentation_input,
-                presentation_submission,
-            },
+    let vp_token = VpTokenBuilder::builder_dcql_query(DCQL_QUERY.clone())
+        .add_presentation(
+            CredentialId::try_new("my_credential".to_string()).unwrap(),
+            PresentationFormat::JwtVcJson(jwt),
         )
+        .build()
+        .unwrap();
+
+    let authorization_response: AuthorizationResponse<OID4VP> = provider_manager
+        .generate_response(&authorization_request, vp_token)
         .await
         .unwrap();
 
-    // Validate the authorization_response.
     assert!(relying_party_manager
         .validate_response(&authorization_response)
         .await
