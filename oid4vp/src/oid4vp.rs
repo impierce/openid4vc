@@ -1,12 +1,13 @@
 use crate::authorization_request::{
-    AuthorizationRequestBuilder, AuthorizationRequestParameters, ClientMetadataParameters,
+    AuthorizationRequestBuilder, AuthorizationRequestParameters, ClaimFormatDesignation, ClaimFormatProperty,
+    ClientMetadataParameters,
 };
 use crate::token::vp_token::VpToken;
-use dif_presentation_exchange::presentation_definition::ClaimFormatProperty;
-pub use dif_presentation_exchange::{
-    evaluate_input, ClaimFormatDesignation, InputDescriptor, InputDescriptorMappingObject, PathNested,
-    PresentationDefinition, PresentationSubmission,
-};
+// use dif_presentation_exchange::presentation_definition::ClaimFormatProperty;
+// pub use dif_presentation_exchange::{
+//     evaluate_input, ClaimFormatDesignation, InputDescriptor, InputDescriptorMappingObject, PathNested,
+//     PresentationDefinition, PresentationSubmission,
+// };
 use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::Algorithm;
 use oid4vc_core::client_metadata::ClientMetadataResource;
@@ -20,6 +21,7 @@ use reqwest_retry::RetryTransientMiddleware;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::Arc;
+
 // use std::sync::Arc;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -32,12 +34,6 @@ pub enum PresentationInputType {
     Presentation(Box<Presentation<Jwt>>),
     SdJwtVc(String),
 }
-
-// #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-// pub struct AuthorizationResponseInput {
-//     pub verifiable_presentation_input: PresentationInputType,
-//     pub presentation_submission: PresentationSubmission,
-// }
 
 /// This is the [`RequestHandle`] for the [`OID4VP`] extension.
 #[derive(Debug, PartialEq, Clone)]

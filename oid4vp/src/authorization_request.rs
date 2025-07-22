@@ -1,9 +1,8 @@
 use crate::dcql::dcql_query::DcqlQuery;
 use crate::oid4vp::OID4VP;
+use jsonwebtoken::Algorithm;
 
 use anyhow::{anyhow, Result};
-use dif_presentation_exchange::presentation_definition::ClaimFormatProperty;
-use dif_presentation_exchange::ClaimFormatDesignation;
 use is_empty::IsEmpty;
 use monostate::MustBe;
 use oid4vc_core::authorization_request::Object;
@@ -97,6 +96,43 @@ impl fmt::Display for ClientId {
         }
     }
 }
+
+// Its value MUST be an array of one or more format-specific algorithmic identifier references
+// TODO: fix this related to jwt_vc_json and jwt_vp_json: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-e.1
+#[allow(dead_code)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Hash, Clone, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ClaimFormatDesignation {
+    Jwt,
+    JwtVc,
+    JwtVcJson,
+    JwtVp,
+    JwtVpJson,
+    Ldp,
+    LdpVc,
+    LdpVp,
+    AcVc,
+    AcVp,
+    MsoMdoc,
+    #[serde(rename = "dc+sd-jwt")]
+    DcSdJwt,
+}
+
+#[allow(dead_code)]
+#[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ClaimFormatProperty {
+    Alg(Vec<Algorithm>),
+    ProofType(Vec<String>),
+    #[serde(untagged)]
+    SdJwt {
+        #[serde(rename = "sd-jwt_alg_values", default, skip_serializing_if = "Vec::is_empty")]
+        sd_jwt_alg_values: Vec<Algorithm>,
+        #[serde(rename = "kb-jwt_alg_values", default, skip_serializing_if = "Vec::is_empty")]
+        kb_jwt_alg_values: Vec<Algorithm>,
+    },
+}
+
 /// [`AuthorizationRequest`] claims specific to [`OID4VP`].
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -160,7 +196,6 @@ impl AuthorizationRequestBuilder {
                         .dcql_query
                         .take()
                         .ok_or_else(|| anyhow!("presentation_definition parameter is required."))?,
-                    // client_id_scheme: self.client_id_scheme.take(),
                     scope: self.scope.take(),
                     response_mode: self.response_mode.take(),
                     nonce: self
@@ -310,7 +345,7 @@ mod tests {
                 scope: None,
             },
             from_str::<ExampleAuthorizationRequest>(include_str!(
-                "../tests/examples/authorization_request_chayatest.json"
+                "../tests/examples/authorization_request_sample.json"
             ))
             .unwrap(),
         );

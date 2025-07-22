@@ -10,10 +10,10 @@ use oid4vc_core::{
 };
 use oid4vc_manager::{methods::key_method::KeySubject, ProviderManager, RelyingPartyManager};
 use oid4vci::VerifiableCredentialJwt;
+use oid4vp::authorization_request::{ClaimFormatDesignation, ClaimFormatProperty};
 use oid4vp::{
     authorization_request::{ClientId, ClientMetadataParameters},
     oid4vp::OID4VP,
-    ClaimFormatDesignation, ClaimFormatProperty,
 };
 use oid4vp::{
     dcql::dcql_query::{CredentialId, DcqlQuery},
