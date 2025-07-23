@@ -46,14 +46,13 @@ pub struct KeyProofTypeBuilder {
 pub struct ProofOfPossession {
     #[serde(flatten)]
     pub rfc7519_claims: RFC7519Claims,
-    pub nonce: String,
+    pub nonce: Option<String>,
 }
 
 impl KeyProofTypeBuilder {
     pub async fn build(self) -> anyhow::Result<KeyProofType> {
         anyhow::ensure!(self.rfc7519_claims.aud.is_some(), "aud claim is required");
         anyhow::ensure!(self.rfc7519_claims.iat.is_some(), "iat claim is required");
-        anyhow::ensure!(self.nonce.is_some(), "nonce claim is required");
 
         let subject_syntax_type = self
             .subject_syntax_type
@@ -70,7 +69,7 @@ impl KeyProofTypeBuilder {
                     },
                     ProofOfPossession {
                         rfc7519_claims: self.rfc7519_claims,
-                        nonce: self.nonce.ok_or(anyhow::anyhow!("No nonce found"))?,
+                        nonce: self.nonce,
                     },
                     &subject_syntax_type,
                 )

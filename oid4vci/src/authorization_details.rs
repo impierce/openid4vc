@@ -5,8 +5,9 @@ use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
+// TODO: use `nutype`
 /// Represents the `openid_credential` field of the `AuthorizationDetailsObject`.
-#[derive(Debug, Eq, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize, Default, Clone)]
 pub enum OpenidCredential {
     #[default]
     #[serde(rename = "openid_credential")]
@@ -17,7 +18,7 @@ pub enum OpenidCredential {
 /// described in [OpenID4VCI](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-request-issuance-of-a-certa)
 // TODO: Add `credential_configuration_id` field.
 #[skip_serializing_none]
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct AuthorizationDetailsObject<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
@@ -28,9 +29,9 @@ where
     pub credential_configuration_or_format: CredentialConfigurationOrFormat<CFC>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 #[serde(untagged)]
-pub enum CredentialConfigurationOrFormat<CFC = CredentialFormats>
+pub enum CredentialConfigurationOrFormat<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {

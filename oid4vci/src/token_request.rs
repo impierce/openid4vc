@@ -8,6 +8,7 @@ use serde_with::skip_serializing_none;
 pub enum TokenRequest {
     #[serde(rename = "authorization_code")]
     AuthorizationCode {
+        client_id: Option<String>,
         code: String,
         code_verifier: Option<String>,
         redirect_uri: Option<String>,
@@ -35,6 +36,7 @@ mod tests {
             )
             .unwrap(),
             TokenRequest::AuthorizationCode {
+                client_id: None,
                 code: "SplxlOBeZQQYbYS6WxSbIA".to_string(),
                 code_verifier: Some("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string()),
                 redirect_uri: Some("https://Wallet.example.org/cb".to_string()),

@@ -67,6 +67,7 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection + Clone + Deserial
                     )
                     .route("/.well-known/openid-credential-issuer", get(openid_credential_issuer))
                     .route("/credential_offer", get(credential_offer))
+                    .route("/par", post(par))
                     .route("/authorize", get(authorize))
                     .route("/token", post(token))
                     .route("/credential", post(credential))
@@ -134,9 +135,25 @@ async fn credential_offer<S: Storage<CFC>, CFC: CredentialFormatCollection>(
     )
 }
 
+async fn par<S: Storage<CFC>, CFC: CredentialFormatCollection>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
+    Json(_pushed_authorization_request): Json<AuthorizationRequest<CFC>>,
+) -> impl IntoResponse {
+    (
+        StatusCode::CREATED,
+        Json(
+            credential_issuer_manager
+                .storage
+                .get_pushed_authorization_response()
+                .unwrap(),
+        ),
+    )
+}
+
 async fn authorize<S: Storage<CFC>, CFC: CredentialFormatCollection>(
     State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
-    Json(_authorization_request): Json<AuthorizationRequest<CFC>>,
+    // Json(_authorization_request): Json<AuthorizationRequest<CFC>>,
+    Form(_authorization_request): Form<serde_json::Value>,
 ) -> impl IntoResponse {
     (
         // TODO: should be 302 Found + implement proper error response.

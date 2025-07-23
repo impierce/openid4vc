@@ -34,5 +34,9 @@ pub struct AuthorizationServerMetadata {
     pub code_challenge_methods_supported: Option<Vec<String>>,
     #[serde(rename = "pre-authorized_grant_anonymous_access_supported")]
     pub pre_authorized_grant_anonymous_access_supported: Option<bool>,
+    // Pushed Authorization Requests
+    pub pushed_authorization_request_endpoint: Option<Url>,
+    #[serde(default)]
+    pub require_pushed_authorization_requests: Option<bool>,
     // Additional authorization server metadata parameters MAY also be used.
 }

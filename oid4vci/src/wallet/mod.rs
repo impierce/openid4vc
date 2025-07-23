@@ -21,7 +21,10 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
 use serde::de::DeserializeOwned;
+use serde::Serializer;
+use serde_json::json;
 use std::str::FromStr;
+use uuid::Uuid;
 
 #[derive(Debug)]
 pub struct Wallet<CFC = CredentialFormats<WithParameters>>
@@ -33,6 +36,28 @@ where
     pub client: ClientWithMiddleware,
     pub proof_signing_alg_values_supported: Vec<Algorithm>,
     phantom: std::marker::PhantomData<CFC>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+pub struct PushedAuthorizationResponse {
+    #[serde(serialize_with = "uuid_as_urn")]
+    pub request_uri: Uuid,
+    pub expires_in: u64,
+}
+
+// FIXME: Only PAR?
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct AuthorizationRequestByReference {
+    pub client_id: String,
+    #[serde(serialize_with = "uuid_as_urn")]
+    pub request_uri: Uuid,
+}
+
+fn uuid_as_urn<S>(uuid: &Uuid, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&uuid.urn().to_string())
 }
 
 impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
@@ -117,32 +142,104 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .map_err(|_| anyhow::anyhow!("Failed to get credential issuer metadata"))
     }
 
+    pub async fn get_pushed_authorization_response(
+        &self,
+        pushed_authorization_request_endpoint: Url,
+        authorization_details: Vec<AuthorizationDetailsObject<CFC>>,
+        code_challenge: Option<String>,
+        code_challenge_method: Option<String>,
+    ) -> Result<PushedAuthorizationResponse> {
+        let authorization_request = AuthorizationRequest {
+            response_type: "code".to_string(),
+            client_id: self
+                .subject
+                .identifier(
+                    &self
+                        .supported_subject_syntax_types
+                        .first()
+                        .map(ToString::to_string)
+                        .ok_or(anyhow!("No supported subject syntax types found."))?,
+                    self.proof_signing_alg_values_supported[0],
+                )
+                .await?,
+            redirect_uri: None,
+            scope: None,
+            state: None,
+            authorization_details,
+            // FIXME
+            issuer_state: None,
+            code_challenge,
+            code_challenge_method,
+        };
+
+        self.client
+            .post(pushed_authorization_request_endpoint)
+            .json(&authorization_request)
+            .send()
+            .await?
+            .json::<PushedAuthorizationResponse>()
+            .await
+            .map_err(|_| anyhow::anyhow!("Failed to send pushed authorization request"))
+    }
+
     pub async fn get_authorization_code(
         &self,
         authorization_endpoint: Url,
         authorization_details: Vec<AuthorizationDetailsObject<CFC>>,
+        code_challenge: Option<String>,
+        code_challenge_method: Option<String>,
+        pushed_authorization_response: Option<PushedAuthorizationResponse>,
     ) -> Result<AuthorizationResponse> {
+        let client_id = self
+            .subject
+            .identifier(
+                &self
+                    .supported_subject_syntax_types
+                    .first()
+                    .map(ToString::to_string)
+                    .ok_or(anyhow!("No supported subject syntax types found."))?,
+                self.proof_signing_alg_values_supported[0],
+            )
+            .await?;
+
+        // FIXME: clean this mess up
+        if let Some(pushed_response) = pushed_authorization_response {
+            let authorization_request = json!({
+                "client_id": client_id,
+                "request_uri": pushed_response.request_uri.to_string(),
+            });
+
+            return Ok(self
+                .client
+                .get(authorization_endpoint)
+                // TODO: implement method to convert AuthorizationRequest to form parameters
+                .form(&authorization_request)
+                .send()
+                .await?
+                .json::<AuthorizationResponse>()
+                .await
+                .unwrap());
+            // .map_err(|_| anyhow::anyhow!("Failed to get authorization code"));
+        }
+
+        // FIXME: implement URL form encoding for AuthorizationRequest
+        let authorization_request = AuthorizationRequest {
+            response_type: "code".to_string(),
+            client_id,
+            redirect_uri: None,
+            scope: None,
+            state: None,
+            authorization_details,
+            // FIXME
+            issuer_state: None,
+            code_challenge,
+            code_challenge_method,
+        };
+
         self.client
             .get(authorization_endpoint)
-            // TODO: must be `form`, but `AuthorizationRequest needs to be able to serilalize properly.
-            .json(&AuthorizationRequest {
-                response_type: "code".to_string(),
-                client_id: self
-                    .subject
-                    .identifier(
-                        &self
-                            .supported_subject_syntax_types
-                            .first()
-                            .map(ToString::to_string)
-                            .ok_or(anyhow!("No supported subject syntax types found."))?,
-                        self.proof_signing_alg_values_supported[0],
-                    )
-                    .await?,
-                redirect_uri: None,
-                scope: None,
-                state: None,
-                authorization_details,
-            })
+            // TODO: implement method to convert AuthorizationRequest to form parameters
+            .form(&authorization_request)
             .send()
             .await?
             .json::<AuthorizationResponse>()
@@ -231,33 +328,33 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
         let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
 
+        let mut key_proof_type_builder = KeyProofType::builder()
+            .proof_type(ProofType::Jwt)
+            .algorithm(signing_algorithm)
+            .signer(self.subject.clone())
+            .iss(
+                self.subject
+                    .identifier(&subject_syntax_type.to_string(), signing_algorithm)
+                    .await?,
+            )
+            .aud(credential_issuer_metadata.credential_issuer)
+            .iat(chrono::Utc::now().timestamp());
+
+        // TODO: in certain cases the `c_nonce` is required, so we need to validate that.
+        if let Some(c_nonce) = token_response.c_nonce.as_ref() {
+            key_proof_type_builder = key_proof_type_builder.nonce(c_nonce.clone());
+        }
+
+        let proof = Some(
+            key_proof_type_builder
+                .subject_syntax_type(subject_syntax_type.to_string())
+                .build()
+                .await?,
+        );
+
         let credential_request = CredentialRequest {
             credential_format,
-            proof: Some(
-                KeyProofType::builder()
-                    .proof_type(ProofType::Jwt)
-                    .algorithm(signing_algorithm)
-                    .signer(self.subject.clone())
-                    .iss(
-                        self.subject
-                            .identifier(&subject_syntax_type.to_string(), signing_algorithm)
-                            .await?,
-                    )
-                    .aud(credential_issuer_metadata.credential_issuer)
-                    // TODO: Use current time.
-                    .iat(1571324800)
-                    // TODO: so is this REQUIRED or OPTIONAL?
-                    .nonce(
-                        token_response
-                            .c_nonce
-                            .as_ref()
-                            .ok_or(anyhow::anyhow!("No c_nonce found."))?
-                            .clone(),
-                    )
-                    .subject_syntax_type(subject_syntax_type.to_string())
-                    .build()
-                    .await?,
-            ),
+            proof,
         };
 
         self.client
@@ -285,27 +382,25 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
         let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
 
+        let mut key_proof_type_builder = KeyProofType::builder()
+            .proof_type(ProofType::Jwt)
+            .algorithm(signing_algorithm)
+            .signer(self.subject.clone())
+            .iss(
+                self.subject
+                    .identifier(&subject_syntax_type.to_string(), signing_algorithm)
+                    .await?,
+            )
+            .aud(credential_issuer_metadata.credential_issuer)
+            .iat(chrono::Utc::now().timestamp());
+
+        // TODO: in certain cases the `c_nonce` is required, so we need to validate that.
+        if let Some(c_nonce) = token_response.c_nonce.as_ref() {
+            key_proof_type_builder = key_proof_type_builder.nonce(c_nonce.clone());
+        }
+
         let proof = Some(
-            KeyProofType::builder()
-                .proof_type(ProofType::Jwt)
-                .algorithm(signing_algorithm)
-                .signer(self.subject.clone())
-                .iss(
-                    self.subject
-                        .identifier(&subject_syntax_type.to_string(), signing_algorithm)
-                        .await?,
-                )
-                .aud(credential_issuer_metadata.credential_issuer)
-                // TODO: Use current time.
-                .iat(1571324800)
-                // TODO: so is this REQUIRED or OPTIONAL?
-                .nonce(
-                    token_response
-                        .c_nonce
-                        .as_ref()
-                        .ok_or(anyhow::anyhow!("No c_nonce found."))?
-                        .clone(),
-                )
+            key_proof_type_builder
                 .subject_syntax_type(subject_syntax_type.to_string())
                 .build()
                 .await?,

@@ -6,6 +6,7 @@ use oid4vc_manager::{
     managers::credential_issuer::CredentialIssuerManager, methods::key_method::KeySubject,
     servers::credential_issuer::Server,
 };
+use oid4vci::pkce;
 use oid4vci::{
     authorization_details::{AuthorizationDetailsObject, CredentialConfigurationOrFormat, OpenidCredential},
     credential_format_profiles::{CredentialFormats, WithParameters},
@@ -69,10 +70,17 @@ async fn test_authorization_code_flow() {
         .unwrap()
         .clone();
 
-    // Get the authorization code.
-    let authorization_response = wallet
-        .get_authorization_code(
-            authorization_server_metadata.authorization_endpoint.unwrap(),
+    // Generate a random 128-byte code verifier (must be between 43 and 128 bytes)
+    let code_verify = pkce::code_verifier(128);
+    // Generate an encrypted code challenge accordingly
+    let code_challenge = pkce::code_challenge(&code_verify);
+
+    let pushed_authorization_response = wallet
+        .get_pushed_authorization_response(
+            authorization_server_metadata
+                .pushed_authorization_request_endpoint
+                .clone()
+                .unwrap(),
             vec![AuthorizationDetailsObject {
                 r#type: OpenidCredential::Type,
                 locations: None,
@@ -81,11 +89,26 @@ async fn test_authorization_code_flow() {
                 ),
             }
             .into()],
+            Some(code_challenge),
+            Some("S256".to_string()),
+        )
+        .await
+        .unwrap();
+
+    // Get the authorization code.
+    let authorization_response = wallet
+        .get_authorization_code(
+            authorization_server_metadata.authorization_endpoint.unwrap(),
+            vec![],
+            None,
+            None,
+            Some(pushed_authorization_response),
         )
         .await
         .unwrap();
 
     let token_request = TokenRequest::AuthorizationCode {
+        client_id: Some(wallet.subject.identifier("did:key", Algorithm::EdDSA).await.unwrap()),
         code: authorization_response.code,
         code_verifier: None,
         redirect_uri: None,

@@ -13,11 +13,13 @@ use oid4vci::{
     credential_response::{CredentialResponse, CredentialResponseType},
     token_request::TokenRequest,
     token_response::TokenResponse,
+    wallet::PushedAuthorizationResponse,
     VerifiableCredentialJwt,
 };
 use reqwest::Url;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
+use uuid::Uuid;
 
 lazy_static! {
     pub static ref CODE: String = generate_authorization_code(16);
@@ -27,6 +29,7 @@ lazy_static! {
     };
     pub static ref ACCESS_TOKEN: String = "czZCaGRSa3F0MzpnWDFmQmF0M2JW".to_string();
     pub static ref C_NONCE: String = "tZignsnFbp".to_string();
+    pub static ref REQUEST_URI: Uuid = Uuid::new_v4();
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -54,6 +57,13 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
         ]
         .into_iter()
         .collect()
+    }
+
+    fn get_pushed_authorization_response(&self) -> Option<PushedAuthorizationResponse> {
+        Some(PushedAuthorizationResponse {
+            request_uri: REQUEST_URI.clone(),
+            expires_in: 3600,
+        })
     }
 
     fn get_authorization_code(&self) -> Option<AuthorizationCode> {
