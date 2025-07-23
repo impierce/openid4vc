@@ -17,8 +17,6 @@ members = [
     "dif-presentation-exchange",
     "oid4vc-manager",
 
-]
-
 [workspace.package]
 homepage = "https://www.impierce.com/"
 license = "Apache-2.0"
@@ -28,15 +26,15 @@ repository = "https://github.com/impierce/openid4vc"
 nutype = { version = "0.6.1", features = ["serde"] }
 chrono = "0.4"
 getset = "0.1"
-http = "1.3"
-identity_core = { version = "1.5" }
-identity_credential = { version = "1.5", default-features = false, features = [
+
+http = "1.3.1"
+identity_core = { git = "https://github.com/iotaledger/identity", tag = "v1.6.0-beta.3" }
+identity_credential = { git = "https://github.com/iotaledger/identity", tag = "v1.6.0-beta.3", default-features = false, features = [
     "validator",
     "credential",
     "presentation",
     "sd-jwt-vc",
 ] }
-
 is_empty = "0.2"
 jsonwebtoken = "9.3"
 monostate = "0.1"
@@ -52,7 +50,7 @@ serde_urlencoded = "0.7"
 serde_with = "3.0"
 strum = { version = "0.27", features = ["derive"] }
 strum_macros = "0.27"
-tokio = { version = "1.26.0", features = ["rt", "macros", "rt-multi-thread"] }
+tokio = { version = "1.44.2", features = ["rt", "macros", "rt-multi-thread"] }
 thiserror = "1.0"
 url = { version = "2", features = ["serde"] }
 validator = { version = "0.19", features = ["derive"] }
