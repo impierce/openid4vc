@@ -20,14 +20,6 @@ pub enum PresentationFormat {
     MsoMdoc(Vec<u8>),
 }
 
-impl VpToken {
-    pub fn new() -> Self {
-        Self {
-            presentations: HashMap::new(),
-        }
-    }
-
-    pub fn builder() -> VpTokenBuilder {
-        VpTokenBuilder::new()
-    }
+pub fn builder() -> VpTokenBuilder {
+    VpTokenBuilder::new()
 }

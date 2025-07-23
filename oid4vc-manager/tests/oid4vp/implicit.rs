@@ -45,7 +45,7 @@ lazy_static! {
 }
 
 #[tokio::test]
-async fn test_implicit_flow_friday() {
+async fn test_implicit_flow() {
     // Create a new issuer.
     let issuer = KeySubject::from_keypair(
         generate::<Ed25519KeyPair>(Some(

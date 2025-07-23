@@ -10,12 +10,6 @@ pub struct VpTokenBuilder {
     dcql_query: Option<DcqlQuery>,
 }
 
-impl Default for VpToken {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl VpTokenBuilder {
     pub fn new() -> Self {
         Self::default()

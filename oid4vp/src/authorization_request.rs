@@ -1,6 +1,5 @@
 use crate::dcql::dcql_query::DcqlQuery;
 use crate::oid4vp::OID4VP;
-
 use anyhow::{anyhow, Result};
 use dif_presentation_exchange::presentation_definition::ClaimFormatProperty;
 use dif_presentation_exchange::ClaimFormatDesignation;
@@ -34,7 +33,7 @@ pub enum ClientIdPrefix {
     DecentralizedIdentifier,
     VerifierAttestation,
     X509SanDns,
-    X509SanUri,
+    X509Hash,
 }
 
 impl std::fmt::Display for ClientIdPrefix {
@@ -46,7 +45,7 @@ impl std::fmt::Display for ClientIdPrefix {
             ClientIdPrefix::DecentralizedIdentifier => write!(f, "decentralized_identifier"),
             ClientIdPrefix::VerifierAttestation => write!(f, "verifier_attestation"),
             ClientIdPrefix::X509SanDns => write!(f, "x509_san_dns"),
-            ClientIdPrefix::X509SanUri => write!(f, "x509_san_uri"),
+            ClientIdPrefix::X509Hash => write!(f, "x509_hash"),
         }
     }
 }
@@ -62,10 +61,10 @@ impl ClientId {
                 "pre-registered" => ClientIdPrefix::PreRegistered,
                 "redirect_uri" => ClientIdPrefix::RedirectUri,
                 "openid_federation" => ClientIdPrefix::OpenidFederation,
-                "decentralized_identifier" => ClientIdPrefix::DecentralizedIdentifier,
+                "did" => ClientIdPrefix::DecentralizedIdentifier,
                 "verifier_attestation" => ClientIdPrefix::VerifierAttestation,
                 "x509_san_dns" => ClientIdPrefix::X509SanDns,
-                "x509_san_uri" => ClientIdPrefix::X509SanUri,
+                "x509_hash" => ClientIdPrefix::X509Hash,
                 _ => return Err(format!("Unknown client ID prefix: {prefix_str}")),
             };
             Ok(Self {
@@ -200,7 +199,6 @@ mod tests {
         ClaimPath, ClaimPathElement, ClaimQuery, CredentialId, CredentialQuery, DcqlQuery, Format, MetaTypes,
     };
     use jsonwebtoken::Algorithm;
-    // use nutype::try_new;
     use serde_json::from_str;
 
     fn test_credential_id(id: &str) -> CredentialId {

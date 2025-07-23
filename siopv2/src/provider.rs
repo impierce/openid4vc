@@ -1,6 +1,6 @@
 use anyhow::Result;
 use jsonwebtoken::Algorithm;
-use oid4vc_core::utils::to_form_urlencoded_string::to_form_urlencoded_string;
+use oid4vc_core::utils::form_urlencoded::to_form_urlencoded_string;
 use oid4vc_core::{
     authentication::subject::SigningSubject,
     authorization_request::{AuthorizationRequest, Body, ByReference, ByValue, Object},
@@ -153,7 +153,7 @@ impl Provider {
         authorization_response: &AuthorizationResponse<E>,
     ) -> Result<StatusCode> {
         let encoded = to_form_urlencoded_string(&authorization_response)
-            .map_err(|_| anyhow::anyhow!("Failed to encode authorization response:"))?;
+            .map_err(|err| anyhow::anyhow!("Failed to encode authorization response:{err}"))?;
 
         Ok(self
             .client

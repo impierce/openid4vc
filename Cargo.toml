@@ -16,14 +16,13 @@ members = [
     "siopv2",
     "dif-presentation-exchange",
     "oid4vc-manager",
-
+]
 [workspace.package]
 homepage = "https://www.impierce.com/"
 license = "Apache-2.0"
 repository = "https://github.com/impierce/openid4vc"
 
 [workspace.dependencies]
-nutype = { version = "0.6.1", features = ["serde"] }
 chrono = "0.4"
 getset = "0.1"
 
@@ -38,6 +37,7 @@ identity_credential = { git = "https://github.com/iotaledger/identity", tag = "v
 is_empty = "0.2"
 jsonwebtoken = "9.3"
 monostate = "0.1"
+nutype = { version = "0.6.1", features = ["serde"] }
 reqwest = { version = "0.11", default-features = false, features = [
     "json",
     "rustls-tls",

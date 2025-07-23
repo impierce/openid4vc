@@ -7,7 +7,6 @@ pub use dif_presentation_exchange::{
     evaluate_input, ClaimFormatDesignation, InputDescriptor, InputDescriptorMappingObject, PathNested,
     PresentationDefinition, PresentationSubmission,
 };
-use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::Algorithm;
 use oid4vc_core::client_metadata::ClientMetadataResource;
 use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};
@@ -20,24 +19,11 @@ use reqwest_retry::RetryTransientMiddleware;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::Arc;
-// use std::sync::Arc;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationResponseParameters {
     pub vp_token: VpToken,
 }
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub enum PresentationInputType {
-    Presentation(Box<Presentation<Jwt>>),
-    SdJwtVc(String),
-}
-
-// #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-// pub struct AuthorizationResponseInput {
-//     pub verifiable_presentation_input: PresentationInputType,
-//     pub presentation_submission: PresentationSubmission,
-// }
 
 /// This is the [`RequestHandle`] for the [`OID4VP`] extension.
 #[derive(Debug, PartialEq, Clone)]
@@ -69,6 +55,17 @@ impl OpenID4VC for OID4VP {}
 impl Extension for OID4VP {
     type RequestHandle = RequestHandler;
     type ResponseHandle = ResponseHandler;
+
+    async fn generate_token(
+        _subject: Arc<dyn Subject + 'static>,
+        _client_id: &str,
+        _extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
+        _user_input: &<Self::ResponseHandle as ResponseHandle>::Input,
+        _subject_syntax_type: impl TryInto<SubjectSyntaxType>,
+        _signing_algorithm: impl TryInto<Algorithm>,
+    ) -> anyhow::Result<Vec<String>> {
+        Ok(vec![])
+    }
 
     // TODO: combine this function with `get_relying_party_supported_syntax_types`.
     async fn get_relying_party_supported_algorithms(
@@ -168,16 +165,6 @@ impl Extension for OID4VP {
             state,
             extension: AuthorizationResponseParameters { vp_token: user_input },
         })
-    }
-    async fn generate_token(
-        _subject: Arc<dyn Subject + 'static>,
-        _client_id: &str,
-        _extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
-        _user_input: &<Self::ResponseHandle as ResponseHandle>::Input,
-        _subject_syntax_type: impl TryInto<SubjectSyntaxType>,
-        _signing_algorithm: impl TryInto<Algorithm>,
-    ) -> anyhow::Result<Vec<String>> {
-        Ok(vec![])
     }
 
     async fn decode_authorization_response(
