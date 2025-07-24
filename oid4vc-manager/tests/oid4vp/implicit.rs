@@ -16,7 +16,7 @@ use oid4vp::{
     ClaimFormatDesignation, ClaimFormatProperty,
 };
 use oid4vp::{
-    dcql::dcql_query::{CredentialId, DcqlQuery},
+    dcql::dcql_query::{CredentialQueryId, DcqlQuery},
     token::vp_token::PresentationFormat,
     token::vp_token_builder::VpTokenBuilder,
 };
@@ -138,7 +138,7 @@ async fn test_implicit_flow() {
 
     let vp_token = VpTokenBuilder::builder_dcql_query(DCQL_QUERY.clone())
         .add_presentation(
-            CredentialId::try_new("my_credential".to_string()).unwrap(),
+            CredentialQueryId::try_new("my_credential".to_string()).unwrap(),
             PresentationFormat::JwtVcJson(jwt),
         )
         .build()

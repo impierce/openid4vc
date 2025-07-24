@@ -1,4 +1,4 @@
-use crate::dcql::dcql_query::{CredentialId, CredentialQuery, DcqlQuery};
+use crate::dcql::dcql_query::{CredentialQuery, CredentialQueryId, DcqlQuery};
 use crate::token::vp_token::{PresentationFormat, VpToken};
 use anyhow::Result;
 use std::collections::HashMap;
@@ -6,7 +6,7 @@ use validator::{Validate, ValidationError, ValidationErrors};
 
 #[derive(Default, Validate)]
 pub struct VpTokenBuilder {
-    presentations: HashMap<CredentialId, Vec<PresentationFormat>>,
+    presentations: HashMap<CredentialQueryId, Vec<PresentationFormat>>,
     dcql_query: Option<DcqlQuery>,
 }
 
@@ -22,13 +22,17 @@ impl VpTokenBuilder {
         }
     }
 
-    pub fn add_presentation(mut self, credential_id: CredentialId, presentation: PresentationFormat) -> Self {
+    pub fn add_presentation(mut self, credential_id: CredentialQueryId, presentation: PresentationFormat) -> Self {
         self.presentations.entry(credential_id).or_default().push(presentation);
         self
     }
 
     /// for multiple presentations for the same credential_id
-    pub fn add_presentations(mut self, credential_id: CredentialId, presentations: Vec<PresentationFormat>) -> Self {
+    pub fn add_presentations(
+        mut self,
+        credential_id: CredentialQueryId,
+        presentations: Vec<PresentationFormat>,
+    ) -> Self {
         self.presentations.insert(credential_id, presentations);
         self
     }
@@ -48,7 +52,7 @@ impl VpTokenBuilder {
     fn validate_against_dcql(&self, dcql_query: &DcqlQuery) -> Result<(), ValidationErrors> {
         let mut errors = ValidationErrors::new();
 
-        let credential_queries: HashMap<CredentialId, &CredentialQuery> =
+        let credential_queries: HashMap<CredentialQueryId, &CredentialQuery> =
             dcql_query.credentials.iter().map(|cq| (cq.id.clone(), cq)).collect();
 
         // Check to see if all required credentials are present.

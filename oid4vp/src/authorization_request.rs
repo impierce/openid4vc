@@ -196,13 +196,13 @@ impl AuthorizationRequestBuilder {
 mod tests {
     use super::*;
     use crate::dcql::dcql_query::{
-        ClaimPath, ClaimPathElement, ClaimQuery, CredentialId, CredentialQuery, DcqlQuery, Format, MetaTypes,
+        ClaimPath, ClaimPathElement, ClaimQuery, CredentialQuery, CredentialQueryId, DcqlQuery, Format, MetaTypes,
     };
     use jsonwebtoken::Algorithm;
     use serde_json::from_str;
 
-    fn test_credential_id(id: &str) -> CredentialId {
-        CredentialId::try_new(id.to_string()).unwrap()
+    fn test_credential_query_id(id: &str) -> CredentialQueryId {
+        CredentialQueryId::try_new(id.to_string()).unwrap()
     }
 
     fn test_claim_path(elements: Vec<ClaimPathElement>) -> ClaimPath {
@@ -271,7 +271,7 @@ mod tests {
                 }),
                 dcql_query: DcqlQuery {
                     credentials: vec![CredentialQuery {
-                        id: test_credential_id("my_credential"),
+                        id: test_credential_query_id("my_credential"),
                         format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
