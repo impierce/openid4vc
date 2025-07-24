@@ -27,7 +27,7 @@ impl Display for SubjectSyntaxType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             SubjectSyntaxType::JwkThumbprint => write!(f, "urn:ietf:params:oauth:jwk-thumbprint"),
-            SubjectSyntaxType::Did(did_method) => write!(f, "{}", did_method),
+            SubjectSyntaxType::Did(did_method) => write!(f, "{did_method}"),
         }
     }
 }
