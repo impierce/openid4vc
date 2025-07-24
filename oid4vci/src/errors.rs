@@ -44,7 +44,7 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Error: {:?}", self.error)?;
         if let Some(desc) = &self.error_description {
-            write!(f, " - {}", desc)?;
+            write!(f, " - {desc}")?;
         }
         Ok(())
     }
