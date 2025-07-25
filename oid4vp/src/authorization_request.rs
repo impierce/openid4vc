@@ -195,18 +195,17 @@ impl AuthorizationRequestBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dcql::dcql_query::{
-        ClaimPath, ClaimPathElement, ClaimQuery, CredentialQuery, CredentialQueryId, DcqlQuery, Format, MetaTypes,
-    };
+    use crate::dcql::dcql_query::{ClaimQuery, CredentialQuery, CredentialQueryId, DcqlQuery, Format, MetaTypes};
     use jsonwebtoken::Algorithm;
+    use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer};
     use serde_json::from_str;
 
     fn test_credential_query_id(id: &str) -> CredentialQueryId {
         CredentialQueryId::try_new(id.to_string()).unwrap()
     }
 
-    fn test_claim_path(elements: Vec<ClaimPathElement>) -> ClaimPath {
-        ClaimPath::try_new(elements).unwrap()
+    fn test_claim_path(elements: Vec<ClaimPathElement>) -> ClaimPathPointer {
+        ClaimPathPointer::try_new(elements).unwrap()
     }
 
     #[test]
@@ -278,7 +277,7 @@ mod tests {
                             vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: None,

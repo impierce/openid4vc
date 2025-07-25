@@ -1,7 +1,7 @@
 use super::claims::{validate_claims, ClaimsContext};
 use super::meta::{validate_meta, MetaContext};
 use nutype::nutype;
-use oid4vc_core::utils::predicates::not_empty;
+use oid4vc_core::claim_path_pointer::{ClaimPathPointer, ClaimValues};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::HashSet;
@@ -15,12 +15,6 @@ pub struct CredentialQueryId(String);
 fn valid_credential_query_id(s: &str) -> bool {
     s.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-')
 }
-
-#[nutype(validate(predicate = not_empty), derive(Debug, Clone, PartialEq, Serialize, Deserialize, AsRef))]
-pub struct ClaimPath(Vec<ClaimPathElement>);
-
-#[nutype(validate(predicate = not_empty), derive(Debug, Clone, PartialEq, Serialize, AsRef, Deserialize))]
-pub struct ClaimValues(Vec<ClaimValue>);
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Validate)]
 pub struct DcqlQuery {
@@ -141,32 +135,14 @@ pub struct TrustedAuthority {
 pub struct ClaimQuery {
     //TODO: Use nutype for id, see CredentialQueryId as reference.
     pub id: Option<String>,
-    pub path: ClaimPath,
+    pub path: ClaimPathPointer,
     pub values: Option<ClaimValues>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-#[serde(untagged)]
-pub enum ClaimPathElement {
-    /// To address a particular claim within an object, append the key (claim name) to the array.
-    String(String),
-    /// To address an element within an array, append the index to the array (as a non-negative, 0-based integer).
-    Integer(u64),
-    /// To address all elements within an array, append a null value to the array.
-    Null,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-#[serde(untagged)]
-pub enum ClaimValue {
-    String(String),
-    Integer(i64),
-    Boolean(bool),
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer, ClaimValue, ClaimValues};
     use serde_json::from_str;
     // OID4VP Credential Test Examples from
     // https://github.com/openid/OpenID4VP/tree/main/examples/query_lang
@@ -175,8 +151,8 @@ mod tests {
         CredentialQueryId::try_new(id.to_string()).unwrap()
     }
 
-    fn test_claim_path(elements: Vec<ClaimPathElement>) -> ClaimPath {
-        ClaimPath::try_new(elements).unwrap()
+    fn test_claim_path(elements: Vec<ClaimPathElement>) -> ClaimPathPointer {
+        ClaimPathPointer::try_new(elements).unwrap()
     }
 
     fn test_claim_values(values: Vec<ClaimValue>) -> ClaimValues {
@@ -194,7 +170,7 @@ mod tests {
                         doctype_value: "org.iso.7367.1.mVRC".to_string()
                     }),
                     trusted_authorities: None,
-                    require_cryptographic_holder_binding: None,
+                    require_cryptographic_holder_binding: Some(true),
                     claims: vec![
                         ClaimQuery {
                             id: None,
@@ -233,7 +209,7 @@ mod tests {
                         vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
                     }),
                     trusted_authorities: None,
-                    require_cryptographic_holder_binding: None,
+                    require_cryptographic_holder_binding: Some(true),
                     claims: vec![
                         ClaimQuery {
                             id: None,
@@ -274,7 +250,7 @@ mod tests {
                         vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
                     }),
                     trusted_authorities: None,
-                    require_cryptographic_holder_binding: None,
+                    require_cryptographic_holder_binding: Some(true),
                     claims: vec![
                         ClaimQuery {
                             id: None,
@@ -326,7 +302,7 @@ mod tests {
                         vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
                     }),
                     trusted_authorities: None,
-                    require_cryptographic_holder_binding: None,
+                    require_cryptographic_holder_binding: Some(true),
                     claims: vec![
                         ClaimQuery {
                             id: Some("a".to_string()),
@@ -377,7 +353,7 @@ mod tests {
                             vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: None,
@@ -408,7 +384,7 @@ mod tests {
                             doctype_value: "org.iso.7367.1.mVRC".to_string(),
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: None,
@@ -450,7 +426,7 @@ mod tests {
                             doctype_value: "org.iso.18013.5.1.mDL".to_string(),
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: Some("given_name".to_string()),
@@ -487,7 +463,7 @@ mod tests {
                             doctype_value: "org.iso.18013.5.1.mDL".to_string(),
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: Some("resident_address".to_string()),
@@ -516,7 +492,7 @@ mod tests {
                             doctype_value: "org.iso.23220.photoid.1".to_string(),
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: Some("given_name".to_string()),
@@ -553,7 +529,7 @@ mod tests {
                             doctype_value: "org.iso.23220.photoid.1".to_string(),
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: Some("resident_address".to_string()),
@@ -578,7 +554,7 @@ mod tests {
                 credential_sets: Some(vec![
                     CredentialSetQuery {
                         options: vec![vec!["mdl-id".to_string()], vec!["photo_card-id".to_string()]],
-                        required: None
+                        required: Some(true),
                     },
                     CredentialSetQuery {
                         options: vec![vec!["mdl-address".to_string()], vec!["photo_card-address".to_string()]],
@@ -603,7 +579,7 @@ mod tests {
                             vct_values: vec!["https://credentials.example.com/identity_credential".to_string()],
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: None,
@@ -634,7 +610,7 @@ mod tests {
                             vct_values: vec!["https://othercredentials.example/pid".to_string()],
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: None,
@@ -665,7 +641,7 @@ mod tests {
                             vct_values: vec!["https://credentials.example.com/reduced_identity_credential".to_string()],
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: None,
@@ -688,7 +664,7 @@ mod tests {
                             vct_values: vec!["https://cred.example/residence_credential".to_string()],
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: None,
@@ -716,7 +692,7 @@ mod tests {
                             vct_values: vec!["https://company.example/company_rewards".to_string()],
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![ClaimQuery {
                             id: None,
                             path: test_claim_path(vec![ClaimPathElement::String("rewards_number".to_string())]),
@@ -733,7 +709,7 @@ mod tests {
                             vec!["other_pid".to_string()],
                             vec!["pid_reduced_cred_1".to_string(), "pid_reduced_cred_2".to_string()]
                         ],
-                        required: None
+                        required: Some(true)
                     },
                     CredentialSetQuery {
                         options: vec![vec!["nice_to_have".to_string()]],
@@ -889,7 +865,7 @@ mod tests {
                     vct_values: vec!["https://credentials.example.com/identity_credential".to_string()],
                 }),
                 trusted_authorities: None,
-                require_cryptographic_holder_binding: None,
+                require_cryptographic_holder_binding: Some(true),
                 claims: vec![],
                 claim_sets: None,
             }],
@@ -948,7 +924,7 @@ mod tests {
                 type_values: vec![vec!["https://example.com/credential".to_string()]],
             }),
             trusted_authorities: None,
-            require_cryptographic_holder_binding: None,
+            require_cryptographic_holder_binding: Some(true),
             claims: vec![ClaimQuery {
                 id: None,
                 path: test_claim_path(vec![ClaimPathElement::String("line_number".to_string())]),
@@ -971,7 +947,7 @@ mod tests {
                 vct_values: vec!["https://credentials.example.com/identity_credential".to_string()],
             }),
             trusted_authorities: None,
-            require_cryptographic_holder_binding: None,
+            require_cryptographic_holder_binding: Some(true),
             claims: vec![
                 ClaimQuery {
                     id: Some("basho".to_string()),
@@ -1005,7 +981,7 @@ mod tests {
 
         assert!(!parsed.as_object().unwrap().contains_key("multiple"));
         assert!(!parsed.as_object().unwrap().contains_key("trusted_authorities"));
-        assert!(!parsed
+        assert!(parsed
             .as_object()
             .unwrap()
             .contains_key("require_cryptographic_holder_binding"));
