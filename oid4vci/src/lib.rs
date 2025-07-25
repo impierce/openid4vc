@@ -10,6 +10,7 @@ pub mod credential_response;
 pub mod errors;
 pub mod notification_request;
 pub mod proof;
+pub mod proofs;
 pub mod token_request;
 pub mod token_response;
 pub mod wallet;
@@ -19,7 +20,7 @@ use std::collections::HashMap;
 pub use credential::{VerifiableCredentialJwt, VerifiableCredentialJwtBuilder};
 use oid4vc_core::JsonObject;
 pub use pkce;
-pub use proof::{KeyProofType, ProofType};
+pub use proof::Proof;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::json;
 pub use wallet::Wallet;
@@ -39,11 +40,6 @@ pub fn to_form_urlencoded_string<T: Serialize>(value: &T) -> anyhow::Result<Stri
             _ => Some((k.to_owned(), v.to_owned())),
         })
         .collect();
-
-    println!(
-        "to_form_urlencoded_string: {}",
-        serde_json::to_string_pretty(&map).unwrap()
-    );
 
     let encoded = serde_urlencoded::to_string(map).unwrap();
     Ok(encoded)

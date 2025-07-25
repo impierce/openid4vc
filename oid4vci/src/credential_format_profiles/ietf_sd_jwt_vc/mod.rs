@@ -1,1 +1,1 @@
-pub mod vc_sd_jwt;
+pub mod dc_sd_jwt;

@@ -27,9 +27,9 @@ where
     fn get_credential_response(
         &self,
         access_token: String,
+        credential_configuration_id: String,
         subject_did: Url,
         issuer_did: Url,
-        credential_format: CFC,
         subject: SigningSubject,
     ) -> Option<CredentialResponse>;
     fn get_state(&self) -> Option<String>;

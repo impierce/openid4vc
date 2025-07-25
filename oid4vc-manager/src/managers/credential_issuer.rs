@@ -32,7 +32,6 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
                     credential_issuer: issuer_url.clone(),
                     authorization_servers: vec![],
                     credential_endpoint: issuer_url.join("/credential")?,
-                    batch_credential_endpoint: Some(issuer_url.join("/batch_credential")?),
                     deferred_credential_endpoint: None,
                     notification_endpoint: Some(issuer_url.join("/notification")?),
                     credential_response_encryption: None,

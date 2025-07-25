@@ -9,7 +9,7 @@ use oid4vc_manager::{
 use oid4vci::{
     credential_format_profiles::{CredentialFormats, WithParameters},
     credential_offer::{CredentialOffer, CredentialOfferParameters, Grants},
-    credential_response::{BatchCredentialResponse, CredentialResponse, CredentialResponseType},
+    credential_response::{CredentialResponse, CredentialResponseType},
     notification_request::NotificationEvent,
     token_request::TokenRequest,
     Wallet,
@@ -116,14 +116,15 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         .collect();
 
     if !batch {
-        let university_degree_credential_format = credentials.last().unwrap().clone();
+        let drivers_license_credential_format = credentials.last().unwrap().clone();
 
         // Get the credential.
         let credential_response: CredentialResponse = wallet
             .get_credential(
                 credential_issuer_metadata,
                 &token_response,
-                &university_degree_credential_format,
+                credential_offer.credential_configuration_ids.first().unwrap().clone(),
+                &drivers_license_credential_format,
             )
             .await
             .unwrap();
@@ -139,69 +140,6 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         // Check the credential.
         assert_eq!(
             claims["vc"],
-            serde_json::json!({
-                "@context": [
-                    "https://www.w3.org/2018/credentials/v1",
-                    "https://www.w3.org/2018/credentials/examples/v1"
-                ],
-                "id": "UniversityDegree_JWT",
-                "type": [
-                    "VerifiableCredential",
-                    "PersonalInformation"
-                ],
-                "issuanceDate": "2022-01-01T00:00:00Z",
-                "issuer": credential_issuer_url,
-                "credentialSubject": {
-                    "id": subject_did,
-                    "givenName": "Ferris",
-                    "familyName": "Crabman",
-                    "email": "ferris.crabman@crabmail.com",
-                    "birthdate": "1985-05-21"
-                }
-            })
-        );
-
-        let notification_endpoint = credential_issuer_url.join("/notification").unwrap();
-        let notification_id = "test-test-test".to_string();
-        let access_token = token_response.access_token.clone();
-        let event = NotificationEvent::CredentialAccepted;
-        let event_description = None;
-
-        assert!(wallet
-            .send_notification_request(
-                notification_endpoint,
-                notification_id,
-                access_token,
-                event,
-                event_description,
-            )
-            .await
-            .is_ok());
-    } else if batch {
-        // Get the credentials.
-        let batch_credential_response: BatchCredentialResponse = wallet
-            .get_batch_credential(credential_issuer_metadata, &token_response, &credentials)
-            .await
-            .unwrap();
-
-        let credentials: Vec<_> = batch_credential_response
-            .credential_responses
-            .into_iter()
-            .map(|credential_response| {
-                let credential = match credential_response {
-                    CredentialResponseType::Immediate { credential, .. } => credential,
-                    _ => panic!("Credential was not a JWT VC JSON."),
-                };
-
-                // Decode the JWT without performing validation
-                let claims = get_jwt_claims(&credential);
-                claims
-            })
-            .collect();
-
-        // Check the "DriverLicense_JWT" credential.
-        assert_eq!(
-            credentials[0]["vc"],
             serde_json::json!({
                 "@context": [
                     "https://www.w3.org/2018/credentials/v1",
@@ -224,9 +162,98 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             })
         );
 
+        let notification_endpoint = credential_issuer_url.join("/notification").unwrap();
+        let notification_id = "test-test-test".to_string();
+        let access_token = token_response.access_token.clone();
+        let event = NotificationEvent::CredentialAccepted;
+        let event_description = None;
+
+        assert!(wallet
+            .send_notification_request(
+                notification_endpoint,
+                notification_id,
+                access_token,
+                event,
+                event_description,
+            )
+            .await
+            .is_ok());
+    } else if batch {
+        let mut credentials = credentials.into_iter();
+        let mut credential_configuration_ids = credential_offer.credential_configuration_ids.into_iter();
+
+        let drivers_license_credential = credentials.next().unwrap();
+        let credential_configuration_id = credential_configuration_ids.next().unwrap();
+
+        // Get the credential.
+        let credential_response: CredentialResponse = wallet
+            .get_credential(
+                credential_issuer_metadata.clone(),
+                &token_response,
+                credential_configuration_id,
+                &drivers_license_credential,
+            )
+            .await
+            .unwrap();
+
+        let credential = match credential_response.credential {
+            CredentialResponseType::Immediate { credential, .. } => credential,
+            _ => panic!("Credential was not a JWT VC JSON."),
+        };
+
+        // Decode the JWT without performing validation
+        let claims = get_jwt_claims(&credential);
+
+        // Check the "DriverLicense_JWT" credential.
+        assert_eq!(
+            claims["vc"],
+            serde_json::json!({
+                "@context": [
+                    "https://www.w3.org/2018/credentials/v1",
+                    "https://www.w3.org/2018/credentials/examples/v1"
+                ],
+                "id": "DriverLicense_JWT",
+                "type": [
+                    "VerifiableCredential",
+                    "DriverLicenseCredential"
+                ],
+                "issuer": credential_issuer_url,
+                "issuanceDate": "2022-08-15T09:30:00Z",
+                "expirationDate": "2027-08-15T23:59:59Z",
+                "credentialSubject": {
+                    "id": subject_did,
+                    "licenseClass": "Class C",
+                    "issuedBy": "California",
+                    "validity": "Valid"
+                }
+            })
+        );
+
+        let university_degree_credential = credentials.next().unwrap();
+        let credential_configuration_id = credential_configuration_ids.next().unwrap();
+
+        // Get the credential.
+        let credential_response: CredentialResponse = wallet
+            .get_credential(
+                credential_issuer_metadata,
+                &token_response,
+                credential_configuration_id,
+                &university_degree_credential,
+            )
+            .await
+            .unwrap();
+
+        let credential = match credential_response.credential {
+            CredentialResponseType::Immediate { credential, .. } => credential,
+            _ => panic!("Credential was not a JWT VC JSON."),
+        };
+
+        // Decode the JWT without performing validation
+        let claims = get_jwt_claims(&credential);
+
         // Check the "UniversityDegree_JWT" credential.
         assert_eq!(
-            credentials[1]["vc"],
+            claims["vc"],
             serde_json::json!({
                 "@context": [
                     "https://www.w3.org/2018/credentials/v1",

@@ -7,7 +7,7 @@ use oid4vc_core::{authentication::subject::SigningSubject, generate_authorizatio
 use oid4vc_manager::storage::Storage;
 use oid4vci::{
     authorization_response::AuthorizationResponse,
-    credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters},
+    credential_format_profiles::CredentialFormatCollection,
     credential_issuer::credential_configurations_supported::CredentialConfigurationsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
     credential_response::{CredentialResponse, CredentialResponseType},
@@ -103,27 +103,14 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
     fn get_credential_response(
         &self,
         access_token: String,
+        credential_configuration_id: String,
         subject_did: Url,
         issuer_did: Url,
-        credential_format: CFC,
         signer: SigningSubject,
     ) -> Option<CredentialResponse> {
-        let type_ = match serde_json::from_value::<CredentialFormats<WithParameters>>(
-            serde_json::to_value(credential_format).unwrap(),
-        )
-        .unwrap()
-        {
-            CredentialFormats::JwtVcJson(credential) => credential.parameters.credential_definition.type_,
-            _ => unreachable!("Credential format not supported"),
-        };
-
-        let credential_json = match &type_[..] {
-            [_, b] if b == "UniversityDegreeCredential" => {
-                File::open("./tests/common/credentials/university_degree.json").unwrap()
-            }
-            [_, b] if b == "DriverLicenseCredential" => {
-                File::open("./tests/common/credentials/driver_license.json").unwrap()
-            }
+        let credential_json = match credential_configuration_id.as_str() {
+            "UniversityDegree_JWT" => File::open("./tests/common/credentials/university_degree.json").unwrap(),
+            "DriverLicense_JWT" => File::open("./tests/common/credentials/driver_license.json").unwrap(),
             _ => unreachable!(),
         };
 

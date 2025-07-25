@@ -16,7 +16,6 @@ use oid4vci::{
 };
 use std::sync::Arc;
 
-// TODO: Current Authorization Code Flow is not fully conformant to the spec. Issue: https://github.com/impierce/openid4vc/issues/46
 #[tokio::test]
 async fn test_authorization_code_flow() {
     // Setup the credential issuer.
@@ -63,10 +62,12 @@ async fn test_authorization_code_flow() {
         .await
         .unwrap();
 
+    let credential_configuration_id = "UniversityDegree_JWT".to_string();
+
     // Get the credential format for a university degree.
     let university_degree_credential_format = credential_issuer_metadata
         .credential_configurations_supported
-        .get("UniversityDegree_JWT")
+        .get(&credential_configuration_id)
         .unwrap()
         .clone();
 
@@ -87,6 +88,7 @@ async fn test_authorization_code_flow() {
                 credential_configuration_or_format: CredentialConfigurationOrFormat::CredentialFormat(
                     university_degree_credential_format.credential_format.clone(),
                 ),
+                claims: None,
             }
             .into()],
             Some(code_challenge),
@@ -125,6 +127,7 @@ async fn test_authorization_code_flow() {
         .get_credential(
             credential_issuer_metadata,
             &token_response,
+            credential_configuration_id,
             &university_degree_credential_format,
         )
         .await

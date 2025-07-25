@@ -1,6 +1,6 @@
 use crate::{
     authorization_details::AuthorizationDetailsObject,
-    credential_format_profiles::{CredentialFormatCollection, CredentialFormats},
+    credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters},
 };
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -8,7 +8,7 @@ use serde_with::skip_serializing_none;
 /// The Authorization Request is used to request authorization as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-authorization-request
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct AuthorizationRequest<CFC = CredentialFormats>
+pub struct AuthorizationRequest<CFC = CredentialFormats<WithParameters>>
 where
     CFC: CredentialFormatCollection,
 {

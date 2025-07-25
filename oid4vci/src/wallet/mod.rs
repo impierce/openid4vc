@@ -7,15 +7,16 @@ use crate::credential_issuer::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
 };
 use crate::credential_offer::CredentialOfferParameters;
-use crate::credential_request::{BatchCredentialRequest, CredentialRequest};
-use crate::credential_response::BatchCredentialResponse;
+use crate::credential_request::{CredentialIdentifierOrCredentialConfigurationId, CredentialRequest};
 use crate::notification_request::{NotificationEvent, NotificationRequest};
-use crate::proof::{KeyProofType, ProofType};
+use crate::proof::ProofType;
 use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
+use crate::{to_form_urlencoded_string, Proof};
 use anyhow::{anyhow, Result};
 use jsonwebtoken::Algorithm;
 use oid4vc_core::authentication::subject::SigningSubject;
 use oid4vc_core::SubjectSyntaxType;
+use reqwest::header::{HeaderValue, CONTENT_TYPE};
 use reqwest::Url;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::policies::ExponentialBackoff;
@@ -168,13 +169,21 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             authorization_details,
             // FIXME
             issuer_state: None,
+            // FIXME
             code_challenge,
+            // FIXME
             code_challenge_method,
         };
 
+        let url_encoded = to_form_urlencoded_string(&authorization_request).unwrap();
+
         self.client
             .post(pushed_authorization_request_endpoint)
-            .json(&authorization_request)
+            .header(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/x-www-form-urlencoded"),
+            )
+            .body(url_encoded)
             .send()
             .await?
             .json::<PushedAuthorizationResponse>()
@@ -321,14 +330,13 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         &self,
         credential_issuer_metadata: CredentialIssuerMetadata<CFC>,
         token_response: &TokenResponse,
+        credential_configuration_id: String,
         credential_configuration: &CredentialConfigurationsSupportedObject,
     ) -> Result<CredentialResponse> {
-        let credential_format = credential_configuration.credential_format.to_owned();
-
         let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
         let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
 
-        let mut key_proof_type_builder = KeyProofType::builder()
+        let mut key_proof_type_builder = Proof::builder()
             .proof_type(ProofType::Jwt)
             .algorithm(signing_algorithm)
             .signer(self.subject.clone())
@@ -353,73 +361,16 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         );
 
         let credential_request = CredentialRequest {
-            credential_format,
+            credential_identifier_or_credential_configuration_id:
+                CredentialIdentifierOrCredentialConfigurationId::CredentialConfigurationId(credential_configuration_id),
             proof,
+            proofs: None,
         };
 
         self.client
             .post(credential_issuer_metadata.credential_endpoint)
             .bearer_auth(token_response.access_token.clone())
             .json(&credential_request)
-            .send()
-            .await?
-            .json()
-            .await
-            .map_err(|e| e.into())
-    }
-
-    pub async fn get_batch_credential(
-        &self,
-        credential_issuer_metadata: CredentialIssuerMetadata<CFC>,
-        token_response: &TokenResponse,
-        credential_configurations: &[CredentialConfigurationsSupportedObject],
-    ) -> Result<BatchCredentialResponse> {
-        // TODO: This needs to be fixed since this current implementation assumes that for all credentials the same Proof Type is supported.
-        let credential_configuration = credential_configurations
-            .first()
-            .ok_or(anyhow::anyhow!("No credential configurations found."))?;
-
-        let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
-        let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
-
-        let mut key_proof_type_builder = KeyProofType::builder()
-            .proof_type(ProofType::Jwt)
-            .algorithm(signing_algorithm)
-            .signer(self.subject.clone())
-            .iss(
-                self.subject
-                    .identifier(&subject_syntax_type.to_string(), signing_algorithm)
-                    .await?,
-            )
-            .aud(credential_issuer_metadata.credential_issuer)
-            .iat(chrono::Utc::now().timestamp());
-
-        // TODO: in certain cases the `c_nonce` is required, so we need to validate that.
-        if let Some(c_nonce) = token_response.c_nonce.as_ref() {
-            key_proof_type_builder = key_proof_type_builder.nonce(c_nonce.clone());
-        }
-
-        let proof = Some(
-            key_proof_type_builder
-                .subject_syntax_type(subject_syntax_type.to_string())
-                .build()
-                .await?,
-        );
-
-        let batch_credential_request = BatchCredentialRequest {
-            credential_requests: credential_configurations
-                .iter()
-                .map(|credential_configuration| CredentialRequest {
-                    credential_format: credential_configuration.credential_format.to_owned(),
-                    proof: proof.clone(),
-                })
-                .collect(),
-        };
-
-        self.client
-            .post(credential_issuer_metadata.batch_credential_endpoint.unwrap())
-            .bearer_auth(token_response.access_token.clone())
-            .json(&batch_credential_request)
             .send()
             .await?
             .json()
@@ -484,33 +435,6 @@ pub mod tests {
             .unwrap();
 
         assert_eq!(signing_algorithm, Algorithm::EdDSA);
-    }
-
-    #[test]
-    fn select_signing_algorithm_returns_error_when_issuers_supported_proof_type_is_not_supported() {
-        // Create a new Wallet.
-        let wallet: Wallet = Wallet::new(
-            Arc::new(TestSubject::default()),
-            vec!["did:test"],
-            vec![Algorithm::EdDSA],
-        )
-        .unwrap();
-
-        let error = wallet
-            .select_signing_algorithm(&CredentialConfigurationsSupportedObject {
-                proof_types_supported: HashMap::from_iter(vec![(
-                    // This Proof Type is not supported in the Wallet (as of now) so the Wallet will return an error.
-                    ProofType::Cwt,
-                    KeyProofMetadata {
-                        proof_signing_alg_values_supported: vec![Algorithm::EdDSA],
-                    },
-                )]),
-                ..Default::default()
-            })
-            .unwrap_err()
-            .to_string();
-
-        assert_eq!(error, "The Credential Issuer does not support JWT proof types");
     }
 
     #[test]

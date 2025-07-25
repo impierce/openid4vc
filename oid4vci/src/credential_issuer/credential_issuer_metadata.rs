@@ -30,7 +30,6 @@ where
     // TODO: Temporary solution
     #[derivative(Default(value = "Url::parse(\"https://example.com\").unwrap()"))]
     pub credential_endpoint: Url,
-    pub batch_credential_endpoint: Option<Url>,
     pub deferred_credential_endpoint: Option<Url>,
     pub notification_endpoint: Option<Url>,
     pub credential_response_encryption: Option<CredentialResponseEncryption>,
@@ -48,8 +47,8 @@ mod tests {
             w3c_verifiable_credentials::{jwt_vc_json, CredentialSubject},
             CredentialFormats, Parameters, WithParameters,
         },
-        proof::KeyProofMetadata,
-        ProofType,
+        credential_issuer::credential_configurations_supported::IssuerMetadataClaim,
+        proof::{KeyProofMetadata, ProofType},
     };
     use jsonwebtoken::Algorithm;
     use serde_json::{from_str, json};
@@ -64,11 +63,6 @@ mod tests {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
                 authorization_servers: vec!["https://server.example.com".parse().unwrap()],
                 credential_endpoint: Url::parse("https://credential-issuer.example.com").unwrap(),
-                batch_credential_endpoint: Some(
-                    "https://credential-issuer.example.com/batch_credential"
-                        .parse()
-                        .unwrap()
-                ),
                 deferred_credential_endpoint: Some(
                     "https://credential-issuer.example.com/deferred_credential"
                         .parse()
@@ -96,44 +90,16 @@ mod tests {
                     "UniversityDegreeCredential".to_string(),
                     CredentialConfigurationsSupportedObject {
                         credential_format: CredentialFormats::<WithParameters>::JwtVcJson(Parameters {
-                            parameters: (
-                                jwt_vc_json::CredentialDefinition {
-                                    type_: vec![
-                                        "VerifiableCredential".to_string(),
-                                        "UniversityDegreeCredential".to_string()
-                                    ],
-                                    credential_subject: CredentialSubject {
-                                        credential_subject: Some(json!({
-                                            "given_name": {
-                                                "display": [
-                                                    {
-                                                        "name": "Given Name",
-                                                        "locale": "en-US"
-                                                    },
-                                                ]
-                                            },
-                                            "family_name": {
-                                                "display": [
-                                                    {
-                                                        "name": "Surname",
-                                                        "locale": "en-US"
-                                                    }
-                                                ]
-                                            },
-                                            "degree": {},
-                                            "gpa": {
-                                                "display": [
-                                                    {
-                                                        "name": "GPA"
-                                                    }
-                                                ]
-                                            }
-                                        }))
-                                    }
-                                },
-                                None
-                            )
-                                .into()
+                            parameters: (jwt_vc_json::CredentialDefinition {
+                                type_: vec![
+                                    "VerifiableCredential".to_string(),
+                                    "UniversityDegreeCredential".to_string()
+                                ],
+                                credential_subject: CredentialSubject {
+                                    credential_subject: None
+                                }
+                            })
+                            .into()
                         }),
                         scope: Some("UniversityDegree".to_string()),
                         cryptographic_binding_methods_supported: vec!["did:example".to_string()],
@@ -150,12 +116,42 @@ mod tests {
                             "name": "University Credential",
                             "locale": "en-US",
                             "logo": {
-                                "url": "https://university.example.edu/public/logo.png",
+                                "uri": "https://university.example.edu/public/logo.png",
                                 "alt_text": "a square logo of a university"
                             },
                             "background_color": "#12107c",
                             "text_color": "#FFFFFF"
                         })],
+                        claims: vec![
+                            IssuerMetadataClaim {
+                                path: vec!["credentialSubject".to_string(), "given_name".to_string()],
+                                mandatory: false,
+                                display: vec![json!({
+                                    "name": "Given Name",
+                                    "locale": "en-US"
+                                })],
+                            },
+                            IssuerMetadataClaim {
+                                path: vec!["credentialSubject".to_string(), "family_name".to_string()],
+                                mandatory: false,
+                                display: vec![json!({
+                                    "name": "Surname",
+                                    "locale": "en-US"
+                                })],
+                            },
+                            IssuerMetadataClaim {
+                                path: vec!["credentialSubject".to_string(), "degree".to_string()],
+                                mandatory: false,
+                                display: vec![],
+                            },
+                            IssuerMetadataClaim {
+                                path: vec!["credentialSubject".to_string(), "gpa".to_string()],
+                                mandatory: false,
+                                display: vec![json!({
+                                    "name": "GPA",
+                                })],
+                            }
+                        ]
                     },
                 ),]
                 .into_iter()

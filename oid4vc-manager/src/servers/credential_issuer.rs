@@ -12,10 +12,8 @@ use axum::{
 use axum_auth::AuthBearer;
 use oid4vc_core::Validator;
 use oid4vci::{
-    authorization_request::AuthorizationRequest,
     credential_format_profiles::CredentialFormatCollection,
-    credential_request::{BatchCredentialRequest, CredentialRequest},
-    credential_response::BatchCredentialResponse,
+    credential_request::{CredentialIdentifierOrCredentialConfigurationId, CredentialRequest},
     notification_request::NotificationRequest,
     token_request::TokenRequest,
 };
@@ -71,7 +69,6 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection + Clone + Deserial
                     .route("/authorize", get(authorize))
                     .route("/token", post(token))
                     .route("/credential", post(credential))
-                    .route("/batch_credential", post(batch_credential))
                     .route("/notification", post(notification))
                     .merge(extension.unwrap_or_default())
                     .layer(
@@ -137,7 +134,8 @@ async fn credential_offer<S: Storage<CFC>, CFC: CredentialFormatCollection>(
 
 async fn par<S: Storage<CFC>, CFC: CredentialFormatCollection>(
     State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
-    Json(_pushed_authorization_request): Json<AuthorizationRequest<CFC>>,
+    // FIXME: should be StringifiedForm<PushedAuthorizationRequest>?
+    Form(_pushed_authorization_request): Form<serde_json::Value>,
 ) -> impl IntoResponse {
     (
         StatusCode::CREATED,
@@ -152,7 +150,7 @@ async fn par<S: Storage<CFC>, CFC: CredentialFormatCollection>(
 
 async fn authorize<S: Storage<CFC>, CFC: CredentialFormatCollection>(
     State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
-    // Json(_authorization_request): Json<AuthorizationRequest<CFC>>,
+    // FIXME: should be StringifiedForm<AuthorizationRequest<CFC>>?
     Form(_authorization_request): Form<serde_json::Value>,
 ) -> impl IntoResponse {
     (
@@ -186,7 +184,7 @@ async fn token<S: Storage<CFC>, CFC: CredentialFormatCollection>(
 async fn credential<S: Storage<CFC>, CFC: CredentialFormatCollection>(
     State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
     AuthBearer(access_token): AuthBearer,
-    Json(credential_request): Json<CredentialRequest<CFC>>,
+    Json(credential_request): Json<CredentialRequest>,
 ) -> impl IntoResponse {
     // TODO: The bunch of unwrap's here should be replaced with error responses as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-error-response
     let proof = credential_issuer_manager
@@ -197,6 +195,16 @@ async fn credential<S: Storage<CFC>, CFC: CredentialFormatCollection>(
         )
         .await
         .unwrap();
+
+    let credential_configuration_id = match credential_request.credential_identifier_or_credential_configuration_id {
+        CredentialIdentifierOrCredentialConfigurationId::CredentialIdentifier(_) => {
+            unimplemented!();
+        }
+        CredentialIdentifierOrCredentialConfigurationId::CredentialConfigurationId(credential_configuration_id) => {
+            credential_configuration_id
+        }
+    };
+
     (
         StatusCode::OK,
         AppendHeaders([("Cache-Control", "no-store")]),
@@ -205,13 +213,13 @@ async fn credential<S: Storage<CFC>, CFC: CredentialFormatCollection>(
                 .storage
                 .get_credential_response(
                     access_token,
+                    credential_configuration_id,
                     proof.rfc7519_claims.iss().as_ref().unwrap().parse().unwrap(),
                     credential_issuer_manager
                         .credential_issuer
                         .metadata
                         .credential_issuer
                         .clone(),
-                    credential_request.credential_format.clone(),
                     credential_issuer_manager.credential_issuer.subject.clone(),
                 )
                 .unwrap(),
@@ -219,52 +227,6 @@ async fn credential<S: Storage<CFC>, CFC: CredentialFormatCollection>(
     )
 }
 
-async fn batch_credential<S: Storage<CFC>, CFC: CredentialFormatCollection>(
-    State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
-    AuthBearer(access_token): AuthBearer,
-    Json(batch_credential_request): Json<BatchCredentialRequest<CFC>>,
-) -> impl IntoResponse {
-    let mut credential_responses = vec![];
-    for credential_request in batch_credential_request.credential_requests {
-        // TODO: The bunch of unwrap's here should be replaced with error responses as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-batch-credential-error-resp
-        let proof = credential_issuer_manager
-            .credential_issuer
-            .validate_proof(
-                credential_request.proof.unwrap(),
-                Validator::Subject(credential_issuer_manager.credential_issuer.subject.clone()),
-            )
-            .await
-            .unwrap();
-
-        credential_responses.push(
-            credential_issuer_manager
-                .storage
-                .get_credential_response(
-                    access_token.clone(),
-                    proof.rfc7519_claims.iss().as_ref().unwrap().parse().unwrap(),
-                    credential_issuer_manager
-                        .credential_issuer
-                        .metadata
-                        .credential_issuer
-                        .clone(),
-                    credential_request.credential_format.clone(),
-                    credential_issuer_manager.credential_issuer.subject.clone(),
-                )
-                .unwrap()
-                .credential,
-        );
-    }
-
-    (
-        StatusCode::OK,
-        AppendHeaders([("Cache-Control", "no-store")]),
-        Json(BatchCredentialResponse {
-            credential_responses,
-            c_nonce: None,
-            c_nonce_expires_in: None,
-        }),
-    )
-}
 async fn notification(
     AuthBearer(_access_token): AuthBearer,
     Json(_notification_request): Json<NotificationRequest>,

@@ -128,7 +128,7 @@ impl Extension for OID4VP {
             ClientMetadataResource::ClientMetadata { extension, .. } => extension
                 .vp_formats
                 .get(&ClaimFormatDesignation::JwtVcJson)
-                .or_else(|| extension.vp_formats.get(&ClaimFormatDesignation::VcSdJwt))
+                .or_else(|| extension.vp_formats.get(&ClaimFormatDesignation::DcSdJwt))
                 .and_then(|claim_format_property| match claim_format_property {
                     ClaimFormatProperty::Alg(algs) => Some(algs.clone()),
                     // TODO: implement `ProofType`.
