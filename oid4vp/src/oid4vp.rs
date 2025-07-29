@@ -1,13 +1,8 @@
 use crate::authorization_request::{
-    AuthorizationRequestBuilder, AuthorizationRequestParameters, ClaimFormatDesignation, ClaimFormatProperty,
-    ClientMetadataParameters,
+    AuthorizationRequestBuilder, AuthorizationRequestParameters, ClientMetadataParameters, CredentialFormatIdentifier,
+    FormatSpecificParameters,
 };
 use crate::token::vp_token::VpToken;
-// use dif_presentation_exchange::presentation_definition::ClaimFormatProperty;
-// pub use dif_presentation_exchange::{
-//     evaluate_input, ClaimFormatDesignation, InputDescriptor, InputDescriptorMappingObject, PathNested,
-//     PresentationDefinition, PresentationSubmission,
-// };
 use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::Algorithm;
 use oid4vc_core::client_metadata::ClientMetadataResource;
@@ -21,8 +16,6 @@ use reqwest_retry::RetryTransientMiddleware;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::Arc;
-
-// use std::sync::Arc;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationResponseParameters {
@@ -89,22 +82,18 @@ impl Extension for OID4VP {
         // well as the Proof of Possession.
         match client_metadata {
             // Fetch the client metadata from the given URI.
-            ClientMetadataResource::ClientMetadataUri(_) => unreachable!(),
+            //TODO: Add LDP VC
             ClientMetadataResource::ClientMetadata { extension, .. } => extension
                 .vp_formats_supported
-                .get(&ClaimFormatDesignation::JwtVcJson)
-                .or_else(|| extension.vp_formats_supported.get(&ClaimFormatDesignation::DcSdJwt))
-                .and_then(|claim_format_property| match claim_format_property {
-                    ClaimFormatProperty::Alg(algs) => Some(algs.clone()),
-                    // TODO: implement `ProofType`.
-                    ClaimFormatProperty::ProofType(_) => None,
-                    ClaimFormatProperty::SdJwt {
-                        sd_jwt_alg_values,
-                        // TODO: implement Key Binding
-                        kb_jwt_alg_values: _kb_jwt_alg_values,
-                    } => Some(sd_jwt_alg_values.clone()),
+                .get(&CredentialFormatIdentifier::JwtVcJson)
+                .or_else(|| extension.vp_formats_supported.get(&CredentialFormatIdentifier::DcSdJwt))
+                .and_then(|format_specific_parameters| match format_specific_parameters {
+                    FormatSpecificParameters::JwtVcJson { alg_values } => alg_values.clone(),
+                    FormatSpecificParameters::DcSdJwt { sd_jwt_alg_values, .. } => sd_jwt_alg_values.clone(),
+                    _ => None,
                 })
-                .ok_or(anyhow::anyhow!("No supported algorithms found.")),
+                .ok_or_else(|| anyhow::anyhow!("No supported algorithms found.")),
+            _ => unreachable!("ClientMetadataUri should have been resolved above"),
         }
     }
 

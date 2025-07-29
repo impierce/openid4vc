@@ -10,8 +10,6 @@ repository.workspace = true
 
 [dependencies]
 oid4vc-core = { path = "../oid4vc-core" }
-# dif-presentation-exchange = { path = "../dif-presentation-exchange" }
-
 anyhow = "1.0"
 derivative = "2.2.0"
 getset.workspace = true

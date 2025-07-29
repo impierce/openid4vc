@@ -56,4 +56,3 @@ oid4vci = { path = "oid4vci" }
 oid4vp = { path = "oid4vp" }
 siopv2 = { path = "siopv2" }
 oid4vc-manager = { path = "oid4vc-manager" }
-# dif-presentation-exchange = { path = "dif-presentation-exchange" }

@@ -10,7 +10,7 @@ use oid4vc_core::{
 };
 use oid4vc_manager::{methods::key_method::KeySubject, ProviderManager, RelyingPartyManager};
 use oid4vci::VerifiableCredentialJwt;
-use oid4vp::authorization_request::{ClaimFormatDesignation, ClaimFormatProperty};
+use oid4vp::authorization_request::{CredentialFormatIdentifier, FormatSpecificParameters};
 use oid4vp::{
     authorization_request::{ClientId, ClientMetadataParameters},
     oid4vp::OID4VP,
@@ -77,8 +77,10 @@ async fn test_implicit_flow_friday() {
             logo_uri: None,
             extension: ClientMetadataParameters {
                 vp_formats_supported: vec![(
-                    ClaimFormatDesignation::JwtVcJson,
-                    ClaimFormatProperty::Alg(vec![Algorithm::EdDSA]),
+                    CredentialFormatIdentifier::JwtVcJson,
+                    FormatSpecificParameters::JwtVcJson {
+                        alg_values: Some(vec![Algorithm::EdDSA]),
+                    },
                 )]
                 .into_iter()
                 .collect(),
