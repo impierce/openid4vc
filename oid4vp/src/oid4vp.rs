@@ -1,8 +1,8 @@
 use crate::authorization_request::{
-    AuthorizationRequestBuilder, AuthorizationRequestParameters, ClientMetadataParameters, CredentialFormatIdentifier,
-    FormatSpecificParameters,
+    AuthorizationRequestBuilder, AuthorizationRequestParameters, ClientMetadataParameters,
 };
 use crate::token::vp_token::VpToken;
+use anyhow::anyhow;
 use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::Algorithm;
 use oid4vc_core::client_metadata::ClientMetadataResource;
@@ -85,14 +85,15 @@ impl Extension for OID4VP {
             //TODO: Add LDP VC
             ClientMetadataResource::ClientMetadata { extension, .. } => extension
                 .vp_formats_supported
-                .get(&CredentialFormatIdentifier::JwtVcJson)
-                .or_else(|| extension.vp_formats_supported.get(&CredentialFormatIdentifier::DcSdJwt))
-                .and_then(|format_specific_parameters| match format_specific_parameters {
-                    FormatSpecificParameters::JwtVcJson { alg_values } => alg_values.clone(),
-                    FormatSpecificParameters::DcSdJwt { sd_jwt_alg_values, .. } => sd_jwt_alg_values.clone(),
-                    _ => None,
+                .jwt_vc_json
+                .and_then(|params| params.alg_values)
+                .or_else(|| {
+                    extension
+                        .vp_formats_supported
+                        .dc_sd_jwt
+                        .and_then(|params| params.sd_jwt_alg_values)
                 })
-                .ok_or_else(|| anyhow::anyhow!("No supported algorithms found.")),
+                .ok_or_else(|| anyhow!("No supported algorithms found")),
             _ => unreachable!("ClientMetadataUri should have been resolved above"),
         }
     }
