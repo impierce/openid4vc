@@ -96,8 +96,6 @@ impl fmt::Display for ClientId {
     }
 }
 
-// Its value MUST be an array of one or more format-specific algorithmic identifier references
-// TODO: fix this related to jwt_vc_json and jwt_vp_json: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-e.1
 #[allow(dead_code)]
 #[derive(Deserialize, Debug, PartialEq, Eq, Hash, Clone, Serialize)]
 #[serde(rename_all = "snake_case")]
