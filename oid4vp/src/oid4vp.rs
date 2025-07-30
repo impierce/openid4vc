@@ -59,6 +59,17 @@ impl Extension for OID4VP {
     type RequestHandle = RequestHandler;
     type ResponseHandle = ResponseHandler;
 
+    async fn generate_token(
+        _subject: Arc<dyn Subject + 'static>,
+        _client_id: &str,
+        _extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
+        _user_input: &<Self::ResponseHandle as ResponseHandle>::Input,
+        _subject_syntax_type: impl TryInto<SubjectSyntaxType>,
+        _signing_algorithm: impl TryInto<Algorithm>,
+    ) -> anyhow::Result<Vec<String>> {
+        Ok(vec![])
+    }
+
     // TODO: combine this function with `get_relying_party_supported_syntax_types`.
     async fn get_relying_party_supported_algorithms(
         authorization_request: &<Self::RequestHandle as RequestHandle>::Parameters,
@@ -154,16 +165,6 @@ impl Extension for OID4VP {
             state,
             extension: AuthorizationResponseParameters { vp_token: user_input },
         })
-    }
-    async fn generate_token(
-        _subject: Arc<dyn Subject + 'static>,
-        _client_id: &str,
-        _extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
-        _user_input: &<Self::ResponseHandle as ResponseHandle>::Input,
-        _subject_syntax_type: impl TryInto<SubjectSyntaxType>,
-        _signing_algorithm: impl TryInto<Algorithm>,
-    ) -> anyhow::Result<Vec<String>> {
-        Ok(vec![])
     }
 
     async fn decode_authorization_response(

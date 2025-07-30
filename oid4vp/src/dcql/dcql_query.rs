@@ -1,29 +1,19 @@
 use super::claims::{validate_claims, ClaimsContext};
 use super::meta::{validate_meta, MetaContext};
 use nutype::nutype;
+use oid4vc_core::claim_path_pointer::{ClaimPathPointer, ClaimValues};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
-use validator::{Validate, ValidationErrors};
+use std::collections::HashSet;
+use validator::{Validate, ValidationError, ValidationErrors};
 
 #[nutype(
-    validate(not_empty, predicate = valid_credential_id),
+    validate(not_empty, predicate = valid_credential_query_id),
     derive(Debug, Clone, PartialEq, Serialize, Deserialize, Hash, Eq, Display, AsRef)
 )]
-pub struct CredentialId(String);
-fn valid_credential_id(s: &str) -> bool {
+pub struct CredentialQueryId(String);
+fn valid_credential_query_id(s: &str) -> bool {
     s.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-')
-}
-
-#[nutype(validate(predicate = claim_path_not_empty), derive(Debug, Clone, PartialEq, Serialize, Deserialize, AsRef))]
-pub struct ClaimPath(Vec<ClaimPathElement>);
-fn claim_path_not_empty(path: &[ClaimPathElement]) -> bool {
-    !path.is_empty()
-}
-
-#[nutype(validate(predicate = claim_values_not_empty), derive(Debug, Clone, PartialEq, Serialize, AsRef, Deserialize))]
-pub struct ClaimValues(Vec<ClaimValue>);
-fn claim_values_not_empty(values: &[ClaimValue]) -> bool {
-    !values.is_empty()
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Validate)]
@@ -35,7 +25,7 @@ pub struct DcqlQuery {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Validate)]
 pub struct CredentialQuery {
-    pub id: CredentialId,
+    pub id: CredentialQueryId,
     pub format: Format,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub multiple: Option<bool>,
@@ -43,12 +33,17 @@ pub struct CredentialQuery {
     pub meta: Option<MetaTypes>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trusted_authorities: Option<Vec<TrustedAuthority>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default = "default_as_true", skip_serializing_if = "Option::is_none")]
     pub require_cryptographic_holder_binding: Option<bool>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub claims: Vec<ClaimQuery>,
+    //TODO Create nutype to create a new type with non-empty predicate. As ref see CredentialQueryId above.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub claim_sets: Option<Vec<Vec<String>>>,
+}
+
+fn default_as_true() -> Option<bool> {
+    Some(true)
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
@@ -70,7 +65,28 @@ pub enum Format {
     #[serde(rename = "mso_mdoc")]
     MsoMdoc,
 }
+impl DcqlQuery {
+    pub fn validate_all(&self) -> Result<(), ValidationErrors> {
+        self.validate()?;
 
+        // Check for duplicate credential IDs as the same id must not be present in the Authorization Request more than once.
+        let mut seen_ids = HashSet::new();
+        for (index, credential) in self.credentials.iter().enumerate() {
+            if !seen_ids.insert(&credential.id) {
+                let mut errors = ValidationErrors::new();
+                let validation_error = ValidationError::new("duplicate_credential_id")
+                    .with_message(format!("Duplicate credential ID '{}' at index {}", credential.id, index).into());
+                errors.add("credentials", validation_error);
+                return Err(errors);
+            }
+        }
+        for credential in &self.credentials {
+            credential.validate_all()?;
+        }
+
+        Ok(())
+    }
+}
 impl CredentialQuery {
     pub fn validate_all(&self) -> Result<(), ValidationErrors> {
         self.validate()?;
@@ -99,14 +115,17 @@ impl CredentialQuery {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct CredentialSetQuery {
+    //TODO: Create nutype  with non-empty predicate (see CredentialQueryId)
     pub options: Vec<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default = "default_as_true", skip_serializing_if = "Option::is_none")]
     pub required: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct TrustedAuthority {
     #[serde(rename = "type")]
+    //TODO: type_ should have stronger typing, see types defined by the spec:
+    // https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html#name-authority-key-identifier
     pub type_: String,
     pub values: Vec<String>,
 }
@@ -114,43 +133,26 @@ pub struct TrustedAuthority {
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Validate, Clone)]
 pub struct ClaimQuery {
+    //TODO: Use nutype for id, see CredentialQueryId as reference.
     pub id: Option<String>,
-    pub path: ClaimPath,
+    pub path: ClaimPathPointer,
     pub values: Option<ClaimValues>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-#[serde(untagged)]
-pub enum ClaimPathElement {
-    /// To address a particular claim within an object, append the key (claim name) to the array.
-    String(String),
-    /// To address an element within an array, append the index to the array (as a non-negative, 0-based integer).
-    Integer(u64),
-    /// To address all elements within an array, append a null value to the array.
-    Null,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-#[serde(untagged)]
-pub enum ClaimValue {
-    String(String),
-    Integer(i64),
-    Boolean(bool),
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer, ClaimValue, ClaimValues};
     use serde_json::from_str;
     // OID4VP Credential Test Examples from
     // https://github.com/openid/OpenID4VP/tree/main/examples/query_lang
 
-    fn test_credential_id(id: &str) -> CredentialId {
-        CredentialId::try_new(id.to_string()).unwrap()
+    fn test_credential_query_id(id: &str) -> CredentialQueryId {
+        CredentialQueryId::try_new(id.to_string()).unwrap()
     }
 
-    fn test_claim_path(elements: Vec<ClaimPathElement>) -> ClaimPath {
-        ClaimPath::try_new(elements).unwrap()
+    fn test_claim_path(elements: Vec<ClaimPathElement>) -> ClaimPathPointer {
+        ClaimPathPointer::try_new(elements).unwrap()
     }
 
     fn test_claim_values(values: Vec<ClaimValue>) -> ClaimValues {
@@ -161,14 +163,14 @@ mod tests {
         assert_eq!(
             DcqlQuery {
                 credentials: vec![CredentialQuery {
-                    id: test_credential_id("my_credential"),
+                    id: test_credential_query_id("my_credential"),
                     format: Format::MsoMdoc,
                     multiple: None,
                     meta: Some(MetaTypes::MsoMdocMeta {
                         doctype_value: "org.iso.7367.1.mVRC".to_string()
                     }),
                     trusted_authorities: None,
-                    require_cryptographic_holder_binding: None,
+                    require_cryptographic_holder_binding: Some(true),
                     claims: vec![
                         ClaimQuery {
                             id: None,
@@ -200,14 +202,14 @@ mod tests {
         assert_eq!(
             DcqlQuery {
                 credentials: vec![CredentialQuery {
-                    id: test_credential_id("my_credential"),
+                    id: test_credential_query_id("my_credential"),
                     format: Format::DcSdJwt,
                     multiple: None,
                     meta: Some(MetaTypes::SdJwtMeta {
                         vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
                     }),
                     trusted_authorities: None,
-                    require_cryptographic_holder_binding: None,
+                    require_cryptographic_holder_binding: Some(true),
                     claims: vec![
                         ClaimQuery {
                             id: None,
@@ -241,14 +243,14 @@ mod tests {
         assert_eq!(
             DcqlQuery {
                 credentials: vec![CredentialQuery {
-                    id: test_credential_id("my_credential"),
+                    id: test_credential_query_id("my_credential"),
                     format: Format::DcSdJwt,
                     multiple: None,
                     meta: Some(MetaTypes::SdJwtMeta {
                         vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
                     }),
                     trusted_authorities: None,
-                    require_cryptographic_holder_binding: None,
+                    require_cryptographic_holder_binding: Some(true),
                     claims: vec![
                         ClaimQuery {
                             id: None,
@@ -293,14 +295,14 @@ mod tests {
         assert_eq!(
             DcqlQuery {
                 credentials: vec![CredentialQuery {
-                    id: test_credential_id("pid"),
+                    id: test_credential_query_id("pid"),
                     format: Format::DcSdJwt,
                     multiple: None,
                     meta: Some(MetaTypes::SdJwtMeta {
                         vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
                     }),
                     trusted_authorities: None,
-                    require_cryptographic_holder_binding: None,
+                    require_cryptographic_holder_binding: Some(true),
                     claims: vec![
                         ClaimQuery {
                             id: Some("a".to_string()),
@@ -344,14 +346,14 @@ mod tests {
             DcqlQuery {
                 credentials: vec![
                     CredentialQuery {
-                        id: test_credential_id("pid"),
+                        id: test_credential_query_id("pid"),
                         format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: None,
@@ -375,14 +377,14 @@ mod tests {
                         claim_sets: None
                     },
                     CredentialQuery {
-                        id: test_credential_id("mdl"),
+                        id: test_credential_query_id("mdl"),
                         format: Format::MsoMdoc,
                         multiple: None,
                         meta: Some(MetaTypes::MsoMdocMeta {
                             doctype_value: "org.iso.7367.1.mVRC".to_string(),
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: None,
@@ -417,14 +419,14 @@ mod tests {
             DcqlQuery {
                 credentials: vec![
                     CredentialQuery {
-                        id: test_credential_id("mdl-id"),
+                        id: test_credential_query_id("mdl-id"),
                         format: Format::MsoMdoc,
                         multiple: None,
                         meta: Some(MetaTypes::MsoMdocMeta {
                             doctype_value: "org.iso.18013.5.1.mDL".to_string(),
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: Some("given_name".to_string()),
@@ -454,14 +456,14 @@ mod tests {
                         claim_sets: None
                     },
                     CredentialQuery {
-                        id: test_credential_id("mdl-address"),
+                        id: test_credential_query_id("mdl-address"),
                         format: Format::MsoMdoc,
                         multiple: None,
                         meta: Some(MetaTypes::MsoMdocMeta {
                             doctype_value: "org.iso.18013.5.1.mDL".to_string(),
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: Some("resident_address".to_string()),
@@ -483,14 +485,14 @@ mod tests {
                         claim_sets: None
                     },
                     CredentialQuery {
-                        id: test_credential_id("photo_card-id"),
+                        id: test_credential_query_id("photo_card-id"),
                         format: Format::MsoMdoc,
                         multiple: None,
                         meta: Some(MetaTypes::MsoMdocMeta {
                             doctype_value: "org.iso.23220.photoid.1".to_string(),
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: Some("given_name".to_string()),
@@ -520,14 +522,14 @@ mod tests {
                         claim_sets: None
                     },
                     CredentialQuery {
-                        id: test_credential_id("photo_card-address"),
+                        id: test_credential_query_id("photo_card-address"),
                         format: Format::MsoMdoc,
                         multiple: None,
                         meta: Some(MetaTypes::MsoMdocMeta {
                             doctype_value: "org.iso.23220.photoid.1".to_string(),
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: Some("resident_address".to_string()),
@@ -552,7 +554,7 @@ mod tests {
                 credential_sets: Some(vec![
                     CredentialSetQuery {
                         options: vec![vec!["mdl-id".to_string()], vec!["photo_card-id".to_string()]],
-                        required: None
+                        required: Some(true),
                     },
                     CredentialSetQuery {
                         options: vec![vec!["mdl-address".to_string()], vec!["photo_card-address".to_string()]],
@@ -570,14 +572,14 @@ mod tests {
             DcqlQuery {
                 credentials: vec![
                     CredentialQuery {
-                        id: test_credential_id("pid"),
+                        id: test_credential_query_id("pid"),
                         format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://credentials.example.com/identity_credential".to_string()],
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: None,
@@ -601,14 +603,14 @@ mod tests {
                         claim_sets: None
                     },
                     CredentialQuery {
-                        id: test_credential_id("other_pid"),
+                        id: test_credential_query_id("other_pid"),
                         format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://othercredentials.example/pid".to_string()],
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: None,
@@ -632,14 +634,14 @@ mod tests {
                         claim_sets: None
                     },
                     CredentialQuery {
-                        id: test_credential_id("pid_reduced_cred_1"),
+                        id: test_credential_query_id("pid_reduced_cred_1"),
                         format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://credentials.example.com/reduced_identity_credential".to_string()],
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: None,
@@ -655,14 +657,14 @@ mod tests {
                         claim_sets: None
                     },
                     CredentialQuery {
-                        id: test_credential_id("pid_reduced_cred_2"),
+                        id: test_credential_query_id("pid_reduced_cred_2"),
                         format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://cred.example/residence_credential".to_string()],
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![
                             ClaimQuery {
                                 id: None,
@@ -683,14 +685,14 @@ mod tests {
                         claim_sets: None
                     },
                     CredentialQuery {
-                        id: test_credential_id("nice_to_have"),
+                        id: test_credential_query_id("nice_to_have"),
                         format: Format::DcSdJwt,
                         multiple: None,
                         meta: Some(MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://company.example/company_rewards".to_string()],
                         }),
                         trusted_authorities: None,
-                        require_cryptographic_holder_binding: None,
+                        require_cryptographic_holder_binding: Some(true),
                         claims: vec![ClaimQuery {
                             id: None,
                             path: test_claim_path(vec![ClaimPathElement::String("rewards_number".to_string())]),
@@ -707,7 +709,7 @@ mod tests {
                             vec!["other_pid".to_string()],
                             vec!["pid_reduced_cred_1".to_string(), "pid_reduced_cred_2".to_string()]
                         ],
-                        required: None
+                        required: Some(true)
                     },
                     CredentialSetQuery {
                         options: vec![vec!["nice_to_have".to_string()]],
@@ -835,17 +837,35 @@ mod tests {
     }
 
     #[test]
+    fn test_require_cryptographic_holder_binding() {
+        let json = serde_json::json!({
+            "id": "my_credential",
+            "format": "dc+sd-jwt",
+            "meta": {
+                "vct_values": ["https://www.w3.org/2018/credentials/examples/v1#PersonalInformation"]
+            },
+            "claims": [
+                {"path": ["credentialSubject", "familyName"]},
+            ]
+        });
+
+        let credential_query: CredentialQuery =
+            serde_json::from_value(json).expect("Failed to deserialize CredentialQuery");
+
+        assert_eq!(credential_query.require_cryptographic_holder_binding, Some(true))
+    }
+    #[test]
     fn test_dcql_query() {
         let temporary = DcqlQuery {
             credentials: vec![CredentialQuery {
-                id: test_credential_id("my_credential"),
+                id: test_credential_query_id("my_credential"),
                 format: Format::MsoMdoc,
                 multiple: None,
                 meta: Some(MetaTypes::SdJwtMeta {
                     vct_values: vec!["https://credentials.example.com/identity_credential".to_string()],
                 }),
                 trusted_authorities: None,
-                require_cryptographic_holder_binding: None,
+                require_cryptographic_holder_binding: Some(true),
                 claims: vec![],
                 claim_sets: None,
             }],
@@ -897,14 +917,14 @@ mod tests {
     #[test]
     fn test_credential_query_serialization_round_trip() {
         let original_credential = CredentialQuery {
-            id: test_credential_id("basho"),
+            id: test_credential_query_id("basho"),
             format: Format::LdpVc,
             multiple: None,
             meta: Some(MetaTypes::W3CFormatMeta {
                 type_values: vec![vec!["https://example.com/credential".to_string()]],
             }),
             trusted_authorities: None,
-            require_cryptographic_holder_binding: None,
+            require_cryptographic_holder_binding: Some(true),
             claims: vec![ClaimQuery {
                 id: None,
                 path: test_claim_path(vec![ClaimPathElement::String("line_number".to_string())]),
@@ -920,14 +940,14 @@ mod tests {
     #[test]
     fn test_credential_query_serialization() {
         let credential_query = CredentialQuery {
-            id: test_credential_id("robbie"),
+            id: test_credential_query_id("robbie"),
             format: Format::DcSdJwt,
             multiple: None,
             meta: Some(MetaTypes::SdJwtMeta {
                 vct_values: vec!["https://credentials.example.com/identity_credential".to_string()],
             }),
             trusted_authorities: None,
-            require_cryptographic_holder_binding: None,
+            require_cryptographic_holder_binding: Some(true),
             claims: vec![
                 ClaimQuery {
                     id: Some("basho".to_string()),
@@ -961,7 +981,7 @@ mod tests {
 
         assert!(!parsed.as_object().unwrap().contains_key("multiple"));
         assert!(!parsed.as_object().unwrap().contains_key("trusted_authorities"));
-        assert!(!parsed
+        assert!(parsed
             .as_object()
             .unwrap()
             .contains_key("require_cryptographic_holder_binding"));

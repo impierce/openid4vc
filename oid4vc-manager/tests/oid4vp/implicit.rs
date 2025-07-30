@@ -16,7 +16,7 @@ use oid4vp::{
     oid4vp::OID4VP,
 };
 use oid4vp::{
-    dcql::dcql_query::{CredentialId, DcqlQuery},
+    dcql::dcql_query::{CredentialQueryId, DcqlQuery},
     token::vp_token::PresentationFormat,
     token::vp_token_builder::VpTokenBuilder,
 };
@@ -45,7 +45,7 @@ lazy_static! {
 }
 
 #[tokio::test]
-async fn test_implicit_flow_friday() {
+async fn test_implicit_flow() {
     // Create a new issuer.
     let issuer = KeySubject::from_keypair(
         generate::<Ed25519KeyPair>(Some(
@@ -138,7 +138,7 @@ async fn test_implicit_flow_friday() {
 
     let vp_token = VpTokenBuilder::builder_dcql_query(DCQL_QUERY.clone())
         .add_presentation(
-            CredentialId::try_new("my_credential".to_string()).unwrap(),
+            CredentialQueryId::try_new("my_credential".to_string()).unwrap(),
             PresentationFormat::JwtVcJson(jwt),
         )
         .build()
