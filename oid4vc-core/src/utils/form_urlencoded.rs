@@ -57,7 +57,6 @@ use std::collections::HashMap;
 /// assert!(encoded.contains("name=test"));
 /// assert!(encoded.contains("items=%5B1%2C2%2C3%5D"));
 /// assert!(encoded.contains("details=%7B%22key%22%3A%22value%22%7D"));
-
 pub fn to_form_urlencoded_string<T: Serialize>(value: &T) -> anyhow::Result<String> {
     let map: serde_json::Map<String, serde_json::Value> = json!(value)
         .as_object()
