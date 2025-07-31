@@ -43,7 +43,7 @@ where
 pub struct PushedAuthorizationResponse {
     #[serde(serialize_with = "uuid_as_urn")]
     pub request_uri: Uuid,
-    pub expires_in: u64,
+    pub expires_in: i64,
 }
 
 // FIXME: Only PAR?
@@ -54,7 +54,7 @@ pub struct AuthorizationRequestByReference {
     pub request_uri: Uuid,
 }
 
-fn uuid_as_urn<S>(uuid: &Uuid, serializer: S) -> Result<S::Ok, S::Error>
+pub fn uuid_as_urn<S>(uuid: &Uuid, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -348,10 +348,11 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .aud(credential_issuer_metadata.credential_issuer)
             .iat(chrono::Utc::now().timestamp());
 
-        // TODO: in certain cases the `c_nonce` is required, so we need to validate that.
-        if let Some(c_nonce) = token_response.c_nonce.as_ref() {
-            key_proof_type_builder = key_proof_type_builder.nonce(c_nonce.clone());
-        }
+        // FIXME: remove `c_nonce`?
+        // // TODO: in certain cases the `c_nonce` is required, so we need to validate that.
+        // if let Some(c_nonce) = token_response.c_nonce.as_ref() {
+        //     key_proof_type_builder = key_proof_type_builder.nonce(c_nonce.clone());
+        // }
 
         let proof = Some(
             key_proof_type_builder

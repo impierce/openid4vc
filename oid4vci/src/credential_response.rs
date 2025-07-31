@@ -7,8 +7,6 @@ use serde_with::skip_serializing_none;
 pub struct CredentialResponse {
     #[serde(flatten)]
     pub credential: CredentialResponseType,
-    pub c_nonce: Option<String>,
-    pub c_nonce_expires_in: Option<u64>,
 }
 
 #[skip_serializing_none]
@@ -35,16 +33,12 @@ mod tests {
             credential: CredentialResponseType::Deferred {
                 transaction_id: "123".to_string(),
             },
-            c_nonce: Some("456".to_string()),
-            c_nonce_expires_in: Some(789),
         };
         let serialized = serde_json::to_value(&credential_response).unwrap();
         assert_eq!(
             serialized,
             json!({
-                "transaction_id": "123",
-                "c_nonce": "456",
-                "c_nonce_expires_in": 789
+                "transaction_id": "123"
             })
         );
         let deserialized: CredentialResponse = serde_json::from_value(serialized).unwrap();

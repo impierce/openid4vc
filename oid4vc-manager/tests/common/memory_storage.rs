@@ -95,8 +95,6 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
             expires_in: Some(86400),
             refresh_token: None,
             scope: None,
-            c_nonce: Some(C_NONCE.clone()),
-            c_nonce_expires_in: Some(86400),
         })
     }
 
@@ -140,8 +138,6 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
                 .unwrap(),
                 notification_id: None,
             },
-            c_nonce: Some(C_NONCE.clone()),
-            c_nonce_expires_in: Some(86400),
         })
     }
 
