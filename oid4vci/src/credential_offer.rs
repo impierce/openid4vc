@@ -100,6 +100,14 @@ pub struct Grants {
     pub pre_authorized_code: Option<PreAuthorizedCode>,
 }
 
+#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum GrantType {
+    AuthorizationCode,
+    #[serde(rename = "urn:ietf:params:oauth:grant-type:pre-authorized_code")]
+    PreAuthorizedCode,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
