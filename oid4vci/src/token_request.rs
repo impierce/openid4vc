@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
+use url::Url;
 
 /// Token Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-token-request
 #[skip_serializing_none]
@@ -8,10 +9,10 @@ use serde_with::skip_serializing_none;
 pub enum TokenRequest {
     #[serde(rename = "authorization_code")]
     AuthorizationCode {
-        client_id: Option<String>,
+        client_id: String,
         code: String,
         code_verifier: Option<String>,
-        redirect_uri: Option<String>,
+        redirect_uri: Option<Url>,
     },
     #[serde(rename = "urn:ietf:params:oauth:grant-type:pre-authorized_code")]
     PreAuthorizedCode {
@@ -30,16 +31,17 @@ mod tests {
         assert_eq!(
             serde_urlencoded::from_str::<TokenRequest>(
                 "grant_type=authorization_code\
+        &client_id=client_id\
         &code=SplxlOBeZQQYbYS6WxSbIA\
         &code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk\
         &redirect_uri=https%3A%2F%2FWallet.example.org%2Fcb",
             )
             .unwrap(),
             TokenRequest::AuthorizationCode {
-                client_id: None,
+                client_id: "client_id".to_string(),
                 code: "SplxlOBeZQQYbYS6WxSbIA".to_string(),
                 code_verifier: Some("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string()),
-                redirect_uri: Some("https://Wallet.example.org/cb".to_string()),
+                redirect_uri: Some("https://Wallet.example.org/cb".parse().unwrap()),
             }
         );
 

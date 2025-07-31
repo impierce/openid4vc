@@ -110,7 +110,7 @@ async fn test_authorization_code_flow() {
         .unwrap();
 
     let token_request = TokenRequest::AuthorizationCode {
-        client_id: Some(wallet.subject.identifier("did:key", Algorithm::EdDSA).await.unwrap()),
+        client_id: wallet.subject.identifier("did:key", Algorithm::EdDSA).await.unwrap(),
         code: authorization_response.code,
         code_verifier: None,
         redirect_uri: None,
