@@ -60,9 +60,7 @@ use std::collections::HashMap;
 pub fn to_form_urlencoded_string<T: Serialize>(value: &T) -> anyhow::Result<String> {
     let map: serde_json::Map<String, serde_json::Value> = json!(value)
         .as_object()
-        .ok_or(anyhow::anyhow!(
-            "Failed to convert value to JSON object for URL encoding"
-        ))?
+        .ok_or(anyhow::anyhow!("Expected a JSON object for serialization"))?
         .iter()
         .filter_map(|(k, v)| match v {
             serde_json::Value::Object(_) | serde_json::Value::Array(_) => {
