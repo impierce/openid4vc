@@ -21,7 +21,7 @@ use oid4vp::{
     token::vp_token_builder::VpTokenBuilder,
 };
 use serde_json::json;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 
 lazy_static! {
     pub static ref DCQL_QUERY: DcqlQuery = serde_json::from_value(json!({
@@ -64,12 +64,12 @@ async fn test_implicit_flow() {
 
     // Create a new relying party.
     let relying_party = Arc::new(KeySubject::new());
-    let relying_party_did = relying_party.identifier("did:key", Algorithm::EdDSA).await.unwrap();
+    let _relying_party_did = relying_party.identifier("did:key", Algorithm::EdDSA).await.unwrap();
     let relying_party_manager = RelyingPartyManager::new(relying_party, "did:key", vec![Algorithm::EdDSA]).unwrap();
 
     // Create authorization request with response_type `id_token vp_token`
     let authorization_request = AuthorizationRequest::<Object<OID4VP>>::builder()
-        .client_id(ClientId::parse(&relying_party_did).unwrap())
+        .client_id(ClientId::from_str("my-client-id").unwrap())
         .redirect_uri("https://example.com".parse::<url::Url>().unwrap())
         .dcql_query(DCQL_QUERY.clone())
         .client_metadata(ClientMetadataResource::ClientMetadata {

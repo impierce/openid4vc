@@ -2,11 +2,6 @@ use crate::authorization_request::{
     AuthorizationRequestBuilder, AuthorizationRequestParameters, ClientMetadataParameters,
 };
 use crate::token::vp_token::VpToken;
-use dif_presentation_exchange::presentation_definition::ClaimFormatProperty;
-pub use dif_presentation_exchange::{
-    evaluate_input, ClaimFormatDesignation, InputDescriptor, InputDescriptorMappingObject, PathNested,
-    PresentationDefinition, PresentationSubmission,
-};
 use jsonwebtoken::Algorithm;
 use oid4vc_core::client_metadata::ClientMetadataResource;
 use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};

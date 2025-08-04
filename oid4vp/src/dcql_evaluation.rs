@@ -22,8 +22,8 @@ pub fn evaluate_single_claim_query(claim_query: &ClaimQuery, credential_json: &V
 /// Processing with claims_sets as described in OID4VP - draft 28 Section 6.4.1 Selecting Claims:
 /// https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-selecting-claims-and-credentials
 pub fn evaluate_credential_query(credential_query: &CredentialQuery, credential_json: &Value) -> bool {
-    //If claims is absent, the Verifier is requesting no claims that are selectively disclosable;
-    //the Wallet MUST return only the claims that are mandatory to present (e.g., SD-JWT and Key Binding JWT for a Credential of format IETF SD-JWT VC).
+    // If claims is absent, the Verifier is requesting no claims that are selectively disclosable;
+    // the Wallet MUST return only the claims that are mandatory to present (e.g., SD-JWT and Key Binding JWT for a Credential of format IETF SD-JWT VC).
     if credential_query.claims.is_empty() {
         return true;
     }
@@ -51,11 +51,11 @@ pub fn evaluate_credential_query(credential_query: &CredentialQuery, credential_
 #[cfg(test)]
 mod tests {
     use super::*;
-    use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer};
+    use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer, ClaimValue, ClaimValues};
     use serde_json::json;
 
     const TESTCREDENTIAL: &str = include_str!("../tests/examples/credentials/jwt_vc.json");
-
+    const DCQL_QUERY: &str = include_str!("../tests/examples/dcql_jwt_vc.json");
     #[test]
     fn test_get_value_from_json() {
         let testing_credential: Value = serde_json::from_str(TESTCREDENTIAL).unwrap();
@@ -67,5 +67,91 @@ mod tests {
         .unwrap();
         let values = path.get_values_from_json(&testing_credential);
         assert_eq!(values, vec![json!("Max")]);
+    }
+
+    #[test]
+    fn test_evaluate_single_claim_query() {
+        let testing_credential: Value = serde_json::from_str(TESTCREDENTIAL).unwrap();
+        let claim_query = ClaimQuery {
+            id: Some("given_name".to_string()),
+            path: ClaimPathPointer::try_new(vec![
+                ClaimPathElement::String("vc".to_string()),
+                ClaimPathElement::String("credentialSubject".to_string()),
+                ClaimPathElement::String("given_name".to_string()),
+            ])
+            .unwrap(),
+            values: Some(ClaimValues::try_new(vec![ClaimValue::String("Max".to_string())]).unwrap()),
+        };
+        // Returns true
+        assert!(evaluate_single_claim_query(&claim_query, &testing_credential));
+    }
+
+    #[test]
+
+    fn evaluate_single_invalid_claim_query() {
+        let testing_credential = json!({
+                "vc": {
+            "@context": [
+                "https://www.w3.org/2018/credentials/v1",
+                "https://www.w3.org/2018/credentials/examples/v1"
+            ],
+            "type": [
+                "VerifiableCredential",
+                "IDCredential"
+            ],
+            "credentialSubject": {
+                "given_name": "Rainer",
+                "family_name": "Zufall",
+                "birthdate": "1998-01-11",
+                "address": {
+                    "street_address": "Sandanger 25",
+                    "locality": "Musterstadt",
+                    "postal_code": "123456",
+                    "country": "DE"
+                }
+            }
+        }
+            });
+        let claim_query = ClaimQuery {
+            id: Some("given_name".to_string()),
+            path: ClaimPathPointer::try_new(vec![
+                ClaimPathElement::String("vc".to_string()),
+                ClaimPathElement::String("credentialSubject".to_string()),
+                ClaimPathElement::String("given_name".to_string()),
+            ])
+            .unwrap(),
+            values: Some(ClaimValues::try_new(vec![ClaimValue::String("Max".to_string())]).unwrap()),
+        };
+        // Returns false
+        assert!(!evaluate_single_claim_query(&claim_query, &testing_credential));
+    }
+
+    #[test]
+    fn test_dcql_credential_query() {
+        let testing_credential = json!({
+                "vc": {
+            "@context": [
+                "https://www.w3.org/2018/credentials/v1",
+                "https://www.w3.org/2018/credentials/examples/v1"
+            ],
+            "type": [
+                "VerifiableCredential",
+                "IDCredential"
+            ],
+            "credentialSubject": {
+                "given_name": "Rainer",
+                "family_name": "Zufall",
+                "birthdate": "1998-01-11",
+                "address": {
+                    "street_address": "Sandanger 25",
+                    "locality": "Musterstadt",
+                    "postal_code": "123456",
+                    "country": "DE"
+                }
+            }
+        }
+            });
+        let dcql_query: Value = serde_json::from_str(DCQL_QUERY).unwrap();
+        assert!(evaluate_credential_query(&dcql_query, &testing_credential));
     }
 }

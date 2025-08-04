@@ -1,8 +1,6 @@
 use crate::dcql::dcql_query::DcqlQuery;
 use crate::oid4vp::OID4VP;
 use anyhow::{anyhow, Result};
-use dif_presentation_exchange::presentation_definition::ClaimFormatProperty;
-use dif_presentation_exchange::ClaimFormatDesignation;
 use is_empty::IsEmpty;
 use monostate::MustBe;
 use oid4vc_core::authorization_request::Object;
@@ -54,8 +52,18 @@ impl ClientId {
     pub fn new(prefix: ClientIdPrefix, identifier: String) -> Self {
         Self { prefix, identifier }
     }
+    pub fn prefix(&self) -> &ClientIdPrefix {
+        &self.prefix
+    }
+    pub fn identifier(&self) -> &str {
+        &self.identifier
+    }
+}
 
-    pub fn parse(s: &str) -> Result<Self, String> {
+impl std::str::FromStr for ClientId {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Some((prefix_str, identifier)) = s.split_once(':') {
             let prefix = match prefix_str {
                 "pre-registered" => ClientIdPrefix::PreRegistered,
@@ -78,13 +86,6 @@ impl ClientId {
             })
         }
     }
-
-    pub fn prefix(&self) -> &ClientIdPrefix {
-        &self.prefix
-    }
-    pub fn identifier(&self) -> &str {
-        &self.identifier
-    }
 }
 
 impl fmt::Display for ClientId {
@@ -95,6 +96,7 @@ impl fmt::Display for ClientId {
         }
     }
 }
+
 /// [`AuthorizationRequest`] claims specific to [`OID4VP`].
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -158,7 +160,6 @@ impl AuthorizationRequestBuilder {
                         .dcql_query
                         .take()
                         .ok_or_else(|| anyhow!("presentation_definition parameter is required."))?,
-                    // client_id_scheme: self.client_id_scheme.take(),
                     scope: self.scope.take(),
                     response_mode: self.response_mode.take(),
                     nonce: self
@@ -210,14 +211,14 @@ mod tests {
 
     #[test]
     fn test_new_client_id() {
-        let test_client_id = ClientId::parse("openid_federation:example_client").unwrap();
+        let test_client_id = "openid_federation:example_client".parse::<ClientId>().unwrap();
         assert_eq!(test_client_id.prefix(), &ClientIdPrefix::OpenidFederation);
         assert_eq!(test_client_id.identifier(), "example_client");
     }
 
     #[test]
     fn test_redirect_client_id() {
-        let test_redirect_id = ClientId::parse("example_client").unwrap();
+        let test_redirect_id = "example_client".parse::<ClientId>().unwrap();
         assert_eq!(test_redirect_id.prefix(), &ClientIdPrefix::PreRegistered);
         assert_eq!(test_redirect_id.identifier(), "example_client");
     }
@@ -238,7 +239,6 @@ mod tests {
             pub response_mode: Option<String>,
             pub scope: Option<Scope>,
             pub nonce: String,
-            // TODO: impl client_metadata_uri.
             #[serde(flatten)]
             pub client_metadata: Option<ClientMetadataResource<ClientMetadataParameters>>,
         }

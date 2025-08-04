@@ -153,7 +153,7 @@ impl Provider {
         authorization_response: &AuthorizationResponse<E>,
     ) -> Result<StatusCode> {
         let encoded = to_form_urlencoded_string(&authorization_response)
-            .map_err(|err| anyhow::anyhow!("Failed to encode authorization response:{err}"))?;
+            .map_err(|err| anyhow::anyhow!("Failed to encode authorization response: {err}"))?;
 
         Ok(self
             .client

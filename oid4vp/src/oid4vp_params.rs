@@ -1,4 +1,4 @@
-use crate::token::vp_token::VpToken;
+use crate::VpToken;
 use serde::{Deserialize, Serialize};
 
 /// Represents the parameters of an OpenID4VP response. It can hold a Verifiable Presentation Token and a Presentation

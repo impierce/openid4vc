@@ -57,6 +57,7 @@ use std::collections::HashMap;
 /// assert!(encoded.contains("name=test"));
 /// assert!(encoded.contains("items=%5B1%2C2%2C3%5D"));
 /// assert!(encoded.contains("details=%7B%22key%22%3A%22value%22%7D"));
+/// ```
 pub fn to_form_urlencoded_string<T: Serialize>(value: &T) -> anyhow::Result<String> {
     let map: serde_json::Map<String, serde_json::Value> = json!(value)
         .as_object()
@@ -76,6 +77,58 @@ pub fn to_form_urlencoded_string<T: Serialize>(value: &T) -> anyhow::Result<Stri
     Ok(encoded)
 }
 
+/// Deserializes a `x-www-form-urlencoded` string into a value.  
+///  
+/// This function is the inverse of `to_form_urlencoded_string`. It first decodes the  
+/// URL-encoded string into a map of string keys and string values. It then attempts to  
+/// parse each value as a JSON string. If parsing succeeds, the JSON value is used.  
+/// If it fails (e.g., the value is a simple string like "test"), it's treated as a  
+/// plain JSON string. The resulting JSON object is then deserialized into the target type.  
+///  
+/// # Arguments  
+///  
+/// * `encoded` - A `x-www-form-urlencoded` string.  
+///  
+/// # Returns  
+///  
+/// Returns `Ok(T)` with the deserialized value, or `Err(anyhow::Error)` on failure.  
+///  
+/// # Errors  
+///  
+/// Returns an error if:  
+/// - The input is not valid `x-www-form-urlencoded` data.  
+/// - The resulting JSON object cannot be deserialized into the target type `T`.  
+///  
+/// # Example  
+///  
+/// ```  
+/// use serde::Deserialize;  
+/// use oid4vc_core::utils::form_urlencoded::from_form_urlencoded_string;  
+///  
+/// #[derive(Deserialize, Debug, PartialEq)]  
+/// struct Data {  
+///     name: String,  
+///     items: Vec<i32>,  
+///     details: Detail,  
+/// }  
+///  
+/// #[derive(Deserialize, Debug, PartialEq)]  
+/// struct Detail {  
+///     key: String,  
+/// }  
+///  
+/// let encoded_string = "name=test&items=%5B1%2C2%2C3%5D&details=%7B%22key%22%3A%22value%22%7D";  
+///  
+/// let decoded: Data = from_form_urlencoded_string(encoded_string).unwrap();  
+///  
+/// let expected = Data {  
+///     name: "test".to_string(),  
+///     items: vec![1, 2, 3],  
+///     details: Detail { key: "value".to_string() },  
+/// };  
+///  
+/// assert_eq!(decoded, expected);  
+/// ```
 pub fn from_form_urlencoded_string<T: DeserializeOwned>(encoded: &str) -> anyhow::Result<T> {
     let string_map: HashMap<String, String> =
         serde_urlencoded::from_str(encoded).map_err(|e| anyhow::anyhow!("Failed to decodde: {}", e))?;
