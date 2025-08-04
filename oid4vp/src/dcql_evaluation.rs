@@ -2,7 +2,7 @@ use crate::dcql::dcql_query::{ClaimQuery, CredentialQuery};
 use oid4vc_core::claim_path_pointer::matches_claim_values;
 use serde_json::Value;
 
-pub fn evaluate_single_claim_query(claim_query: &ClaimQuery, credential_json: &Value) -> bool {
+fn evaluate_single_claim_query(claim_query: &ClaimQuery, credential_json: &Value) -> bool {
     let extracted_values = claim_query.path.get_values_from_json(credential_json);
     if extracted_values.is_empty() {
         return false;
@@ -88,7 +88,6 @@ mod tests {
     }
 
     #[test]
-
     fn evaluate_single_invalid_claim_query() {
         let testing_credential = json!({
                 "vc": {
