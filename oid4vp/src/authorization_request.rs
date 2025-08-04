@@ -130,6 +130,7 @@ pub struct ClientMetadataParameters {
     pub vp_formats_supported: VpFormatsSupported,
 }
 
+#[skip_serializing_none]
 #[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
 pub struct VpFormatsSupported {
     pub jwt_vc_json: Option<JwtVcJsonParameters>,
