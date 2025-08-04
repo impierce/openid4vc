@@ -283,7 +283,7 @@ mod tests {
 
         assert_eq!(
             CredentialRequest {
-                credential_format: CredentialFormats::VcSdJwt(Parameters {
+                credential_format: CredentialFormats::DcSdJwt(Parameters {
                     parameters: ("SD_JWT_VC_example_in_OpenID4VCI".to_string(), None, None).into(),
                 }),
                 proof: Some(KeyProofType::Jwt {

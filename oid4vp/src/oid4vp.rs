@@ -2,6 +2,8 @@ use crate::authorization_request::{
     AuthorizationRequestBuilder, AuthorizationRequestParameters, ClientMetadataParameters,
 };
 use crate::token::vp_token::VpToken;
+use anyhow::anyhow;
+use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::Algorithm;
 use oid4vc_core::client_metadata::ClientMetadataResource;
 use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};
@@ -18,6 +20,12 @@ use std::sync::Arc;
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationResponseParameters {
     pub vp_token: VpToken,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub enum PresentationInputType {
+    Presentation(Box<Presentation<Jwt>>),
+    SdJwtVc(String),
 }
 
 /// This is the [`RequestHandle`] for the [`OID4VP`] extension.
@@ -85,22 +93,19 @@ impl Extension for OID4VP {
         // well as the Proof of Possession.
         match client_metadata {
             // Fetch the client metadata from the given URI.
-            ClientMetadataResource::ClientMetadataUri(_) => unreachable!(),
+            //TODO: Add LDP VC
             ClientMetadataResource::ClientMetadata { extension, .. } => extension
-                .vp_formats
-                .get(&ClaimFormatDesignation::JwtVcJson)
-                .or_else(|| extension.vp_formats.get(&ClaimFormatDesignation::VcSdJwt))
-                .and_then(|claim_format_property| match claim_format_property {
-                    ClaimFormatProperty::Alg(algs) => Some(algs.clone()),
-                    // TODO: implement `ProofType`.
-                    ClaimFormatProperty::ProofType(_) => None,
-                    ClaimFormatProperty::SdJwt {
-                        sd_jwt_alg_values,
-                        // TODO: implement Key Binding
-                        kb_jwt_alg_values: _kb_jwt_alg_values,
-                    } => Some(sd_jwt_alg_values.clone()),
+                .vp_formats_supported
+                .jwt_vc_json
+                .and_then(|params| params.alg_values)
+                .or_else(|| {
+                    extension
+                        .vp_formats_supported
+                        .dc_sd_jwt
+                        .and_then(|params| params.sd_jwt_alg_values)
                 })
-                .ok_or(anyhow::anyhow!("No supported algorithms found.")),
+                .ok_or_else(|| anyhow!("No supported algorithms found")),
+            _ => unreachable!("ClientMetadataUri should have been resolved above"),
         }
     }
 

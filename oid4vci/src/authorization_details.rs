@@ -186,7 +186,7 @@ mod tests {
                 r#type: OpenidCredential::Type,
                 locations: None,
                 credential_configuration_or_format: CredentialConfigurationOrFormat::CredentialFormat(
-                    CredentialFormats::VcSdJwt(Parameters {
+                    CredentialFormats::DcSdJwt(Parameters {
                         parameters: ("SD_JWT_VC_example_in_OpenID4VCI".to_string(), None, None).into(),
                     }),
                 ),

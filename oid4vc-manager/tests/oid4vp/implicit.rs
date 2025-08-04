@@ -10,10 +10,10 @@ use oid4vc_core::{
 };
 use oid4vc_manager::{methods::key_method::KeySubject, ProviderManager, RelyingPartyManager};
 use oid4vci::VerifiableCredentialJwt;
+use oid4vp::authorization_request::{JwtVcJsonParameters, VpFormatsSupported};
 use oid4vp::{
     authorization_request::{ClientId, ClientMetadataParameters},
     oid4vp::OID4VP,
-    ClaimFormatDesignation, ClaimFormatProperty,
 };
 use oid4vp::{
     dcql::dcql_query::{CredentialQueryId, DcqlQuery},
@@ -76,12 +76,12 @@ async fn test_implicit_flow() {
             client_name: None,
             logo_uri: None,
             extension: ClientMetadataParameters {
-                vp_formats: vec![(
-                    ClaimFormatDesignation::JwtVcJson,
-                    ClaimFormatProperty::Alg(vec![Algorithm::EdDSA]),
-                )]
-                .into_iter()
-                .collect(),
+                vp_formats_supported: VpFormatsSupported {
+                    jwt_vc_json: Some(JwtVcJsonParameters {
+                        alg_values: Some(vec![Algorithm::EdDSA]),
+                    }),
+                    ..Default::default()
+                },
             },
             other: HashMap::from_iter(vec![(
                 "subject_syntax_types_supported".to_string(),

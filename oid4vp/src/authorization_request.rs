@@ -1,5 +1,7 @@
 use crate::dcql::dcql_query::DcqlQuery;
 use crate::oid4vp::OID4VP;
+use jsonwebtoken::Algorithm;
+
 use anyhow::{anyhow, Result};
 use is_empty::IsEmpty;
 use monostate::MustBe;
@@ -10,7 +12,6 @@ use oid4vc_core::{
 };
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
-use std::collections::HashMap;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -97,6 +98,19 @@ impl fmt::Display for ClientId {
     }
 }
 
+#[allow(dead_code)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Hash, Clone, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CredentialFormatIdentifier {
+    JwtVcJson,
+    JwtVpJson,
+    LdpVc,
+    LdpVp,
+    MsoMdoc,
+    #[serde(rename = "dc+sd-jwt")]
+    DcSdJwt,
+}
+
 /// [`AuthorizationRequest`] claims specific to [`OID4VP`].
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -115,7 +129,51 @@ pub struct ClientMetadataParameters {
     /// Object defining the formats and proof types of Verifiable Presentations and Verifiable Credentials that a
     /// Verifier supports.
     /// As described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-20.html#name-additional-verifier-metadat
-    pub vp_formats: HashMap<ClaimFormatDesignation, ClaimFormatProperty>,
+    pub vp_formats_supported: VpFormatsSupported,
+}
+
+#[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
+pub struct VpFormatsSupported {
+    pub jwt_vc_json: Option<JwtVcJsonParameters>,
+    pub jwt_vp_json: Option<JwtVpJsonParameters>,
+    #[serde(rename = "dc+sd-jwt")]
+    pub dc_sd_jwt: Option<DcSdJwtParameters>,
+    pub ldp_vc: Option<LdpVcParameters>,
+    pub ldp_vp: Option<LdpVpParameters>,
+    pub mso_mdoc: Option<MsoMdocParameters>,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
+pub struct JwtVcJsonParameters {
+    pub alg_values: Option<Vec<Algorithm>>,
+}
+#[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
+pub struct JwtVpJsonParameters {
+    pub alg_values: Option<Vec<Algorithm>>,
+}
+#[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
+pub struct DcSdJwtParameters {
+    #[serde(rename = "sd-jwt_alg_values")]
+    pub sd_jwt_alg_values: Option<Vec<Algorithm>>,
+    #[serde(rename = "kb-jwt_alg_values")]
+    pub kb_jwt_alg_values: Option<Vec<Algorithm>>,
+}
+#[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
+pub struct LdpVcParameters {
+    pub proof_type_values: Option<Vec<String>>,
+    pub cryptosuite_values: Option<Vec<String>>,
+}
+
+#[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
+pub struct LdpVpParameters {
+    pub proof_type_values: Option<Vec<String>>,
+    pub cryptosuite_values: Option<Vec<String>>,
+}
+
+#[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
+pub struct MsoMdocParameters {
+    pub issuerauth_alg_values: Option<Vec<i32>>,
+    pub deviceauth_alg_values: Option<Vec<i32>>,
 }
 
 #[derive(Debug, Default, IsEmpty)]
@@ -196,18 +254,8 @@ impl AuthorizationRequestBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dcql::dcql_query::{ClaimQuery, CredentialQuery, CredentialQueryId, DcqlQuery, Format, MetaTypes};
-    use jsonwebtoken::Algorithm;
-    use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer};
     use serde_json::from_str;
-
-    fn test_credential_query_id(id: &str) -> CredentialQueryId {
-        CredentialQueryId::try_new(id.to_string()).unwrap()
-    }
-
-    fn test_claim_path(elements: Vec<ClaimPathElement>) -> ClaimPathPointer {
-        ClaimPathPointer::try_new(elements).unwrap()
-    }
+    use std::collections::HashMap;
 
     #[test]
     fn test_new_client_id() {
@@ -224,91 +272,143 @@ mod tests {
     }
 
     #[test]
-    fn test_oid4vp_examples() {
-        // Examples from
-        // https://github.com/openid/OpenID4VP/tree/965597ae01fc6e6a2bddc0d6b16f3f6122f3c1ab/examples/client_metadata.
-
-        // Some required parameters are omitted in the examples. Therefore this example struct represents a subset of
-        // the full `AuthorizationRequestParameters` struct.
-        #[derive(Serialize, Deserialize, Debug, PartialEq)]
-        struct ExampleAuthorizationRequest {
-            pub client_id: String,
-            pub redirect_uri: url::Url,
-            pub response_type: MustBe!("vp_token id_token"),
-            pub dcql_query: DcqlQuery,
-            pub response_mode: Option<String>,
-            pub scope: Option<Scope>,
-            pub nonce: String,
-            #[serde(flatten)]
-            pub client_metadata: Option<ClientMetadataResource<ClientMetadataParameters>>,
-        }
-
-        assert_eq!(
-            ExampleAuthorizationRequest {
-                client_id: "did:example:123".to_string(),
-                redirect_uri: url::Url::parse("https://client.example.org/callback").unwrap(),
-                response_type: MustBe!("vp_token id_token"),
-                nonce: "n-0S6_WzA2Mj".to_string(),
-                client_metadata: Some(ClientMetadataResource::ClientMetadata {
-                    client_name: Some("My Example (SIOP)".to_string()),
-                    logo_uri: None,
-                    extension: ClientMetadataParameters {
-                        vp_formats: vec![
-                            (
-                                ClaimFormatDesignation::JwtVpJson,
-                                ClaimFormatProperty::Alg(vec![Algorithm::EdDSA, Algorithm::ES256,])
-                            ),
-                            (
-                                ClaimFormatDesignation::LdpVp,
-                                ClaimFormatProperty::ProofType(vec!["Ed25519Signature2018".to_string(),])
-                            )
-                        ]
-                        .into_iter()
-                        .collect()
-                    },
-                    other: HashMap::from_iter(vec![("application_type".to_string(), serde_json::json!("web"))]),
-                }),
-                dcql_query: DcqlQuery {
-                    credentials: vec![CredentialQuery {
-                        id: test_credential_query_id("my_credential"),
-                        format: Format::DcSdJwt,
-                        multiple: None,
-                        meta: Some(MetaTypes::SdJwtMeta {
-                            vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
+    fn test_client_metadata_parameters_jwt_vc_json() {
+        let build: AuthorizationRequestBuilder = AuthorizationRequestBuilder::default()
+            .client_id(ClientId::parse("did:example:123").unwrap())
+            .redirect_uri(url::Url::parse("https://client.example.org/callback").unwrap())
+            .nonce("n-0S6_WzA2Mj".to_string())
+            .client_metadata(ClientMetadataResource::ClientMetadata {
+                client_name: Some("My SimpleSample".to_string()),
+                logo_uri: None,
+                extension: ClientMetadataParameters {
+                    vp_formats_supported: VpFormatsSupported {
+                        jwt_vc_json: Some(JwtVcJsonParameters {
+                            alg_values: Some(vec![Algorithm::ES256, Algorithm::ES384]),
                         }),
-                        trusted_authorities: None,
-                        require_cryptographic_holder_binding: Some(true),
-                        claims: vec![
-                            ClaimQuery {
-                                id: None,
-                                path: test_claim_path(vec![ClaimPathElement::String("last_name".to_string())]),
-                                values: None
-                            },
-                            ClaimQuery {
-                                id: None,
-                                path: test_claim_path(vec![ClaimPathElement::String("first_name".to_string())]),
-                                values: None
-                            },
-                            ClaimQuery {
-                                id: None,
-                                path: test_claim_path(vec![
-                                    ClaimPathElement::String("address".to_string()),
-                                    ClaimPathElement::String("street_address".to_string())
-                                ]),
-                                values: None
-                            }
-                        ],
-                        claim_sets: None
-                    }],
-                    credential_sets: None
+                        ..Default::default()
+                    },
                 },
-                response_mode: None,
-                scope: None,
-            },
-            from_str::<ExampleAuthorizationRequest>(include_str!(
-                "../tests/examples/authorization_request_chayatest.json"
-            ))
-            .unwrap(),
-        );
+                other: HashMap::new(),
+            });
+        let expected = from_str::<ClientMetadataParameters>(include_str!(
+            "../tests/examples/client_metadata/examples/client_metadata/w3c_jwt_verifier_metadata.json"
+        ))
+        .unwrap();
+
+        let auth_metadata = match build.client_metadata.as_ref().unwrap() {
+            ClientMetadataResource::ClientMetadata { extension, .. } => extension,
+            ClientMetadataResource::ClientMetadataUri { .. } => panic!(),
+        };
+
+        assert_eq!(auth_metadata, &expected);
+    }
+
+    #[test]
+    fn test_client_metadata_parameters_sd_jwt_vc() {
+        let build: AuthorizationRequestBuilder = AuthorizationRequestBuilder::default()
+            .client_id(ClientId::parse("did:example:123").unwrap())
+            .redirect_uri(url::Url::parse("https://client.example.org/callback").unwrap())
+            .nonce("n-0S6_WzA2Mj".to_string())
+            .client_metadata(ClientMetadataResource::ClientMetadata {
+                client_name: Some("My SimpleSample".to_string()),
+                logo_uri: None,
+                extension: ClientMetadataParameters {
+                    vp_formats_supported: VpFormatsSupported {
+                        dc_sd_jwt: Some(DcSdJwtParameters {
+                            sd_jwt_alg_values: Some(vec![Algorithm::ES256, Algorithm::ES384]),
+                            kb_jwt_alg_values: Some(vec![Algorithm::ES256, Algorithm::ES384]),
+                        }),
+                        ..Default::default()
+                    },
+                },
+                other: HashMap::new(),
+            });
+        let expected = from_str::<ClientMetadataParameters>(include_str!(
+            "../tests/examples/client_metadata/examples/client_metadata/sd_jwt_vc_verifier_metadata.json"
+        ))
+        .unwrap();
+
+        let auth_metadata = match build.client_metadata.as_ref().unwrap() {
+            ClientMetadataResource::ClientMetadata { extension, .. } => extension,
+            ClientMetadataResource::ClientMetadataUri { .. } => panic!(),
+        };
+
+        assert_eq!(auth_metadata, &expected);
+    }
+
+    #[test]
+    fn test_client_metadata_parameters_w3c_ldp_vc() {
+        let build: AuthorizationRequestBuilder = AuthorizationRequestBuilder::default()
+            .client_id(ClientId::parse("did:example:123").unwrap())
+            .redirect_uri(url::Url::parse("https://client.example.org/callback").unwrap())
+            .nonce("n-0S6_WzA2Mj".to_string())
+            .client_metadata(ClientMetadataResource::ClientMetadata {
+                client_name: Some("My SimpleSample".to_string()),
+                logo_uri: None,
+                extension: ClientMetadataParameters {
+                    vp_formats_supported: VpFormatsSupported {
+                        ldp_vc: Some(LdpVcParameters {
+                            proof_type_values: Some(vec![
+                                "DataIntegrityProof".to_string(),
+                                "Ed25519Signature2020".to_string(),
+                            ]),
+                            cryptosuite_values: Some(vec![
+                                "ecdsa-rdfc-2019".to_string(),
+                                "ecdsa-sd-2023".to_string(),
+                                "ecdsa-jcs-2019".to_string(),
+                                "bbs-2023".to_string(),
+                            ]),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    },
+                },
+                other: HashMap::new(),
+            });
+        let expected = from_str::<ClientMetadataParameters>(include_str!(
+            "../tests/examples/client_metadata/examples/client_metadata/w3c_ldp_verifier_metadata.json"
+        ))
+        .unwrap();
+
+        let auth_metadata = match build.client_metadata.as_ref().unwrap() {
+            ClientMetadataResource::ClientMetadata { extension, .. } => extension,
+            ClientMetadataResource::ClientMetadataUri { .. } => panic!(),
+        };
+
+        assert_eq!(auth_metadata, &expected);
+    }
+
+    #[test]
+    fn test_client_metadata_parameters_mso_mdoc_verifier() {
+        let build: AuthorizationRequestBuilder = AuthorizationRequestBuilder::default()
+            .client_id(ClientId::parse("did:example:123").unwrap())
+            .redirect_uri(url::Url::parse("https://client.example.org/callback").unwrap())
+            .nonce("n-0S6_WzA2Mj".to_string())
+            .client_metadata(ClientMetadataResource::ClientMetadata {
+                client_name: Some("My SimpleSample".to_string()),
+                logo_uri: None,
+                extension: ClientMetadataParameters {
+                    vp_formats_supported: VpFormatsSupported {
+                        mso_mdoc: Some(MsoMdocParameters {
+                            issuerauth_alg_values: Some(vec![-9, -50]),
+                            deviceauth_alg_values: Some(vec![-9, -50]),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    },
+                },
+                other: HashMap::new(),
+            });
+        let expected = from_str::<ClientMetadataParameters>(include_str!(
+            "../tests/examples/client_metadata/examples/client_metadata/mso_mdoc_verifier_metadata.json"
+        ))
+        .unwrap();
+
+        let auth_metadata = match build.client_metadata.as_ref().unwrap() {
+            ClientMetadataResource::ClientMetadata { extension, .. } => extension,
+            ClientMetadataResource::ClientMetadataUri { .. } => panic!(),
+        };
+
+        assert_eq!(auth_metadata, &expected);
     }
 }
