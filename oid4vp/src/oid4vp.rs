@@ -35,6 +35,7 @@ impl RequestHandle for RequestHandler {
     type Parameters = AuthorizationRequestParameters;
     type Builder = AuthorizationRequestBuilder;
 }
+
 /// This is the [`ResponseHandle`] for the [`OID4VP`] extension.
 #[derive(Debug, PartialEq, Clone)]
 pub struct ResponseHandler {}
