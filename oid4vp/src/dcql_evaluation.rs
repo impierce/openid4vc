@@ -51,11 +51,12 @@ pub fn evaluate_credential_query(credential_query: &CredentialQuery, credential_
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dcql::claims::{validate_claims, ClaimsContext};
     use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer, ClaimValue, ClaimValues};
     use serde_json::json;
 
     const TESTCREDENTIAL: &str = include_str!("../tests/examples/credentials/jwt_vc.json");
-    const DCQL_QUERY: &str = include_str!("../tests/examples/dcql_jwt_vc.json");
+    const DCQL_QUERY: &str = include_str!("../tests/examples/request/dcql_jwt_vc.json");
     #[test]
     fn test_get_value_from_json() {
         let testing_credential: Value = serde_json::from_str(TESTCREDENTIAL).unwrap();
@@ -126,10 +127,18 @@ mod tests {
         assert!(!evaluate_single_claim_query(&claim_query, &testing_credential));
     }
 
+    #[derive(Debug, serde::Deserialize)]
+    pub struct DcqlRequest {
+        pub credentials: Vec<CredentialQuery>,
+    }
+
     #[test]
     fn test_dcql_credential_query() {
         let testing_credential = json!({
-                "vc": {
+            "iss": "https://example.gov/issuers/565049",
+            "nbf": 1262304000,
+            "jti": "http://example.gov/credentials/3732",
+            "sub": "did:example:ebfeb1f712ebc6f1c276e12ec21",
             "@context": [
                 "https://www.w3.org/2018/credentials/v1",
                 "https://www.w3.org/2018/credentials/examples/v1"
@@ -149,9 +158,15 @@ mod tests {
                     "country": "DE"
                 }
             }
-        }
-            });
-        let dcql_query: Value = serde_json::from_str(DCQL_QUERY).unwrap();
-        assert!(evaluate_credential_query(&dcql_query, &testing_credential));
+        });
+        let dcql_request: DcqlRequest = serde_json::from_str(DCQL_QUERY).unwrap();
+        let dcql_query = &dcql_request.credentials[0];
+
+        let claims_context = ClaimsContext {
+            claim_sets: &dcql_query.claim_sets,
+        };
+        validate_claims(&dcql_query.claims, &claims_context).unwrap();
+
+        assert!(evaluate_credential_query(dcql_query, &testing_credential));
     }
 }

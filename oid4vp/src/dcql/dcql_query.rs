@@ -134,6 +134,7 @@ pub struct TrustedAuthority {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Validate, Clone)]
 pub struct ClaimQuery {
     //TODO: Use nutype for id, see CredentialQueryId as reference.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
     pub path: ClaimPathPointer,
     pub values: Option<ClaimValues>,

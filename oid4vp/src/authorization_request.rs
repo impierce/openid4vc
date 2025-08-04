@@ -13,7 +13,6 @@ use oid4vc_core::{
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::fmt;
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClientId {
     prefix: ClientIdPrefix,
@@ -256,6 +255,7 @@ mod tests {
     use super::*;
     use serde_json::from_str;
     use std::collections::HashMap;
+    use std::str::FromStr;
 
     #[test]
     fn test_new_client_id() {
@@ -274,7 +274,7 @@ mod tests {
     #[test]
     fn test_client_metadata_parameters_jwt_vc_json() {
         let build: AuthorizationRequestBuilder = AuthorizationRequestBuilder::default()
-            .client_id(ClientId::parse("did:example:123").unwrap())
+            .client_id(ClientId::from_str("did:example:123").unwrap())
             .redirect_uri(url::Url::parse("https://client.example.org/callback").unwrap())
             .nonce("n-0S6_WzA2Mj".to_string())
             .client_metadata(ClientMetadataResource::ClientMetadata {
@@ -306,7 +306,7 @@ mod tests {
     #[test]
     fn test_client_metadata_parameters_sd_jwt_vc() {
         let build: AuthorizationRequestBuilder = AuthorizationRequestBuilder::default()
-            .client_id(ClientId::parse("did:example:123").unwrap())
+            .client_id(ClientId::from_str("did:example:123").unwrap())
             .redirect_uri(url::Url::parse("https://client.example.org/callback").unwrap())
             .nonce("n-0S6_WzA2Mj".to_string())
             .client_metadata(ClientMetadataResource::ClientMetadata {
@@ -339,7 +339,7 @@ mod tests {
     #[test]
     fn test_client_metadata_parameters_w3c_ldp_vc() {
         let build: AuthorizationRequestBuilder = AuthorizationRequestBuilder::default()
-            .client_id(ClientId::parse("did:example:123").unwrap())
+            .client_id(ClientId::from_str("did:example:123").unwrap())
             .redirect_uri(url::Url::parse("https://client.example.org/callback").unwrap())
             .nonce("n-0S6_WzA2Mj".to_string())
             .client_metadata(ClientMetadataResource::ClientMetadata {
@@ -381,7 +381,7 @@ mod tests {
     #[test]
     fn test_client_metadata_parameters_mso_mdoc_verifier() {
         let build: AuthorizationRequestBuilder = AuthorizationRequestBuilder::default()
-            .client_id(ClientId::parse("did:example:123").unwrap())
+            .client_id(ClientId::from_str("did:example:123").unwrap())
             .redirect_uri(url::Url::parse("https://client.example.org/callback").unwrap())
             .nonce("n-0S6_WzA2Mj".to_string())
             .client_metadata(ClientMetadataResource::ClientMetadata {
