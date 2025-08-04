@@ -144,34 +144,45 @@ pub struct VpFormatsSupported {
 
 #[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
 pub struct JwtVcJsonParameters {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub alg_values: Option<Vec<Algorithm>>,
 }
+
 #[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
 pub struct JwtVpJsonParameters {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub alg_values: Option<Vec<Algorithm>>,
 }
+
 #[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
 pub struct DcSdJwtParameters {
-    #[serde(rename = "sd-jwt_alg_values")]
+    #[serde(rename = "sd-jwt_alg_values", skip_serializing_if = "Option::is_none")]
     pub sd_jwt_alg_values: Option<Vec<Algorithm>>,
-    #[serde(rename = "kb-jwt_alg_values")]
+    #[serde(rename = "kb-jwt_alg_values", skip_serializing_if = "Option::is_none")]
     pub kb_jwt_alg_values: Option<Vec<Algorithm>>,
 }
+
 #[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
 pub struct LdpVcParameters {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub proof_type_values: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cryptosuite_values: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
 pub struct LdpVpParameters {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub proof_type_values: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cryptosuite_values: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
 pub struct MsoMdocParameters {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub issuerauth_alg_values: Option<Vec<i32>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub deviceauth_alg_values: Option<Vec<i32>>,
 }
 
