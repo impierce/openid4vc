@@ -149,6 +149,7 @@ async fn test_implicit_flow() {
         .await
         .unwrap();
 
+    // Validate the authorization_response.
     assert!(relying_party_manager
         .validate_response(&authorization_response)
         .await
