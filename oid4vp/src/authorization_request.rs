@@ -13,6 +13,7 @@ use oid4vc_core::{
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::fmt;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClientId {
     prefix: ClientIdPrefix,
@@ -21,10 +22,8 @@ pub struct ClientId {
 
 /// The Client ID Scheme enables the use of different mechanisms to obtain and validate the Verifier's metadata. As
 /// described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-20.html#name-verifier-metadata-managemen
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ClientIdPrefix {
-    #[serde(rename = "pre-registered")]
     PreRegistered,
     RedirectUri,
     OpenidFederation,

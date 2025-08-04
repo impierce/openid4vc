@@ -37,7 +37,7 @@ pub struct CredentialQuery {
     pub require_cryptographic_holder_binding: Option<bool>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub claims: Vec<ClaimQuery>,
-    //TODO Create nutype to create a new type with non-empty predicate. As ref see CredentialQueryId above.
+    // TODO Create nutype to create a new type with non-empty predicate. As ref see CredentialQueryId above.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub claim_sets: Option<Vec<Vec<String>>>,
 }
@@ -115,7 +115,7 @@ impl CredentialQuery {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct CredentialSetQuery {
-    //TODO: Create nutype  with non-empty predicate (see CredentialQueryId)
+    // TODO: Create nutype  with non-empty predicate (see CredentialQueryId)
     pub options: Vec<Vec<String>>,
     #[serde(default = "default_as_true", skip_serializing_if = "Option::is_none")]
     pub required: Option<bool>,
@@ -124,7 +124,7 @@ pub struct CredentialSetQuery {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct TrustedAuthority {
     #[serde(rename = "type")]
-    //TODO: type_ should have stronger typing, see types defined by the spec:
+    // TODO: type_ should have stronger typing, see types defined by the spec:
     // https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html#name-authority-key-identifier
     pub type_: String,
     pub values: Vec<String>,
@@ -133,7 +133,7 @@ pub struct TrustedAuthority {
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Validate, Clone)]
 pub struct ClaimQuery {
-    //TODO: Use nutype for id, see CredentialQueryId as reference.
+    // TODO: Use nutype for id, see CredentialQueryId as reference.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
     pub path: ClaimPathPointer,

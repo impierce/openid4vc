@@ -94,7 +94,7 @@ impl Extension for OID4VP {
         // well as the Proof of Possession.
         match client_metadata {
             // Fetch the client metadata from the given URI.
-            //TODO: Add LDP VC
+            // TODO: Add LDP VC
             ClientMetadataResource::ClientMetadata { extension, .. } => extension
                 .vp_formats_supported
                 .jwt_vc_json
