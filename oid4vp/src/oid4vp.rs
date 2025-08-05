@@ -57,12 +57,10 @@ pub enum InputPresentation {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-struct DecodedVpToken {
+pub struct DecodedVpToken {
     #[serde(flatten)]
-    #[getset(get = "pub")]
-    pub(super) presentations: HashMap<CredentialQueryId, Vec<VerifiableCredentialJwt>>,
+    pub presentations: HashMap<CredentialQueryId, Vec<VerifiableCredentialJwt>>,
 }
-//cc should call this decoded presentations maybe? thoughts and prayers?
 
 /// This is the [`Extension`] implementation for the [`OID4VP`] extension.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -187,24 +185,19 @@ impl Extension for OID4VP {
         let vp_token = &authorization_response.extension.vp_token;
         let mut decoded_presentations: HashMap<CredentialQueryId, Vec<VerifiableCredentialJwt>> = HashMap::new();
 
-        // like this, iterate over the presentations in the vp_token
         for (credential_query_id, presentation_formats) in vp_token.presentations() {
             let mut all_decoded_credentials = Vec::new();
 
             for presentation_format in presentation_formats {
                 match presentation_format {
-                    //outer layer of jwt decoded and validated
                     PresentationFormat::JwtVcJson(jwt_string) => {
                         let decoded_presentation: Presentation<Jwt> = validator.decode(jwt_string.clone()).await?;
 
-                        //then inside
                         let credential_futures: Vec<_> = decoded_presentation
                             .verifiable_credential
                             .iter()
                             .map(|vc_jwt| validator.decode(vc_jwt.as_str().to_owned()))
                             .collect();
-
-                        // must waitfor all validations to be completed, then,
 
                         let decoded_credentials: Result<Vec<_>, _> =
                             join_all(credential_futures).await.into_iter().collect();
@@ -212,10 +205,7 @@ impl Extension for OID4VP {
                         let mut decoded_credentials = decoded_credentials?;
                         all_decoded_credentials.append(&mut decoded_credentials);
                     }
-                    PresentationFormat::DcSdJwt(dc_sd_jwt_string) => {
-                        let _decoded_sd_jwt = validator.decode(dc_sd_jwt_string.clone()).await?;
-                    }
-                    // TODO: handle additional formats LdpVc and MsoMdoc
+                    // TODO: handle additional formats DcSdJwt, LdpVc and MsoMdoc
                     _ => {
                         return Err(anyhow!("Unsupported presentation format: {:?}", presentation_format));
                     }
