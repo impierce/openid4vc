@@ -1,8 +1,10 @@
 use crate::authorization_request::{
     AuthorizationRequestBuilder, AuthorizationRequestParameters, ClientMetadataParameters,
 };
-use crate::token::vp_token::VpToken;
+use crate::dcql::dcql_query::CredentialQueryId;
+use crate::token::vp_token::{PresentationFormat, VpToken};
 use anyhow::anyhow;
+use futures::future::join_all;
 use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::Algorithm;
 use oid4vc_core::client_metadata::ClientMetadataResource;
@@ -10,10 +12,12 @@ use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle}
 use oid4vc_core::Subject;
 use oid4vc_core::SubjectSyntaxType;
 use oid4vc_core::{authorization_response::AuthorizationResponse, openid4vc_extension::Extension};
+use oid4vci::VerifiableCredentialJwt;
 use reqwest_middleware::ClientBuilder;
 use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -42,7 +46,7 @@ pub struct ResponseHandler {}
 impl ResponseHandle for ResponseHandler {
     type Input = VpToken;
     type Parameters = AuthorizationResponseParameters;
-    type ResponseItem = VpToken;
+    type ResponseItem = DecodedVpToken;
 }
 
 pub enum InputPresentation {
@@ -51,6 +55,14 @@ pub enum InputPresentation {
     DcSdJwt(String),
     // MsoMdoc,
 }
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+struct DecodedVpToken {
+    #[serde(flatten)]
+    #[getset(get = "pub")]
+    pub(super) presentations: HashMap<CredentialQueryId, Vec<VerifiableCredentialJwt>>,
+}
+//cc should call this decoded presentations maybe? thoughts and prayers?
 
 /// This is the [`Extension`] implementation for the [`OID4VP`] extension.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -169,10 +181,51 @@ impl Extension for OID4VP {
     }
 
     async fn decode_authorization_response(
-        _validator: oid4vc_core::Validator,
+        validator: oid4vc_core::Validator,
         authorization_response: &AuthorizationResponse<Self>,
-    ) -> anyhow::Result<<Self::ResponseHandle as ResponseHandle>::ResponseItem> {
-        //doublecheck
-        Ok(authorization_response.extension.vp_token.clone())
+    ) -> anyhow::Result<DecodedVpToken> {
+        let vp_token = &authorization_response.extension.vp_token;
+        let mut decoded_presentations: HashMap<CredentialQueryId, Vec<VerifiableCredentialJwt>> = HashMap::new();
+
+        // like this, iterate over the presentations in the vp_token
+        for (credential_query_id, presentation_formats) in vp_token.presentations() {
+            let mut all_decoded_credentials = Vec::new();
+
+            for presentation_format in presentation_formats {
+                match presentation_format {
+                    //outer layer of jwt decoded and validated
+                    PresentationFormat::JwtVcJson(jwt_string) => {
+                        let decoded_presentation: Presentation<Jwt> = validator.decode(jwt_string.clone()).await?;
+
+                        //then inside
+                        let credential_futures: Vec<_> = decoded_presentation
+                            .verifiable_credential
+                            .iter()
+                            .map(|vc_jwt| validator.decode(vc_jwt.as_str().to_owned()))
+                            .collect();
+
+                        // must waitfor all validations to be completed, then,
+
+                        let decoded_credentials: Result<Vec<_>, _> =
+                            join_all(credential_futures).await.into_iter().collect();
+
+                        let mut decoded_credentials = decoded_credentials?;
+                        all_decoded_credentials.append(&mut decoded_credentials);
+                    }
+                    PresentationFormat::DcSdJwt(dc_sd_jwt_string) => {
+                        let _decoded_sd_jwt = validator.decode(dc_sd_jwt_string.clone()).await?;
+                    }
+                    // TODO: handle additional formats LdpVc and MsoMdoc
+                    _ => {
+                        return Err(anyhow!("Unsupported presentation format: {:?}", presentation_format));
+                    }
+                }
+            }
+            decoded_presentations.insert(credential_query_id.clone(), all_decoded_credentials);
+        }
+
+        Ok(DecodedVpToken {
+            presentations: decoded_presentations,
+        })
     }
 }
