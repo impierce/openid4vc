@@ -1,4 +1,6 @@
+use chrono::{Duration, Utc};
 use did_key::{generate, Ed25519KeyPair};
+use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
 use oid4vc_core::authentication::subject::Subject;
@@ -11,6 +13,7 @@ use oid4vc_core::{
 use oid4vc_manager::{methods::key_method::KeySubject, ProviderManager, RelyingPartyManager};
 use oid4vci::VerifiableCredentialJwt;
 use oid4vp::authorization_request::{JwtVcJsonParameters, VpFormatsSupported};
+use oid4vp::token::verifiable_presentation_jwt::VerifiablePresentationJwt;
 use oid4vp::{
     authorization_request::{ClientId, ClientMetadataParameters},
     oid4vp::OID4VP,
@@ -20,8 +23,11 @@ use oid4vp::{
     token::vp_token::PresentationFormat,
     token::vp_token_builder::VpTokenBuilder,
 };
+
 use serde_json::json;
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::collections::HashMap;
+use std::str::FromStr;
+use std::sync::Arc;
 
 lazy_static! {
     pub static ref DCQL_QUERY: DcqlQuery = serde_json::from_value(json!({
@@ -93,7 +99,7 @@ async fn test_implicit_flow() {
         .unwrap();
 
     // Create a provider manager and validate the authorization request.
-    let provider_manager = ProviderManager::new(subject, vec!["did:key"], vec![Algorithm::EdDSA]).unwrap();
+    let provider_manager = ProviderManager::new(subject.clone(), vec!["did:key"], vec![Algorithm::EdDSA]).unwrap();
 
     // Create a new verifiable credential.
     let verifiable_credential = VerifiableCredentialJwt::builder()
@@ -125,7 +131,7 @@ async fn test_implicit_flow() {
 
     // Encode the verifiable credential as a JWT.
     let jwt = jwt::encode(
-        Arc::new(issuer),
+        subject.clone(),
         Header {
             alg: Algorithm::EdDSA,
             ..Default::default()
@@ -136,10 +142,41 @@ async fn test_implicit_flow() {
     .await
     .unwrap();
 
+    // Create a verifiable presentation using the JWT.
+    let verifiable_presentation_jwt =
+        Presentation::builder(subject_did.parse().unwrap(), identity_core::common::Object::new())
+            .credential(Jwt::from(jwt))
+            .build()
+            .unwrap();
+
+    let verifiable_presentation_jwt = VerifiablePresentationJwt::builder()
+        .iss(subject_did.clone())
+        .sub(subject_did)
+        .aud("my-client-id".to_string())
+        .nonce("nonce".to_string())
+        // TODO: make this configurable.
+        .exp((Utc::now() + Duration::minutes(10)).timestamp())
+        .iat((Utc::now()).timestamp())
+        .verifiable_presentation(verifiable_presentation_jwt)
+        .build()
+        .unwrap();
+
+    let verifiable_presentation_jwt = jwt::encode(
+        subject.clone(),
+        Header {
+            alg: Algorithm::EdDSA,
+            ..Default::default()
+        },
+        &verifiable_presentation_jwt,
+        "did:key",
+    )
+    .await
+    .unwrap();
+
     let vp_token = VpTokenBuilder::builder_dcql_query(DCQL_QUERY.clone())
         .add_presentation(
             CredentialQueryId::try_new("my_credential".to_string()).unwrap(),
-            PresentationFormat::JwtVcJson(jwt),
+            PresentationFormat::JwtVcJson(verifiable_presentation_jwt),
         )
         .build()
         .unwrap();

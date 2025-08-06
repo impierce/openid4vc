@@ -2,6 +2,7 @@ use crate::authorization_request::{
     AuthorizationRequestBuilder, AuthorizationRequestParameters, ClientMetadataParameters,
 };
 use crate::dcql::dcql_query::CredentialQueryId;
+use crate::token::verifiable_presentation_jwt::VerifiablePresentationJwt;
 use crate::token::vp_token::{PresentationFormat, VpToken};
 use anyhow::anyhow;
 use futures::future::join_all;
@@ -184,24 +185,21 @@ impl Extension for OID4VP {
     ) -> anyhow::Result<DecodedVpToken> {
         let vp_token = &authorization_response.extension.vp_token;
         let mut decoded_presentations: HashMap<CredentialQueryId, Vec<VerifiableCredentialJwt>> = HashMap::new();
-
         for (credential_query_id, presentation_formats) in vp_token.presentations() {
             let mut all_decoded_credentials = Vec::new();
-
             for presentation_format in presentation_formats {
                 match presentation_format {
                     PresentationFormat::JwtVcJson(jwt_string) => {
-                        let decoded_presentation: Presentation<Jwt> = validator.decode(jwt_string.clone()).await?;
-
+                        let decoded_presentation: VerifiablePresentationJwt =
+                            validator.decode(jwt_string.clone()).await?;
                         let credential_futures: Vec<_> = decoded_presentation
+                            .verifiable_presentation()
                             .verifiable_credential
                             .iter()
                             .map(|vc_jwt| validator.decode(vc_jwt.as_str().to_owned()))
                             .collect();
-
                         let decoded_credentials: Result<Vec<_>, _> =
                             join_all(credential_futures).await.into_iter().collect();
-
                         let mut decoded_credentials = decoded_credentials?;
                         all_decoded_credentials.append(&mut decoded_credentials);
                     }

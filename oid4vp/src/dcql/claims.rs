@@ -85,3 +85,195 @@ pub fn validate_claims_without_sets(claims: &[ClaimQuery]) -> Result<(), Validat
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dcql::dcql_query::DcqlQuery;
+    use lazy_static::lazy_static;
+
+    lazy_static! {
+        pub static ref VALID_QUERY: serde_json::Value = serde_json::json!(
+                  {
+          "credentials": [
+            {
+              "id": "pid",
+              "format": "dc+sd-jwt",
+              "meta": {
+                "vct_values": [ "https://credentials.example.com/identity_credential" ]
+              },
+              "claims": [
+                {"id": "a", "path": ["last_name"]},
+                {"id": "b", "path": ["postal_code"]},
+                {"id": "c", "path": ["locality"]},
+                {"id": "d", "path": ["region"]},
+                {"id": "e", "path": ["date_of_birth"]}
+              ],
+              "claim_sets": [
+                ["a", "c", "d", "e"],
+                ["a", "b", "e"]
+              ]
+            }
+          ]
+        }
+              );
+        pub static ref INVALID_QUERY_WITH_SETS_DUPLICATE_ID: serde_json::Value = serde_json::json!({
+          "credentials": [
+            {
+              "id": "pid",
+              "format": "dc+sd-jwt",
+              "meta": {
+                "vct_values": [ "https://credentials.example.com/identity_credential" ]
+              },
+              "claims": [
+                {"id": "a", "path": ["last_name"]},
+                {"id": "a", "path": ["postal_code"]},
+                { "id": "a", "path": ["locality"]},
+                {"id": "d", "path": ["region"]},
+                {"id": "e", "path": ["date_of_birth"]}
+              ],
+              "claim_sets": [
+                ["a", "c", "d", "e"],
+                ["a", "b", "e"]
+              ]
+            }
+          ]
+        });
+        pub static ref INVALID_QUERY_WITH_SETS_MISSING_ID: serde_json::Value = serde_json::json!({
+          "credentials": [
+            {
+              "id": "pid",
+              "format": "dc+sd-jwt",
+              "meta": {
+                "vct_values": [ "https://credentials.example.com/identity_credential" ]
+              },
+              "claims": [
+                {"path": ["last_name"]},
+                {"id": "b", "path": ["postal_code"]},
+                { "path": ["locality"]},
+                {"id": "d", "path": ["region"]},
+                {"id": "e", "path": ["date_of_birth"]}
+              ],
+              "claim_sets": [
+                ["a", "c", "d", "e"],
+                ["a", "b", "e"]
+              ]
+            }
+          ]
+        });
+        pub static ref INVALID_QUERY_WITH_SETS_NONEXISTENT_ID: serde_json::Value = serde_json::json!({
+          "credentials": [
+            {
+              "id": "pid",
+              "format": "dc+sd-jwt",
+              "meta": {
+                "vct_values": [ "https://credentials.example.com/identity_credential" ]
+              },
+              "claims": [
+                {"id": "a", "path": ["last_name"]},
+                {"id": "b", "path": ["postal_code"]},
+                { "id": "c", "path": ["locality"]},
+                {"id": "d", "path": ["region"]},
+                {"id": "e", "path": ["date_of_birth"]}
+              ],
+              "claim_sets": [
+                ["z", "c", "d", "e"],
+                ["a", "b", "e"]
+              ]
+            }
+          ]
+        });
+        pub static ref INVALID_QUERY_WITHOUT_SETS_INVALID_ID_FORMAT: serde_json::Value = serde_json::json!({
+          "credentials": [
+            {
+              "id": "pid",
+              "format": "dc+sd-jwt",
+              "meta": {
+                "vct_values": [ "https://credentials.example.com/identity_credential" ]
+              },
+              "claims": [
+                {"id": "!", "path": ["last_name"]},
+                {"id": "b&", "path": ["postal_code"]},
+                { "id": "c", "path": ["locality"]},
+                {"id": "d", "path": ["region"]},
+                {"id": "e", "path": ["date_of_birth"]}
+              ],
+            }
+          ]
+        });
+    }
+
+    #[test]
+    fn test_validate_claims_valid() {
+        let dcql_query: DcqlQuery = serde_json::from_value(VALID_QUERY.clone()).unwrap();
+        let credential = &dcql_query.credentials[0];
+
+        let ctx = ClaimsContext {
+            claim_sets: &credential.claim_sets,
+        };
+
+        let result = validate_claims(&credential.claims, &ctx);
+        assert!(result.is_ok(), "Valid claims should pass validation");
+    }
+
+    #[test]
+    fn test_validate_claims_with_sets_duplicate_id() {
+        let dcql_query: DcqlQuery = serde_json::from_value(INVALID_QUERY_WITH_SETS_DUPLICATE_ID.clone()).unwrap();
+        let credential = &dcql_query.credentials[0];
+
+        let ctx = ClaimsContext {
+            claim_sets: &credential.claim_sets,
+        };
+
+        let result = validate_claims(&credential.claims, &ctx);
+        assert!(result.is_err(), "Duplicate IDs found");
+        let err = result.unwrap_err();
+        assert_eq!(err.code.as_ref(), "duplicate_claim_id");
+    }
+
+    #[test]
+    fn test_validate_claims_with_sets_missing_id() {
+        let dcql_query: DcqlQuery = serde_json::from_value(INVALID_QUERY_WITH_SETS_MISSING_ID.clone()).unwrap();
+        let credential = &dcql_query.credentials[0];
+
+        let ctx = ClaimsContext {
+            claim_sets: &credential.claim_sets,
+        };
+
+        let result = validate_claims(&credential.claims, &ctx);
+        assert!(result.is_err(), "IDs are missing but claim_sets are present");
+        let err = result.unwrap_err();
+        assert_eq!(err.code.as_ref(), "missing_claim_id");
+    }
+
+    #[test]
+    fn test_validate_claims_with_sets_nonexistent_id() {
+        let dcql_query: DcqlQuery = serde_json::from_value(INVALID_QUERY_WITH_SETS_NONEXISTENT_ID.clone()).unwrap();
+        let credential = &dcql_query.credentials[0];
+
+        let ctx = ClaimsContext {
+            claim_sets: &credential.claim_sets,
+        };
+
+        let result = validate_claims(&credential.claims, &ctx);
+        assert!(result.is_err(), "Nonexistent ID found in claim_sets");
+        let err = result.unwrap_err();
+        assert_eq!(err.code.as_ref(), "invalid_claim_id");
+    }
+
+    #[test]
+    fn test_validate_claims_without_sets_invalid_format() {
+        let dcql_query: DcqlQuery =
+            serde_json::from_value(INVALID_QUERY_WITHOUT_SETS_INVALID_ID_FORMAT.clone()).unwrap();
+        let credential = &dcql_query.credentials[0];
+
+        let ctx = ClaimsContext {
+            claim_sets: &credential.claim_sets,
+        };
+
+        let result = validate_claims(&credential.claims, &ctx);
+        assert!(result.is_err(), "Invalid ID format");
+        let err = result.unwrap_err();
+        assert_eq!(err.code.as_ref(), "invalid_claim_id_format");
+    }
+}
