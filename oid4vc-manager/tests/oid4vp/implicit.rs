@@ -156,7 +156,7 @@ async fn test_implicit_flow() {
     let verifiable_presentation_jwt = VerifiablePresentationJwt::builder()
         .iss(subject_did.clone())
         .sub(subject_did)
-        .aud(relying_party_did_with_prefix.to_string().clone())
+        .aud(relying_party_did_with_prefix.to_string())
         .nonce("nonce".to_string())
         // TODO: make this configurable.
         .exp((Utc::now() + Duration::minutes(10)).timestamp())
