@@ -32,10 +32,11 @@ pub struct CredentialQuery {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub meta: Option<MetaTypes>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    // TODO Create nutype to create a new type with non-empty predicate. As ref see CredentialQueryId above.
     pub trusted_authorities: Option<Vec<TrustedAuthority>>,
     #[serde(default = "default_as_true", skip_serializing_if = "Option::is_none")]
     pub require_cryptographic_holder_binding: Option<bool>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub claims: Vec<ClaimQuery>,
     // TODO Create nutype to create a new type with non-empty predicate. As ref see CredentialQueryId above.
     #[serde(skip_serializing_if = "Option::is_none")]

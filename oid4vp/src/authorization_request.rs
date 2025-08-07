@@ -1,9 +1,8 @@
 use crate::dcql::dcql_query::DcqlQuery;
 use crate::oid4vp::OID4VP;
-use jsonwebtoken::Algorithm;
-
 use anyhow::{anyhow, Result};
 use is_empty::IsEmpty;
+use jsonwebtoken::Algorithm;
 use monostate::MustBe;
 use oid4vc_core::authorization_request::Object;
 use oid4vc_core::builder_fn;
@@ -285,7 +284,7 @@ mod tests {
     #[test]
     fn test_client_metadata_parameters_jwt_vc_json() {
         let build: AuthorizationRequestBuilder = AuthorizationRequestBuilder::default()
-            .client_id(ClientId::from_str("did:example:123").unwrap())
+            .client_id(ClientId::from_str("decentralized_identifier:example:123").unwrap())
             .redirect_uri(url::Url::parse("https://client.example.org/callback").unwrap())
             .nonce("n-0S6_WzA2Mj".to_string())
             .client_metadata(ClientMetadataResource::ClientMetadata {
@@ -317,7 +316,7 @@ mod tests {
     #[test]
     fn test_client_metadata_parameters_sd_jwt_vc() {
         let build: AuthorizationRequestBuilder = AuthorizationRequestBuilder::default()
-            .client_id(ClientId::from_str("did:example:123").unwrap())
+            .client_id(ClientId::from_str("decentralized_identifier:example:123").unwrap())
             .redirect_uri(url::Url::parse("https://client.example.org/callback").unwrap())
             .nonce("n-0S6_WzA2Mj".to_string())
             .client_metadata(ClientMetadataResource::ClientMetadata {
@@ -350,7 +349,7 @@ mod tests {
     #[test]
     fn test_client_metadata_parameters_w3c_ldp_vc() {
         let build: AuthorizationRequestBuilder = AuthorizationRequestBuilder::default()
-            .client_id(ClientId::from_str("did:example:123").unwrap())
+            .client_id(ClientId::from_str("decentralized_identifier:example:123").unwrap())
             .redirect_uri(url::Url::parse("https://client.example.org/callback").unwrap())
             .nonce("n-0S6_WzA2Mj".to_string())
             .client_metadata(ClientMetadataResource::ClientMetadata {
@@ -392,7 +391,7 @@ mod tests {
     #[test]
     fn test_client_metadata_parameters_mso_mdoc_verifier() {
         let build: AuthorizationRequestBuilder = AuthorizationRequestBuilder::default()
-            .client_id(ClientId::from_str("did:example:123").unwrap())
+            .client_id(ClientId::from_str("decentralized_identifier:example:123").unwrap())
             .redirect_uri(url::Url::parse("https://client.example.org/callback").unwrap())
             .nonce("n-0S6_WzA2Mj".to_string())
             .client_metadata(ClientMetadataResource::ClientMetadata {

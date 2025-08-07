@@ -6,7 +6,6 @@ use crate::token::verifiable_presentation_jwt::VerifiablePresentationJwt;
 use crate::token::vp_token::{PresentationFormat, VpToken};
 use anyhow::anyhow;
 use futures::future::join_all;
-use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::Algorithm;
 use oid4vc_core::client_metadata::ClientMetadataResource;
 use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};
@@ -25,12 +24,6 @@ use std::sync::Arc;
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationResponseParameters {
     pub vp_token: VpToken,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub enum PresentationInputType {
-    Presentation(Box<Presentation<Jwt>>),
-    SdJwtVc(String),
 }
 
 /// This is the [`RequestHandle`] for the [`OID4VP`] extension.
