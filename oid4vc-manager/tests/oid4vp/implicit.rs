@@ -15,7 +15,7 @@ use oid4vci::VerifiableCredentialJwt;
 use oid4vp::authorization_request::{JwtVcJsonParameters, VpFormatsSupported};
 use oid4vp::token::verifiable_presentation_jwt::VerifiablePresentationJwt;
 use oid4vp::{
-    authorization_request::{ClientId, ClientMetadataParameters},
+    authorization_request::{ClientId, ClientIdPrefix, ClientMetadataParameters},
     oid4vp::OID4VP,
 };
 use oid4vp::{
@@ -26,7 +26,6 @@ use oid4vp::{
 
 use serde_json::json;
 use std::collections::HashMap;
-use std::str::FromStr;
 use std::sync::Arc;
 
 lazy_static! {
@@ -70,12 +69,17 @@ async fn test_implicit_flow() {
 
     // Create a new relying party.
     let relying_party = Arc::new(KeySubject::new());
-    let _relying_party_did = relying_party.identifier("did:key", Algorithm::EdDSA).await.unwrap();
+    let relying_party_did = relying_party.identifier("did:key", Algorithm::EdDSA).await.unwrap();
     let relying_party_manager = RelyingPartyManager::new(relying_party, "did:key", vec![Algorithm::EdDSA]).unwrap();
+
+    let relying_party_did_with_prefix = ClientId {
+        prefix: ClientIdPrefix::DecentralizedIdentifier,
+        identifier: relying_party_did.to_string(),
+    };
 
     // Create authorization request with response_type `id_token vp_token`
     let authorization_request = AuthorizationRequest::<Object<OID4VP>>::builder()
-        .client_id(ClientId::from_str("my-client-id").unwrap())
+        .client_id(relying_party_with_prefix.clone())
         .redirect_uri("https://example.com".parse::<url::Url>().unwrap())
         .dcql_query(DCQL_QUERY.clone())
         .client_metadata(ClientMetadataResource::ClientMetadata {
@@ -152,7 +156,7 @@ async fn test_implicit_flow() {
     let verifiable_presentation_jwt = VerifiablePresentationJwt::builder()
         .iss(subject_did.clone())
         .sub(subject_did)
-        .aud("my-client-id".to_string())
+        .aud(relying_party_with_prefix.to_string().clone())
         .nonce("nonce".to_string())
         // TODO: make this configurable.
         .exp((Utc::now() + Duration::minutes(10)).timestamp())
