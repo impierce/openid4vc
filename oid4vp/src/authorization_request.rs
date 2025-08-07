@@ -16,8 +16,8 @@ use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClientId {
-    pub prefix: ClientIdPrefix,
-    pub identifier: String,
+    prefix: ClientIdPrefix,
+    identifier: String,
 }
 
 /// The Client ID Scheme enables the use of different mechanisms to obtain and validate the Verifier's metadata. As
