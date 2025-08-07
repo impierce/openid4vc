@@ -68,7 +68,7 @@ impl std::str::FromStr for ClientId {
                 "pre-registered" => ClientIdPrefix::PreRegistered,
                 "redirect_uri" => ClientIdPrefix::RedirectUri,
                 "openid_federation" => ClientIdPrefix::OpenidFederation,
-                "did" => ClientIdPrefix::DecentralizedIdentifier,
+                "decentralized_identifier" => ClientIdPrefix::DecentralizedIdentifier,
                 "verifier_attestation" => ClientIdPrefix::VerifierAttestation,
                 "x509_san_dns" => ClientIdPrefix::X509SanDns,
                 "x509_hash" => ClientIdPrefix::X509Hash,
