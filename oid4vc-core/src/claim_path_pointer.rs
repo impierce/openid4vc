@@ -30,7 +30,7 @@ pub enum ClaimPathElement {
 
 impl ClaimPathPointer {
     /// As described in OID4VP - draft 28 Section 7.1 for JSON-based credentials:
-    /// https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-processing
+    /// https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html#name-semantics-for-json-based-cr
     /// TODO: Add semantics for ISO Mdoc credential format.
     pub fn get_values_from_json(&self, json_data: &Value) -> Vec<Value> {
         let mut current_selections: Vec<&Value> = vec![json_data];
@@ -69,7 +69,7 @@ impl ClaimPathPointer {
         current_selections.into_iter().cloned().collect()
     }
 }
-//Chaya! This function could be in evaluation. 
+//Chaya! This function could be in evaluation.
 pub fn matches_claim_values(actual_value: &Value, required_value: &ClaimValues) -> bool {
     required_value.as_ref().iter().any(|required_cv| match required_cv {
         ClaimValue::String(s) => actual_value.as_str() == Some(s.as_str()),

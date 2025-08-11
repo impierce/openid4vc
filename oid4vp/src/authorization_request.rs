@@ -20,7 +20,7 @@ pub struct ClientId {
 }
 
 /// The Client ID Scheme enables the use of different mechanisms to obtain and validate the Verifier's metadata. As
-/// described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-20.html#name-verifier-metadata-managemen
+/// described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html#name-client-identifier-prefix-an
 #[derive(Debug, PartialEq, Clone)]
 pub enum ClientIdPrefix {
     PreRegistered,
@@ -125,7 +125,7 @@ pub struct AuthorizationRequestParameters {
 pub struct ClientMetadataParameters {
     /// Object defining the formats and proof types of Verifiable Presentations and Verifiable Credentials that a
     /// Verifier supports.
-    /// As described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-20.html#name-additional-verifier-metadat
+    /// As described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html#name-wallet-metadata-authorizati
     pub vp_formats_supported: VpFormatsSupported,
 }
 
