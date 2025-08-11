@@ -209,6 +209,7 @@ pub struct AuthorizationRequestBuilder {
     dcql_query: Option<DcqlQuery>,
     client_id: Option<ClientId>,
     redirect_uri: Option<url::Url>,
+    // FIX! TODO: Make sure state is required when presentations are requested WITHOUT holder binding proofs.
     state: Option<String>,
     scope: Option<Scope>,
     response_mode: Option<String>,
