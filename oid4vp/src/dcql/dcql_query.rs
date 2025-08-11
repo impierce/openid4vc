@@ -57,14 +57,12 @@ pub enum MetaTypes {
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+#[serde(rename_all = "snake_case")]
 pub enum Format {
-    #[serde(rename = "ldp_vc")]
     LdpVc,
-    #[serde(rename = "jwt_vc_json")]
     JwtVcJson,
     #[serde(rename = "dc+sd-jwt")]
     DcSdJwt,
-    #[serde(rename = "mso_mdoc")]
     MsoMdoc,
 }
 impl DcqlQuery {
