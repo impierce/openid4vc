@@ -89,6 +89,15 @@ impl DcqlQuery {
         Ok(())
     }
 }
+
+impl Default for DcqlQuery {
+    fn default() -> Self {
+        Self {
+            credentials: Vec::new(),
+            credential_sets: None,
+        }
+    }
+}
 impl CredentialQuery {
     pub fn validate_all(&self) -> Result<(), ValidationErrors> {
         self.validate()?;

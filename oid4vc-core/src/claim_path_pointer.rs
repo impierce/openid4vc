@@ -69,14 +69,6 @@ impl ClaimPathPointer {
         current_selections.into_iter().cloned().collect()
     }
 }
-//Chaya! This function could be in evaluation.
-pub fn matches_claim_values(actual_value: &Value, required_value: &ClaimValues) -> bool {
-    required_value.as_ref().iter().any(|required_cv| match required_cv {
-        ClaimValue::String(s) => actual_value.as_str() == Some(s.as_str()),
-        ClaimValue::Integer(i) => actual_value.as_i64() == Some(*i),
-        ClaimValue::Boolean(b) => actual_value.as_bool() == Some(*b),
-    })
-}
 
 #[cfg(test)]
 mod tests {

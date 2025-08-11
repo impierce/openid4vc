@@ -52,6 +52,8 @@ lazy_static! {
 
 #[tokio::test]
 async fn test_implicit_flow() {
+    const TEST_DID_METHOD: &str = "did:key";
+
     // Create a new issuer.
     let issuer = KeySubject::from_keypair(
         generate::<Ed25519KeyPair>(Some(
@@ -59,19 +61,23 @@ async fn test_implicit_flow() {
         )),
         None,
     );
-    let issuer_did = issuer.identifier("did:key", Algorithm::EdDSA).await.unwrap();
+    let issuer_did = issuer.identifier(TEST_DID_METHOD, Algorithm::EdDSA).await.unwrap();
 
     // Create a new subject.
     let subject = Arc::new(KeySubject::from_keypair(
         generate::<Ed25519KeyPair>(Some("this-is-a-very-UNSAFE-secret-key".as_bytes().try_into().unwrap())),
         None,
     ));
-    let subject_did = subject.identifier("did:key", Algorithm::EdDSA).await.unwrap();
+    let subject_did = subject.identifier(TEST_DID_METHOD, Algorithm::EdDSA).await.unwrap();
 
     // Create a new relying party.
     let relying_party = Arc::new(KeySubject::new());
-    let relying_party_did = relying_party.identifier("did:key", Algorithm::EdDSA).await.unwrap();
-    let relying_party_manager = RelyingPartyManager::new(relying_party, "did:key", vec![Algorithm::EdDSA]).unwrap();
+    let relying_party_did = relying_party
+        .identifier(TEST_DID_METHOD, Algorithm::EdDSA)
+        .await
+        .unwrap();
+    let relying_party_manager =
+        RelyingPartyManager::new(relying_party, TEST_DID_METHOD, vec![Algorithm::EdDSA]).unwrap();
 
     let relying_party_did_with_prefix =
         ClientId::from_str(&format!("decentralized_identifier:{}", relying_party_did)).unwrap();
@@ -103,7 +109,8 @@ async fn test_implicit_flow() {
         .unwrap();
 
     // Create a provider manager and validate the authorization request.
-    let provider_manager = ProviderManager::new(subject.clone(), vec!["did:key"], vec![Algorithm::EdDSA]).unwrap();
+    let provider_manager =
+        ProviderManager::new(subject.clone(), vec![TEST_DID_METHOD], vec![Algorithm::EdDSA]).unwrap();
 
     // Create a new verifiable credential.
     let verifiable_credential = VerifiableCredentialJwt::builder()
@@ -141,7 +148,7 @@ async fn test_implicit_flow() {
             ..Default::default()
         },
         &verifiable_credential,
-        "did:key",
+        TEST_DID_METHOD,
     )
     .await
     .unwrap();
@@ -172,7 +179,7 @@ async fn test_implicit_flow() {
             ..Default::default()
         },
         &verifiable_presentation_jwt,
-        "did:key",
+        TEST_DID_METHOD,
     )
     .await
     .unwrap();

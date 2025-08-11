@@ -20,7 +20,7 @@ pub struct ClientId {
 }
 
 /// The Client ID Scheme enables the use of different mechanisms to obtain and validate the Verifier's metadata. As
-/// described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html#name-client-identifier-prefix-an
+/// described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-20.html#name-verifier-metadata-managemen
 #[derive(Debug, PartialEq, Clone)]
 pub enum ClientIdPrefix {
     PreRegistered,
@@ -113,10 +113,8 @@ pub enum CredentialFormatIdentifier {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationRequestParameters {
     pub response_type: MustBe!("vp_token"),
-    // TODO: Current implementation only supports "vp_token" in the Authorization Response Flow.
-    // Consider supporting additional response types: "vp_token id_token" and "code".
     pub dcql_query: DcqlQuery,
-    pub response_mode: Option<String>,
+    pub response_mode: String,
     pub scope: Option<Scope>,
     pub nonce: String,
     #[serde(flatten)]
@@ -213,7 +211,6 @@ pub struct AuthorizationRequestBuilder {
     redirect_uri: Option<url::Url>,
     state: Option<String>,
     scope: Option<Scope>,
-    //TODO Chaya - response mode should not be...optional in this way.
     response_mode: Option<String>,
     nonce: Option<String>,
     client_metadata: Option<ClientMetadataResource<ClientMetadataParameters>>,
@@ -249,7 +246,9 @@ impl AuthorizationRequestBuilder {
                         .take()
                         .ok_or_else(|| anyhow!("presentation_definition parameter is required."))?,
                     scope: self.scope.take(),
-                    response_mode: self.response_mode.take(),
+                    response_mode: self.response_mode.take().ok_or_else(|| {
+                        anyhow!("response_mode parameter is required. Supported values: fragment, query, form_post")
+                    })?,
                     nonce: self
                         .nonce
                         .take()
