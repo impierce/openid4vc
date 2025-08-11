@@ -7,7 +7,6 @@ use oid4vc_core::{builder_fn, RFC7519Claims};
 pub struct VerifiablePresentationJwtBuilder {
     rfc7519_claims: RFC7519Claims,
     verifiable_presentation: Option<Presentation<Jwt>>,
-    // TODO: Is this required?
     nonce: Option<String>,
 }
 

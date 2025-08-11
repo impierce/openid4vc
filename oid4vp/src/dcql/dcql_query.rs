@@ -12,6 +12,7 @@ use validator::{Validate, ValidationError, ValidationErrors};
     derive(Debug, Clone, PartialEq, Serialize, Deserialize, Hash, Eq, Display, AsRef)
 )]
 pub struct CredentialQueryId(String);
+
 fn valid_credential_query_id(s: &str) -> bool {
     s.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-')
 }
@@ -32,12 +33,12 @@ pub struct CredentialQuery {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub meta: Option<MetaTypes>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    // TODO Create nutype to create a new type with non-empty predicate. As ref see CredentialQueryId above.
+    // TODO: Create nutype to create a new type with non-empty predicate. As ref see CredentialQueryId above.
     pub trusted_authorities: Option<Vec<TrustedAuthority>>,
     #[serde(default = "default_as_true", skip_serializing_if = "Option::is_none")]
     pub require_cryptographic_holder_binding: Option<bool>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub claims: Vec<ClaimQuery>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub claims: Option<Vec<ClaimQuery>>,
     // TODO Create nutype to create a new type with non-empty predicate. As ref see CredentialQueryId above.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub claim_sets: Option<Vec<Vec<String>>>,
@@ -104,7 +105,7 @@ impl CredentialQuery {
             claim_sets: &self.claim_sets,
         };
 
-        if let Err(e) = validate_claims(&self.claims, &claims_ctx) {
+        if let Err(e) = validate_claims(self.claims.as_deref().unwrap_or(&[]), &claims_ctx) {
             let mut errors = ValidationErrors::new();
             errors.add("claims", e);
             return Err(errors);
@@ -173,7 +174,7 @@ mod tests {
                     }),
                     trusted_authorities: None,
                     require_cryptographic_holder_binding: Some(true),
-                    claims: vec![
+                    claims: Some(vec![
                         ClaimQuery {
                             id: None,
                             path: test_claim_path(vec![
@@ -190,7 +191,7 @@ mod tests {
                             ]),
                             values: None
                         }
-                    ],
+                    ]),
                     claim_sets: None
                 }],
                 credential_sets: None
@@ -212,7 +213,7 @@ mod tests {
                     }),
                     trusted_authorities: None,
                     require_cryptographic_holder_binding: Some(true),
-                    claims: vec![
+                    claims: Some(vec![
                         ClaimQuery {
                             id: None,
                             path: test_claim_path(vec![ClaimPathElement::String("last_name".to_string())]),
@@ -231,7 +232,7 @@ mod tests {
                             ]),
                             values: None
                         }
-                    ],
+                    ]),
                     claim_sets: None
                 }],
                 credential_sets: None
@@ -253,7 +254,7 @@ mod tests {
                     }),
                     trusted_authorities: None,
                     require_cryptographic_holder_binding: Some(true),
-                    claims: vec![
+                    claims: Some(vec![
                         ClaimQuery {
                             id: None,
                             path: test_claim_path(vec![ClaimPathElement::String("last_name".to_string())]),
@@ -280,7 +281,7 @@ mod tests {
                                 ClaimValue::String("90211".to_string())
                             ])),
                         },
-                    ],
+                    ]),
                     claim_sets: None
                 }],
                 credential_sets: None
@@ -305,7 +306,7 @@ mod tests {
                     }),
                     trusted_authorities: None,
                     require_cryptographic_holder_binding: Some(true),
-                    claims: vec![
+                    claims: Some(vec![
                         ClaimQuery {
                             id: Some("a".to_string()),
                             path: test_claim_path(vec![ClaimPathElement::String("last_name".to_string())]),
@@ -331,7 +332,7 @@ mod tests {
                             path: test_claim_path(vec![ClaimPathElement::String("date_of_birth".to_string())]),
                             values: None
                         },
-                    ],
+                    ]),
                     claim_sets: Some(vec![
                         vec!["a".to_string(), "c".to_string(), "d".to_string(), "e".to_string()],
                         vec!["a".to_string(), "b".to_string(), "e".to_string()]
@@ -356,7 +357,7 @@ mod tests {
                         }),
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
-                        claims: vec![
+                        claims: Some(vec![
                             ClaimQuery {
                                 id: None,
                                 path: test_claim_path(vec![ClaimPathElement::String("given_name".to_string())]),
@@ -375,7 +376,7 @@ mod tests {
                                 ]),
                                 values: None
                             }
-                        ],
+                        ]),
                         claim_sets: None
                     },
                     CredentialQuery {
@@ -387,7 +388,7 @@ mod tests {
                         }),
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
-                        claims: vec![
+                        claims: Some(vec![
                             ClaimQuery {
                                 id: None,
                                 path: test_claim_path(vec![
@@ -404,7 +405,7 @@ mod tests {
                                 ]),
                                 values: None
                             }
-                        ],
+                        ]),
                         claim_sets: None
                     }
                 ],
@@ -429,7 +430,7 @@ mod tests {
                         }),
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
-                        claims: vec![
+                        claims: Some(vec![
                             ClaimQuery {
                                 id: Some("given_name".to_string()),
                                 path: test_claim_path(vec![
@@ -454,7 +455,7 @@ mod tests {
                                 ]),
                                 values: None
                             }
-                        ],
+                        ]),
                         claim_sets: None
                     },
                     CredentialQuery {
@@ -466,7 +467,7 @@ mod tests {
                         }),
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
-                        claims: vec![
+                        claims: Some(vec![
                             ClaimQuery {
                                 id: Some("resident_address".to_string()),
                                 path: test_claim_path(vec![
@@ -483,7 +484,7 @@ mod tests {
                                 ]),
                                 values: None
                             }
-                        ],
+                        ]),
                         claim_sets: None
                     },
                     CredentialQuery {
@@ -495,7 +496,7 @@ mod tests {
                         }),
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
-                        claims: vec![
+                        claims: Some(vec![
                             ClaimQuery {
                                 id: Some("given_name".to_string()),
                                 path: test_claim_path(vec![
@@ -520,7 +521,7 @@ mod tests {
                                 ]),
                                 values: None
                             }
-                        ],
+                        ]),
                         claim_sets: None
                     },
                     CredentialQuery {
@@ -532,7 +533,7 @@ mod tests {
                         }),
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
-                        claims: vec![
+                        claims: Some(vec![
                             ClaimQuery {
                                 id: Some("resident_address".to_string()),
                                 path: test_claim_path(vec![
@@ -549,7 +550,7 @@ mod tests {
                                 ]),
                                 values: None
                             }
-                        ],
+                        ]),
                         claim_sets: None
                     }
                 ],
@@ -582,7 +583,7 @@ mod tests {
                         }),
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
-                        claims: vec![
+                        claims: Some(vec![
                             ClaimQuery {
                                 id: None,
                                 path: test_claim_path(vec![ClaimPathElement::String("given_name".to_string())]),
@@ -601,7 +602,7 @@ mod tests {
                                 ]),
                                 values: None
                             }
-                        ],
+                        ]),
                         claim_sets: None
                     },
                     CredentialQuery {
@@ -613,7 +614,7 @@ mod tests {
                         }),
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
-                        claims: vec![
+                        claims: Some(vec![
                             ClaimQuery {
                                 id: None,
                                 path: test_claim_path(vec![ClaimPathElement::String("given_name".to_string())]),
@@ -632,7 +633,7 @@ mod tests {
                                 ]),
                                 values: None
                             }
-                        ],
+                        ]),
                         claim_sets: None
                     },
                     CredentialQuery {
@@ -644,7 +645,7 @@ mod tests {
                         }),
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
-                        claims: vec![
+                        claims: Some(vec![
                             ClaimQuery {
                                 id: None,
                                 path: test_claim_path(vec![ClaimPathElement::String("family_name".to_string())]),
@@ -655,7 +656,7 @@ mod tests {
                                 path: test_claim_path(vec![ClaimPathElement::String("given_name".to_string())]),
                                 values: None
                             }
-                        ],
+                        ]),
                         claim_sets: None
                     },
                     CredentialQuery {
@@ -667,7 +668,7 @@ mod tests {
                         }),
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
-                        claims: vec![
+                        claims: Some(vec![
                             ClaimQuery {
                                 id: None,
                                 path: test_claim_path(vec![ClaimPathElement::String("postal_code".to_string())]),
@@ -683,7 +684,7 @@ mod tests {
                                 path: test_claim_path(vec![ClaimPathElement::String("region".to_string())]),
                                 values: None
                             }
-                        ],
+                        ]),
                         claim_sets: None
                     },
                     CredentialQuery {
@@ -695,11 +696,11 @@ mod tests {
                         }),
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
-                        claims: vec![ClaimQuery {
+                        claims: Some(vec![ClaimQuery {
                             id: None,
                             path: test_claim_path(vec![ClaimPathElement::String("rewards_number".to_string())]),
                             values: None
-                        }],
+                        }]),
                         claim_sets: None
                     },
                 ],
@@ -868,7 +869,7 @@ mod tests {
                 }),
                 trusted_authorities: None,
                 require_cryptographic_holder_binding: Some(true),
-                claims: vec![],
+                claims: None,
                 claim_sets: None,
             }],
             credential_sets: None,
@@ -927,11 +928,11 @@ mod tests {
             }),
             trusted_authorities: None,
             require_cryptographic_holder_binding: Some(true),
-            claims: vec![ClaimQuery {
+            claims: Some(vec![ClaimQuery {
                 id: None,
                 path: test_claim_path(vec![ClaimPathElement::String("line_number".to_string())]),
                 values: None,
-            }],
+            }]),
             claim_sets: None,
         };
         let json = serde_json::to_string(&original_credential).expect("Failed to serialize");
@@ -950,7 +951,7 @@ mod tests {
             }),
             trusted_authorities: None,
             require_cryptographic_holder_binding: Some(true),
-            claims: vec![
+            claims: Some(vec![
                 ClaimQuery {
                     id: Some("basho".to_string()),
                     path: test_claim_path(vec![ClaimPathElement::String("last_name".to_string())]),
@@ -961,7 +962,7 @@ mod tests {
                     path: test_claim_path(vec![ClaimPathElement::String("first_name".to_string())]),
                     values: Some(test_claim_values(vec![ClaimValue::String("Matsuo".to_string())])),
                 },
-            ],
+            ]),
             claim_sets: Some(vec![vec!["basho".to_string(), "casho".to_string()]]),
         };
         let json = serde_json::to_string_pretty(&credential_query).expect("Failed to serialize");

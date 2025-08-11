@@ -212,7 +212,7 @@ mod tests {
             claim_sets: &credential.claim_sets,
         };
 
-        let result = validate_claims(&credential.claims, &ctx);
+        let result = validate_claims(credential.claims.as_deref().unwrap_or(&[]), &ctx);
         assert!(result.is_ok(), "Valid claims should pass validation");
     }
 
@@ -225,7 +225,7 @@ mod tests {
             claim_sets: &credential.claim_sets,
         };
 
-        let result = validate_claims(&credential.claims, &ctx);
+        let result = validate_claims(credential.claims.as_deref().unwrap_or(&[]), &ctx);
         assert!(result.is_err(), "Duplicate IDs found");
         let err = result.unwrap_err();
         assert_eq!(err.code.as_ref(), "duplicate_claim_id");
@@ -240,7 +240,7 @@ mod tests {
             claim_sets: &credential.claim_sets,
         };
 
-        let result = validate_claims(&credential.claims, &ctx);
+        let result = validate_claims(credential.claims.as_deref().unwrap_or(&[]), &ctx);
         assert!(result.is_err(), "IDs are missing but claim_sets are present");
         let err = result.unwrap_err();
         assert_eq!(err.code.as_ref(), "missing_claim_id");
@@ -255,7 +255,7 @@ mod tests {
             claim_sets: &credential.claim_sets,
         };
 
-        let result = validate_claims(&credential.claims, &ctx);
+        let result = validate_claims(credential.claims.as_deref().unwrap_or(&[]), &ctx);
         assert!(result.is_err(), "Nonexistent ID found in claim_sets");
         let err = result.unwrap_err();
         assert_eq!(err.code.as_ref(), "invalid_claim_id");
@@ -271,7 +271,7 @@ mod tests {
             claim_sets: &credential.claim_sets,
         };
 
-        let result = validate_claims(&credential.claims, &ctx);
+        let result: Result<(), ValidationError> = validate_claims(credential.claims.as_deref().unwrap_or(&[]), &ctx);
         assert!(result.is_err(), "Invalid ID format");
         let err = result.unwrap_err();
         assert_eq!(err.code.as_ref(), "invalid_claim_id_format");

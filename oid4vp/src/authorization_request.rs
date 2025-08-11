@@ -193,6 +193,7 @@ pub struct AuthorizationRequestBuilder {
     redirect_uri: Option<url::Url>,
     state: Option<String>,
     scope: Option<Scope>,
+    //TODO Chaya - response mode should not be...optional in this way.
     response_mode: Option<String>,
     nonce: Option<String>,
     client_metadata: Option<ClientMetadataResource<ClientMetadataParameters>>,

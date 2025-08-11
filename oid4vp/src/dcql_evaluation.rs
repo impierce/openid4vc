@@ -24,13 +24,15 @@ fn evaluate_single_claim_query(claim_query: &ClaimQuery, credential_json: &Value
 pub fn evaluate_credential_query(credential_query: &CredentialQuery, credential_json: &Value) -> bool {
     // If claims is absent, the Verifier is requesting no claims that are selectively disclosable;
     // the Wallet MUST return only the claims that are mandatory to present (e.g., SD-JWT and Key Binding JWT for a Credential of format IETF SD-JWT VC).
-    if credential_query.claims.is_empty() {
+    if credential_query.claims.as_deref().unwrap_or(&[]).is_empty() {
         return true;
     }
     // If claims is present, but claim_sets is absent, the Verifier requests all claims listed in claims.
     match &credential_query.claim_sets {
         None => credential_query
             .claims
+            .as_deref()
+            .unwrap_or(&[])
             .iter()
             .all(|claim| evaluate_single_claim_query(claim, credential_json)),
 
@@ -40,8 +42,8 @@ pub fn evaluate_credential_query(credential_query: &CredentialQuery, credential_
             claim_set.iter().all(|claim_id| {
                 credential_query
                     .claims
-                    .iter()
-                    .find(|claim| claim.id.as_ref() == Some(claim_id))
+                    .as_ref()
+                    .and_then(|claims| claims.iter().find(|claim| claim.id.as_ref() == Some(claim_id)))
                     .is_some_and(|claim| evaluate_single_claim_query(claim, credential_json))
             })
         }),
@@ -57,6 +59,7 @@ mod tests {
 
     const TESTCREDENTIAL: &str = include_str!("../tests/examples/credentials/jwt_vc.json");
     const DCQL_QUERY: &str = include_str!("../tests/examples/request/dcql_jwt_vc.json");
+
     #[test]
     fn test_get_value_from_json() {
         let testing_credential: Value = serde_json::from_str(TESTCREDENTIAL).unwrap();
@@ -164,7 +167,7 @@ mod tests {
         let claims_context = ClaimsContext {
             claim_sets: &dcql_query.claim_sets,
         };
-        validate_claims(&dcql_query.claims, &claims_context).unwrap();
+        validate_claims(&dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
 
         assert!(evaluate_credential_query(dcql_query, &testing_credential));
     }

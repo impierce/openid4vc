@@ -43,13 +43,6 @@ impl ResponseHandle for ResponseHandler {
     type ResponseItem = DecodedVpToken;
 }
 
-pub enum InputPresentation {
-    // LdpVc,
-    JwtVcJson(String),
-    DcSdJwt(String),
-    // MsoMdoc,
-}
-
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct DecodedVpToken {
     #[serde(flatten)]
@@ -64,6 +57,7 @@ impl Extension for OID4VP {
     type RequestHandle = RequestHandler;
     type ResponseHandle = ResponseHandler;
 
+    // TODO: https://github.com/impierce/openid4vc/pull/98/files/2f8e4f76d9b90c6750f3b1b1ca507e8e63fb43a7#r2263004787
     async fn generate_token(
         _subject: Arc<dyn Subject + 'static>,
         _client_id: &str,
@@ -193,8 +187,7 @@ impl Extension for OID4VP {
                             .collect();
                         let decoded_credentials: Result<Vec<_>, _> =
                             join_all(credential_futures).await.into_iter().collect();
-                        let mut decoded_credentials = decoded_credentials?;
-                        all_decoded_credentials.append(&mut decoded_credentials);
+                        all_decoded_credentials.append(&mut decoded_credentials?);
                     }
                     // TODO: handle additional formats DcSdJwt, LdpVc and MsoMdoc
                     _ => {

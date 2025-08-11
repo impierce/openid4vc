@@ -20,6 +20,8 @@ pub enum PresentationFormat {
     MsoMdoc(Vec<u8>),
 }
 
-pub fn builder() -> VpTokenBuilder {
-    VpTokenBuilder::new()
+impl VpToken {
+    pub fn builder() -> VpTokenBuilder {
+        VpTokenBuilder::new()
+    }
 }
