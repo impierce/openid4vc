@@ -104,6 +104,7 @@ async fn test_implicit_flow() {
                 json!(vec!["did:key".to_string(),]),
             )]),
         })
+        .response_mode("query".to_string())
         .nonce("nonce".to_string())
         .build()
         .unwrap();
