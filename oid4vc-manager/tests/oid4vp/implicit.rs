@@ -91,6 +91,8 @@ async fn test_implicit_flow() {
                     }),
                     ..Default::default()
                 },
+                encrypted_response_enc_values_supported: None,
+                jwks: None,
             },
             other: HashMap::from_iter(vec![(
                 "subject_syntax_types_supported".to_string(),

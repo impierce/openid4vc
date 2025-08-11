@@ -113,6 +113,8 @@ pub enum CredentialFormatIdentifier {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationRequestParameters {
     pub response_type: MustBe!("vp_token"),
+    // TODO: Current implementation only supports "vp_token" in the Authorization Response Flow.
+    // Consider supporting additional response types: "vp_token id_token" and "code".
     pub dcql_query: DcqlQuery,
     pub response_mode: Option<String>,
     pub scope: Option<Scope>,
@@ -127,6 +129,22 @@ pub struct ClientMetadataParameters {
     /// Verifier supports.
     /// As described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html#name-wallet-metadata-authorizati
     pub vp_formats_supported: VpFormatsSupported,
+    /// TODO: Implement encryption response support.
+    pub encrypted_response_enc_values_supported: Option<Vec<String>>,
+    /// TODO: Not yet implemented. Requires further implementation of a JWK library.
+    pub jwks: Option<JsonWebKeySet>,
+}
+
+// TODO: Temporary placeholder structure until we add a proper JWK library
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct JsonWebKeySet {
+    pub keys: Vec<JsonWebKey>,
+}
+
+// TODO: Temporary placeholder structure until we add a proper JWK library.
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct JsonWebKey {
+    pub kid: String,
 }
 
 #[skip_serializing_none]
@@ -298,6 +316,8 @@ mod tests {
                         }),
                         ..Default::default()
                     },
+                    encrypted_response_enc_values_supported: None,
+                    jwks: None,
                 },
                 other: HashMap::new(),
             });
@@ -331,6 +351,8 @@ mod tests {
                         }),
                         ..Default::default()
                     },
+                    encrypted_response_enc_values_supported: None,
+                    jwks: None,
                 },
                 other: HashMap::new(),
             });
@@ -373,6 +395,8 @@ mod tests {
                         }),
                         ..Default::default()
                     },
+                    encrypted_response_enc_values_supported: None,
+                    jwks: None,
                 },
                 other: HashMap::new(),
             });
@@ -407,6 +431,8 @@ mod tests {
                         }),
                         ..Default::default()
                     },
+                    encrypted_response_enc_values_supported: None,
+                    jwks: None,
                 },
                 other: HashMap::new(),
             });
