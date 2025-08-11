@@ -32,21 +32,49 @@ pub fn validate_claims_with_sets(claims: &[ClaimQuery], claim_sets: &[Vec<String
         }
     }
 
-    // IDs within claims must be unique - validate
+    // Validate the claim ID format and uniqueness.
+    validate_claim_ids(claims)?;
+
+    let claim_ids: Vec<&String> = claims.iter().filter_map(|c| c.id.as_ref()).collect();
+
+    // Validate that all IDs in claim_sets exist in claims
+    validate_claims_sets_references(&claim_ids, claim_sets)?;
+
+    Ok(())
+}
+
+pub fn validate_claims_without_sets(claims: &[ClaimQuery]) -> Result<(), ValidationError> {
+    // When claim_sets is not present, IDs are optional but must be unique if they exist
+    validate_claim_ids(claims)?;
+
+    Ok(())
+}
+
+/// Validates that the claim IDs in the claims are unique and follow the required format.
+fn validate_claim_ids(claims: &[ClaimQuery]) -> Result<(), ValidationError> {
     let mut seen_ids = std::collections::HashSet::new();
+
     for (i, claim) in claims.iter().enumerate() {
         if let Some(id) = &claim.id {
+            if !is_valid_claim_id_format(id) {
+                return Err(ValidationError::new("invalid_claim_id_format")
+                    .with_message(format!("Claim ID '{id}' at index {i} contains invalid characters. Only alphanumeric, underscore, and hyphen characters are allowed").into()));
+            }
+            if id.is_empty() {
+                return Err(ValidationError::new("empty_claim_id")
+                    .with_message(format!("Claim ID cannot be empty at index {i}").into()));
+            }
             if !seen_ids.insert(id) {
                 return Err(ValidationError::new("duplicate_claim_id")
                     .with_message(format!("Duplicate claim ID '{id}' found at index {i}").into()));
             }
         }
     }
+    Ok(())
+}
 
-    // Collect claim IDs for validation against claim_sets
-    let claim_ids: Vec<&String> = claims.iter().filter_map(|c| c.id.as_ref()).collect();
-
-    // Validate that all IDs in claim_sets exist in claims
+/// Validates that claim IDs in claim_sets reference valid claims.
+fn validate_claims_sets_references(claim_ids: &[&String], claim_sets: &[Vec<String>]) -> Result<(), ValidationError> {
     for (i, set) in claim_sets.iter().enumerate() {
         for (j, id) in set.iter().enumerate() {
             if !claim_ids.contains(&id) {
@@ -55,35 +83,11 @@ pub fn validate_claims_with_sets(claims: &[ClaimQuery], claim_sets: &[Vec<String
             }
         }
     }
-
     Ok(())
 }
 
-pub fn validate_claims_without_sets(claims: &[ClaimQuery]) -> Result<(), ValidationError> {
-    // When claim_sets is not present, IDs are optional but must be unique if they exist
-    let mut seen_ids = std::collections::HashSet::new();
-
-    for (i, claim) in claims.iter().enumerate() {
-        if let Some(id) = &claim.id {
-            // Validate ID format (alphanumeric, underscore, or hyphen characters)
-            if !id.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
-                return Err(ValidationError::new("invalid_claim_id_format")
-                    .with_message(format!("Claim ID '{id}' at index {i} contains invalid characters. Only alphanumeric, underscore, and hyphen characters are allowed").into()));
-            }
-
-            if id.is_empty() {
-                return Err(ValidationError::new("empty_claim_id")
-                    .with_message(format!("Claim ID cannot be empty at index {i}").into()));
-            }
-
-            if !seen_ids.insert(id) {
-                return Err(ValidationError::new("duplicate_claim_id")
-                    .with_message(format!("Duplicate claim ID '{id}' found at index {i}").into()));
-            }
-        }
-    }
-
-    Ok(())
+fn is_valid_claim_id_format(id: &str) -> bool {
+    !id.is_empty() && id.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-')
 }
 
 #[cfg(test)]
