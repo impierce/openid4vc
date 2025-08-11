@@ -65,6 +65,7 @@ pub enum Format {
     DcSdJwt,
     MsoMdoc,
 }
+
 impl DcqlQuery {
     pub fn validate_all(&self) -> Result<(), ValidationErrors> {
         self.validate()?;
@@ -84,18 +85,100 @@ impl DcqlQuery {
             credential.validate_all()?;
         }
 
+        if let Some(credential_sets) = &self.credential_sets {
+            self.validate_credential_sets(credential_sets)?;
+        }
+
+        Ok(())
+    }
+
+    fn validate_credential_sets(&self, credential_sets: &[CredentialSetQuery]) -> Result<(), ValidationErrors> {
+        let mut errors = ValidationErrors::new();
+        let credential_ids: HashSet<&CredentialQueryId> = self.credentials.iter().map(|cred| &cred.id).collect();
+
+        for credential_set in credential_sets.iter() {
+            if let Err(set_errors) = self.validate_single_credential_set(credential_set, &credential_ids) {
+                for (_, field_errors) in set_errors.field_errors() {
+                    for error in field_errors {
+                        errors.add("credential_sets", error.clone());
+                    }
+                }
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+
+    fn validate_single_credential_set(
+        &self,
+        credential_set: &CredentialSetQuery,
+        credential_ids: &HashSet<&CredentialQueryId>,
+    ) -> Result<(), ValidationErrors> {
+        let mut errors = ValidationErrors::new();
+
+        // Validate that the options field in credential_set is not empty (as a whole).
+        if credential_set.options.is_empty() {
+            let validation_error =
+                ValidationError::new("empty_options").with_message("credential_set options cannot be empty".into());
+            errors.add("options", validation_error);
+        }
+
+        // Validate that each option in credential_set is not empty.
+        for (option_index, option) in credential_set.options.iter().enumerate() {
+            if option.is_empty() {
+                let validation_error =
+                    ValidationError::new("empty_option").with_message("options cannot be empty".into());
+                errors.add("options", validation_error);
+            }
+
+            // Validate that each credential ID in the option exists in the credential arrays.
+            for (credential_index, credential_id_str) in option.iter().enumerate() {
+                match CredentialQueryId::try_new(credential_id_str.clone()) {
+                    Ok(credential_id) => {
+                        if !credential_ids.contains(&credential_id) {
+                            let validation_error = ValidationError::new("unknown_credential_id").with_message(
+                                format!(
+                                    "Credential ID '{}' in option[{}] does not match any known credential ID",
+                                    credential_id_str, option_index
+                                )
+                                .into(),
+                            );
+                            errors.add("options", validation_error);
+                        }
+                    }
+                    Err(_) => {
+                        let validation_error = ValidationError::new("invalid_credential_id_format").with_message(
+                            format!(
+                                "Invalid credential ID format '{}' in options[{}][{}]",
+                                credential_id_str, option_index, credential_index
+                            )
+                            .into(),
+                        );
+                        errors.add("options", validation_error);
+                    }
+                }
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+}
+
+impl CredentialSetQuery {
+    pub fn validate_all(&self) -> Result<(), ValidationErrors> {
+        self.validate()?;
         Ok(())
     }
 }
 
-impl Default for DcqlQuery {
-    fn default() -> Self {
-        Self {
-            credentials: Vec::new(),
-            credential_sets: None,
-        }
-    }
-}
 impl CredentialQuery {
     pub fn validate_all(&self) -> Result<(), ValidationErrors> {
         self.validate()?;
@@ -122,7 +205,7 @@ impl CredentialQuery {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Validate)]
 pub struct CredentialSetQuery {
     // TODO: Create nutype  with non-empty predicate (see CredentialQueryId)
     pub options: Vec<Vec<String>>,
@@ -995,5 +1078,157 @@ mod tests {
             .as_object()
             .unwrap()
             .contains_key("require_cryptographic_holder_binding"));
+    }
+
+    #[test]
+    fn test_credentials_sets_validation() {
+        assert_eq!(DcqlQuery {
+            credentials: vec![
+                CredentialQuery {
+                    id: test_credential_query_id("pid"),
+                    format: Format::DcSdJwt,
+                    multiple: None,
+                    meta: Some(MetaTypes::SdJwtMeta {
+                        vct_values: vec!["https://credentials.example.com/identity_credential".to_string()],
+                    }),
+                    trusted_authorities: None,
+                    require_cryptographic_holder_binding: Some(true),
+                    claims: Some(vec![
+                        ClaimQuery {
+                            id: None,
+                            path: test_claim_path(vec![ClaimPathElement::String("given_name".to_string())]),
+                            values: None
+                        },
+                        ClaimQuery {
+                            id: None,
+                            path: test_claim_path(vec![ClaimPathElement::String("family_name".to_string())]),
+                            values: None
+                        },
+                        ClaimQuery {
+                            id: None,
+                            path: test_claim_path(vec![
+                                ClaimPathElement::String("address".to_string()),
+                                ClaimPathElement::String("street_address".to_string())
+                            ]),
+                            values: None
+                        }
+                    ]),
+                    claim_sets: None
+                },
+                CredentialQuery {
+                    id: test_credential_query_id("other_pid"),
+                    format: Format::DcSdJwt,
+                    multiple: None,
+                    meta: Some(MetaTypes::SdJwtMeta {
+                        vct_values: vec!["https://othercredentials.example/pid".to_string()],
+                    }),
+                    trusted_authorities: None,
+                    require_cryptographic_holder_binding: Some(true),
+                    claims: Some(vec![
+                        ClaimQuery {
+                            id: None,
+                            path: test_claim_path(vec![ClaimPathElement::String("given_name".to_string())]),
+                            values: None
+                        },
+                        ClaimQuery {
+                            id: None,
+                            path: test_claim_path(vec![ClaimPathElement::String("family_name".to_string())]),
+                            values: None
+                        },
+                        ClaimQuery {
+                            id: None,
+                            path: test_claim_path(vec![
+                                ClaimPathElement::String("address".to_string()),
+                                ClaimPathElement::String("street_address".to_string())
+                            ]),
+                            values: None
+                        }
+                    ]),
+                    claim_sets: None
+                },
+                CredentialQuery {
+                    id: test_credential_query_id("pid_reduced_cred_1"),
+                    format: Format::DcSdJwt,
+                    multiple: None,
+                    meta: Some(MetaTypes::SdJwtMeta {
+                        vct_values: vec!["https://credentials.example.com/reduced_identity_credential".to_string()],
+                    }),
+                    trusted_authorities: None,
+                    require_cryptographic_holder_binding: Some(true),
+                    claims: Some(vec![
+                        ClaimQuery {
+                            id: None,
+                            path: test_claim_path(vec![ClaimPathElement::String("family_name".to_string())]),
+                            values: None
+                        },
+                        ClaimQuery {
+                            id: None,
+                            path: test_claim_path(vec![ClaimPathElement::String("given_name".to_string())]),
+                            values: None
+                        }
+                    ]),
+                    claim_sets: None
+                },
+                CredentialQuery {
+                    id: test_credential_query_id("pid_reduced_cred_2"),
+                    format: Format::DcSdJwt,
+                    multiple: None,
+                    meta: Some(MetaTypes::SdJwtMeta {
+                        vct_values: vec!["https://cred.example/residence_credential".to_string()],
+                    }),
+                    trusted_authorities: None,
+                    require_cryptographic_holder_binding: Some(true),
+                    claims: Some(vec![
+                        ClaimQuery {
+                            id: None,
+                            path: test_claim_path(vec![ClaimPathElement::String("postal_code".to_string())]),
+                            values: None
+                        },
+                        ClaimQuery {
+                            id: None,
+                            path: test_claim_path(vec![ClaimPathElement::String("locality".to_string())]),
+                            values: None
+                        },
+                        ClaimQuery {
+                            id: None,
+                            path: test_claim_path(vec![ClaimPathElement::String("region".to_string())]),
+                            values: None
+                        }
+                    ]),
+                    claim_sets: None
+                },
+                CredentialQuery {
+                    id: test_credential_query_id("nice_to_have"),
+                    format: Format::DcSdJwt,
+                    multiple: None,
+                    meta: Some(MetaTypes::SdJwtMeta {
+                        vct_values: vec!["https://company.example/company_rewards".to_string()],
+                    }),
+                    trusted_authorities: None,
+                    require_cryptographic_holder_binding: Some(true),
+                    claims: Some(vec![ClaimQuery {
+                        id: None,
+                        path: test_claim_path(vec![ClaimPathElement::String("rewards_number".to_string())]),
+                        values: None
+                    }]),
+                    claim_sets: None
+                },
+            ],
+
+            credential_sets: Some(vec![
+                CredentialSetQuery {
+                    options: vec![
+                        vec!["fashion_police".to_string()],
+                        vec!["other_pid".to_string()],
+                        vec!["pid_reduced_cred_1".to_string(), "pid_reduced_cred_2".to_string()]
+                    ],
+                    required: Some(true)
+                },
+                CredentialSetQuery {
+                    options: vec![vec!["nice_to_have".to_string()]],
+                    required: Some(false),
+                }
+            ])
+        },);
     }
 }
