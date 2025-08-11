@@ -235,6 +235,7 @@ pub struct ClaimQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use lazy_static::lazy_static;
     use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer, ClaimValue, ClaimValues};
     use serde_json::from_str;
     // OID4VP Credential Test Examples from
@@ -1080,155 +1081,226 @@ mod tests {
             .contains_key("require_cryptographic_holder_binding"));
     }
 
-    #[test]
-    fn test_credentials_sets_validation() {
-        assert_eq!(DcqlQuery {
-            credentials: vec![
-                CredentialQuery {
-                    id: test_credential_query_id("pid"),
-                    format: Format::DcSdJwt,
-                    multiple: None,
-                    meta: Some(MetaTypes::SdJwtMeta {
-                        vct_values: vec!["https://credentials.example.com/identity_credential".to_string()],
-                    }),
-                    trusted_authorities: None,
-                    require_cryptographic_holder_binding: Some(true),
-                    claims: Some(vec![
-                        ClaimQuery {
-                            id: None,
-                            path: test_claim_path(vec![ClaimPathElement::String("given_name".to_string())]),
-                            values: None
-                        },
-                        ClaimQuery {
-                            id: None,
-                            path: test_claim_path(vec![ClaimPathElement::String("family_name".to_string())]),
-                            values: None
-                        },
-                        ClaimQuery {
-                            id: None,
-                            path: test_claim_path(vec![
-                                ClaimPathElement::String("address".to_string()),
-                                ClaimPathElement::String("street_address".to_string())
-                            ]),
-                            values: None
-                        }
-                    ]),
-                    claim_sets: None
+    lazy_static! {
+        pub static ref INVALID_CREDENTIAL_SET: serde_json::Value = serde_json::json!(
+                       {
+          "credentials": [
+            {
+              "id": "mdl-id",
+              "format": "mso_mdoc",
+              "meta": {
+                "doctype_value": "org.iso.18013.5.1.mDL"
+              },
+              "claims": [
+                {
+                  "id": "given_name",
+                  "path": ["org.iso.18013.5.1", "given_name"]
                 },
-                CredentialQuery {
-                    id: test_credential_query_id("other_pid"),
-                    format: Format::DcSdJwt,
-                    multiple: None,
-                    meta: Some(MetaTypes::SdJwtMeta {
-                        vct_values: vec!["https://othercredentials.example/pid".to_string()],
-                    }),
-                    trusted_authorities: None,
-                    require_cryptographic_holder_binding: Some(true),
-                    claims: Some(vec![
-                        ClaimQuery {
-                            id: None,
-                            path: test_claim_path(vec![ClaimPathElement::String("given_name".to_string())]),
-                            values: None
-                        },
-                        ClaimQuery {
-                            id: None,
-                            path: test_claim_path(vec![ClaimPathElement::String("family_name".to_string())]),
-                            values: None
-                        },
-                        ClaimQuery {
-                            id: None,
-                            path: test_claim_path(vec![
-                                ClaimPathElement::String("address".to_string()),
-                                ClaimPathElement::String("street_address".to_string())
-                            ]),
-                            values: None
-                        }
-                    ]),
-                    claim_sets: None
+                {
+                  "id": "family_name",
+                  "path": ["org.iso.18013.5.1", "family_name"]
                 },
-                CredentialQuery {
-                    id: test_credential_query_id("pid_reduced_cred_1"),
-                    format: Format::DcSdJwt,
-                    multiple: None,
-                    meta: Some(MetaTypes::SdJwtMeta {
-                        vct_values: vec!["https://credentials.example.com/reduced_identity_credential".to_string()],
-                    }),
-                    trusted_authorities: None,
-                    require_cryptographic_holder_binding: Some(true),
-                    claims: Some(vec![
-                        ClaimQuery {
-                            id: None,
-                            path: test_claim_path(vec![ClaimPathElement::String("family_name".to_string())]),
-                            values: None
-                        },
-                        ClaimQuery {
-                            id: None,
-                            path: test_claim_path(vec![ClaimPathElement::String("given_name".to_string())]),
-                            values: None
-                        }
-                    ]),
-                    claim_sets: None
-                },
-                CredentialQuery {
-                    id: test_credential_query_id("pid_reduced_cred_2"),
-                    format: Format::DcSdJwt,
-                    multiple: None,
-                    meta: Some(MetaTypes::SdJwtMeta {
-                        vct_values: vec!["https://cred.example/residence_credential".to_string()],
-                    }),
-                    trusted_authorities: None,
-                    require_cryptographic_holder_binding: Some(true),
-                    claims: Some(vec![
-                        ClaimQuery {
-                            id: None,
-                            path: test_claim_path(vec![ClaimPathElement::String("postal_code".to_string())]),
-                            values: None
-                        },
-                        ClaimQuery {
-                            id: None,
-                            path: test_claim_path(vec![ClaimPathElement::String("locality".to_string())]),
-                            values: None
-                        },
-                        ClaimQuery {
-                            id: None,
-                            path: test_claim_path(vec![ClaimPathElement::String("region".to_string())]),
-                            values: None
-                        }
-                    ]),
-                    claim_sets: None
-                },
-                CredentialQuery {
-                    id: test_credential_query_id("nice_to_have"),
-                    format: Format::DcSdJwt,
-                    multiple: None,
-                    meta: Some(MetaTypes::SdJwtMeta {
-                        vct_values: vec!["https://company.example/company_rewards".to_string()],
-                    }),
-                    trusted_authorities: None,
-                    require_cryptographic_holder_binding: Some(true),
-                    claims: Some(vec![ClaimQuery {
-                        id: None,
-                        path: test_claim_path(vec![ClaimPathElement::String("rewards_number".to_string())]),
-                        values: None
-                    }]),
-                    claim_sets: None
-                },
-            ],
-
-            credential_sets: Some(vec![
-                CredentialSetQuery {
-                    options: vec![
-                        vec!["fashion_police".to_string()],
-                        vec!["other_pid".to_string()],
-                        vec!["pid_reduced_cred_1".to_string(), "pid_reduced_cred_2".to_string()]
-                    ],
-                    required: Some(true)
-                },
-                CredentialSetQuery {
-                    options: vec![vec!["nice_to_have".to_string()]],
-                    required: Some(false),
+                {
+                  "id": "portrait",
+                  "path": ["org.iso.18013.5.1", "portrait"]
                 }
-            ])
-        },);
+              ]
+            },
+            {
+              "id": "mdl-address",
+              "format": "mso_mdoc",
+              "meta": {
+                "doctype_value": "org.iso.18013.5.1.mDL"
+              },
+              "claims": [
+                {
+                  "id": "resident_address",
+                  "path": ["org.iso.18013.5.1", "resident_address"]
+                },
+                {
+                  "id": "resident_country",
+                  "path": ["org.iso.18013.5.1", "resident_country"]
+                }
+              ]
+            },
+            {
+              "id": "photo_card-id",
+              "format": "mso_mdoc",
+              "meta": {
+                "doctype_value": "org.iso.23220.photoid.1"
+              },
+              "claims": [
+                {
+                  "id": "given_name",
+                  "path": ["org.iso.18013.5.1", "given_name"]
+                },
+                {
+                  "id": "family_name",
+                  "path": ["org.iso.18013.5.1", "family_name"]
+                },
+                {
+                  "id": "portrait",
+                  "path": ["org.iso.18013.5.1", "portrait"]
+                }
+              ]
+            },
+            {
+              "id": "photo_card-address",
+              "format": "mso_mdoc",
+              "meta": {
+                "doctype_value": "org.iso.23220.photoid.1"
+              },
+              "claims": [
+                {
+                  "id": "resident_address",
+                  "path": ["org.iso.18013.5.1", "resident_address"]
+                },
+                {
+                  "id": "resident_country",
+                  "path": ["org.iso.18013.5.1", "resident_country"]
+                }
+              ]
+            }
+          ],
+          "credential_sets": [
+            {
+              "options": [
+                [ "fashion-police" ],
+                [ "photo_card-id" ]
+              ]
+            },
+            {
+              "required": false,
+              "options": [
+                [ "mdl-address" ],
+                [ "photo_card-address" ]
+              ]
+            }
+          ]
+        });
+        pub static ref CREDENTIAL_SET_OPTION_MISSING: serde_json::Value = serde_json::json!(
+                       {
+          "credentials": [
+            {
+              "id": "mdl-id",
+              "format": "mso_mdoc",
+              "meta": {
+                "doctype_value": "org.iso.18013.5.1.mDL"
+              },
+              "claims": [
+                {
+                  "id": "given_name",
+                  "path": ["org.iso.18013.5.1", "given_name"]
+                },
+                {
+                  "id": "family_name",
+                  "path": ["org.iso.18013.5.1", "family_name"]
+                },
+                {
+                  "id": "portrait",
+                  "path": ["org.iso.18013.5.1", "portrait"]
+                }
+              ]
+            },
+            {
+              "id": "mdl-address",
+              "format": "mso_mdoc",
+              "meta": {
+                "doctype_value": "org.iso.18013.5.1.mDL"
+              },
+              "claims": [
+                {
+                  "id": "resident_address",
+                  "path": ["org.iso.18013.5.1", "resident_address"]
+                },
+                {
+                  "id": "resident_country",
+                  "path": ["org.iso.18013.5.1", "resident_country"]
+                }
+              ]
+            },
+            {
+              "id": "photo_card-id",
+              "format": "mso_mdoc",
+              "meta": {
+                "doctype_value": "org.iso.23220.photoid.1"
+              },
+              "claims": [
+                {
+                  "id": "given_name",
+                  "path": ["org.iso.18013.5.1", "given_name"]
+                },
+                {
+                  "id": "family_name",
+                  "path": ["org.iso.18013.5.1", "family_name"]
+                },
+                {
+                  "id": "portrait",
+                  "path": ["org.iso.18013.5.1", "portrait"]
+                }
+              ]
+            },
+            {
+              "id": "photo_card-address",
+              "format": "mso_mdoc",
+              "meta": {
+                "doctype_value": "org.iso.23220.photoid.1"
+              },
+              "claims": [
+                {
+                  "id": "resident_address",
+                  "path": ["org.iso.18013.5.1", "resident_address"]
+                },
+                {
+                  "id": "resident_country",
+                  "path": ["org.iso.18013.5.1", "resident_country"]
+                }
+              ]
+            }
+          ],
+          "credential_sets": [
+            {
+              "options": [
+                [ "fashion-police" ],
+                [ ]
+              ]
+            },
+            {
+              "required": false,
+              "options": [
+                [ "mdl-address" ],
+                [ "photo_card-address" ]
+              ]
+            }
+          ]
+        });
+    }
+
+    #[test]
+    fn test_invalid_credential_set_id() {
+        let result = serde_json::from_value::<DcqlQuery>(INVALID_CREDENTIAL_SET.clone());
+        assert!(result.is_ok());
+
+        let dcql_query = result.unwrap();
+        let validation_result = dcql_query.validate_all();
+
+        if let Err(ref err) = validation_result {
+            println!("Validation error: {}", err);
+        }
+        assert!(validation_result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_credential_set_options() {
+        let result = serde_json::from_value::<DcqlQuery>(CREDENTIAL_SET_OPTION_MISSING.clone());
+        assert!(result.is_ok());
+
+        let dcql_query = result.unwrap();
+        let validation_result = dcql_query.validate_all();
+
+        if let Err(ref err) = validation_result {
+            println!("Validation error: {}", err);
+        }
+        assert!(validation_result.is_err());
     }
 }
