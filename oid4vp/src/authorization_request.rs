@@ -113,6 +113,7 @@ pub enum CredentialFormatIdentifier {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationRequestParameters {
     pub response_type: MustBe!("vp_token"),
+    // TODO: Implement support for other response types. Currently only vp_token is supported.
     pub dcql_query: DcqlQuery,
     pub response_mode: String,
     pub scope: Option<Scope>,
