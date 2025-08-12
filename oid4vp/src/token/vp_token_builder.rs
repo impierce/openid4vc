@@ -59,13 +59,11 @@ impl VpTokenBuilder {
         if let Some(credential_sets) = &dcql_query.credential_sets {
             // Check if all required credential sets are satisfied.
             for credential_set in credential_sets {
-                if credential_set.required.unwrap_or(true) {
-                    if !self.is_credential_set_satisfied(credential_set) {
-                        errors.add(
-                            "credential_sets",
-                            ValidationError::new("required_credential_set_not_satisfied"),
-                        );
-                    }
+                if credential_set.required.unwrap_or(true) && !self.is_credential_set_satisfied(credential_set) {
+                    errors.add(
+                        "credential_sets",
+                        ValidationError::new("required_credential_set_not_satisfied"),
+                    );
                 }
             }
         } else {
