@@ -1,6 +1,64 @@
-use crate::dcql::dcql_query::{ClaimQuery, CredentialQuery};
+use crate::dcql::dcql_query::{ClaimQuery, CredentialQuery, CredentialSetQuery, DcqlQuery};
 use oid4vc_core::claim_path_pointer::{ClaimValue, ClaimValues};
 use serde_json::Value;
+use std::collections::HashMap;
+
+/// Processing a dcql_query with credential sets as described in OID4VP - draft 28 - Section 6.4.2 Selecting Credentials:
+/// https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html#name-selecting-credentials
+fn set_is_required(credential_set: &CredentialSetQuery) -> bool {
+    credential_set.required.unwrap_or(true)
+}
+
+pub fn evaluate_dcql_query(dcql_query: &DcqlQuery, available_credentials: &HashMap<String, &Value>) -> bool {
+    // If there are credential sets, check if all required sets can be satisfied.
+    if let Some(credential_sets) = &dcql_query.credential_sets {
+        // All of the Credential Set Queries in the credential_sets array where
+        // the required attribute is true or omitted must be satisfied
+        let required_sets_satisfied = credential_sets.iter().all(|credential_set| {
+            let is_required_set = set_is_required(credential_set);
+            if !is_required_set {
+                return true;
+            }
+
+            // Check if the required set has at least one satisfiable option.
+            evaluate_credential_set(credential_set, &dcql_query.credentials, available_credentials)
+        });
+
+        return required_sets_satisfied;
+    }
+
+    // If credential_sets is not provided, the Verifier requests presentations for all Credentials in credentials to be returned.
+    dcql_query.credentials.iter().all(|credential_query| {
+        let credential_id = credential_query.id.as_ref();
+        if let Some(credential_json) = available_credentials.get(credential_id) {
+            evaluate_credential_query(credential_query, credential_json)
+        } else {
+            false
+        }
+    })
+}
+
+// To satisfy a Credential Set Query, the Wallet MUST return presentations of a set of Credentials that
+// match to one of the options inside the Credential Set Query.
+pub fn evaluate_credential_set(
+    credential_set: &CredentialSetQuery,
+    all_credentials: &[CredentialQuery],
+    available_credentials: &HashMap<String, &Value>,
+) -> bool {
+    credential_set.options.iter().any(|option| {
+        option.iter().all(|credential_id| {
+            if let Some(credential_query) = all_credentials.iter().find(|cq| cq.id.as_ref() == credential_id) {
+                if let Some(credential_json) = available_credentials.get(credential_id) {
+                    evaluate_credential_query(credential_query, credential_json)
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        })
+    })
+}
 
 fn evaluate_single_claim_query(claim_query: &ClaimQuery, credential_json: &Value) -> bool {
     let extracted_values = claim_query.path.get_values_from_json(credential_json);
