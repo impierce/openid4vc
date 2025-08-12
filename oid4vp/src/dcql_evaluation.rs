@@ -242,7 +242,6 @@ mod tests {
 
     #[test]
     fn test_dcql_query_with_credential_sets() {
-        // Parse your existing query
         let dcql_query: DcqlQuery = serde_json::from_str(TESTCREDENTIALQUERY_WITH_SETS).unwrap();
 
         // Simplified version of a credential that satisfies the first option (pid)
