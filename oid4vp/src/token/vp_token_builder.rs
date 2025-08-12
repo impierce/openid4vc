@@ -103,3 +103,145 @@ impl VpTokenBuilder {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dcql::dcql_query::CredentialQueryId;
+    use serde_json::json;
+
+    fn dummy_presentation() -> PresentationFormat {
+        PresentationFormat::JwtVcJson("dummy.jwt.token".to_string())
+    }
+
+    #[test]
+    fn test_vp_token_builder_unrequested_credential() {
+        let dcql_query_json = json!({
+            "credentials": [
+                {
+                    "id": "requested-cred",
+                    "format": "dc+sd-jwt",
+                    "meta": {
+                        "vct_values": ["https://example.com/cred"]
+                    },
+                    "claims": []
+                }
+            ]
+        });
+
+        let dcql_query: DcqlQuery = serde_json::from_value(dcql_query_json).unwrap();
+
+        // Test: Add presentation for credential that wasn't requested
+        let result = VpTokenBuilder::builder_dcql_query(dcql_query)
+            .add_presentation(
+                CredentialQueryId::try_new("unrequested-cred".to_string()).unwrap(),
+                dummy_presentation(),
+            )
+            .build();
+
+        assert!(result.is_err());
+        let error_string = result.unwrap_err().to_string();
+        assert!(error_string.contains("unrequested_credential"));
+    }
+
+    #[test]
+    fn test_vp_token_builder_optional_credential_set() {
+        let dcql_query_json = json!({
+            "credentials": [
+                {
+                    "id": "mdl-id",
+                    "format": "mso_mdoc",
+                    "meta": {
+                        "doctype_value": "org.iso.18013.5.1.mDL"
+                    },
+                    "claims": []
+                },
+                {
+                    "id": "optional-cred",
+                    "format": "mso_mdoc",
+                    "meta": {
+                        "doctype_value": "org.iso.example"
+                    },
+                    "claims": []
+                }
+            ],
+            "credential_sets": [
+                {
+                                        // required omitted is the same as required: true
+
+                    "options": [["mdl-id"]]
+                },
+                {
+                    "required": false,
+                    "options": [["optional-cred"]]
+                }
+            ]
+        });
+
+        let dcql_query: DcqlQuery = serde_json::from_value(dcql_query_json).unwrap();
+
+        // Provide only required credential, skip optional (should pass)
+        let result = VpTokenBuilder::builder_dcql_query(dcql_query)
+            .add_presentation(
+                CredentialQueryId::try_new("mdl-id".to_string()).unwrap(),
+                dummy_presentation(),
+            )
+            .build();
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_vp_token_builder_missing_required_credential_set() {
+        let dcql_query_json = json!({
+            "credentials": [
+                {
+                    "id": "mdl-id",
+                    "format": "mso_mdoc",
+                    "meta": {
+                        "doctype_value": "org.iso.18013.5.1.mDL"
+                    },
+                    "claims": []
+                },
+                {
+                    "id": "optional-cred",
+                    "format": "mso_mdoc",
+                    "meta": {
+                        "doctype_value": "org.iso.example"
+                    },
+                    "claims": []
+                }
+            ],
+            "credential_sets": [
+                {
+                    "required": true,
+                    "options": [["mdl-id"]]
+                },
+                {
+                    // This credential set is required, but not in the presentations so should cause an error.
+                    "required": true,
+                    "options": [["optional-cred"]]
+                }
+            ]
+        });
+
+        let dcql_query: DcqlQuery = serde_json::from_value(dcql_query_json).unwrap();
+
+        let result = VpTokenBuilder::builder_dcql_query(dcql_query)
+            .add_presentation(
+                CredentialQueryId::try_new("mdl-id".to_string()).unwrap(),
+                dummy_presentation(),
+            )
+            .add_presentation(
+                // This credential is unrequested and should cause an error
+                CredentialQueryId::try_new("thats-not-right".to_string()).unwrap(),
+                dummy_presentation(),
+            )
+            .build();
+
+        if let Err(ref err) = result {
+            println!("Error: {}", err);
+        }
+        assert!(result.is_err());
+    }
+}
