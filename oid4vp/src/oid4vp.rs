@@ -154,6 +154,7 @@ impl Extension for OID4VP {
     }
 
     fn build_authorization_response(
+        // TODO: https://github.com/impierce/openid4vc/pull/98/files/2f8e4f76d9b90c6750f3b1b1ca507e8e63fb43a7#r2263004787
         _jwts: Vec<String>,
         user_input: <Self::ResponseHandle as ResponseHandle>::Input,
         redirect_uri: String,
