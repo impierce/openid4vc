@@ -125,6 +125,8 @@ mod tests {
 
     const TESTCREDENTIAL: &str = include_str!("../tests/examples/credentials/jwt_vc.json");
     const DCQL_QUERY: &str = include_str!("../tests/examples/request/dcql_jwt_vc.json");
+    const TESTCREDENTIALQUERY_WITH_SETS: &str =
+        include_str!("../tests/examples/query_lang/credentials_alternatives.json");
 
     #[test]
     fn test_get_value_from_json() {
@@ -236,5 +238,48 @@ mod tests {
         validate_claims(&dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
 
         assert!(evaluate_credential_query(dcql_query, &testing_credential));
+    }
+
+    #[test]
+    fn test_dcql_query_with_credential_sets() {
+        // Parse your existing query
+        let dcql_query: DcqlQuery = serde_json::from_str(TESTCREDENTIALQUERY_WITH_SETS).unwrap();
+
+        // Simplified version of a credential that satisfies the first option (pid)
+        let pid_credential = json!({
+            "given_name": "John",
+            "family_name": "Doe",
+            "address": {
+                "street_address": "123 Main St"
+            }
+        });
+
+        let mut available_credentials = HashMap::new();
+        available_credentials.insert("pid".to_string(), &pid_credential);
+
+        assert!(evaluate_dcql_query(&dcql_query, &available_credentials));
+
+        // Alternative credentials (pid_reduced_cred_1 + pid_reduced_cred_2)
+        let reduced_cred_1 = json!({
+            "given_name": "John",
+            "family_name": "Doe"
+        });
+
+        let reduced_cred_2 = json!({
+            "postal_code": "12345",
+            "locality": "Somewhere",
+            "region": "HERE"
+        });
+
+        let mut available_credentials = HashMap::new();
+        available_credentials.insert("pid_reduced_cred_1".to_string(), &reduced_cred_1);
+        available_credentials.insert("pid_reduced_cred_2".to_string(), &reduced_cred_2);
+
+        assert!(evaluate_dcql_query(&dcql_query, &available_credentials));
+
+        // If there were no credentials, the query should fail.
+        let available_credentials = HashMap::new();
+
+        assert!(!evaluate_dcql_query(&dcql_query, &available_credentials));
     }
 }
