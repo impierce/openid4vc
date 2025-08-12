@@ -244,4 +244,103 @@ mod tests {
         }
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_vp_token_builder_nothing_is_required() {
+        let dcql_query_json = json!({
+            "credentials": [
+                {
+                    "id": "mdl-id",
+                    "format": "mso_mdoc",
+                    "meta": {
+                        "doctype_value": "org.iso.18013.5.1.mDL"
+                    },
+                    "claims": []
+                },
+                {
+                    "id": "optional-cred",
+                    "format": "mso_mdoc",
+                    "meta": {
+                        "doctype_value": "org.iso.example"
+                    },
+                    "claims": []
+                }
+            ],
+            "credential_sets": [
+                {
+                    "required": false,
+                    "options": [["mdl-id"]]
+                },
+                {
+                    "required": false,
+                    "options": [["optional-cred"]]
+                }
+            ]
+        });
+
+        let dcql_query: DcqlQuery = serde_json::from_value(dcql_query_json).unwrap();
+
+        let result = VpTokenBuilder::builder_dcql_query(dcql_query)
+            .add_presentation(
+                CredentialQueryId::try_new("mdl-id".to_string()).unwrap(),
+                dummy_presentation(),
+            )
+            .add_presentation(
+                CredentialQueryId::try_new("optional-cred".to_string()).unwrap(),
+                dummy_presentation(),
+            )
+            .build();
+
+        println!("Result: {:#?}", result);
+
+        if let Err(ref err) = result {
+            println!("Error: {}", err);
+        }
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_vp_token_builder_nothing_is_required_but_one_is_there() {
+        let dcql_query_json = json!({
+            "credentials": [
+                {
+                    "id": "mdl-id",
+                    "format": "mso_mdoc",
+                    "meta": {
+                        "doctype_value": "org.iso.18013.5.1.mDL"
+                    },
+                    "claims": []
+                },
+                {
+                    "id": "optional-cred",
+                    "format": "mso_mdoc",
+                    "meta": {
+                        "doctype_value": "org.iso.example"
+                    },
+                    "claims": []
+                }
+            ],
+            "credential_sets": [
+                {
+                    "required": false,
+                    "options": [["mdl-id"]]
+                },
+                {
+                    "required": false,
+                    "options": [["optional-cred"]]
+                }
+            ]
+        });
+
+        let dcql_query: DcqlQuery = serde_json::from_value(dcql_query_json).unwrap();
+
+        let result = VpTokenBuilder::builder_dcql_query(dcql_query).build();
+
+        println!("Result: {:#?}", result);
+
+        if let Err(ref err) = result {
+            println!("Error: {}", err);
+        }
+        assert!(result.is_ok());
+    }
 }
