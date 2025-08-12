@@ -246,7 +246,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vp_token_builder_nothing_is_required() {
+    fn test_vp_token_builder_credential_sets_not_required() {
         let dcql_query_json = json!({
             "credentials": [
                 {
@@ -300,7 +300,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vp_token_builder_nothing_is_required_but_one_is_there() {
+    fn test_vp_token_builder_empty_presentations_with_credential_sets() {
         let dcql_query_json = json!({
             "credentials": [
                 {
