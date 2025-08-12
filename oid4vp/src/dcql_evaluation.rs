@@ -209,23 +209,25 @@ mod tests {
             "nbf": 1262304000,
             "jti": "http://example.gov/credentials/3732",
             "sub": "did:example:ebfeb1f712ebc6f1c276e12ec21",
-            "@context": [
-                "https://www.w3.org/2018/credentials/v1",
-                "https://www.w3.org/2018/credentials/examples/v1"
-            ],
-            "type": [
-                "VerifiableCredential",
-                "IDCredential"
-            ],
-            "credentialSubject": {
-                "given_name": "Rainer",
-                "family_name": "Zufall",
-                "birthdate": "1998-01-11",
-                "address": {
-                    "street_address": "Sandanger 25",
-                    "locality": "Musterstadt",
-                    "postal_code": "123456",
-                    "country": "DE"
+            "vc": {
+                "@context": [
+                    "https://www.w3.org/2018/credentials/v1",
+                    "https://www.w3.org/2018/credentials/examples/v1"
+                ],
+                "type": [
+                    "VerifiableCredential",
+                    "IDCredential"
+                ],
+                "credentialSubject": {
+                    "given_name": "Rainer",
+                    "family_name": "Zufall",
+                    "birthdate": "1998-01-11",
+                    "address": {
+                        "street_address": "Sandanger 25",
+                        "locality": "Musterstadt",
+                        "postal_code": "123456",
+                        "country": "DE"
+                    }
                 }
             }
         });
@@ -237,7 +239,10 @@ mod tests {
         };
         validate_claims(&dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
 
-        assert!(evaluate_credential_query(dcql_query, &testing_credential));
+        assert!(evaluate_credential_query(
+            dcql_query,
+            &testing_credential.get("vc").unwrap()
+        ));
     }
 
     #[test]
