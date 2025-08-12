@@ -27,7 +27,7 @@ impl VpTokenBuilder {
         self
     }
 
-    /// for multiple presentations for the same credential_id
+    // for multiple presentations for the same credential_id
     pub fn add_presentations(
         mut self,
         credential_id: CredentialQueryId,
@@ -49,54 +49,41 @@ impl VpTokenBuilder {
         })
     }
 
+    // Validate the VpToken against the provided DcqlQuery.
     fn validate_against_dcql(&self, dcql_query: &DcqlQuery) -> Result<(), ValidationErrors> {
         let mut errors = ValidationErrors::new();
 
         let credential_queries: HashMap<CredentialQueryId, &CredentialQuery> =
             dcql_query.credentials.iter().map(|cq| (cq.id.clone(), cq)).collect();
 
-        // Check to see if all required credentials are present.
-        for credential_query in &dcql_query.credentials {
-            if !self.presentations.contains_key(&credential_query.id) {
-                let mut error = ValidationError::new("missing_required_credential");
-                error.message = Some(
-                    format!(
-                        "Required credential '{}' is missing from presentations",
-                        credential_query.id
-                    )
-                    .into(),
-                );
-                errors.add("presentations", error);
+        if let Some(credential_sets) = &dcql_query.credential_sets {
+            // Check if all required credential sets are satisfied.
+            for credential_set in credential_sets {
+                if credential_set.required.unwrap_or(true) {
+                    if !self.is_credential_set_satisfied(credential_set) {
+                        errors.add(
+                            "credential_sets",
+                            ValidationError::new("required_credential_set_not_satisfied"),
+                        );
+                    }
+                }
+            }
+        } else {
+            // If there are no credential sets, we assume all credentials are required.
+            for credential_query in &dcql_query.credentials {
+                if !self.presentations.contains_key(&credential_query.id) {
+                    errors.add("presentations", ValidationError::new("missing_required_credential"));
+                }
             }
         }
-
-        // Make sure there are no extra or unnecessary presentations
-        for credential_id in self.presentations.keys() {
-            if !credential_queries.contains_key(credential_id) {
-                let mut error = ValidationError::new("invalid_credential_id");
-                error.message =
-                    Some(format!("Presentation provided for '{credential_id}' which was not requested for.").into());
-                errors.add("presentations", error);
-            }
-        }
-
-        // Check multiple parameter
+        // Check multiple constraints and for no unrequested presentations
         for (credential_id, presentations) in &self.presentations {
             if let Some(credential_query) = credential_queries.get(credential_id) {
-                let allows_multiple = credential_query.multiple.unwrap_or(false);
-
-                if !allows_multiple && presentations.len() > 1 {
-                    let mut error = ValidationError::new("multiple_not_allowed");
-                    error.message = Some(
-                        format!(
-                            "Credential '{}' does not allow multiple presentations, but {} provided",
-                            credential_id,
-                            presentations.len()
-                        )
-                        .into(),
-                    );
-                    errors.add("presentations", error);
+                if !credential_query.multiple.unwrap_or(false) && presentations.len() > 1 {
+                    errors.add("presentations", ValidationError::new("multiple_not_allowed"));
                 }
+            } else {
+                errors.add("presentations", ValidationError::new("unrequested_credential"));
             }
         }
 
@@ -105,5 +92,16 @@ impl VpTokenBuilder {
         } else {
             Err(errors)
         }
+    }
+
+    /// Check if at least one option in the credential set is fully satisfied
+    fn is_credential_set_satisfied(&self, credential_set: &crate::dcql::dcql_query::CredentialSetQuery) -> bool {
+        credential_set.options.iter().any(|option| {
+            option.iter().all(|credential_id_str| {
+                crate::dcql::dcql_query::CredentialQueryId::try_new(credential_id_str.clone())
+                    .map(|id| self.presentations.contains_key(&id))
+                    .unwrap_or(false)
+            })
+        })
     }
 }
