@@ -167,7 +167,7 @@ mod tests {
             ],
             "credential_sets": [
                 {
-                                        // required omitted is the same as required: true
+                // required omitted is the same as "required: true"
 
                     "options": [["mdl-id"]]
                 },
