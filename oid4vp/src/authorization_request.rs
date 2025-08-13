@@ -248,9 +248,10 @@ impl AuthorizationRequestBuilder {
                         .take()
                         .ok_or_else(|| anyhow!("presentation_definition parameter is required."))?,
                     scope: self.scope.take(),
-                    response_mode: self.response_mode.take().ok_or_else(|| {
-                        anyhow!("response_mode parameter is required. Supported values: fragment, query, form_post")
-                    })?,
+                    response_mode: self
+                        .response_mode
+                        .take()
+                        .ok_or_else(|| anyhow!("response_mode parameter is required."))?,
                     nonce: self
                         .nonce
                         .take()
