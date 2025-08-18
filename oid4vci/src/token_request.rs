@@ -1,4 +1,3 @@
-use crate::credential_offer::TxCode;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 

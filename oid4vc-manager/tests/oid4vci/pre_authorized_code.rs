@@ -8,7 +8,7 @@ use oid4vc_manager::{
 };
 use oid4vci::{
     credential_format_profiles::{CredentialFormats, WithParameters},
-    credential_offer::{CredentialOffer, CredentialOfferParameters, Grants, InputMode, TxCode},
+    credential_offer::{CredentialOffer, CredentialOfferParameters, Grants},
     credential_response::{BatchCredentialResponse, CredentialResponse, CredentialResponseType},
     notification_request::NotificationEvent,
     token_request::TokenRequest,
@@ -88,13 +88,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             pre_authorized_code, ..
         }) => TokenRequest::PreAuthorizedCode {
             pre_authorized_code: pre_authorized_code.unwrap().pre_authorized_code,
-            tx_code: Some(TxCode {
-                input_mode: Some(InputMode::Numeric),
-                length: Some(6),
-                description: Some(
-                    "Please provide the one-time code which was sent to your verified e-mail address.".to_string(),
-                ),
-            }),
+            tx_code: Some("493536".to_string()),
         },
         None => unreachable!(),
     };
