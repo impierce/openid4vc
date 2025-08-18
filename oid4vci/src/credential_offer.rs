@@ -19,16 +19,17 @@ pub struct AuthorizationCode {
 pub struct PreAuthorizedCode {
     #[serde(rename = "pre-authorized_code")]
     pub pre_authorized_code: String,
-    pub tx_code: Option<TransactionCode>,
+    pub tx_code: Option<TxCode>,
     pub interval: Option<i64>,
     pub authorization_server: Option<Url>,
 }
 
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
-pub struct TransactionCode {
+pub struct TxCode {
     pub input_mode: Option<InputMode>,
-    pub length: Option<u64>,
+    pub length: Option<u8>,
+    // Allows a pin-length of 0-255.
     pub description: Option<String>,
 }
 
@@ -160,7 +161,7 @@ mod tests {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
                         pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
-                        tx_code: Some(TransactionCode::default()),
+                        tx_code: Some(TxCode::default()),
                         ..Default::default()
                     })
                 })
@@ -180,7 +181,7 @@ mod tests {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
                         pre_authorized_code: "oaKazRN8I0IbtZ0C7JuMn5".to_string(),
-                        tx_code: Some(TransactionCode {
+                        tx_code: Some(TxCode {
                             length: Some(4),
                             input_mode: Some(InputMode::Numeric),
                             description: Some("Please provide the one-time code that was sent via e-mail".to_string()),
@@ -203,9 +204,9 @@ mod tests {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
                         pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
-                        tx_code: Some(TransactionCode {
+                        tx_code: Some(TxCode {
                             description: Some(
-                                "Please provide the one-time code which was sent to your mobile phone via SMS"
+                                "Please provide the one-time code which was sent to your verified e-mail address."
                                     .to_string()
                             ),
                             ..Default::default()

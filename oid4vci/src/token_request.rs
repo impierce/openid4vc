@@ -1,3 +1,4 @@
+use crate::credential_offer::TxCode;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -16,7 +17,7 @@ pub enum TokenRequest {
     PreAuthorizedCode {
         #[serde(rename = "pre-authorized_code")]
         pre_authorized_code: String,
-        tx_code: Option<String>,
+        tx_code: Option<TxCode>,
     },
 }
 
