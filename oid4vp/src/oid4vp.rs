@@ -1,28 +1,30 @@
 use crate::authorization_request::{
     AuthorizationRequestBuilder, AuthorizationRequestParameters, ClientMetadataParameters,
 };
-use crate::oid4vp_params::{serde_oid4vp_response, Oid4vpParams};
-use crate::token::vp_token::VpToken;
-use chrono::{Duration, Utc};
-use dif_presentation_exchange::presentation_definition::ClaimFormatProperty;
-pub use dif_presentation_exchange::{
-    evaluate_input, ClaimFormatDesignation, InputDescriptor, InputDescriptorMappingObject, PathNested,
-    PresentationDefinition, PresentationSubmission,
-};
+use crate::dcql::dcql_query::CredentialQueryId;
+use crate::token::verifiable_presentation_jwt::VerifiablePresentationJwt;
+use crate::token::vp_token::{PresentationFormat, VpToken};
+use anyhow::anyhow;
 use futures::future::join_all;
-use identity_credential::{credential::Jwt, presentation::Presentation};
-use jsonwebtoken::{Algorithm, Header};
+use jsonwebtoken::Algorithm;
 use oid4vc_core::client_metadata::ClientMetadataResource;
 use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};
-use oid4vc_core::{authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension, Subject};
-use oid4vc_core::{SubjectSyntaxType, Validator};
+use oid4vc_core::Subject;
+use oid4vc_core::SubjectSyntaxType;
+use oid4vc_core::{authorization_response::AuthorizationResponse, openid4vc_extension::Extension};
 use oid4vci::VerifiableCredentialJwt;
 use reqwest_middleware::ClientBuilder;
 use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct AuthorizationResponseParameters {
+    pub vp_token: VpToken,
+}
 
 /// This is the [`RequestHandle`] for the [`OID4VP`] extension.
 #[derive(Debug, PartialEq, Clone)]
@@ -36,9 +38,15 @@ impl RequestHandle for RequestHandler {
 #[derive(Debug, PartialEq, Clone)]
 pub struct ResponseHandler {}
 impl ResponseHandle for ResponseHandler {
-    type Input = AuthorizationResponseInput;
+    type Input = VpToken;
     type Parameters = AuthorizationResponseParameters;
-    type ResponseItem = Vec<VerifiableCredentialJwt>;
+    type ResponseItem = DecodedVpToken;
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct DecodedVpToken {
+    #[serde(flatten)]
+    pub presentations: HashMap<CredentialQueryId, Vec<VerifiableCredentialJwt>>,
 }
 
 /// This is the [`Extension`] implementation for the [`OID4VP`] extension.
@@ -49,56 +57,16 @@ impl Extension for OID4VP {
     type RequestHandle = RequestHandler;
     type ResponseHandle = ResponseHandler;
 
+    // TODO: https://github.com/impierce/openid4vc/pull/98/files/2f8e4f76d9b90c6750f3b1b1ca507e8e63fb43a7#r2263004787
     async fn generate_token(
-        subject: Arc<dyn Subject>,
-        client_id: &str,
-        extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
-        user_input: &<Self::ResponseHandle as ResponseHandle>::Input,
-        subject_syntax_type: impl TryInto<SubjectSyntaxType>,
-        signing_algorithm: impl TryInto<Algorithm>,
+        _subject: Arc<dyn Subject + 'static>,
+        _client_id: &str,
+        _extension_parameters: &<Self::RequestHandle as RequestHandle>::Parameters,
+        _user_input: &<Self::ResponseHandle as ResponseHandle>::Input,
+        _subject_syntax_type: impl TryInto<SubjectSyntaxType>,
+        _signing_algorithm: impl TryInto<Algorithm>,
     ) -> anyhow::Result<Vec<String>> {
-        let signing_algorithm = signing_algorithm
-            .try_into()
-            .map_err(|_| anyhow::anyhow!("Failed to convert the signing algorithm"))?;
-
-        let subject_syntax_type_string = subject_syntax_type
-            .try_into()
-            .map_err(|_| anyhow::anyhow!("Failed to convert the subject syntax type"))?
-            .to_string();
-        let subject_identifier = subject
-            .identifier(&subject_syntax_type_string, signing_algorithm)
-            .await?;
-
-        let mut jwts = vec![];
-        match &user_input.verifiable_presentation_input {
-            PresentationInputType::Presentation(verifiable_presentation) => {
-                let vp_token = VpToken::builder()
-                    .iss(subject_identifier.clone())
-                    .sub(subject_identifier)
-                    .aud(client_id)
-                    .nonce(extension_parameters.nonce.to_owned())
-                    // TODO: make this configurable.
-                    .exp((Utc::now() + Duration::minutes(10)).timestamp())
-                    .iat((Utc::now()).timestamp())
-                    .verifiable_presentation(*verifiable_presentation.clone())
-                    .build()?;
-
-                let jwt = jwt::encode(
-                    subject.clone(),
-                    Header::new(signing_algorithm),
-                    vp_token,
-                    &subject_syntax_type_string,
-                )
-                .await?;
-
-                jwts.push(jwt);
-            }
-            PresentationInputType::SdJwtVc(jwt) => {
-                jwts.push(jwt.to_owned());
-            }
-        }
-
-        Ok(jwts)
+        Ok(vec![])
     }
 
     // TODO: combine this function with `get_relying_party_supported_syntax_types`.
@@ -124,22 +92,19 @@ impl Extension for OID4VP {
         // well as the Proof of Possession.
         match client_metadata {
             // Fetch the client metadata from the given URI.
-            ClientMetadataResource::ClientMetadataUri(_) => unreachable!(),
+            // TODO: Add LDP VC
             ClientMetadataResource::ClientMetadata { extension, .. } => extension
-                .vp_formats
-                .get(&ClaimFormatDesignation::JwtVcJson)
-                .or_else(|| extension.vp_formats.get(&ClaimFormatDesignation::VcSdJwt))
-                .and_then(|claim_format_property| match claim_format_property {
-                    ClaimFormatProperty::Alg(algs) => Some(algs.clone()),
-                    // TODO: implement `ProofType`.
-                    ClaimFormatProperty::ProofType(_) => None,
-                    ClaimFormatProperty::SdJwt {
-                        sd_jwt_alg_values,
-                        // TODO: implement Key Binding
-                        kb_jwt_alg_values: _kb_jwt_alg_values,
-                    } => Some(sd_jwt_alg_values.clone()),
+                .vp_formats_supported
+                .jwt_vc_json
+                .and_then(|params| params.alg_values)
+                .or_else(|| {
+                    extension
+                        .vp_formats_supported
+                        .dc_sd_jwt
+                        .and_then(|params| params.sd_jwt_alg_values)
                 })
-                .ok_or(anyhow::anyhow!("No supported algorithms found.")),
+                .ok_or_else(|| anyhow!("No supported algorithms found")),
+            _ => unreachable!("ClientMetadataUri should have been resolved above"),
         }
     }
 
@@ -189,7 +154,8 @@ impl Extension for OID4VP {
     }
 
     fn build_authorization_response(
-        jwts: Vec<String>,
+        // TODO: https://github.com/impierce/openid4vc/pull/98/files/2f8e4f76d9b90c6750f3b1b1ca507e8e63fb43a7#r2263004787
+        _jwts: Vec<String>,
         user_input: <Self::ResponseHandle as ResponseHandle>::Input,
         redirect_uri: String,
         state: Option<String>,
@@ -197,52 +163,44 @@ impl Extension for OID4VP {
         Ok(AuthorizationResponse {
             redirect_uri,
             state,
-            extension: AuthorizationResponseParameters {
-                oid4vp_parameters: Oid4vpParams::Params {
-                    vp_token: jwts.first().unwrap().to_owned(),
-                    presentation_submission: user_input.presentation_submission,
-                },
-            },
+            extension: AuthorizationResponseParameters { vp_token: user_input },
         })
     }
 
     async fn decode_authorization_response(
-        validator: Validator,
-        response: &AuthorizationResponse<Self>,
-    ) -> anyhow::Result<<Self::ResponseHandle as ResponseHandle>::ResponseItem> {
-        let vp_token: VpToken = match &response.extension.oid4vp_parameters {
-            Oid4vpParams::Jwt { .. } => todo!(),
-            Oid4vpParams::Params { vp_token, .. } => validator.decode(vp_token.to_owned()).await?,
-        };
+        validator: oid4vc_core::Validator,
+        authorization_response: &AuthorizationResponse<Self>,
+    ) -> anyhow::Result<DecodedVpToken> {
+        let vp_token = &authorization_response.extension.vp_token;
+        let mut decoded_presentations: HashMap<CredentialQueryId, Vec<VerifiableCredentialJwt>> = HashMap::new();
+        for (credential_query_id, presentation_formats) in vp_token.presentations() {
+            let mut all_decoded_credentials = Vec::new();
+            for presentation_format in presentation_formats {
+                match presentation_format {
+                    PresentationFormat::JwtVcJson(jwt_string) => {
+                        let decoded_presentation: VerifiablePresentationJwt =
+                            validator.decode(jwt_string.clone()).await?;
+                        let credential_futures: Vec<_> = decoded_presentation
+                            .verifiable_presentation()
+                            .verifiable_credential
+                            .iter()
+                            .map(|vc_jwt| validator.decode(vc_jwt.as_str().to_owned()))
+                            .collect();
+                        let decoded_credentials: Result<Vec<_>, _> =
+                            join_all(credential_futures).await.into_iter().collect();
+                        all_decoded_credentials.append(&mut decoded_credentials?);
+                    }
+                    // TODO: handle additional formats DcSdJwt, LdpVc and MsoMdoc
+                    _ => {
+                        return Err(anyhow!("Unsupported presentation format: {:?}", presentation_format));
+                    }
+                }
+            }
+            decoded_presentations.insert(credential_query_id.clone(), all_decoded_credentials);
+        }
 
-        join_all(
-            vp_token
-                .verifiable_presentation()
-                .verifiable_credential
-                .iter()
-                .map(|vc| validator.decode(vc.as_str().to_owned()))
-                .collect::<Vec<_>>(),
-        )
-        .await
-        .into_iter()
-        .collect()
+        Ok(DecodedVpToken {
+            presentations: decoded_presentations,
+        })
     }
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct AuthorizationResponseParameters {
-    #[serde(flatten, with = "serde_oid4vp_response")]
-    pub oid4vp_parameters: Oid4vpParams,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct AuthorizationResponseInput {
-    pub verifiable_presentation_input: PresentationInputType,
-    pub presentation_submission: PresentationSubmission,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub enum PresentationInputType {
-    Presentation(Box<Presentation<Jwt>>),
-    SdJwtVc(String),
 }

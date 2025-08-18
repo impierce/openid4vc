@@ -80,13 +80,13 @@ impl std::fmt::Display for CredentialOffer {
             CredentialOffer::CredentialOfferUri(uri) => {
                 let mut url = Url::parse("openid-credential-offer://").map_err(|_| std::fmt::Error)?;
                 url.query_pairs_mut().append_pair("credential_offer_uri", uri.as_ref());
-                write!(f, "{}", url)
+                write!(f, "{url}")
             }
             CredentialOffer::CredentialOffer(offer) => {
                 let mut url = Url::parse("openid-credential-offer://").map_err(|_| std::fmt::Error)?;
                 url.query_pairs_mut()
                     .append_pair("credential_offer", &to_query_value(offer).map_err(|_| std::fmt::Error)?);
-                write!(f, "{}", url)
+                write!(f, "{url}")
             }
         }
     }

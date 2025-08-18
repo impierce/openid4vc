@@ -287,7 +287,7 @@ mod tests {
                 credential_configurations_supported: vec![(
                     "SD_JWT_VC_example_in_OpenID4VCI".to_string(),
                     CredentialConfigurationsSupportedObject {
-                        credential_format: CredentialFormats::VcSdJwt(Parameters {
+                        credential_format: CredentialFormats::DcSdJwt(Parameters {
                             parameters: (
                                 "SD_JWT_VC_example_in_OpenID4VCI".to_string(),
                                 Some(json!({

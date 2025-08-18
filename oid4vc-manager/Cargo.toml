@@ -23,6 +23,7 @@ getset.workspace = true
 identity_core.workspace = true
 identity_credential.workspace = true
 jsonwebtoken.workspace = true
+lazy_static = "1.4.0"
 paste = "1.0"
 reqwest.workspace = true
 serde.workspace = true
@@ -30,7 +31,7 @@ serde_json.workspace = true
 serde_urlencoded.workspace = true
 serde_with.workspace = true
 tokio.workspace = true
-tower-http = { version = "0.4", features = ["cors"]}
+tower-http = { version = "0.4", features = ["cors"] }
 url.workspace = true
 
 [dev-dependencies]
