@@ -17,7 +17,7 @@ pub enum TokenRequest {
     PreAuthorizedCode {
         #[serde(rename = "pre-authorized_code")]
         pre_authorized_code: String,
-        tx_code: Option<TxCode>,
+        tx_code: Option<String>,
     },
 }
 
