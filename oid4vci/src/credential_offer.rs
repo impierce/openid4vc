@@ -1,7 +1,9 @@
 use anyhow::Result;
+use nutype::nutype;
 use oid4vc_core::{to_query_value, JsonObject};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
+
 use serde_json::Value;
 use serde_with::skip_serializing_none;
 
@@ -30,8 +32,15 @@ pub struct TxCode {
     pub input_mode: Option<InputMode>,
     pub length: Option<u8>,
     // Allows a pin-length of 0-255.
-    pub description: Option<String>,
+    pub description: Option<Description>,
+    // The length of the string must not exceed 300 characters.
 }
+
+#[nutype(
+    validate(len_char_max = 300),
+    derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)
+)]
+pub struct Description(String);
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
 #[serde(rename_all = "lowercase")]
@@ -184,7 +193,11 @@ mod tests {
                         tx_code: Some(TxCode {
                             length: Some(4),
                             input_mode: Some(InputMode::Numeric),
-                            description: Some("Please provide the one-time code that was sent via e-mail".to_string()),
+                            description: Description::try_new(
+                                "Please provide the one-time code which was sent to your verified e-mail address."
+                                    .to_string()
+                            )
+                            .ok(),
                         }),
                         ..Default::default()
                     })
@@ -205,10 +218,11 @@ mod tests {
                     pre_authorized_code: Some(PreAuthorizedCode {
                         pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
                         tx_code: Some(TxCode {
-                            description: Some(
+                            description: Description::try_new(
                                 "Please provide the one-time code which was sent to your verified e-mail address."
                                     .to_string()
-                            ),
+                            )
+                            .ok(),
                             ..Default::default()
                         }),
                         ..Default::default()
