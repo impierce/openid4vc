@@ -1,5 +1,7 @@
 # Rust library for OpenID for Verifiable Credentials
 
+[![codecov](https://codecov.io/github/impierce/openid4vc/graph/badge.svg?token=CDL92C53JL)](https://codecov.io/github/impierce/openid4vc)
+
 This is a library for the OpenID for Verifiable Credentials (OpenID4VC) specifications family developed by the [OpenID
 Digital Credentials Protocols
 Working Group](https://openid.net/wg/digital-credentials-protocols/).
