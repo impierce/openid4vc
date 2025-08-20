@@ -41,8 +41,7 @@ where
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct PushedAuthorizationResponse {
-    #[serde(serialize_with = "uuid_as_urn")]
-    pub request_uri: Uuid,
+    pub request_uri: String,
     pub expires_in: i64,
 }
 
@@ -50,8 +49,7 @@ pub struct PushedAuthorizationResponse {
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct AuthorizationRequestByReference {
     pub client_id: String,
-    #[serde(serialize_with = "uuid_as_urn")]
-    pub request_uri: Uuid,
+    pub request_uri: String,
 }
 
 pub fn uuid_as_urn<S>(uuid: &Uuid, serializer: S) -> Result<S::Ok, S::Error>
@@ -336,7 +334,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
         let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
 
-        let mut key_proof_type_builder = Proof::builder()
+        let key_proof_type_builder = Proof::builder()
             .proof_type(ProofType::Jwt)
             .algorithm(signing_algorithm)
             .signer(self.subject.clone())
@@ -347,12 +345,6 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             )
             .aud(credential_issuer_metadata.credential_issuer)
             .iat(chrono::Utc::now().timestamp());
-
-        // FIXME: remove `c_nonce`?
-        // // TODO: in certain cases the `c_nonce` is required, so we need to validate that.
-        // if let Some(c_nonce) = token_response.c_nonce.as_ref() {
-        //     key_proof_type_builder = key_proof_type_builder.nonce(c_nonce.clone());
-        // }
 
         let proof = Some(
             key_proof_type_builder
