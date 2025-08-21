@@ -1,7 +1,6 @@
-use std::str::FromStr;
-
 use anyhow::Result;
 use jsonwebtoken::Algorithm;
+use oid4vc_core::utils::form_urlencoded::to_form_urlencoded_string;
 use oid4vc_core::{
     authentication::subject::SigningSubject,
     authorization_request::{AuthorizationRequest, Body, ByReference, ByValue, Object},
@@ -12,6 +11,7 @@ use oid4vc_core::{
 use reqwest::StatusCode;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
+use std::str::FromStr;
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
 /// [`AuthorizationRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
@@ -152,10 +152,14 @@ impl Provider {
         &self,
         authorization_response: &AuthorizationResponse<E>,
     ) -> Result<StatusCode> {
+        let encoded = to_form_urlencoded_string(&authorization_response)
+            .map_err(|err| anyhow::anyhow!("Failed to encode authorization response: {err}"))?;
+
         Ok(self
             .client
             .post(authorization_response.redirect_uri.clone())
-            .form(&authorization_response)
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(encoded)
             .send()
             .await?
             .status())

@@ -23,6 +23,7 @@ getset.workspace = true
 identity_core.workspace = true
 identity_credential.workspace = true
 jsonwebtoken.workspace = true
+lazy_static = "1.4.0"
 paste = "1.0"
 reqwest.workspace = true
 serde.workspace = true

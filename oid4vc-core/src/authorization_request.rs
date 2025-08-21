@@ -18,6 +18,7 @@ pub struct Object<E: Extension = Generic> {
     pub rfc7519_claims: RFC7519Claims,
     pub client_id: String,
     pub redirect_uri: url::Url,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub state: Option<String>,
     #[serde(flatten)]
     pub extension: <E::RequestHandle as RequestHandle>::Parameters,

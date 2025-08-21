@@ -11,7 +11,6 @@ repository.workspace = true
 [dependencies]
 # Fix these dependencies once the crates arre automatically published to crates.io.
 oid4vc-core = { path = "../oid4vc-core" }
-dif-presentation-exchange = { path = "../dif-presentation-exchange" }
 oid4vci = { path = "../oid4vci" }
 
 anyhow = "1.0"
@@ -22,7 +21,9 @@ identity_core.workspace = true
 identity_credential.workspace = true
 is_empty.workspace = true
 jsonwebtoken.workspace = true
+lazy_static = "1.4.0"
 monostate.workspace = true
+nutype.workspace = true
 reqwest.workspace = true
 reqwest-middleware.workspace = true
 reqwest-retry.workspace = true
@@ -31,3 +32,4 @@ serde_json.workspace = true
 serde_with.workspace = true
 tokio.workspace = true
 url.workspace = true
+validator.workspace = true

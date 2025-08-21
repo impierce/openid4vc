@@ -29,7 +29,7 @@ lazy_static! {
     };
     pub static ref ACCESS_TOKEN: String = "czZCaGRSa3F0MzpnWDFmQmF0M2JW".to_string();
     pub static ref C_NONCE: String = "tZignsnFbp".to_string();
-    pub static ref REQUEST_URI: Uuid = Uuid::new_v4();
+    pub static ref REQUEST_URI: String = Uuid::new_v4().to_string();
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
