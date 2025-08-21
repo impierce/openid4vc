@@ -19,7 +19,6 @@ use oid4vci::{
 use reqwest::Url;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
-use uuid::Uuid;
 
 lazy_static! {
     pub static ref CODE: String = generate_authorization_code(16);
@@ -29,7 +28,7 @@ lazy_static! {
     };
     pub static ref ACCESS_TOKEN: String = "czZCaGRSa3F0MzpnWDFmQmF0M2JW".to_string();
     pub static ref C_NONCE: String = "tZignsnFbp".to_string();
-    pub static ref REQUEST_URI: String = Uuid::new_v4().to_string();
+    pub static ref REQUEST_URI: String = "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6".to_string();
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

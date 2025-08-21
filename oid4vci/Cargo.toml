@@ -18,7 +18,6 @@ http.workspace = true
 lazy_static = "1.4"
 jsonwebtoken.workspace = true
 paste = "1.0"
-# TODO: make this a feature?
 pkce = "0.2"
 reqwest.workspace = true
 reqwest-middleware.workspace = true
@@ -30,7 +29,6 @@ serde_with.workspace = true
 tokio.workspace = true
 thiserror.workspace = true
 url.workspace = true
-uuid.workspace = true
 
 [dev-dependencies]
 oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }

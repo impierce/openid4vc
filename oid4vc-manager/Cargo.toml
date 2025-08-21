@@ -41,5 +41,4 @@ ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
 lazy_static = "1.4"
 rand = "0.8"
 rstest = "0.18"
-uuid.workspace = true
 wiremock = "0.5"

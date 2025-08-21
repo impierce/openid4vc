@@ -44,7 +44,6 @@ serde_with = "3.0"
 tokio = { version = "1.43.0", features = ["rt", "macros", "rt-multi-thread"] }
 thiserror = "1.0"
 url = { version = "2", features = ["serde"] }
-uuid = { version = "1.4", features = ["v4", "fast-rng", "serde"] }
 validator = { version = "0.19", features = ["derive"] }
 
 # TODO: Fix these dependencies once publishing to crates.io is automated.
