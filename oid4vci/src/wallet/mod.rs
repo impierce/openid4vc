@@ -10,11 +10,12 @@ use crate::credential_offer::CredentialOfferParameters;
 use crate::credential_request::{CredentialIdentifierOrCredentialConfigurationId, CredentialRequest};
 use crate::notification_request::{NotificationEvent, NotificationRequest};
 use crate::proof::ProofType;
+use crate::Proof;
 use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
-use crate::{to_form_urlencoded_string, Proof};
 use anyhow::{anyhow, Result};
 use jsonwebtoken::Algorithm;
 use oid4vc_core::authentication::subject::SigningSubject;
+use oid4vc_core::utils::form_urlencoded::to_form_urlencoded_string;
 use oid4vc_core::SubjectSyntaxType;
 use reqwest::header::{HeaderValue, CONTENT_TYPE};
 use reqwest::Url;
@@ -22,10 +23,8 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
 use serde::de::DeserializeOwned;
-use serde::Serializer;
 use serde_json::json;
 use std::str::FromStr;
-use uuid::Uuid;
 
 #[derive(Debug)]
 pub struct Wallet<CFC = CredentialFormats<WithParameters>>
