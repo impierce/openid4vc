@@ -52,13 +52,6 @@ pub struct AuthorizationRequestByReference {
     pub request_uri: String,
 }
 
-pub fn uuid_as_urn<S>(uuid: &Uuid, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    serializer.serialize_str(&uuid.urn().to_string())
-}
-
 impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
     pub fn new(
         subject: SigningSubject,
