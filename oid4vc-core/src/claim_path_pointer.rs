@@ -3,13 +3,13 @@ use nutype::nutype;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[nutype(validate(predicate = not_empty), derive(Debug, Clone, PartialEq, Serialize, Deserialize, AsRef))]
+#[nutype(validate(predicate = not_empty), derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, AsRef))]
 pub struct ClaimPathPointer(Vec<ClaimPathElement>);
 
-#[nutype(validate(predicate = not_empty), derive(Debug, Clone, PartialEq, Serialize, AsRef, Deserialize))]
+#[nutype(validate(predicate = not_empty), derive(Debug, Clone, Eq, PartialEq, Serialize, AsRef, Deserialize))]
 pub struct ClaimValues(Vec<ClaimValue>);
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum ClaimValue {
     String(String),
@@ -17,7 +17,7 @@ pub enum ClaimValue {
     Boolean(bool),
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum ClaimPathElement {
     /// To address a particular claim within an object, append the key (claim name) to the array.

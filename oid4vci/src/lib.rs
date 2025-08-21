@@ -8,6 +8,7 @@ pub mod credential_offer;
 pub mod credential_request;
 pub mod credential_response;
 pub mod errors;
+pub mod nonce_response;
 pub mod notification_request;
 pub mod proof;
 pub mod proofs;

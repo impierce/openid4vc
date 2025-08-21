@@ -21,6 +21,7 @@ use serde::de::DeserializeOwned;
 use tokio::task::JoinHandle;
 use tower_http::cors::AllowOrigin;
 
+// TODO: This is only used for testing purposes. It should be removed or replaced with a proper test server setup.
 pub struct Server<S, CFC>
 where
     S: Storage<CFC>,
@@ -134,7 +135,7 @@ async fn credential_offer<S: Storage<CFC>, CFC: CredentialFormatCollection>(
 
 async fn par<S: Storage<CFC>, CFC: CredentialFormatCollection>(
     State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
-    // FIXME: should be StringifiedForm<PushedAuthorizationRequest>?
+    // TODO: should be StringifiedForm<PushedAuthorizationRequest>?
     Form(_pushed_authorization_request): Form<serde_json::Value>,
 ) -> impl IntoResponse {
     (
@@ -150,7 +151,7 @@ async fn par<S: Storage<CFC>, CFC: CredentialFormatCollection>(
 
 async fn authorize<S: Storage<CFC>, CFC: CredentialFormatCollection>(
     State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
-    // FIXME: should be StringifiedForm<AuthorizationRequest<CFC>>?
+    // TODO: should be StringifiedForm<AuthorizationRequest<CFC>>?
     Form(_authorization_request): Form<serde_json::Value>,
 ) -> impl IntoResponse {
     (

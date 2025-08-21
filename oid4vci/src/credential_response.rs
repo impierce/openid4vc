@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-/// Credential Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-response
+/// Credential Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-response
 #[skip_serializing_none]
 #[derive(Serialize, Debug, PartialEq, Deserialize, Clone)]
 pub struct CredentialResponse {
@@ -17,9 +17,15 @@ pub enum CredentialResponseType {
         transaction_id: String,
     },
     Immediate {
-        credential: serde_json::Value,
+        credentials: Vec<CredentialResponseObject>,
         notification_id: Option<String>,
     },
+}
+
+#[derive(Serialize, Debug, PartialEq, Deserialize, Clone)]
+pub struct CredentialResponseObject {
+    // TODO: This should be a more complex type
+    pub credential: String,
 }
 
 #[cfg(test)]

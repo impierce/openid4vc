@@ -2,8 +2,9 @@ use crate::{
     credential_format_profiles::{
         CredentialConfiguration, CredentialFormatCollection, CredentialFormats, WithParameters,
     },
-    credential_issuer::credential_configurations_supported::IssuerMetadataClaim,
+    credential_issuer::credential_configurations_supported::ClaimDescription,
 };
+use oid4vc_core::claim_path_pointer::ClaimPathPointer;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -19,7 +20,6 @@ pub enum OpenidCredential {
 
 /// Represents an object of the `authorization_details` field of the `AuthorizationRequest` object in the Authorization Code Flow as
 /// described in [OpenID4VCI](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-request-issuance-of-a-certa)
-// TODO: Add `credential_configuration_id` field.
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct AuthorizationDetailsObject<CFC = CredentialFormats<WithParameters>>
@@ -35,14 +35,13 @@ where
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct AuthorizationDetailsClaim {
-    // TODO: This should be a `ClaimPathPointer`
-    pub path: Vec<String>,
+    pub path: ClaimPathPointer,
     #[serde(default)]
     pub mandatory: bool,
 }
 
-impl From<IssuerMetadataClaim> for AuthorizationDetailsClaim {
-    fn from(claim: IssuerMetadataClaim) -> Self {
+impl From<ClaimDescription> for AuthorizationDetailsClaim {
+    fn from(claim: ClaimDescription) -> Self {
         Self {
             path: claim.path,
             mandatory: claim.mandatory,

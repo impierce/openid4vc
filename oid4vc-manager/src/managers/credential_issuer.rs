@@ -31,11 +31,13 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
                 metadata: CredentialIssuerMetadata {
                     credential_issuer: issuer_url.clone(),
                     authorization_servers: vec![],
+                    nonce_endpoint: None,
                     credential_endpoint: issuer_url.join("/credential")?,
                     deferred_credential_endpoint: None,
                     notification_endpoint: Some(issuer_url.join("/notification")?),
                     credential_response_encryption: None,
                     credential_identifiers_supported: None,
+                    batch_credential_issuance: None,
                     signed_metadata: None,
                     display: None,
                     credential_configurations_supported: storage.get_credential_configurations_supported(),

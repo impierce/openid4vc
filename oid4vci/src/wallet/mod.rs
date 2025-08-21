@@ -8,6 +8,7 @@ use crate::credential_issuer::{
 };
 use crate::credential_offer::CredentialOfferParameters;
 use crate::credential_request::{CredentialIdentifierOrCredentialConfigurationId, CredentialRequest};
+use crate::nonce_response::NonceResponse;
 use crate::notification_request::{NotificationEvent, NotificationRequest};
 use crate::proof::ProofType;
 use crate::Proof;
@@ -44,7 +45,6 @@ pub struct PushedAuthorizationResponse {
     pub expires_in: i64,
 }
 
-// FIXME: Only PAR?
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct AuthorizationRequestByReference {
     pub client_id: String,
@@ -133,35 +133,29 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .map_err(|_| anyhow::anyhow!("Failed to get credential issuer metadata"))
     }
 
+    // TODO: refactor to reduce the number of arguments
+    #[allow(clippy::too_many_arguments)]
     pub async fn get_pushed_authorization_response(
         &self,
         pushed_authorization_request_endpoint: Url,
+        client_id: &str,
+        redirect_uri: Url,
+        state: String,
         authorization_details: Vec<AuthorizationDetailsObject<CFC>>,
+        issuer_state: String,
         code_challenge: Option<String>,
         code_challenge_method: Option<String>,
     ) -> Result<PushedAuthorizationResponse> {
         let authorization_request = AuthorizationRequest {
             response_type: "code".to_string(),
-            client_id: self
-                .subject
-                .identifier(
-                    &self
-                        .supported_subject_syntax_types
-                        .first()
-                        .map(ToString::to_string)
-                        .ok_or(anyhow!("No supported subject syntax types found."))?,
-                    self.proof_signing_alg_values_supported[0],
-                )
-                .await?,
-            redirect_uri: None,
+            client_id: client_id.to_string(),
+            redirect_uri: Some(redirect_uri),
+            // TODO: add support for `scope`
             scope: None,
-            state: None,
+            state: Some(state),
             authorization_details,
-            // FIXME
-            issuer_state: None,
-            // FIXME
+            issuer_state: Some(issuer_state),
             code_challenge,
-            // FIXME
             code_challenge_method,
         };
 
@@ -261,7 +255,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
     // Supplying the `proof` parameter to the Credential Request is only required when the `proof_types_supported`
     // parameter is present in the Credential Configuration in the Credential Issuer's metadata. However, if the
     // `proof_types_supported` is not present, the Wallet will still provide the `proof` signed with its own preferred
-    // signing algorithm. For more information see: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#section-7.2-2.2.1
+    // signing algorithm. For more information see: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-8.2-2.3.1
     fn select_signing_algorithm(
         &self,
         credential_configuration: &CredentialConfigurationsSupportedObject,
@@ -316,30 +310,56 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .ok_or(anyhow::anyhow!("No supported subject syntax types found."))
     }
 
+    pub async fn get_nonce(&self, nonce_endpoint: Url) -> Result<String> {
+        let NonceResponse { c_nonce } = self
+            .client
+            .post(nonce_endpoint)
+            .send()
+            .await?
+            .json::<NonceResponse>()
+            .await?;
+
+        Ok(c_nonce)
+    }
+
     pub async fn get_credential(
         &self,
         credential_issuer_metadata: CredentialIssuerMetadata<CFC>,
         token_response: &TokenResponse,
+        nonce: Option<String>,
         credential_configuration_id: String,
         credential_configuration: &CredentialConfigurationsSupportedObject,
+        is_pre_authorized: bool,
     ) -> Result<CredentialResponse> {
         let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
         let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
 
-        let key_proof_type_builder = Proof::builder()
+        // let subject_syntax_type =
+        //     SubjectSyntaxType::from_str("did:jwk").map_err(|_| anyhow::anyhow!("Invalid subject syntax type"))?;
+
+        let mut proof_builder = Proof::builder()
             .proof_type(ProofType::Jwt)
             .algorithm(signing_algorithm)
-            .signer(self.subject.clone())
-            .iss(
+            .signer(self.subject.clone());
+
+        if !is_pre_authorized {
+            proof_builder = proof_builder.iss(
                 self.subject
                     .identifier(&subject_syntax_type.to_string(), signing_algorithm)
                     .await?,
-            )
+            );
+        }
+
+        proof_builder = proof_builder
             .aud(credential_issuer_metadata.credential_issuer)
             .iat(chrono::Utc::now().timestamp());
 
+        if let Some(nonce) = nonce {
+            proof_builder = proof_builder.nonce(nonce);
+        }
+
         let proof = Some(
-            key_proof_type_builder
+            proof_builder
                 .subject_syntax_type(subject_syntax_type.to_string())
                 .build()
                 .await?,
