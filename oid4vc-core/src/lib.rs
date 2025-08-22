@@ -1,12 +1,14 @@
 pub mod authentication;
 pub mod authorization_request;
 pub mod authorization_response;
+pub mod claim_path_pointer;
 pub mod client_metadata;
 pub mod jwt;
 pub mod openid4vc_extension;
 pub mod rfc7519_claims;
 pub mod scope;
 pub mod subject_syntax_type;
+pub mod utils;
 
 pub use authentication::{sign::Sign, subject::Subject, validator::Validator, verify::Verify};
 use rand::{distributions::Alphanumeric, Rng};
