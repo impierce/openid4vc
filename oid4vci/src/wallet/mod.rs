@@ -8,6 +8,7 @@ use crate::credential_issuer::{
 };
 use crate::credential_offer::CredentialOfferParameters;
 use crate::credential_request::{CredentialIdentifierOrCredentialConfigurationId, CredentialRequest};
+use crate::nonce_response::NonceResponse;
 use crate::notification_request::{NotificationEvent, NotificationRequest};
 use crate::proof::ProofType;
 use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
@@ -255,14 +256,28 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
     }
 
     pub async fn get_access_token(&self, token_endpoint: Url, token_request: TokenRequest) -> Result<TokenResponse> {
-        self.client
+        let temp = self
+            .client
             .post(token_endpoint)
             .form(&token_request)
             .send()
-            .await?
-            .json()
             .await
-            .map_err(|e| e.into())
+            .inspect(|response| {
+                if !response.status().is_success() {
+                    println!("Failed to get access token: {}", response.status());
+                }
+            })
+            .inspect_err(|e| println!("Error getting access token: {}", e))?
+            .json::<serde_json::Value>()
+            .await
+            .unwrap();
+
+        println!("Token response: {}", serde_json::to_string_pretty(&temp).unwrap());
+
+        // todo!();
+
+        serde_json::from_value::<TokenResponse>(temp)
+            .map_err(|_| anyhow::anyhow!("Failed to deserialize token response"))
     }
 
     // Select supported signing algorithm that matches the Credential Issuer's supported Proof Types.
@@ -324,17 +339,33 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .ok_or(anyhow::anyhow!("No supported subject syntax types found."))
     }
 
+    pub async fn get_nonce(&self, nonce_endpoint: Url) -> Result<String> {
+        let NonceResponse { c_nonce } = self
+            .client
+            .post(nonce_endpoint)
+            .send()
+            .await?
+            .json::<NonceResponse>()
+            .await?;
+
+        Ok(c_nonce)
+    }
+
     pub async fn get_credential(
         &self,
         credential_issuer_metadata: CredentialIssuerMetadata<CFC>,
         token_response: &TokenResponse,
+        nonce: Option<String>,
         credential_configuration_id: String,
         credential_configuration: &CredentialConfigurationsSupportedObject,
     ) -> Result<CredentialResponse> {
         let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
-        let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
+        // let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
 
-        let key_proof_type_builder = Proof::builder()
+        let subject_syntax_type =
+            SubjectSyntaxType::from_str("did:jwk").map_err(|_| anyhow::anyhow!("Invalid subject syntax type"))?;
+
+        let mut proof_builder = Proof::builder()
             .proof_type(ProofType::Jwt)
             .algorithm(signing_algorithm)
             .signer(self.subject.clone())
@@ -346,8 +377,12 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .aud(credential_issuer_metadata.credential_issuer)
             .iat(chrono::Utc::now().timestamp());
 
+        if let Some(nonce) = nonce {
+            proof_builder = proof_builder.nonce(nonce);
+        }
+
         let proof = Some(
-            key_proof_type_builder
+            proof_builder
                 .subject_syntax_type(subject_syntax_type.to_string())
                 .build()
                 .await?,
@@ -360,15 +395,31 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             proofs: None,
         };
 
-        self.client
+        println!(
+            "Credential request: {}",
+            serde_json::to_string_pretty(&credential_request).unwrap()
+        );
+
+        let temp = self
+            .client
             .post(credential_issuer_metadata.credential_endpoint)
             .bearer_auth(token_response.access_token.clone())
             .json(&credential_request)
             .send()
-            .await?
-            .json()
             .await
-            .map_err(|e| e.into())
+            .inspect(|response| {
+                if !response.status().is_success() {
+                    println!("Failed to get credential: {}", response.status());
+                }
+            })?
+            .json::<serde_json::Value>()
+            .await
+            .unwrap();
+
+        println!("Credential response: {}", serde_json::to_string_pretty(&temp).unwrap());
+
+        serde_json::from_value::<CredentialResponse>(temp)
+            .map_err(|_| anyhow::anyhow!("Failed to deserialize credential response"))
     }
 
     pub async fn send_notification_request(

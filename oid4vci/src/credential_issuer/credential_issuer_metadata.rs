@@ -30,6 +30,7 @@ where
     // TODO: Temporary solution
     #[derivative(Default(value = "Url::parse(\"https://example.com\").unwrap()"))]
     pub credential_endpoint: Url,
+    pub nonce_endpoint: Option<Url>,
     pub deferred_credential_endpoint: Option<Url>,
     pub notification_endpoint: Option<Url>,
     pub credential_response_encryption: Option<CredentialResponseEncryption>,
@@ -62,6 +63,7 @@ mod tests {
             CredentialIssuerMetadata {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
                 authorization_servers: vec!["https://server.example.com".parse().unwrap()],
+                nonce_endpoint: None,
                 credential_endpoint: Url::parse("https://credential-issuer.example.com").unwrap(),
                 deferred_credential_endpoint: Some(
                     "https://credential-issuer.example.com/deferred_credential"

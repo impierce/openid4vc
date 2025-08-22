@@ -112,6 +112,7 @@ where
     #[serde(rename = "dc+sd-jwt")]
     DcSdJwt(C::Container<DcSdJwt>),
     #[default]
+    #[serde(other)]
     Unknown,
 }
 

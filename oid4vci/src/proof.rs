@@ -48,6 +48,7 @@ pub struct ProofBuilder {
 pub struct ProofOfPossession {
     #[serde(flatten)]
     pub rfc7519_claims: RFC7519Claims,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub nonce: Option<String>,
 }
 
