@@ -50,7 +50,7 @@ where
     }
 }
 
-/// Authorization Error Response as defined in OpenID4VCI - draft 13 - Section 5.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-authorization-error-respons
+/// Authorization Error Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-authorization-error-respons
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthorizationErrorResponse {
@@ -91,7 +91,7 @@ impl Display for AuthorizationErrorResponse {
         }
     }
 }
-/// Token Error Response as defined in OpenID4VCI - draft 13 - Section 6.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-token-error-response
+/// Token Error Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-token-error-response
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TokenErrorResponse {
@@ -168,7 +168,7 @@ impl Display for CredentialErrorResponse {
     }
 }
 
-/// Deferred Credential Error Response as defined in OpenID4VCI - draft 13 - Section 9.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-deferred-credential-error-r
+/// Deferred Credential Error Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-deferred-credential-respons
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DeferredCredentialErrorResponse {

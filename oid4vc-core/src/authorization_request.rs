@@ -5,6 +5,22 @@ use crate::{
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
 
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum RedirectOrResponseUri {
+    RedirectUri(url::Url),
+    ResponseUri(url::Url),
+}
+
+impl RedirectOrResponseUri {
+    pub fn uri(&self) -> &url::Url {
+        match self {
+            RedirectOrResponseUri::RedirectUri(uri) => uri,
+            RedirectOrResponseUri::ResponseUri(uri) => uri,
+        }
+    }
+}
+
 /// A `Body` is a set of claims that are sent by a client to a provider. It can be `ByValue`, `ByReference`, or an `Object`.
 pub trait Body: Serialize + std::fmt::Debug {
     fn client_id(&self) -> &String;
@@ -17,7 +33,8 @@ pub struct Object<E: Extension = Generic> {
     #[serde(flatten)]
     pub rfc7519_claims: RFC7519Claims,
     pub client_id: String,
-    pub redirect_uri: url::Url,
+    #[serde(flatten)]
+    pub uri: RedirectOrResponseUri,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub state: Option<String>,
     #[serde(flatten)]
@@ -30,7 +47,7 @@ impl<E: Extension> Object<E> {
         Ok(Object {
             rfc7519_claims: original.rfc7519_claims.clone(),
             client_id: original.client_id.clone(),
-            redirect_uri: original.redirect_uri.clone(),
+            uri: original.uri.clone(),
             state: original.state.clone(),
             extension: serde_json::from_value(original.extension.clone())?,
         })
@@ -175,7 +192,7 @@ mod tests {
             body: Object {
                 rfc7519_claims: Default::default(),
                 client_id: "did:example:123".to_string(),
-                redirect_uri: "https://www.example.com".parse().unwrap(),
+                uri: RedirectOrResponseUri::RedirectUri("https://www.example.com".parse().unwrap()),
                 state: Some("state".to_string()),
                 extension: json!({
                     "response_mode": "direct_post",

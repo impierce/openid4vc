@@ -5,7 +5,7 @@ use jsonwebtoken::Algorithm;
 use lazy_static::lazy_static;
 use oid4vc_core::{
     authentication::sign::ExternalSign,
-    authorization_request::{AuthorizationRequest, ByReference, Object},
+    authorization_request::{AuthorizationRequest, ByReference, Object, RedirectOrResponseUri},
     authorization_response::AuthorizationResponse,
     client_metadata::ClientMetadataResource,
     scope::{Scope, ScopeValue},
@@ -133,7 +133,9 @@ async fn test_implicit_flow(#[case] did_method: &str) {
     let authorization_request: AuthorizationRequest<Object<SIOPv2>> = AuthorizationRequest::<Object<SIOPv2>>::builder()
         .client_id(&client_id)
         .scope(Scope::from(vec![ScopeValue::OpenId, ScopeValue::Phone]))
-        .redirect_uri(format!("{server_url}/redirect_uri").parse::<url::Url>().unwrap())
+        .redirect_uri(RedirectOrResponseUri::RedirectUri(
+            format!("{server_url}/redirect_uri").parse::<url::Url>().unwrap(),
+        ))
         .response_mode("direct_post".to_string())
         .client_metadata(ClientMetadataResource::ClientMetadata {
             client_name: None,

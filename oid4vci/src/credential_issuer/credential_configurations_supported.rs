@@ -4,10 +4,11 @@ use crate::{
     credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters},
     proof::{KeyProofMetadata, ProofType},
 };
+use oid4vc_core::claim_path_pointer::ClaimPathPointer;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-/// Credentials Supported object as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#section-11.2.3-2.11.1
+/// Credentials Supported object as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-11.2.3-2.11.1
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
 pub struct CredentialConfigurationsSupportedObject<CFC = CredentialFormats<WithParameters>>
@@ -33,8 +34,7 @@ where
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct IssuerMetadataClaim {
-    // TODO: This should be a `ClaimPathPointer`
-    pub path: Vec<String>,
+    pub path: ClaimPathPointer,
     #[serde(default)]
     pub mandatory: bool,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
@@ -49,6 +49,7 @@ mod tests {
         CredentialFormats, Parameters,
     };
     use jsonwebtoken::Algorithm;
+    use oid4vc_core::claim_path_pointer::ClaimPathElement;
     use serde_json::{from_str, json};
     use std::collections::HashMap;
 
@@ -102,7 +103,11 @@ mod tests {
                         })],
                         claims: vec![
                             IssuerMetadataClaim {
-                                path: vec!["credentialSubject".to_string(), "given_name".to_string()],
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("credentialSubject".to_string()),
+                                    ClaimPathElement::String("given_name".to_string())
+                                ])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![json!({
                                     "name": "Given Name",
@@ -110,7 +115,11 @@ mod tests {
                                 })],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["credentialSubject".to_string(), "family_name".to_string()],
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("credentialSubject".to_string()),
+                                    ClaimPathElement::String("family_name".to_string())
+                                ])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![json!({
                                     "name": "Surname",
@@ -118,12 +127,20 @@ mod tests {
                                 })],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["credentialSubject".to_string(), "degree".to_string()],
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("credentialSubject".to_string()),
+                                    ClaimPathElement::String("degree".to_string())
+                                ])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["credentialSubject".to_string(), "gpa".to_string()],
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("credentialSubject".to_string()),
+                                    ClaimPathElement::String("gpa".to_string())
+                                ])
+                                .unwrap(),
                                 mandatory: true,
                                 display: vec![json!({
                                     "name": "GPA",
@@ -179,7 +196,11 @@ mod tests {
                         )],
                         claims: vec![
                             IssuerMetadataClaim {
-                                path: vec!["credentialSubject".to_string(), "given_name".to_string()],
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("credentialSubject".to_string()),
+                                    ClaimPathElement::String("given_name".to_string())
+                                ])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![json!({
                                     "name": "Given Name",
@@ -187,7 +208,11 @@ mod tests {
                                 })],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["credentialSubject".to_string(), "family_name".to_string()],
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("credentialSubject".to_string()),
+                                    ClaimPathElement::String("family_name".to_string())
+                                ])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![json!({
                                     "name": "Surname",
@@ -195,12 +220,20 @@ mod tests {
                                 })],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["credentialSubject".to_string(), "degree".to_string()],
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("credentialSubject".to_string()),
+                                    ClaimPathElement::String("degree".to_string())
+                                ])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["credentialSubject".to_string(), "gpa".to_string()],
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("credentialSubject".to_string()),
+                                    ClaimPathElement::String("gpa".to_string())
+                                ])
+                                .unwrap(),
                                 mandatory: true,
                                 display: vec![json!({
                                     "name": "GPA",
@@ -255,7 +288,11 @@ mod tests {
                         ],
                         claims: vec![
                             IssuerMetadataClaim {
-                                path: vec!["org.iso.18013.5.1".to_string(), "given_name".to_string()],
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("org.iso.18013.5.1".to_string()),
+                                    ClaimPathElement::String("given_name".to_string())
+                                ])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![
                                     json!({
@@ -269,7 +306,11 @@ mod tests {
                                 ],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["org.iso.18013.5.1".to_string(), "family_name".to_string()],
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("org.iso.18013.5.1".to_string()),
+                                    ClaimPathElement::String("family_name".to_string())
+                                ])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![json!({
                                     "name": "Surname",
@@ -277,12 +318,20 @@ mod tests {
                                 })],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["org.iso.18013.5.1".to_string(), "birth_date".to_string()],
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("org.iso.18013.5.1".to_string()),
+                                    ClaimPathElement::String("birth_date".to_string())
+                                ])
+                                .unwrap(),
                                 mandatory: true,
                                 display: vec![],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["org.iso.18013.5.1.aamva".to_string(), "organ_donor".to_string()],
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("org.iso.18013.5.1.aamva".to_string()),
+                                    ClaimPathElement::String("organ_donor".to_string())
+                                ])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![],
                             }
@@ -326,7 +375,10 @@ mod tests {
                         })],
                         claims: vec![
                             IssuerMetadataClaim {
-                                path: vec!["given_name".to_string()],
+                                path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
+                                    "given_name".to_string()
+                                )])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![
                                     json!({
@@ -340,7 +392,10 @@ mod tests {
                                 ],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["family_name".to_string()],
+                                path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
+                                    "family_name".to_string()
+                                )])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![
                                     json!({
@@ -354,17 +409,22 @@ mod tests {
                                 ],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["email".to_string()],
+                                path: ClaimPathPointer::try_new(vec![ClaimPathElement::String("email".to_string())])
+                                    .unwrap(),
                                 mandatory: false,
                                 display: vec![],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["phone_number".to_string()],
+                                path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
+                                    "phone_number".to_string()
+                                )])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["address".to_string()],
+                                path: ClaimPathPointer::try_new(vec![ClaimPathElement::String("address".to_string())])
+                                    .unwrap(),
                                 mandatory: false,
                                 display: vec![
                                     json!({
@@ -378,42 +438,70 @@ mod tests {
                                 ],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["address".to_string(), "street_address".to_string()],
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("address".to_string()),
+                                    ClaimPathElement::String("street_address".to_string())
+                                ])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["address".to_string(), "locality".to_string()],
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("address".to_string()),
+                                    ClaimPathElement::String("locality".to_string())
+                                ])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["address".to_string(), "region".to_string()],
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("address".to_string()),
+                                    ClaimPathElement::String("region".to_string())
+                                ])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["address".to_string(), "country".to_string()],
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("address".to_string()),
+                                    ClaimPathElement::String("country".to_string())
+                                ])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["birthdate".to_string()],
+                                path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
+                                    "birthdate".to_string()
+                                )])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["is_over_18".to_string()],
+                                path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
+                                    "is_over_18".to_string()
+                                )])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["is_over_21".to_string()],
+                                path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
+                                    "is_over_21".to_string()
+                                )])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![],
                             },
                             IssuerMetadataClaim {
-                                path: vec!["is_over_65".to_string()],
+                                path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
+                                    "is_over_65".to_string()
+                                )])
+                                .unwrap(),
                                 mandatory: false,
                                 display: vec![],
                             },

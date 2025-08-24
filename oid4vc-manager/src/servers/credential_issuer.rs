@@ -186,7 +186,7 @@ async fn credential<S: Storage<CFC>, CFC: CredentialFormatCollection>(
     AuthBearer(access_token): AuthBearer,
     Json(credential_request): Json<CredentialRequest>,
 ) -> impl IntoResponse {
-    // TODO: The bunch of unwrap's here should be replaced with error responses as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-error-response
+    // TODO: The bunch of unwrap's here should be replaced with error responses as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-error-response
     let proof = credential_issuer_manager
         .credential_issuer
         .validate_proof(

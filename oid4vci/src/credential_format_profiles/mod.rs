@@ -1,10 +1,12 @@
 pub mod ietf_sd_jwt_vc;
 pub mod iso_mdl;
+pub mod vc_jose_cose;
 pub mod w3c_verifiable_credentials;
 
 use self::{
     iso_mdl::mso_mdoc::MsoMdoc,
     sealed::FormatExtension,
+    vc_jose_cose::vc_sd_jwt::VcSdJwt,
     w3c_verifiable_credentials::{
         jwt_vc_json::JwtVcJson, jwt_vc_json_ld::JwtVcJsonLd, ldp_vc::LdpVc, CredentialSubject,
     },
@@ -111,6 +113,8 @@ where
     MsoMdoc(C::Container<MsoMdoc>),
     #[serde(rename = "dc+sd-jwt")]
     DcSdJwt(C::Container<DcSdJwt>),
+    #[serde(rename = "vc+sd-jwt")]
+    VcSdJwt(C::Container<VcSdJwt>),
     #[default]
     #[serde(other)]
     Unknown,
@@ -138,6 +142,7 @@ where
             CredentialFormats::LdpVc(_) => CredentialFormats::LdpVc(()),
             CredentialFormats::MsoMdoc(_) => CredentialFormats::MsoMdoc(()),
             CredentialFormats::DcSdJwt(_) => CredentialFormats::DcSdJwt(()),
+            CredentialFormats::VcSdJwt(_) => CredentialFormats::VcSdJwt(()),
             CredentialFormats::Unknown => CredentialFormats::Unknown,
         }
     }
@@ -151,6 +156,7 @@ impl CredentialFormats<WithCredential> {
             CredentialFormats::LdpVc(credential) => Ok(&credential.credential),
             CredentialFormats::MsoMdoc(credential) => Ok(&credential.credential),
             CredentialFormats::DcSdJwt(credential) => Ok(&credential.credential),
+            CredentialFormats::VcSdJwt(credential) => Ok(&credential.credential),
             CredentialFormats::Unknown => Err(anyhow::anyhow!("Unknown credential format")),
         }
     }

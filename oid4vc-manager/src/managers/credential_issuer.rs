@@ -37,6 +37,7 @@ impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S
                     notification_endpoint: Some(issuer_url.join("/notification")?),
                     credential_response_encryption: None,
                     credential_identifiers_supported: None,
+                    batch_credential_issuance: None,
                     signed_metadata: None,
                     display: None,
                     credential_configurations_supported: storage.get_credential_configurations_supported(),

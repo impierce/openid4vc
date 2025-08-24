@@ -15,6 +15,7 @@ use oid4vci::{
     Wallet,
 };
 use std::sync::Arc;
+use uuid::Uuid;
 
 #[tokio::test]
 async fn test_authorization_code_flow() {
@@ -64,6 +65,10 @@ async fn test_authorization_code_flow() {
 
     let credential_configuration_id = "UniversityDegree_JWT".to_string();
 
+    let redirect_uri = "http://localhost/callback".parse().unwrap();
+    let wallet_state = Uuid::default().to_string();
+    let issuer_state = Uuid::default().to_string();
+
     // Get the credential format for a university degree.
     let university_degree_credential_format = credential_issuer_metadata
         .credential_configurations_supported
@@ -82,6 +87,8 @@ async fn test_authorization_code_flow() {
                 .pushed_authorization_request_endpoint
                 .clone()
                 .unwrap(),
+            redirect_uri,
+            wallet_state,
             vec![AuthorizationDetailsObject {
                 r#type: OpenidCredential::Type,
                 locations: None,
@@ -91,6 +98,7 @@ async fn test_authorization_code_flow() {
                 claims: None,
             }
             .into()],
+            issuer_state,
             Some(code_challenge),
             Some("S256".to_string()),
         )
@@ -127,6 +135,7 @@ async fn test_authorization_code_flow() {
         .get_credential(
             credential_issuer_metadata,
             &token_response,
+            None,
             credential_configuration_id,
             &university_degree_credential_format,
         )
@@ -134,7 +143,9 @@ async fn test_authorization_code_flow() {
         .unwrap();
 
     let credential = match credential_response.credential {
-        CredentialResponseType::Immediate { credential, .. } => credential,
+        CredentialResponseType::Immediate { credentials, .. } => {
+            serde_json::json!(credentials.first().unwrap().credential)
+        }
         _ => panic!("Credential was not a JWT VC JSON."),
     };
 

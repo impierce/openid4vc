@@ -11,11 +11,12 @@ use crate::credential_request::{CredentialIdentifierOrCredentialConfigurationId,
 use crate::nonce_response::NonceResponse;
 use crate::notification_request::{NotificationEvent, NotificationRequest};
 use crate::proof::ProofType;
+use crate::Proof;
 use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
-use crate::{to_form_urlencoded_string, Proof};
 use anyhow::{anyhow, Result};
 use jsonwebtoken::Algorithm;
 use oid4vc_core::authentication::subject::SigningSubject;
+use oid4vc_core::utils::form_urlencoded::to_form_urlencoded_string;
 use oid4vc_core::SubjectSyntaxType;
 use reqwest::header::{HeaderValue, CONTENT_TYPE};
 use reqwest::Url;
@@ -142,10 +143,15 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .map_err(|_| anyhow::anyhow!("Failed to get credential issuer metadata"))
     }
 
+    // TODO: refactor to reduce the number of arguments
+    #[allow(clippy::too_many_arguments)]
     pub async fn get_pushed_authorization_response(
         &self,
         pushed_authorization_request_endpoint: Url,
+        redirect_uri: Url,
+        state: String,
         authorization_details: Vec<AuthorizationDetailsObject<CFC>>,
+        issuer_state: String,
         code_challenge: Option<String>,
         code_challenge_method: Option<String>,
     ) -> Result<PushedAuthorizationResponse> {
@@ -162,15 +168,13 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
                     self.proof_signing_alg_values_supported[0],
                 )
                 .await?,
-            redirect_uri: None,
+            redirect_uri: Some(redirect_uri),
+            // TODO: add support for `scope`
             scope: None,
-            state: None,
+            state: Some(state),
             authorization_details,
-            // FIXME
-            issuer_state: None,
-            // FIXME
+            issuer_state: Some(issuer_state),
             code_challenge,
-            // FIXME
             code_challenge_method,
         };
 
@@ -284,7 +288,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
     // Supplying the `proof` parameter to the Credential Request is only required when the `proof_types_supported`
     // parameter is present in the Credential Configuration in the Credential Issuer's metadata. However, if the
     // `proof_types_supported` is not present, the Wallet will still provide the `proof` signed with its own preferred
-    // signing algorithm. For more information see: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#section-7.2-2.2.1
+    // signing algorithm. For more information see: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-8.2-2.3.1
     fn select_signing_algorithm(
         &self,
         credential_configuration: &CredentialConfigurationsSupportedObject,
@@ -319,25 +323,25 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .ok_or(anyhow::anyhow!("No matching supported signing algorithms found."))
     }
 
-    fn select_subject_syntax_type(
-        &self,
-        credential_configuration: &CredentialConfigurationsSupportedObject,
-    ) -> Result<SubjectSyntaxType> {
-        let credential_issuer_cryptographic_binding_methods_supported: Vec<SubjectSyntaxType> =
-            credential_configuration
-                .cryptographic_binding_methods_supported
-                .iter()
-                .filter_map(|binding_method| SubjectSyntaxType::from_str(binding_method).ok())
-                .collect();
+    // fn select_subject_syntax_type(
+    //     &self,
+    //     credential_configuration: &CredentialConfigurationsSupportedObject,
+    // ) -> Result<SubjectSyntaxType> {
+    //     let credential_issuer_cryptographic_binding_methods_supported: Vec<SubjectSyntaxType> =
+    //         credential_configuration
+    //             .cryptographic_binding_methods_supported
+    //             .iter()
+    //             .filter_map(|binding_method| SubjectSyntaxType::from_str(binding_method).ok())
+    //             .collect();
 
-        self.supported_subject_syntax_types
-            .iter()
-            .find(|supported_syntax_type| {
-                credential_issuer_cryptographic_binding_methods_supported.contains(supported_syntax_type)
-            })
-            .cloned()
-            .ok_or(anyhow::anyhow!("No supported subject syntax types found."))
-    }
+    //     self.supported_subject_syntax_types
+    //         .iter()
+    //         .find(|supported_syntax_type| {
+    //             credential_issuer_cryptographic_binding_methods_supported.contains(supported_syntax_type)
+    //         })
+    //         .cloned()
+    //         .ok_or(anyhow::anyhow!("No supported subject syntax types found."))
+    // }
 
     pub async fn get_nonce(&self, nonce_endpoint: Url) -> Result<String> {
         let NonceResponse { c_nonce } = self

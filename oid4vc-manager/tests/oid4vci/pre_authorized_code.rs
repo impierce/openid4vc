@@ -123,6 +123,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             .get_credential(
                 credential_issuer_metadata,
                 &token_response,
+                None,
                 credential_offer.credential_configuration_ids.first().unwrap().clone(),
                 &drivers_license_credential_format,
             )
@@ -130,8 +131,10 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             .unwrap();
 
         let credential = match credential_response.credential {
-            CredentialResponseType::Immediate { credential, .. } => credential,
-            _ => panic!("Credential was not a JWT VC JSON."),
+            CredentialResponseType::Immediate { credentials, .. } => {
+                serde_json::json!(credentials.first().unwrap().credential)
+            }
+            _ => unreachable!("Deferred Credential Response is not supported"),
         };
 
         // Decode the JWT without performing validation
@@ -190,6 +193,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             .get_credential(
                 credential_issuer_metadata.clone(),
                 &token_response,
+                None,
                 credential_configuration_id,
                 &drivers_license_credential,
             )
@@ -197,8 +201,10 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             .unwrap();
 
         let credential = match credential_response.credential {
-            CredentialResponseType::Immediate { credential, .. } => credential,
-            _ => panic!("Credential was not a JWT VC JSON."),
+            CredentialResponseType::Immediate { credentials, .. } => {
+                serde_json::json!(credentials.first().unwrap().credential)
+            }
+            _ => unreachable!("Deferred Credential Response is not supported"),
         };
 
         // Decode the JWT without performing validation
@@ -237,6 +243,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             .get_credential(
                 credential_issuer_metadata,
                 &token_response,
+                None,
                 credential_configuration_id,
                 &university_degree_credential,
             )
@@ -244,8 +251,10 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             .unwrap();
 
         let credential = match credential_response.credential {
-            CredentialResponseType::Immediate { credential, .. } => credential,
-            _ => panic!("Credential was not a JWT VC JSON."),
+            CredentialResponseType::Immediate { credentials, .. } => {
+                serde_json::json!(credentials.first().unwrap().credential)
+            }
+            _ => unreachable!("Deferred Credential Response is not supported"),
         };
 
         // Decode the JWT without performing validation

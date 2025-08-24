@@ -138,7 +138,7 @@ mod tests {
         ])
         .unwrap();
         let values = path.get_values_from_json(&testing_credential);
-        assert_eq!(values, vec![json!("Max")]);
+        assert_eq!(values, vec![&json!("Max")]);
     }
 
     #[test]

@@ -4,6 +4,7 @@ use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
 use oid4vc_core::authentication::subject::Subject;
+use oid4vc_core::authorization_request::RedirectOrResponseUri;
 use oid4vc_core::{
     authorization_request::{AuthorizationRequest, Object},
     authorization_response::AuthorizationResponse,
@@ -85,7 +86,9 @@ async fn test_implicit_flow() {
     // Create authorization request with response_type `id_token vp_token`
     let authorization_request = AuthorizationRequest::<Object<OID4VP>>::builder()
         .client_id(relying_party_did_with_prefix.clone())
-        .redirect_uri("https://example.com".parse::<url::Url>().unwrap())
+        .redirect_uri(RedirectOrResponseUri::ResponseUri(
+            "https://example.com".parse::<url::Url>().unwrap(),
+        ))
         .dcql_query(DCQL_QUERY.clone())
         .client_metadata(ClientMetadataResource::ClientMetadata {
             client_name: None,

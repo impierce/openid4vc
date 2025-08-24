@@ -4,9 +4,9 @@ This is a Rust library for the OpenID for Verifiable Credential Issuance (OpenID
 Digital Credentials Protocols
 Working Group](https://openid.net/wg/digital-credentials-protocols/).
 
-| Specification      | Description                               | Version                                                                                                                           |
-| ------------------ | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| [OID4VCI](oid4vci) | OpenID for Verifiable Credential Issuance | [Working Group Draft 13 published: 8 February 2024](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html) |
+| Specification      | Description                               | Version                                                                                                                            |
+| ------------------ | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| [OID4VCI](oid4vci) | OpenID for Verifiable Credential Issuance | [Working Group Draft 15 published: 19 December 2024](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html) |
 
 An overview of all the OpenID Digital Credentials Protocols implementation in Rust can be found [here](../README.md).
 
