@@ -194,8 +194,7 @@ mod tests {
                             length: Some(4),
                             input_mode: Some(InputMode::Numeric),
                             description: Description::try_new(
-                                "Please provide the one-time code which was sent to your verified e-mail address."
-                                    .to_string()
+                                "Please provide the one-time code that was sent via e-mail".to_string()
                             )
                             .ok(),
                         }),
@@ -219,7 +218,7 @@ mod tests {
                         pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
                         tx_code: Some(TxCodeConstraints {
                             description: Description::try_new(
-                                "Please provide the one-time code which was sent to your verified e-mail address."
+                                "Please provide the one-time code which was sent to your mobile phone via SMS"
                                     .to_string()
                             )
                             .ok(),
