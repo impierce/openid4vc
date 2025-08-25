@@ -138,6 +138,7 @@ async fn test_authorization_code_flow() {
             None,
             credential_configuration_id,
             &university_degree_credential_format,
+            false,
         )
         .await
         .unwrap();

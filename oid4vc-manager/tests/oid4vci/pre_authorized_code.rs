@@ -126,6 +126,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
                 None,
                 credential_offer.credential_configuration_ids.first().unwrap().clone(),
                 &drivers_license_credential_format,
+                true,
             )
             .await
             .unwrap();
@@ -196,6 +197,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
                 None,
                 credential_configuration_id,
                 &drivers_license_credential,
+                true,
             )
             .await
             .unwrap();
@@ -246,6 +248,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
                 None,
                 credential_configuration_id,
                 &university_degree_credential,
+                true,
             )
             .await
             .unwrap();

@@ -362,6 +362,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         nonce: Option<String>,
         credential_configuration_id: String,
         credential_configuration: &CredentialConfigurationsSupportedObject,
+        is_pre_authorized: bool,
     ) -> Result<CredentialResponse> {
         let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
         // let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
@@ -372,12 +373,17 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         let mut proof_builder = Proof::builder()
             .proof_type(ProofType::Jwt)
             .algorithm(signing_algorithm)
-            .signer(self.subject.clone())
-            .iss(
+            .signer(self.subject.clone());
+
+        if !is_pre_authorized {
+            proof_builder = proof_builder.iss(
                 self.subject
                     .identifier(&subject_syntax_type.to_string(), signing_algorithm)
                     .await?,
-            )
+            );
+        }
+
+        proof_builder = proof_builder
             .aud(credential_issuer_metadata.credential_issuer)
             .iat(chrono::Utc::now().timestamp());
 
