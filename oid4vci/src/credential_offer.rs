@@ -30,8 +30,9 @@ pub struct PreAuthorizedCode {
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
 pub struct TxCodeConstraints {
     pub input_mode: Option<InputMode>,
-    pub length: Option<u8>,
     // Allows a pin-length of 0-255.
+    pub length: Option<u8>,
+    // The length of the string must not exceed 300 characters.
     pub description: Option<Description>,
     // The length of the string must not exceed 300 characters.
 }
