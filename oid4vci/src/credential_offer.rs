@@ -34,7 +34,6 @@ pub struct TxCodeConstraints {
     pub length: Option<u8>,
     // The length of the string must not exceed 300 characters.
     pub description: Option<Description>,
-    // The length of the string must not exceed 300 characters.
 }
 
 #[nutype(
