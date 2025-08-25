@@ -17,6 +17,7 @@ getset.workspace = true
 http.workspace = true
 lazy_static = "1.4"
 jsonwebtoken.workspace = true
+nutype.workspace = true
 paste = "1.0"
 # TODO: make this a feature?
 pkce = "0.2"
