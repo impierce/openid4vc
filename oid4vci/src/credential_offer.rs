@@ -3,6 +3,7 @@ use nutype::nutype;
 use oid4vc_core::{to_query_value, JsonObject};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
+
 use serde_json::Value;
 use serde_with::skip_serializing_none;
 
@@ -33,7 +34,6 @@ pub struct TxCodeConstraints {
     pub length: Option<u8>,
     // The length of the string must not exceed 300 characters.
     pub description: Option<Description>,
-    // The length of the string must not exceed 300 characters.
 }
 
 #[nutype(
