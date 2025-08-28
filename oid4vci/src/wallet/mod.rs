@@ -24,7 +24,6 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
 use serde::de::DeserializeOwned;
-use serde_json::json;
 use std::str::FromStr;
 
 #[derive(Debug)]
@@ -39,12 +38,14 @@ where
     phantom: std::marker::PhantomData<CFC>,
 }
 
+// TODO: Move everyting related to pushed authorization response to a separate module?
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct PushedAuthorizationResponse {
     pub request_uri: String,
     pub expires_in: i64,
 }
 
+// TODO: Move everyting related to pushed authorization response to a separate module?
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct AuthorizationRequestByReference {
     pub client_id: String,
@@ -133,6 +134,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .map_err(|_| anyhow::anyhow!("Failed to get credential issuer metadata"))
     }
 
+    // TODO: Move everyting related to pushed authorization response to a separate module?
     // TODO: refactor to reduce the number of arguments
     #[allow(clippy::too_many_arguments)]
     pub async fn get_pushed_authorization_response(
@@ -172,15 +174,15 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .await?
             .json::<PushedAuthorizationResponse>()
             .await
-            .map_err(|_| anyhow::anyhow!("Failed to send pushed authorization request"))
+            .map_err(|err| anyhow::anyhow!("Failed to send pushed authorization request: {err}"))
     }
 
     pub async fn get_authorization_code(
         &self,
         authorization_endpoint: Url,
-        authorization_details: Vec<AuthorizationDetailsObject<CFC>>,
-        code_challenge: Option<String>,
-        code_challenge_method: Option<String>,
+        _authorization_details: Vec<AuthorizationDetailsObject<CFC>>,
+        _code_challenge: Option<String>,
+        _code_challenge_method: Option<String>,
         pushed_authorization_response: Option<PushedAuthorizationResponse>,
     ) -> Result<AuthorizationResponse> {
         let client_id = self
@@ -195,49 +197,26 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             )
             .await?;
 
-        // FIXME: clean this mess up
         if let Some(pushed_response) = pushed_authorization_response {
-            let authorization_request = json!({
-                "client_id": client_id,
-                "request_uri": pushed_response.request_uri.to_string(),
-            });
+            let authorization_request = AuthorizationRequestByReference {
+                client_id,
+                request_uri: pushed_response.request_uri,
+            };
 
             return Ok(self
                 .client
                 .get(authorization_endpoint)
-                // TODO: implement method to convert AuthorizationRequest to form parameters
                 .form(&authorization_request)
                 .send()
                 .await?
                 .json::<AuthorizationResponse>()
-                .await
-                .unwrap());
-            // .map_err(|_| anyhow::anyhow!("Failed to get authorization code"));
+                .await?);
         }
 
-        // FIXME: implement URL form encoding for AuthorizationRequest
-        let authorization_request = AuthorizationRequest {
-            response_type: "code".to_string(),
-            client_id,
-            redirect_uri: None,
-            scope: None,
-            state: None,
-            authorization_details,
-            // FIXME
-            issuer_state: None,
-            code_challenge,
-            code_challenge_method,
-        };
-
-        self.client
-            .get(authorization_endpoint)
-            // TODO: implement method to convert AuthorizationRequest to form parameters
-            .form(&authorization_request)
-            .send()
-            .await?
-            .json::<AuthorizationResponse>()
-            .await
-            .map_err(|_| anyhow::anyhow!("Failed to get authorization code"))
+        // TODO: Support regular authorization request without pushed authorization request.
+        Err(anyhow!(
+            "Authorization code flow without pushed authorization request is not supported yet."
+        ))
     }
 
     pub async fn get_access_token(&self, token_endpoint: Url, token_request: TokenRequest) -> Result<TokenResponse> {
@@ -333,9 +312,6 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
     ) -> Result<CredentialResponse> {
         let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
         let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
-
-        // let subject_syntax_type =
-        //     SubjectSyntaxType::from_str("did:jwk").map_err(|_| anyhow::anyhow!("Invalid subject syntax type"))?;
 
         let mut proof_builder = Proof::builder()
             .proof_type(ProofType::Jwt)

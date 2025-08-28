@@ -1,11 +1,12 @@
 use anyhow::Result;
+use nutype::nutype;
 use oid4vc_core::{to_query_value, JsonObject};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_with::skip_serializing_none;
 
-/// Grant Type `authorization_code` as described in https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#section-4.1.1-4.1.1
+/// Grant Type `authorization_code` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-4.1.1-5.1.1
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct AuthorizationCode {
@@ -13,24 +14,33 @@ pub struct AuthorizationCode {
     pub authorization_server: Option<Url>,
 }
 
-/// Grant Type `pre-authorized_code` as described in https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#section-4.1.1-4.2.1
+/// Grant Type `pre-authorized_code` as described here https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-4.1.1-5.2.1
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
 pub struct PreAuthorizedCode {
     #[serde(rename = "pre-authorized_code")]
     pub pre_authorized_code: String,
-    pub tx_code: Option<TransactionCode>,
+    pub tx_code: Option<TxCodeConstraints>,
     pub interval: Option<i64>,
     pub authorization_server: Option<Url>,
 }
 
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
-pub struct TransactionCode {
+pub struct TxCodeConstraints {
     pub input_mode: Option<InputMode>,
-    pub length: Option<u64>,
-    pub description: Option<String>,
+    // Allows a pin-length of 0-255.
+    pub length: Option<u8>,
+    // The length of the string must not exceed 300 characters.
+    pub description: Option<Description>,
+    // The length of the string must not exceed 300 characters.
 }
+
+#[nutype(
+    validate(len_char_max = 300),
+    derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)
+)]
+pub struct Description(String);
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
 #[serde(rename_all = "lowercase")]
@@ -40,7 +50,7 @@ pub enum InputMode {
     Text,
 }
 
-/// Credential Offer Parameters as described in https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-offer-parameters
+/// Credential Offer Parameters as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-offer-parameters
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 pub struct CredentialOfferParameters {
@@ -49,7 +59,7 @@ pub struct CredentialOfferParameters {
     pub grants: Option<Grants>,
 }
 
-/// Credential Offer as described in https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-offer
+/// Credential Offer as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-offer
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum CredentialOffer {
@@ -91,7 +101,7 @@ impl std::fmt::Display for CredentialOffer {
     }
 }
 
-/// Grants as described in https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#section-4.1.1-2.3
+/// Grants as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-4.1.1-2.3
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 pub struct Grants {
@@ -168,7 +178,7 @@ mod tests {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
                         pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
-                        tx_code: Some(TransactionCode::default()),
+                        tx_code: Some(TxCodeConstraints::default()),
                         ..Default::default()
                     })
                 })
@@ -188,10 +198,13 @@ mod tests {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
                         pre_authorized_code: "oaKazRN8I0IbtZ0C7JuMn5".to_string(),
-                        tx_code: Some(TransactionCode {
+                        tx_code: Some(TxCodeConstraints {
                             length: Some(4),
                             input_mode: Some(InputMode::Numeric),
-                            description: Some("Please provide the one-time code that was sent via e-mail".to_string()),
+                            description: Description::try_new(
+                                "Please provide the one-time code that was sent via e-mail".to_string()
+                            )
+                            .ok(),
                         }),
                         ..Default::default()
                     })
@@ -211,11 +224,12 @@ mod tests {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
                         pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
-                        tx_code: Some(TransactionCode {
-                            description: Some(
+                        tx_code: Some(TxCodeConstraints {
+                            description: Description::try_new(
                                 "Please provide the one-time code which was sent to your mobile phone via SMS"
                                     .to_string()
-                            ),
+                            )
+                            .ok(),
                             ..Default::default()
                         }),
                         ..Default::default()

@@ -5,6 +5,8 @@ use crate::{
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
 
+// TODO: refactor this
+// A `RedirectOrResponseUri` is either a `redirect_uri` or a `response_uri`. `redirect_uri`s are used in `siopv2` flows, while `response_uri`s are used in `openid4vp` flows.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum RedirectOrResponseUri {
@@ -15,8 +17,8 @@ pub enum RedirectOrResponseUri {
 impl RedirectOrResponseUri {
     pub fn uri(&self) -> &url::Url {
         match self {
-            RedirectOrResponseUri::RedirectUri(uri) => uri,
-            RedirectOrResponseUri::ResponseUri(uri) => uri,
+            RedirectOrResponseUri::RedirectUri(redirect_uri) => redirect_uri,
+            RedirectOrResponseUri::ResponseUri(response_uri) => response_uri,
         }
     }
 }

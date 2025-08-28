@@ -10,7 +10,7 @@ use oid4vci::{
     credential_format_profiles::CredentialFormatCollection,
     credential_issuer::credential_configurations_supported::CredentialConfigurationsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
-    credential_response::{CredentialResponse, CredentialResponseType},
+    credential_response::{CredentialResponse, CredentialResponseObject, CredentialResponseType},
     token_request::TokenRequest,
     token_response::TokenResponse,
     wallet::PushedAuthorizationResponse,
@@ -19,6 +19,7 @@ use oid4vci::{
 use reqwest::Url;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
+use uuid::Uuid;
 
 lazy_static! {
     pub static ref CODE: String = generate_authorization_code(16);
@@ -28,7 +29,7 @@ lazy_static! {
     };
     pub static ref ACCESS_TOKEN: String = "czZCaGRSa3F0MzpnWDFmQmF0M2JW".to_string();
     pub static ref C_NONCE: String = "tZignsnFbp".to_string();
-    pub static ref REQUEST_URI: String = "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6".to_string();
+    pub static ref REQUEST_URI: String = Uuid::new_v4().to_string();
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -117,24 +118,25 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
 
         (access_token == ACCESS_TOKEN.clone()).then_some(CredentialResponse {
             credential: CredentialResponseType::Immediate {
-                credential: serde_json::to_value(block_on(async {
-                    jwt::encode(
-                        signer.clone(),
-                        Header::new(Algorithm::EdDSA),
-                        VerifiableCredentialJwt::builder()
-                            .sub(subject_did.clone())
-                            .iss(issuer_did.clone())
-                            .iat(0)
-                            .exp(9999999999i64)
-                            .verifiable_credential(verifiable_credential)
-                            .build()
-                            .ok(),
-                        "did:key",
-                    )
-                    .await
-                    .ok()
-                }))
-                .unwrap(),
+                credentials: vec![CredentialResponseObject {
+                    credential: block_on(async {
+                        jwt::encode(
+                            signer.clone(),
+                            Header::new(Algorithm::EdDSA),
+                            VerifiableCredentialJwt::builder()
+                                .sub(subject_did.clone())
+                                .iss(issuer_did.clone())
+                                .iat(0)
+                                .exp(9999999999i64)
+                                .verifiable_credential(verifiable_credential)
+                                .build()
+                                .ok(),
+                            "did:key",
+                        )
+                        .await
+                        .unwrap()
+                    }),
+                }],
                 notification_id: None,
             },
         })

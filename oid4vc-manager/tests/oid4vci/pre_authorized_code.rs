@@ -1,7 +1,6 @@
 use crate::common::{get_jwt_claims, memory_storage::MemoryStorage};
 use did_key::{generate, Ed25519KeyPair};
 use jsonwebtoken::Algorithm;
-use oid4vc_core::Subject;
 use oid4vc_manager::{
     managers::credential_issuer::CredentialIssuerManager, methods::key_method::KeySubject,
     servers::credential_issuer::Server,
@@ -44,7 +43,10 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
 
     // Create a new subject.
     let subject = KeySubject::new();
-    let subject_did = subject.identifier("did:key", Algorithm::EdDSA).await.unwrap();
+
+    // TODO: Update this test so that it communicates the `subject_did` out-of-band with the credential issuer (instead of through the`proof` in the Credential Request).
+    // See: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-8.2.1.1-2.2.2.1
+    // let subject_did = subject.identifier("did:key", Algorithm::EdDSA).await.unwrap();
 
     // Create a new wallet.
     let wallet: Wallet = Wallet::new(Arc::new(subject), vec!["did:key"], vec![Algorithm::EdDSA]).unwrap();
@@ -116,6 +118,8 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         .collect();
 
     if !batch {
+        use oid4vc_manager::servers::credential_issuer::TEST_PRE_AUTHORIZED_SUBJECT_DID;
+
         let drivers_license_credential_format = credentials.last().unwrap().clone();
 
         // Get the credential.
@@ -123,15 +127,19 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             .get_credential(
                 credential_issuer_metadata,
                 &token_response,
+                None,
                 credential_offer.credential_configuration_ids.first().unwrap().clone(),
                 &drivers_license_credential_format,
+                true,
             )
             .await
             .unwrap();
 
         let credential = match credential_response.credential {
-            CredentialResponseType::Immediate { credential, .. } => credential,
-            _ => panic!("Credential was not a JWT VC JSON."),
+            CredentialResponseType::Immediate { credentials, .. } => {
+                serde_json::json!(credentials.first().unwrap().credential)
+            }
+            _ => unreachable!("Deferred Credential Response is not supported"),
         };
 
         // Decode the JWT without performing validation
@@ -154,7 +162,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
                 "issuanceDate": "2022-08-15T09:30:00Z",
                 "expirationDate": "2027-08-15T23:59:59Z",
                 "credentialSubject": {
-                    "id": subject_did,
+                    "id": TEST_PRE_AUTHORIZED_SUBJECT_DID,
                     "licenseClass": "Class C",
                     "issuedBy": "California",
                     "validity": "Valid"
@@ -179,6 +187,8 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             .await
             .is_ok());
     } else if batch {
+        use oid4vc_manager::servers::credential_issuer::TEST_PRE_AUTHORIZED_SUBJECT_DID;
+
         let mut credentials = credentials.into_iter();
         let mut credential_configuration_ids = credential_offer.credential_configuration_ids.into_iter();
 
@@ -190,15 +200,19 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             .get_credential(
                 credential_issuer_metadata.clone(),
                 &token_response,
+                None,
                 credential_configuration_id,
                 &drivers_license_credential,
+                true,
             )
             .await
             .unwrap();
 
         let credential = match credential_response.credential {
-            CredentialResponseType::Immediate { credential, .. } => credential,
-            _ => panic!("Credential was not a JWT VC JSON."),
+            CredentialResponseType::Immediate { credentials, .. } => {
+                serde_json::json!(credentials.first().unwrap().credential)
+            }
+            _ => unreachable!("Deferred Credential Response is not supported"),
         };
 
         // Decode the JWT without performing validation
@@ -221,7 +235,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
                 "issuanceDate": "2022-08-15T09:30:00Z",
                 "expirationDate": "2027-08-15T23:59:59Z",
                 "credentialSubject": {
-                    "id": subject_did,
+                    "id": TEST_PRE_AUTHORIZED_SUBJECT_DID,
                     "licenseClass": "Class C",
                     "issuedBy": "California",
                     "validity": "Valid"
@@ -237,15 +251,19 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             .get_credential(
                 credential_issuer_metadata,
                 &token_response,
+                None,
                 credential_configuration_id,
                 &university_degree_credential,
+                true,
             )
             .await
             .unwrap();
 
         let credential = match credential_response.credential {
-            CredentialResponseType::Immediate { credential, .. } => credential,
-            _ => panic!("Credential was not a JWT VC JSON."),
+            CredentialResponseType::Immediate { credentials, .. } => {
+                serde_json::json!(credentials.first().unwrap().credential)
+            }
+            _ => unreachable!("Deferred Credential Response is not supported"),
         };
 
         // Decode the JWT without performing validation
@@ -267,7 +285,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
                 "issuanceDate": "2022-01-01T00:00:00Z",
                 "issuer": credential_issuer_url,
                 "credentialSubject": {
-                    "id": subject_did,
+                    "id": TEST_PRE_AUTHORIZED_SUBJECT_DID,
                     "givenName": "Ferris",
                     "familyName": "Crabman",
                     "email": "ferris.crabman@crabmail.com",

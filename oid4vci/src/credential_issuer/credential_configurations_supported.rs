@@ -126,7 +126,7 @@ mod tests {
                         )]
                         .into_iter()
                         .collect(),
-                        display: vec![json!({
+                        display: vec![serde_json::from_value(json!({
                             "name": "University Credential",
                             "locale": "en-US",
                             "logo": {
@@ -135,7 +135,8 @@ mod tests {
                             },
                             "background_color": "#12107c",
                             "text_color": "#FFFFFF"
-                        })],
+                        }))
+                        .unwrap()],
                         claims: vec![
                             ClaimDescription {
                                 path: ClaimPathPointer::try_new(vec![
@@ -144,10 +145,11 @@ mod tests {
                                 ])
                                 .unwrap(),
                                 mandatory: false,
-                                display: vec![json!({
+                                display: vec![serde_json::from_value(json!({
                                     "name": "Given Name",
                                     "locale": "en-US"
-                                })],
+                                }))
+                                .unwrap()],
                             },
                             ClaimDescription {
                                 path: ClaimPathPointer::try_new(vec![
@@ -156,10 +158,11 @@ mod tests {
                                 ])
                                 .unwrap(),
                                 mandatory: false,
-                                display: vec![json!({
+                                display: vec![serde_json::from_value(json!({
                                     "name": "Surname",
                                     "locale": "en-US"
-                                })],
+                                }))
+                                .unwrap()],
                             },
                             ClaimDescription {
                                 path: ClaimPathPointer::try_new(vec![
@@ -177,9 +180,10 @@ mod tests {
                                 ])
                                 .unwrap(),
                                 mandatory: true,
-                                display: vec![json!({
+                                display: vec![serde_json::from_value(json!({
                                     "name": "GPA",
-                                })],
+                                }))
+                                .unwrap()],
                             }
                         ]
                     }
@@ -218,7 +222,7 @@ mod tests {
                         cryptographic_binding_methods_supported: vec!["did:example".to_string()],
                         credential_signing_alg_values_supported: vec!["Ed25519Signature2018".to_string()],
                         proof_types_supported: HashMap::new(),
-                        display: vec![json!({
+                        display: vec![serde_json::from_value(json!({
                                 "name": "University Credential",
                                 "locale": "en-US",
                                 "logo": {
@@ -228,7 +232,8 @@ mod tests {
                                 "background_color": "#12107c",
                                 "text_color": "#FFFFFF"
                             }
-                        )],
+                        ))
+                        .unwrap()],
                         claims: vec![
                             ClaimDescription {
                                 path: ClaimPathPointer::try_new(vec![
@@ -237,10 +242,11 @@ mod tests {
                                 ])
                                 .unwrap(),
                                 mandatory: false,
-                                display: vec![json!({
+                                display: vec![serde_json::from_value(json!({
                                     "name": "Given Name",
                                     "locale": "en-US"
-                                })],
+                                }))
+                                .unwrap()],
                             },
                             ClaimDescription {
                                 path: ClaimPathPointer::try_new(vec![
@@ -249,10 +255,11 @@ mod tests {
                                 ])
                                 .unwrap(),
                                 mandatory: false,
-                                display: vec![json!({
+                                display: vec![serde_json::from_value(json!({
                                     "name": "Surname",
                                     "locale": "en-US"
-                                })],
+                                }))
+                                .unwrap()],
                             },
                             ClaimDescription {
                                 path: ClaimPathPointer::try_new(vec![
@@ -270,9 +277,10 @@ mod tests {
                                 ])
                                 .unwrap(),
                                 mandatory: true,
-                                display: vec![json!({
+                                display: vec![serde_json::from_value(json!({
                                     "name": "GPA",
-                                })],
+                                }))
+                                .unwrap()],
                             }
                         ]
                     },
@@ -300,7 +308,7 @@ mod tests {
                         ],
                         proof_types_supported: HashMap::new(),
                         display: vec![
-                            json!({
+                            serde_json::from_value(json!({
                                 "name": "Mobile Driving License",
                                 "locale": "en-US",
                                 "logo": {
@@ -309,8 +317,9 @@ mod tests {
                                 },
                                 "background_color": "#12107c",
                                 "text_color": "#FFFFFF"
-                            }),
-                            json!({
+                            }))
+                            .unwrap(),
+                            serde_json::from_value(json!({
                                 "name": "モバイル運転免許証",
                                 "locale": "ja-JP",
                                 "logo": {
@@ -319,7 +328,8 @@ mod tests {
                                 },
                                 "background_color": "#12107c",
                                 "text_color": "#FFFFFF"
-                            })
+                            }))
+                            .unwrap()
                         ],
                         claims: vec![
                             ClaimDescription {
@@ -330,14 +340,16 @@ mod tests {
                                 .unwrap(),
                                 mandatory: false,
                                 display: vec![
-                                    json!({
+                                    serde_json::from_value(json!({
                                         "name": "Given Name",
                                         "locale": "en-US"
-                                    }),
-                                    json!({
+                                    }))
+                                    .unwrap(),
+                                    serde_json::from_value(json!({
                                         "name": "名前",
                                         "locale": "ja-JP"
-                                    })
+                                    }))
+                                    .unwrap()
                                 ],
                             },
                             ClaimDescription {
@@ -347,10 +359,11 @@ mod tests {
                                 ])
                                 .unwrap(),
                                 mandatory: false,
-                                display: vec![json!({
+                                display: vec![serde_json::from_value(json!({
                                     "name": "Surname",
                                     "locale": "en-US"
-                                })],
+                                }))
+                                .unwrap()],
                             },
                             ClaimDescription {
                                 path: ClaimPathPointer::try_new(vec![
@@ -398,7 +411,7 @@ mod tests {
                         )]
                         .into_iter()
                         .collect(),
-                        display: vec![json!(        {
+                        display: vec![serde_json::from_value(json!(        {
                           "name": "IdentityCredential",
                           "logo": {
                             "uri": "https://university.example.edu/public/logo.png",
@@ -407,7 +420,8 @@ mod tests {
                           "locale": "en-US",
                           "background_color": "#12107c",
                           "text_color": "#FFFFFF"
-                        })],
+                        }))
+                        .unwrap()],
                         claims: vec![
                             ClaimDescription {
                                 path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
@@ -416,14 +430,16 @@ mod tests {
                                 .unwrap(),
                                 mandatory: false,
                                 display: vec![
-                                    json!({
+                                    serde_json::from_value(json!({
                                         "name": "Given Name",
                                         "locale": "en-US"
-                                    }),
-                                    json!({
+                                    }))
+                                    .unwrap(),
+                                    serde_json::from_value(json!({
                                         "name": "Vorname",
                                         "locale": "de-DE"
-                                    })
+                                    }))
+                                    .unwrap()
                                 ],
                             },
                             ClaimDescription {
@@ -433,14 +449,16 @@ mod tests {
                                 .unwrap(),
                                 mandatory: false,
                                 display: vec![
-                                    json!({
+                                    serde_json::from_value(json!({
                                         "name": "Surname",
                                         "locale": "en-US"
-                                    }),
-                                    json!({
+                                    }))
+                                    .unwrap(),
+                                    serde_json::from_value(json!({
                                         "name": "Nachname",
                                         "locale": "de-DE"
-                                    })
+                                    }))
+                                    .unwrap()
                                 ],
                             },
                             ClaimDescription {
@@ -462,14 +480,16 @@ mod tests {
                                     .unwrap(),
                                 mandatory: false,
                                 display: vec![
-                                    json!({
+                                    serde_json::from_value(json!({
                                         "name": "Place of residence",
                                         "locale": "en-US"
-                                    }),
-                                    json!({
+                                    }))
+                                    .unwrap(),
+                                    serde_json::from_value(json!({
                                         "name": "Wohnsitz",
                                         "locale": "de-DE"
-                                    })
+                                    }))
+                                    .unwrap()
                                 ],
                             },
                             ClaimDescription {

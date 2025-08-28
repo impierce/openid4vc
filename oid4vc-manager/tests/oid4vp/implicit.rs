@@ -85,7 +85,7 @@ async fn test_implicit_flow() {
     // Create authorization request with response_type `id_token vp_token`
     let authorization_request = AuthorizationRequest::<Object<OID4VP>>::builder()
         .client_id(relying_party_did_with_prefix.clone())
-        .redirect_uri("https://example.com".parse::<url::Url>().unwrap())
+        .response_uri("https://example.com".parse::<url::Url>().unwrap())
         .dcql_query(DCQL_QUERY.clone())
         .client_metadata(ClientMetadataResource::ClientMetadata {
             client_name: None,

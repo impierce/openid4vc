@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use url::Url;
 
-/// Token Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-token-request
+/// Token Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-token-request
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(tag = "grant_type")]

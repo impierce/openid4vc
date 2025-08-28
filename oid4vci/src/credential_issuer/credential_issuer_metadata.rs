@@ -54,7 +54,7 @@ mod tests {
             w3c_verifiable_credentials::{jwt_vc_json, CredentialSubject},
             CredentialFormats, Parameters, WithParameters,
         },
-        credential_issuer::credential_configurations_supported::CredentialConfigurationsSupportedClaim,
+        credential_issuer::credential_configurations_supported::ClaimDescription,
         proof::{KeyProofMetadata, ProofType},
     };
     use jsonwebtoken::Algorithm;
@@ -122,7 +122,7 @@ mod tests {
                         )]
                         .into_iter()
                         .collect(),
-                        display: vec![json!({
+                        display: vec![serde_json::from_value(json!({
                             "name": "University Credential",
                             "locale": "en-US",
                             "logo": {
@@ -131,33 +131,36 @@ mod tests {
                             },
                             "background_color": "#12107c",
                             "text_color": "#FFFFFF"
-                        })],
+                        }))
+                        .unwrap()],
                         claims: vec![
-                            CredentialConfigurationsSupportedClaim {
+                            ClaimDescription {
                                 path: ClaimPathPointer::try_new(vec![
                                     ClaimPathElement::String("credentialSubject".to_string()),
                                     ClaimPathElement::String("given_name".to_string())
                                 ])
                                 .unwrap(),
                                 mandatory: false,
-                                display: vec![json!({
+                                display: vec![serde_json::from_value(json!({
                                     "name": "Given Name",
                                     "locale": "en-US"
-                                })],
+                                }))
+                                .unwrap()],
                             },
-                            CredentialConfigurationsSupportedClaim {
+                            ClaimDescription {
                                 path: ClaimPathPointer::try_new(vec![
                                     ClaimPathElement::String("credentialSubject".to_string()),
                                     ClaimPathElement::String("family_name".to_string())
                                 ])
                                 .unwrap(),
                                 mandatory: false,
-                                display: vec![json!({
+                                display: vec![serde_json::from_value(json!({
                                     "name": "Surname",
                                     "locale": "en-US"
-                                })],
+                                }))
+                                .unwrap()],
                             },
-                            CredentialConfigurationsSupportedClaim {
+                            ClaimDescription {
                                 path: ClaimPathPointer::try_new(vec![
                                     ClaimPathElement::String("credentialSubject".to_string()),
                                     ClaimPathElement::String("degree".to_string())
@@ -166,16 +169,17 @@ mod tests {
                                 mandatory: false,
                                 display: vec![],
                             },
-                            CredentialConfigurationsSupportedClaim {
+                            ClaimDescription {
                                 path: ClaimPathPointer::try_new(vec![
                                     ClaimPathElement::String("credentialSubject".to_string()),
                                     ClaimPathElement::String("gpa".to_string())
                                 ])
                                 .unwrap(),
                                 mandatory: false,
-                                display: vec![json!({
+                                display: vec![serde_json::from_value(json!({
                                     "name": "GPA",
-                                })],
+                                }))
+                                .unwrap()],
                             }
                         ]
                     },

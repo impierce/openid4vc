@@ -19,7 +19,7 @@ pub enum OpenidCredential {
 }
 
 /// Represents an object of the `authorization_details` field of the `AuthorizationRequest` object in the Authorization Code Flow as
-/// described in [OpenID4VCI](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-request-issuance-of-a-certa)
+/// described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-using-authorization-details
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct AuthorizationDetailsObject<CFC = CredentialFormats<WithParameters>>
@@ -70,6 +70,7 @@ mod tests {
         w3c_verifiable_credentials::{jwt_vc_json, CredentialSubject},
         Parameters,
     };
+    use oid4vc_core::claim_path_pointer::ClaimPathElement;
     use serde_json::{from_str, json};
 
     #[test]
@@ -119,15 +120,27 @@ mod tests {
                 },
                 claims: Some(vec![
                     AuthorizationDetailsClaim {
-                        path: vec!["credentialSubject".to_string(), "given_name".to_string()],
+                        path: ClaimPathPointer::try_new(vec![
+                            ClaimPathElement::String("credentialSubject".to_string()),
+                            ClaimPathElement::String("given_name".to_string())
+                        ])
+                        .unwrap(),
                         mandatory: false,
                     },
                     AuthorizationDetailsClaim {
-                        path: vec!["credentialSubject".to_string(), "family_name".to_string()],
+                        path: ClaimPathPointer::try_new(vec![
+                            ClaimPathElement::String("credentialSubject".to_string()),
+                            ClaimPathElement::String("family_name".to_string())
+                        ])
+                        .unwrap(),
                         mandatory: false,
                     },
                     AuthorizationDetailsClaim {
-                        path: vec!["credentialSubject".to_string(), "degree".to_string()],
+                        path: ClaimPathPointer::try_new(vec![
+                            ClaimPathElement::String("credentialSubject".to_string()),
+                            ClaimPathElement::String("degree".to_string())
+                        ])
+                        .unwrap(),
                         mandatory: false,
                     }
                 ]),
@@ -148,15 +161,27 @@ mod tests {
                 },
                 claims: Some(vec![
                     AuthorizationDetailsClaim {
-                        path: vec!["credentialSubject".to_string(), "given_name".to_string()],
+                        path: ClaimPathPointer::try_new(vec![
+                            ClaimPathElement::String("credentialSubject".to_string()),
+                            ClaimPathElement::String("given_name".to_string())
+                        ])
+                        .unwrap(),
                         mandatory: false,
                     },
                     AuthorizationDetailsClaim {
-                        path: vec!["credentialSubject".to_string(), "family_name".to_string()],
+                        path: ClaimPathPointer::try_new(vec![
+                            ClaimPathElement::String("credentialSubject".to_string()),
+                            ClaimPathElement::String("family_name".to_string())
+                        ])
+                        .unwrap(),
                         mandatory: false,
                     },
                     AuthorizationDetailsClaim {
-                        path: vec!["credentialSubject".to_string(), "degree".to_string()],
+                        path: ClaimPathPointer::try_new(vec![
+                            ClaimPathElement::String("credentialSubject".to_string()),
+                            ClaimPathElement::String("degree".to_string())
+                        ])
+                        .unwrap(),
                         mandatory: false,
                     }
                 ]),
@@ -177,19 +202,35 @@ mod tests {
                 },
                 claims: Some(vec![
                     AuthorizationDetailsClaim {
-                        path: vec!["org.iso.18013.5.1".to_string(), "given_name".to_string()],
+                        path: ClaimPathPointer::try_new(vec![
+                            ClaimPathElement::String("org.iso.18013.5.1".to_string()),
+                            ClaimPathElement::String("given_name".to_string())
+                        ])
+                        .unwrap(),
                         mandatory: false,
                     },
                     AuthorizationDetailsClaim {
-                        path: vec!["org.iso.18013.5.1".to_string(), "family_name".to_string()],
+                        path: ClaimPathPointer::try_new(vec![
+                            ClaimPathElement::String("org.iso.18013.5.1".to_string()),
+                            ClaimPathElement::String("family_name".to_string())
+                        ])
+                        .unwrap(),
                         mandatory: false,
                     },
                     AuthorizationDetailsClaim {
-                        path: vec!["org.iso.18013.5.1".to_string(), "birth_date".to_string()],
+                        path: ClaimPathPointer::try_new(vec![
+                            ClaimPathElement::String("org.iso.18013.5.1".to_string()),
+                            ClaimPathElement::String("birth_date".to_string())
+                        ])
+                        .unwrap(),
                         mandatory: false,
                     },
                     AuthorizationDetailsClaim {
-                        path: vec!["org.iso.18013.5.1.aamva".to_string(), "organ_donor".to_string()],
+                        path: ClaimPathPointer::try_new(vec![
+                            ClaimPathElement::String("org.iso.18013.5.1.aamva".to_string()),
+                            ClaimPathElement::String("organ_donor".to_string()),
+                        ])
+                        .unwrap(),
                         mandatory: false,
                     }
                 ]),

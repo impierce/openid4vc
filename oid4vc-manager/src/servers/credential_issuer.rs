@@ -21,7 +21,10 @@ use serde::de::DeserializeOwned;
 use tokio::task::JoinHandle;
 use tower_http::cors::AllowOrigin;
 
-// TODO: This is only used for testing purposes. It should be removed or replaced with a proper test server setup.
+// TODO: everything in this file is only used for testing purposes, so it should be moved to a test module.
+
+pub const TEST_PRE_AUTHORIZED_SUBJECT_DID: &str = "did:example:pre-authorized-subject";
+
 pub struct Server<S, CFC>
 where
     S: Storage<CFC>,
@@ -135,7 +138,6 @@ async fn credential_offer<S: Storage<CFC>, CFC: CredentialFormatCollection>(
 
 async fn par<S: Storage<CFC>, CFC: CredentialFormatCollection>(
     State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
-    // TODO: should be StringifiedForm<PushedAuthorizationRequest>?
     Form(_pushed_authorization_request): Form<serde_json::Value>,
 ) -> impl IntoResponse {
     (
@@ -151,7 +153,6 @@ async fn par<S: Storage<CFC>, CFC: CredentialFormatCollection>(
 
 async fn authorize<S: Storage<CFC>, CFC: CredentialFormatCollection>(
     State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
-    // TODO: should be StringifiedForm<AuthorizationRequest<CFC>>?
     Form(_authorization_request): Form<serde_json::Value>,
 ) -> impl IntoResponse {
     (
@@ -187,7 +188,7 @@ async fn credential<S: Storage<CFC>, CFC: CredentialFormatCollection>(
     AuthBearer(access_token): AuthBearer,
     Json(credential_request): Json<CredentialRequest>,
 ) -> impl IntoResponse {
-    // TODO: The bunch of unwrap's here should be replaced with error responses as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-error-response
+    // TODO: The bunch of unwrap's here should be replaced with error responses as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-error-response
     let proof = credential_issuer_manager
         .credential_issuer
         .validate_proof(
@@ -215,7 +216,13 @@ async fn credential<S: Storage<CFC>, CFC: CredentialFormatCollection>(
                 .get_credential_response(
                     access_token,
                     credential_configuration_id,
-                    proof.rfc7519_claims.iss().as_ref().unwrap().parse().unwrap(),
+                    proof
+                        .rfc7519_claims
+                        .iss()
+                        .clone()
+                        .unwrap_or_else(|| TEST_PRE_AUTHORIZED_SUBJECT_DID.to_string())
+                        .parse()
+                        .unwrap(),
                     credential_issuer_manager
                         .credential_issuer
                         .metadata

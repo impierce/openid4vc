@@ -3,7 +3,7 @@ use oid4vc_core::{builder_fn, jwt, RFC7519Claims, Subject};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-/// Key Proof Type and the proof itself, as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#proof-types
+/// Proof Type as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-proof-types
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 #[serde(tag = "proof_type")]
 pub enum Proof {
@@ -25,13 +25,14 @@ impl Proof {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct KeyProofMetadata {
     pub proof_signing_alg_values_supported: Vec<Algorithm>,
+    // TODO: add `key_attestations_required`
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum ProofType {
     Jwt,
-    // TODO: add support for `LdpVp` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#section-7.2.1-2.3
+    // TODO: support other proof types
 }
 
 #[derive(Default)]
@@ -48,6 +49,7 @@ pub struct ProofBuilder {
 pub struct ProofOfPossession {
     #[serde(flatten)]
     pub rfc7519_claims: RFC7519Claims,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub nonce: Option<String>,
 }
 

@@ -129,24 +129,11 @@ impl Provider {
         authorization_request: &AuthorizationRequest<Object<E>>,
         input: <E::ResponseHandle as ResponseHandle>::Input,
     ) -> Result<AuthorizationResponse<E>> {
-        println!("Generating response for authorization");
-
-        println!(
-            "Authorization Request: {}",
-            serde_json::to_string_pretty(&authorization_request).unwrap()
-        );
         let redirect_uri = authorization_request.body.uri.uri().to_string();
-        println!("Redirect URI: {}", redirect_uri);
         let state = authorization_request.body.state.clone();
-        println!("State: {:?}", state);
+
         let signing_algorithm = self.get_matching_signing_algorithm(authorization_request).await?;
-        println!("Signing algorithm: {:?}", signing_algorithm);
-        let subject_syntax_type = self
-            .get_matching_subject_syntax_type(authorization_request)
-            .await
-            // FIXME!
-            .unwrap_or(self.supported_subject_syntax_types[0].clone());
-        println!("Subject syntax type: {:?}", subject_syntax_type);
+        let subject_syntax_type = self.get_matching_subject_syntax_type(authorization_request).await?;
 
         let jwts = E::generate_token(
             self.subject.clone(),
@@ -168,20 +155,14 @@ impl Provider {
         let encoded = to_form_urlencoded_string(&authorization_response)
             .map_err(|err| anyhow::anyhow!("Failed to encode authorization response: {err}"))?;
 
-        let response = self
+        Ok(self
             .client
             .post(authorization_response.redirect_uri.clone())
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(encoded)
             .send()
-            .await?;
-
-        let status = response.status();
-
-        let body: serde_json::Value = response.json().await.unwrap_or(serde_json::json!({}));
-        println!("Response status: {status}, body: {body}");
-
-        Ok(status)
+            .await?
+            .status())
     }
 }
 
