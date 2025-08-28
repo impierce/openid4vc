@@ -38,14 +38,14 @@ where
     phantom: std::marker::PhantomData<CFC>,
 }
 
-// TODO: Move everyting related to pushed authorization response to a separate module?
+// TODO: Move everything related to pushed authorization response to a separate module?
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct PushedAuthorizationResponse {
     pub request_uri: String,
     pub expires_in: i64,
 }
 
-// TODO: Move everyting related to pushed authorization response to a separate module?
+// TODO: Move everything related to pushed authorization response to a separate module?
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct AuthorizationRequestByReference {
     pub client_id: String,
@@ -134,7 +134,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .map_err(|_| anyhow::anyhow!("Failed to get credential issuer metadata"))
     }
 
-    // TODO: Move everyting related to pushed authorization response to a separate module?
+    // TODO: Move everything related to pushed authorization response to a separate module?
     // TODO: refactor to reduce the number of arguments
     #[allow(clippy::too_many_arguments)]
     pub async fn get_pushed_authorization_response(
