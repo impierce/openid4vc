@@ -308,7 +308,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         nonce: Option<String>,
         credential_configuration_id: String,
         credential_configuration: &CredentialConfigurationsSupportedObject,
-        is_pre_authorized: bool,
+        pre_authorized_grant_anonymous_access_supported: bool,
     ) -> Result<CredentialResponse> {
         let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
         let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
@@ -318,7 +318,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .algorithm(signing_algorithm)
             .signer(self.subject.clone());
 
-        if !is_pre_authorized {
+        if !pre_authorized_grant_anonymous_access_supported {
             proof_builder = proof_builder.iss(
                 self.subject
                     .identifier(&subject_syntax_type.to_string(), signing_algorithm)
