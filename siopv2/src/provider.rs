@@ -118,6 +118,8 @@ impl Provider {
         self.supported_subject_syntax_types
             .iter()
             .find(|supported_syntax_type| relying_party_supported_syntax_types.contains(supported_syntax_type))
+            // If no match is found, use the first supported syntax type as a fallback.
+            .or_else(|| self.supported_subject_syntax_types.first())
             .cloned()
             .ok_or(anyhow::anyhow!("No supported subject syntax types found."))
     }
