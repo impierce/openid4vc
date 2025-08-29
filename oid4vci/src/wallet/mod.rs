@@ -308,17 +308,16 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         nonce: Option<String>,
         credential_configuration_id: String,
         credential_configuration: &CredentialConfigurationsSupportedObject,
-        pre_authorized_grant_anonymous_access_supported: bool,
+        with_anonymous_access: bool,
     ) -> Result<CredentialResponse> {
         let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
         let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
-
         let mut proof_builder = Proof::builder()
             .proof_type(ProofType::Jwt)
             .algorithm(signing_algorithm)
             .signer(self.subject.clone());
 
-        if !pre_authorized_grant_anonymous_access_supported {
+        if !with_anonymous_access {
             proof_builder = proof_builder.iss(
                 self.subject
                     .identifier(&subject_syntax_type.to_string(), signing_algorithm)
@@ -348,15 +347,21 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             proofs: None,
         };
 
-        self.client
+        let temp = self
+            .client
             .post(credential_issuer_metadata.credential_endpoint)
             .bearer_auth(token_response.access_token.clone())
             .json(&credential_request)
             .send()
             .await?
-            .json()
+            .json::<serde_json::Value>()
             .await
-            .map_err(|e| e.into())
+            // .map_err(|e| e.into())
+            .unwrap();
+
+        println!("Credential response: {}", serde_json::to_string_pretty(&temp).unwrap());
+
+        serde_json::from_value(temp).map_err(|e| e.into())
     }
 
     pub async fn send_notification_request(
