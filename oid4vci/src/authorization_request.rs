@@ -22,5 +22,13 @@ where
     pub issuer_state: Option<String>,
     // PKCE parameters
     pub code_challenge: Option<String>,
-    pub code_challenge_method: Option<String>,
+    pub code_challenge_method: Option<CodeChallengeMethod>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default, Eq, PartialEq)]
+pub enum CodeChallengeMethod {
+    S256,
+    #[default]
+    #[serde(rename = "plain")]
+    Plain,
 }

@@ -6,6 +6,7 @@ use oid4vc_manager::{
     managers::credential_issuer::CredentialIssuerManager, methods::key_method::KeySubject,
     servers::credential_issuer::Server,
 };
+use oid4vci::authorization_request::CodeChallengeMethod;
 use oid4vci::pkce;
 use oid4vci::{
     authorization_details::{AuthorizationDetailsObject, CredentialConfigurationOrFormat, OpenidCredential},
@@ -101,7 +102,7 @@ async fn test_authorization_code_flow() {
             .into()],
             issuer_state,
             Some(code_challenge),
-            Some("S256".to_string()),
+            Some(CodeChallengeMethod::S256),
         )
         .await
         .unwrap();

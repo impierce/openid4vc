@@ -1,5 +1,5 @@
 use crate::authorization_details::AuthorizationDetailsObject;
-use crate::authorization_request::AuthorizationRequest;
+use crate::authorization_request::{AuthorizationRequest, CodeChallengeMethod};
 use crate::authorization_response::AuthorizationResponse;
 use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters};
 use crate::credential_issuer::credential_configurations_supported::CredentialConfigurationsSupportedObject;
@@ -146,7 +146,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         authorization_details: Vec<AuthorizationDetailsObject<CFC>>,
         issuer_state: String,
         code_challenge: Option<String>,
-        code_challenge_method: Option<String>,
+        code_challenge_method: Option<CodeChallengeMethod>,
     ) -> Result<PushedAuthorizationResponse> {
         let authorization_request = AuthorizationRequest {
             response_type: "code".to_string(),
