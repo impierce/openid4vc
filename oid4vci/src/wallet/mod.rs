@@ -1,5 +1,5 @@
 use crate::authorization_details::AuthorizationDetailsObject;
-use crate::authorization_request::AuthorizationRequest;
+use crate::authorization_request::{AuthorizationRequest, CodeChallengeMethod};
 use crate::authorization_response::AuthorizationResponse;
 use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters};
 use crate::credential_issuer::credential_configurations_supported::CredentialConfigurationsSupportedObject;
@@ -7,15 +7,18 @@ use crate::credential_issuer::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
 };
 use crate::credential_offer::CredentialOfferParameters;
-use crate::credential_request::{BatchCredentialRequest, CredentialRequest};
-use crate::credential_response::BatchCredentialResponse;
+use crate::credential_request::{CredentialIdentifierOrCredentialConfigurationId, CredentialRequest};
+use crate::nonce_response::NonceResponse;
 use crate::notification_request::{NotificationEvent, NotificationRequest};
-use crate::proof::{KeyProofType, ProofType};
+use crate::proof::ProofType;
+use crate::Proof;
 use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
 use anyhow::{anyhow, Result};
 use jsonwebtoken::Algorithm;
 use oid4vc_core::authentication::subject::SigningSubject;
+use oid4vc_core::utils::form_urlencoded::to_form_urlencoded_string;
 use oid4vc_core::SubjectSyntaxType;
+use reqwest::header::{HeaderValue, CONTENT_TYPE};
 use reqwest::Url;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::policies::ExponentialBackoff;
@@ -33,6 +36,20 @@ where
     pub client: ClientWithMiddleware,
     pub proof_signing_alg_values_supported: Vec<Algorithm>,
     phantom: std::marker::PhantomData<CFC>,
+}
+
+// TODO: Move everything related to pushed authorization response to a separate module?
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+pub struct PushedAuthorizationResponse {
+    pub request_uri: String,
+    pub expires_in: i64,
+}
+
+// TODO: Move everything related to pushed authorization response to a separate module?
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct AuthorizationRequestByReference {
+    pub client_id: String,
+    pub request_uri: String,
 }
 
 impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
@@ -117,37 +134,89 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .map_err(|_| anyhow::anyhow!("Failed to get credential issuer metadata"))
     }
 
+    // TODO: Move everything related to pushed authorization response to a separate module?
+    // TODO: refactor to reduce the number of arguments
+    #[allow(clippy::too_many_arguments)]
+    pub async fn get_pushed_authorization_response(
+        &self,
+        pushed_authorization_request_endpoint: Url,
+        client_id: &str,
+        redirect_uri: Url,
+        state: String,
+        authorization_details: Vec<AuthorizationDetailsObject<CFC>>,
+        issuer_state: String,
+        code_challenge: Option<String>,
+        code_challenge_method: Option<CodeChallengeMethod>,
+    ) -> Result<PushedAuthorizationResponse> {
+        let authorization_request = AuthorizationRequest {
+            response_type: "code".to_string(),
+            client_id: client_id.to_string(),
+            redirect_uri: Some(redirect_uri),
+            // TODO: add support for `scope`
+            scope: None,
+            state: Some(state),
+            authorization_details,
+            issuer_state: Some(issuer_state),
+            code_challenge,
+            code_challenge_method,
+        };
+
+        let url_encoded = to_form_urlencoded_string(&authorization_request).unwrap();
+
+        self.client
+            .post(pushed_authorization_request_endpoint)
+            .header(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/x-www-form-urlencoded"),
+            )
+            .body(url_encoded)
+            .send()
+            .await?
+            .json::<PushedAuthorizationResponse>()
+            .await
+            .map_err(|err| anyhow::anyhow!("Failed to send pushed authorization request: {err}"))
+    }
+
     pub async fn get_authorization_code(
         &self,
         authorization_endpoint: Url,
-        authorization_details: Vec<AuthorizationDetailsObject<CFC>>,
+        _authorization_details: Vec<AuthorizationDetailsObject<CFC>>,
+        _code_challenge: Option<String>,
+        _code_challenge_method: Option<String>,
+        pushed_authorization_response: Option<PushedAuthorizationResponse>,
     ) -> Result<AuthorizationResponse> {
-        self.client
-            .get(authorization_endpoint)
-            // TODO: must be `form`, but `AuthorizationRequest needs to be able to serilalize properly.
-            .json(&AuthorizationRequest {
-                response_type: "code".to_string(),
-                client_id: self
-                    .subject
-                    .identifier(
-                        &self
-                            .supported_subject_syntax_types
-                            .first()
-                            .map(ToString::to_string)
-                            .ok_or(anyhow!("No supported subject syntax types found."))?,
-                        self.proof_signing_alg_values_supported[0],
-                    )
-                    .await?,
-                redirect_uri: None,
-                scope: None,
-                state: None,
-                authorization_details,
-            })
-            .send()
-            .await?
-            .json::<AuthorizationResponse>()
-            .await
-            .map_err(|_| anyhow::anyhow!("Failed to get authorization code"))
+        let client_id = self
+            .subject
+            .identifier(
+                &self
+                    .supported_subject_syntax_types
+                    .first()
+                    .map(ToString::to_string)
+                    .ok_or(anyhow!("No supported subject syntax types found."))?,
+                self.proof_signing_alg_values_supported[0],
+            )
+            .await?;
+
+        if let Some(pushed_response) = pushed_authorization_response {
+            let authorization_request = AuthorizationRequestByReference {
+                client_id,
+                request_uri: pushed_response.request_uri,
+            };
+
+            return Ok(self
+                .client
+                .get(authorization_endpoint)
+                .form(&authorization_request)
+                .send()
+                .await?
+                .json::<AuthorizationResponse>()
+                .await?);
+        }
+
+        // TODO: Support regular authorization request without pushed authorization request.
+        Err(anyhow!(
+            "Authorization code flow without pushed authorization request is not supported yet."
+        ))
     }
 
     pub async fn get_access_token(&self, token_endpoint: Url, token_request: TokenRequest) -> Result<TokenResponse> {
@@ -165,7 +234,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
     // Supplying the `proof` parameter to the Credential Request is only required when the `proof_types_supported`
     // parameter is present in the Credential Configuration in the Credential Issuer's metadata. However, if the
     // `proof_types_supported` is not present, the Wallet will still provide the `proof` signed with its own preferred
-    // signing algorithm. For more information see: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#section-7.2-2.2.1
+    // signing algorithm. For more information see: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-8.2-2.3.1
     fn select_signing_algorithm(
         &self,
         credential_configuration: &CredentialConfigurationsSupportedObject,
@@ -220,116 +289,79 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .ok_or(anyhow::anyhow!("No supported subject syntax types found."))
     }
 
+    pub async fn get_nonce(&self, nonce_endpoint: Url) -> Result<String> {
+        let NonceResponse { c_nonce } = self
+            .client
+            .post(nonce_endpoint)
+            .send()
+            .await?
+            .json::<NonceResponse>()
+            .await?;
+
+        Ok(c_nonce)
+    }
+
     pub async fn get_credential(
         &self,
         credential_issuer_metadata: CredentialIssuerMetadata<CFC>,
         token_response: &TokenResponse,
+        nonce: Option<String>,
+        credential_configuration_id: String,
         credential_configuration: &CredentialConfigurationsSupportedObject,
+        with_anonymous_access: bool,
     ) -> Result<CredentialResponse> {
-        let credential_format = credential_configuration.credential_format.to_owned();
-
         let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
         let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
+        let mut proof_builder = Proof::builder()
+            .proof_type(ProofType::Jwt)
+            .algorithm(signing_algorithm)
+            .signer(self.subject.clone());
 
-        let credential_request = CredentialRequest {
-            credential_format,
-            proof: Some(
-                KeyProofType::builder()
-                    .proof_type(ProofType::Jwt)
-                    .algorithm(signing_algorithm)
-                    .signer(self.subject.clone())
-                    .iss(
-                        self.subject
-                            .identifier(&subject_syntax_type.to_string(), signing_algorithm)
-                            .await?,
-                    )
-                    .aud(credential_issuer_metadata.credential_issuer)
-                    // TODO: Use current time.
-                    .iat(1571324800)
-                    // TODO: so is this REQUIRED or OPTIONAL?
-                    .nonce(
-                        token_response
-                            .c_nonce
-                            .as_ref()
-                            .ok_or(anyhow::anyhow!("No c_nonce found."))?
-                            .clone(),
-                    )
-                    .subject_syntax_type(subject_syntax_type.to_string())
-                    .build()
+        if !with_anonymous_access {
+            proof_builder = proof_builder.iss(
+                self.subject
+                    .identifier(&subject_syntax_type.to_string(), signing_algorithm)
                     .await?,
-            ),
-        };
+            );
+        }
 
-        self.client
-            .post(credential_issuer_metadata.credential_endpoint)
-            .bearer_auth(token_response.access_token.clone())
-            .json(&credential_request)
-            .send()
-            .await?
-            .json()
-            .await
-            .map_err(|e| e.into())
-    }
+        proof_builder = proof_builder
+            .aud(credential_issuer_metadata.credential_issuer)
+            .iat(chrono::Utc::now().timestamp());
 
-    pub async fn get_batch_credential(
-        &self,
-        credential_issuer_metadata: CredentialIssuerMetadata<CFC>,
-        token_response: &TokenResponse,
-        credential_configurations: &[CredentialConfigurationsSupportedObject],
-    ) -> Result<BatchCredentialResponse> {
-        // TODO: This needs to be fixed since this current implementation assumes that for all credentials the same Proof Type is supported.
-        let credential_configuration = credential_configurations
-            .first()
-            .ok_or(anyhow::anyhow!("No credential configurations found."))?;
-
-        let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
-        let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
+        if let Some(nonce) = nonce {
+            proof_builder = proof_builder.nonce(nonce);
+        }
 
         let proof = Some(
-            KeyProofType::builder()
-                .proof_type(ProofType::Jwt)
-                .algorithm(signing_algorithm)
-                .signer(self.subject.clone())
-                .iss(
-                    self.subject
-                        .identifier(&subject_syntax_type.to_string(), signing_algorithm)
-                        .await?,
-                )
-                .aud(credential_issuer_metadata.credential_issuer)
-                // TODO: Use current time.
-                .iat(1571324800)
-                // TODO: so is this REQUIRED or OPTIONAL?
-                .nonce(
-                    token_response
-                        .c_nonce
-                        .as_ref()
-                        .ok_or(anyhow::anyhow!("No c_nonce found."))?
-                        .clone(),
-                )
+            proof_builder
                 .subject_syntax_type(subject_syntax_type.to_string())
                 .build()
                 .await?,
         );
 
-        let batch_credential_request = BatchCredentialRequest {
-            credential_requests: credential_configurations
-                .iter()
-                .map(|credential_configuration| CredentialRequest {
-                    credential_format: credential_configuration.credential_format.to_owned(),
-                    proof: proof.clone(),
-                })
-                .collect(),
+        let credential_request = CredentialRequest {
+            credential_identifier_or_credential_configuration_id:
+                CredentialIdentifierOrCredentialConfigurationId::CredentialConfigurationId(credential_configuration_id),
+            proof,
+            proofs: None,
         };
 
-        self.client
-            .post(credential_issuer_metadata.batch_credential_endpoint.unwrap())
+        let temp = self
+            .client
+            .post(credential_issuer_metadata.credential_endpoint)
             .bearer_auth(token_response.access_token.clone())
-            .json(&batch_credential_request)
+            .json(&credential_request)
             .send()
             .await?
-            .json()
+            .json::<serde_json::Value>()
             .await
-            .map_err(|e| e.into())
+            // .map_err(|e| e.into())
+            .unwrap();
+
+        println!("Credential response: {}", serde_json::to_string_pretty(&temp).unwrap());
+
+        serde_json::from_value(temp).map_err(|e| e.into())
     }
 
     pub async fn send_notification_request(
@@ -389,33 +421,6 @@ pub mod tests {
             .unwrap();
 
         assert_eq!(signing_algorithm, Algorithm::EdDSA);
-    }
-
-    #[test]
-    fn select_signing_algorithm_returns_error_when_issuers_supported_proof_type_is_not_supported() {
-        // Create a new Wallet.
-        let wallet: Wallet = Wallet::new(
-            Arc::new(TestSubject::default()),
-            vec!["did:test"],
-            vec![Algorithm::EdDSA],
-        )
-        .unwrap();
-
-        let error = wallet
-            .select_signing_algorithm(&CredentialConfigurationsSupportedObject {
-                proof_types_supported: HashMap::from_iter(vec![(
-                    // This Proof Type is not supported in the Wallet (as of now) so the Wallet will return an error.
-                    ProofType::Cwt,
-                    KeyProofMetadata {
-                        proof_signing_alg_values_supported: vec![Algorithm::EdDSA],
-                    },
-                )]),
-                ..Default::default()
-            })
-            .unwrap_err()
-            .to_string();
-
-        assert_eq!(error, "The Credential Issuer does not support JWT proof types");
     }
 
     #[test]

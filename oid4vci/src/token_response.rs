@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-/// Token Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-successful-token-response
+/// Token Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-successful-token-response
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct TokenResponse {
@@ -10,7 +10,5 @@ pub struct TokenResponse {
     pub expires_in: Option<u64>,
     pub refresh_token: Option<String>,
     pub scope: Option<String>,
-    pub c_nonce: Option<String>,
-    pub c_nonce_expires_in: Option<u64>,
     // TODO: add `authorization_details` field when support for Authorization Code Flow is added.
 }

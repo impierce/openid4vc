@@ -6,6 +6,8 @@ use oid4vc_manager::{
     managers::credential_issuer::CredentialIssuerManager, methods::key_method::KeySubject,
     servers::credential_issuer::Server,
 };
+use oid4vci::authorization_request::CodeChallengeMethod;
+use oid4vci::pkce;
 use oid4vci::{
     authorization_details::{AuthorizationDetailsObject, CredentialConfigurationOrFormat, OpenidCredential},
     credential_format_profiles::{CredentialFormats, WithParameters},
@@ -14,8 +16,8 @@ use oid4vci::{
     Wallet,
 };
 use std::sync::Arc;
+use uuid::Uuid;
 
-// TODO: Current Authorization Code Flow is not fully conformant to the spec. Issue: https://github.com/impierce/openid4vc/issues/46
 #[tokio::test]
 async fn test_authorization_code_flow() {
     // Setup the credential issuer.
@@ -62,30 +64,63 @@ async fn test_authorization_code_flow() {
         .await
         .unwrap();
 
+    let credential_configuration_id = "UniversityDegree_JWT".to_string();
+
+    let redirect_uri = "http://localhost/callback".parse().unwrap();
+    let wallet_state = Uuid::default().to_string();
+    let issuer_state = Uuid::default().to_string();
+
     // Get the credential format for a university degree.
     let university_degree_credential_format = credential_issuer_metadata
         .credential_configurations_supported
-        .get("UniversityDegree_JWT")
+        .get(&credential_configuration_id)
         .unwrap()
         .clone();
 
-    // Get the authorization code.
-    let authorization_response = wallet
-        .get_authorization_code(
-            authorization_server_metadata.authorization_endpoint.unwrap(),
+    // Generate a random 128-byte code verifier (must be between 43 and 128 bytes)
+    let code_verify = pkce::code_verifier(128);
+    // Generate an encrypted code challenge accordingly
+    let code_challenge = pkce::code_challenge(&code_verify);
+
+    let pushed_authorization_response = wallet
+        .get_pushed_authorization_response(
+            authorization_server_metadata
+                .pushed_authorization_request_endpoint
+                .clone()
+                .unwrap(),
+            "client_id",
+            redirect_uri,
+            wallet_state,
             vec![AuthorizationDetailsObject {
                 r#type: OpenidCredential::Type,
                 locations: None,
                 credential_configuration_or_format: CredentialConfigurationOrFormat::CredentialFormat(
                     university_degree_credential_format.credential_format.clone(),
                 ),
+                claims: None,
             }
             .into()],
+            issuer_state,
+            Some(code_challenge),
+            Some(CodeChallengeMethod::S256),
+        )
+        .await
+        .unwrap();
+
+    // Get the authorization code.
+    let authorization_response = wallet
+        .get_authorization_code(
+            authorization_server_metadata.authorization_endpoint.unwrap(),
+            vec![],
+            None,
+            None,
+            Some(pushed_authorization_response),
         )
         .await
         .unwrap();
 
     let token_request = TokenRequest::AuthorizationCode {
+        client_id: "client_id".to_string(),
         code: authorization_response.code,
         code_verifier: None,
         redirect_uri: None,
@@ -102,13 +137,18 @@ async fn test_authorization_code_flow() {
         .get_credential(
             credential_issuer_metadata,
             &token_response,
+            None,
+            credential_configuration_id,
             &university_degree_credential_format,
+            false,
         )
         .await
         .unwrap();
 
     let credential = match credential_response.credential {
-        CredentialResponseType::Immediate { credential, .. } => credential,
+        CredentialResponseType::Immediate { credentials, .. } => {
+            serde_json::json!(credentials.first().unwrap().credential)
+        }
         _ => panic!("Credential was not a JWT VC JSON."),
     };
 

@@ -1,297 +1,94 @@
-use crate::{
-    credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters},
-    proof::KeyProofType,
-};
+use crate::{proof::Proof, proofs::Proofs};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-/// Credential Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-request
+/// Credential Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-request
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
-pub struct CredentialRequest<CFC = CredentialFormats<WithParameters>>
-where
-    CFC: CredentialFormatCollection,
-{
+pub struct CredentialRequest {
     #[serde(flatten)]
-    pub credential_format: CFC,
-    pub proof: Option<KeyProofType>,
-    // TODO: add `credential_identifier` field when support for Authorization Code Flow is added.
+    pub credential_identifier_or_credential_configuration_id: CredentialIdentifierOrCredentialConfigurationId,
+    pub proof: Option<Proof>,
+    pub proofs: Option<Proofs>,
     // TODO: add `credential_response_encryption` field when support for JWE is added.
 }
 
-/// Batch Credential Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-batch-credential-request
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct BatchCredentialRequest<CFC = CredentialFormats>
-where
-    CFC: CredentialFormatCollection,
-{
-    pub credential_requests: Vec<CredentialRequest<CFC>>,
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum CredentialIdentifierOrCredentialConfigurationId {
+    CredentialIdentifier(String),
+    CredentialConfigurationId(String),
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::credential_format_profiles::{
-        w3c_verifiable_credentials::{
-            jwt_vc_json::{self, CredentialDefinition},
-            jwt_vc_json_ld, ldp_vc, CredentialSubject,
-        },
-        CredentialFormats, Parameters,
-    };
-    use serde_json::{from_str, json};
+    use serde_json::json;
 
     #[test]
-    fn test_credential_request_serde_jwt_vc_json() {
-        let jwt_vc_json = json!({
-            "format": "jwt_vc_json",
-            "credential_definition": {
-               "type": [
-                  "VerifiableCredential",
-                  "UniversityDegreeCredential"
-               ],
-               "credentialSubject": {
-                  "given_name": {},
-                  "family_name": {},
-                  "degree": {}
-               }
-            },
+    fn test_credential_request_with_credential_configuration_identifier() {
+        let credential_request_json = json!({
+            "credential_configuration_id": "org.iso.18013.5.1.mDL",
             "proof": {
-               "proof_type": "jwt",
-               "jwt":"eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM"
+                "proof_type": "jwt",
+                "jwt": "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ"
             }
         });
 
-        let credential_request_jwt_vc_json: CredentialRequest = serde_json::from_value(jwt_vc_json.clone()).unwrap();
+        let credential_request: CredentialRequest = serde_json::from_value(credential_request_json.clone()).unwrap();
 
         // Assert that the json Value is deserialized into the correct type.
         assert_eq!(
-            credential_request_jwt_vc_json,
+            credential_request,
             CredentialRequest {
-                credential_format: CredentialFormats::JwtVcJson(Parameters {
-                    parameters: (
-                        CredentialDefinition {
-                            type_: vec![
-                                "VerifiableCredential".to_string(),
-                                "UniversityDegreeCredential".to_string()
-                            ],
-                            credential_subject: CredentialSubject {
-                                credential_subject: Some(json!({
-                                    "given_name": {},
-                                    "family_name": {},
-                                    "degree": {}
-                                }))
-                            },
-                        },
-                        None
-                    )
-                        .into()
-                }),
-                proof: Some(KeyProofType::Jwt {
-                    jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
+                credential_identifier_or_credential_configuration_id: CredentialIdentifierOrCredentialConfigurationId::CredentialConfigurationId("org.iso.18013.5.1.mDL".to_string()),
+                proofs: None,
+                proof: Some(Proof::Jwt {
+                    jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ".to_string()
                 })
             },
         );
 
         // Assert that the `CredentialRequest` can be serialized back into the original json Value.
         assert_eq!(
-            serde_json::to_value(credential_request_jwt_vc_json).unwrap(),
-            jwt_vc_json
+            serde_json::to_value(credential_request).unwrap(),
+            credential_request_json
         );
     }
 
     #[test]
-    fn test_credential_request_serde_mso_mdoc() {
-        let mso_mdoc = json!({
-            "format": "mso_mdoc",
-            "doctype": "org.iso.18013.5.1.mDL",
-            "claims": {
-               "org.iso.18013.5.1": {
-                  "given_name": {},
-                  "family_name": {},
-                  "birth_date": {}
-               },
-               "org.iso.18013.5.1.aamva": {
-                  "organ_donor": {}
-               }
-            },
-            "proof": {
-               "proof_type": "jwt",
-               "jwt": "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM"
+    fn test_credential_request_with_multiple_proofs() {
+        let credential_request_json = json!({
+            "credential_identifier": "CivilEngineeringDegree-2023",
+            "proofs": {
+            "jwt": [
+                "eyJ0eXAiOiJvcGVuaWQ0dmNpLXByb29mK2p3dCIsImFsZyI6IkVTMjU2IiwiandrIjp7Imt0eSI6IkVDIiwiY3J2IjoiUC0yNTYiLCJ4IjoiblVXQW9BdjNYWml0aDhFN2kxOU9kYXhPTFlGT3dNLVoyRXVNMDJUaXJUNCIsInkiOiJIc2tIVThCalVpMVU5WHFpN1N3bWo4Z3dBS18weGtjRGpFV183MVNvc0VZIn19",
+                "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ"
+                ]
             }
         });
 
-        let credential_request_mso_mdoc: CredentialRequest = serde_json::from_value(mso_mdoc.clone()).unwrap();
+        let credential_request: CredentialRequest = serde_json::from_value(credential_request_json.clone()).unwrap();
 
         // Assert that the json Value is deserialized into the correct type.
         assert_eq!(
-            credential_request_mso_mdoc,
+            credential_request,
             CredentialRequest {
-                credential_format: CredentialFormats::MsoMdoc(Parameters {
-                    parameters: (
-                        "org.iso.18013.5.1.mDL".to_string(),
-                        Some(json!({
-                            "org.iso.18013.5.1": {
-                                "given_name": {},
-                                "family_name": {},
-                                "birth_date": {}
-                            },
-                            "org.iso.18013.5.1.aamva": {
-                                "organ_donor": {}
-                            }
-                        })),
-                        None
-                    )
-                        .into()
+                credential_identifier_or_credential_configuration_id: CredentialIdentifierOrCredentialConfigurationId::CredentialIdentifier("CivilEngineeringDegree-2023".to_string()),
+                proofs: Some(Proofs {
+                    jwt: vec![
+                        "eyJ0eXAiOiJvcGVuaWQ0dmNpLXByb29mK2p3dCIsImFsZyI6IkVTMjU2IiwiandrIjp7Imt0eSI6IkVDIiwiY3J2IjoiUC0yNTYiLCJ4IjoiblVXQW9BdjNYWml0aDhFN2kxOU9kYXhPTFlGT3dNLVoyRXVNMDJUaXJUNCIsInkiOiJIc2tIVThCalVpMVU5WHFpN1N3bWo4Z3dBS18weGtjRGpFV183MVNvc0VZIn19".to_string(),
+                        "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ".to_string()
+                    ]
                 }),
-                proof: Some(KeyProofType::Jwt {
-                    jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
-                })
+                proof: None,
             },
         );
 
         // Assert that the `CredentialRequest` can be serialized back into the original json Value.
-        assert_eq!(serde_json::to_value(credential_request_mso_mdoc).unwrap(), mso_mdoc);
-    }
-
-    #[test]
-    fn test_oid4vci_examples() {
-        // Examples from
-        // https://github.com/openid/OpenID4VCI/tree/80b2214814106e55e5fd09af3415ba4fc124b6be/examples
-
         assert_eq!(
-            CredentialRequest {
-                credential_format: CredentialFormats::MsoMdoc(Parameters {
-                    parameters: (
-                        "org.iso.18013.5.1.mDL".to_string(),
-                        Some(json!({
-                            "org.iso.18013.5.1": {
-                                "given_name": {},
-                                "family_name": {},
-                                "birth_date": {}
-                            },
-                            "org.iso.18013.5.1.aamva": {
-                                "organ_donor": {}
-                            }
-                        })),
-                        None
-                    )
-                        .into()
-                }),
-                proof: Some(KeyProofType::Jwt {
-                    jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
-                })
-            },
-            from_str::<CredentialRequest>(include_str!(
-                "../tests/examples/credential_request_iso_mdl_with_claims.json"
-            ))
-            .unwrap()
-        );
-
-        assert_eq!(
-            CredentialRequest {
-                credential_format: CredentialFormats::JwtVcJsonLd(Parameters {
-                    parameters: (
-                        jwt_vc_json_ld::CredentialDefinition {
-                            context: vec![
-                                "https://www.w3.org/2018/credentials/v1".to_string(),
-                                "https://www.w3.org/2018/credentials/examples/v1".to_string()
-                            ],
-                            type_: vec![
-                                "VerifiableCredential".to_string(),
-                                "UniversityDegreeCredential".to_string()
-                            ],
-                            credential_subject: CredentialSubject {
-                                credential_subject: Some(json!({
-                                    "degree": {
-                                        "type":{}
-                                    }
-                                }))
-                            },
-                        },
-                        None
-                    )
-                        .into()
-                }),
-                proof: Some(KeyProofType::Jwt {
-                    jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
-                })
-            },
-            from_str::<CredentialRequest>(include_str!("../tests/examples/credential_request_jwt_vc_json-ld.json"))
-                .unwrap()
-        );
-
-        assert_eq!(
-            CredentialRequest {
-                credential_format: CredentialFormats::JwtVcJson(Parameters {
-                    parameters: (
-                        jwt_vc_json::CredentialDefinition {
-                            type_: vec![
-                                "VerifiableCredential".to_string(),
-                                "UniversityDegreeCredential".to_string()
-                            ],
-                            credential_subject: CredentialSubject {
-                                credential_subject: Some(json!({
-                                    "given_name": {},
-                                    "family_name": {},
-                                    "degree": {}
-                                }))
-                            },
-                        },
-                        None
-                    )
-                        .into()
-                }),
-                proof: Some(KeyProofType::Jwt {
-                    jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJzNkJoZFJrcXQzIiwiYXVkIjoiaHR0cHM6Ly9zZXJ2ZXIuZXhhbXBsZS5jb20iLCJpYXQiOiIyMDE4LTA5LTE0VDIxOjE5OjEwWiIsIm5vbmNlIjoidFppZ25zbkZicCJ9.ewdkIkPV50iOeBUqMXCC_aZKPxgihac0aW9EkL1nOzM".to_string()
-                })
-            },
-            from_str::<CredentialRequest>(include_str!("../tests/examples/credential_request_jwt_vc_json_with_claims.json"))
-                .unwrap()
-        );
-
-        assert_eq!(
-            CredentialRequest {
-                credential_format: CredentialFormats::LdpVc(Parameters {
-                    parameters: (
-                        ldp_vc::CredentialDefinition {
-                            context: vec![
-                                "https://www.w3.org/2018/credentials/v1".to_string(),
-                                "https://www.w3.org/2018/credentials/examples/v1".to_string()
-                            ],
-                            type_: vec![
-                                "VerifiableCredential".to_string(),
-                                "UniversityDegreeCredential".to_string()
-                            ],
-                            credential_subject: CredentialSubject {
-                                credential_subject: Some(json!({
-                                        "degree": {
-                                            "type": {}
-                                        }
-                                }))
-                            }
-                        },
-                        None
-                    )
-                        .into()
-                }),
-                proof: Some(KeyProofType::Jwt {
-                    jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZ...KPxgihac0aW9EkL1nOzM".to_string()
-                })
-            },
-            from_str::<CredentialRequest>(include_str!("../tests/examples/credential_request_ldp_vc.json")).unwrap()
-        );
-
-        assert_eq!(
-            CredentialRequest {
-                credential_format: CredentialFormats::DcSdJwt(Parameters {
-                    parameters: ("SD_JWT_VC_example_in_OpenID4VCI".to_string(), None, None).into(),
-                }),
-                proof: Some(KeyProofType::Jwt {
-                    jwt: "eyJ0eXAiOiJvcGVuaWQ0dmNpLXByb29mK2p3dCIsImFsZyI6IkVTMjU2IiwiandrIjp7Imt0eSI6IkVDIiwiY3J2IjoiUC0yNTYiLCJ4IjoiblVXQW9BdjNYWml0aDhFN2kxOU9kYXhPTFlGT3dNLVoyRXVNMDJUaXJUNCIsInkiOiJIc2tIVThCalVpMVU5WHFpN1N3bWo4Z3dBS18weGtjRGpFV183MVNvc0VZIn19.eyJhdWQiOiJodHRwczovL2NyZWRlbnRpYWwtaXNzdWVyLmV4YW1wbGUuY29tIiwiaWF0IjoxNzAxOTYwNDQ0LCJub25jZSI6IkxhclJHU2JtVVBZdFJZTzZCUTR5bjgifQ.-a3EDsxClUB4O3LeDD5DVGEnNMT01FCQW4P6-2-BNBqc_Zxf0Qw4CWayLEpqkAomlkLb9zioZoipdP-jvh1WlA".to_string()
-                })
-            },
-            from_str::<CredentialRequest>(include_str!("../tests/examples/credential_request_sd_jwt_vc.json")).unwrap()
-
+            serde_json::to_value(credential_request).unwrap(),
+            credential_request_json
         );
     }
 }

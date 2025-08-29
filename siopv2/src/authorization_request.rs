@@ -3,7 +3,7 @@ use anyhow::{anyhow, Result};
 use is_empty::IsEmpty;
 use jsonwebtoken::Algorithm;
 use monostate::MustBe;
-use oid4vc_core::authorization_request::Object;
+use oid4vc_core::authorization_request::{Object, RedirectOrResponseUri};
 use oid4vc_core::builder_fn;
 use oid4vc_core::{
     authorization_request::AuthorizationRequest, client_metadata::ClientMetadataResource, scope::Scope, RFC7519Claims,
@@ -11,6 +11,7 @@ use oid4vc_core::{
 };
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
+use url::Url;
 
 /// [`AuthorizationRequest`] claims specific to [`SIOPv2`].
 #[skip_serializing_none]
@@ -66,7 +67,7 @@ impl AuthorizationRequestParameters {
 pub struct AuthorizationRequestBuilder {
     rfc7519_claims: RFC7519Claims,
     client_id: Option<String>,
-    redirect_uri: Option<url::Url>,
+    redirect_uri: Option<Url>,
     state: Option<String>,
     scope: Option<Scope>,
     response_mode: Option<String>,
@@ -92,7 +93,7 @@ impl AuthorizationRequestBuilder {
     builder_fn!(response_mode, String);
     builder_fn!(client_id, String);
     builder_fn!(scope, Scope);
-    builder_fn!(redirect_uri, url::Url);
+    builder_fn!(redirect_uri, Url);
     builder_fn!(nonce, String);
     builder_fn!(client_metadata, ClientMetadataResource<ClientMetadataParameters>);
     builder_fn!(state, String);
@@ -125,10 +126,11 @@ impl AuthorizationRequestBuilder {
                     body: Object::<SIOPv2> {
                         rfc7519_claims: self.rfc7519_claims,
                         client_id,
-                        redirect_uri: self
-                            .redirect_uri
-                            .take()
-                            .ok_or_else(|| anyhow!("redirect_uri parameter is required."))?,
+                        uri: RedirectOrResponseUri::RedirectUri(
+                            self.redirect_uri
+                                .take()
+                                .ok_or_else(|| anyhow!("redirect_uri parameter is required."))?,
+                        ),
                         state: self.state.take(),
                         extension,
                     },
@@ -201,7 +203,7 @@ mod tests {
                 body: Object::<SIOPv2> {
                     rfc7519_claims: RFC7519Claims::default(),
                     client_id: "did:example:123".to_string(),
-                    redirect_uri: "https://example.com".parse().unwrap(),
+                    uri: RedirectOrResponseUri::RedirectUri("https://example.com".parse::<url::Url>().unwrap(),),
                     state: None,
                     extension: AuthorizationRequestParameters {
                         response_type: MustBe!("id_token"),

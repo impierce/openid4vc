@@ -13,8 +13,13 @@ pub struct CredentialResponseEncryption {
     pub encryption_required: bool,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct BatchCredentialIssuance {
+    pub batch_size: u32,
+}
+
 /// Credential Issuer Metadata as described here:
-/// https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-issuer-metadata-p
+/// https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-issuer-metadata-p
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Derivative)]
 #[derivative(Default)]
@@ -30,11 +35,12 @@ where
     // TODO: Temporary solution
     #[derivative(Default(value = "Url::parse(\"https://example.com\").unwrap()"))]
     pub credential_endpoint: Url,
-    pub batch_credential_endpoint: Option<Url>,
+    pub nonce_endpoint: Option<Url>,
     pub deferred_credential_endpoint: Option<Url>,
     pub notification_endpoint: Option<Url>,
     pub credential_response_encryption: Option<CredentialResponseEncryption>,
     pub credential_identifiers_supported: Option<bool>,
+    pub batch_credential_issuance: Option<BatchCredentialIssuance>,
     pub signed_metadata: Option<String>,
     pub display: Option<Vec<serde_json::Value>>,
     pub credential_configurations_supported: HashMap<String, CredentialConfigurationsSupportedObject<CFC>>,
@@ -48,10 +54,11 @@ mod tests {
             w3c_verifiable_credentials::{jwt_vc_json, CredentialSubject},
             CredentialFormats, Parameters, WithParameters,
         },
-        proof::KeyProofMetadata,
-        ProofType,
+        credential_issuer::credential_configurations_supported::ClaimDescription,
+        proof::{KeyProofMetadata, ProofType},
     };
     use jsonwebtoken::Algorithm;
+    use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer};
     use serde_json::{from_str, json};
 
     #[test]
@@ -63,12 +70,8 @@ mod tests {
             CredentialIssuerMetadata {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
                 authorization_servers: vec!["https://server.example.com".parse().unwrap()],
+                nonce_endpoint: None,
                 credential_endpoint: Url::parse("https://credential-issuer.example.com").unwrap(),
-                batch_credential_endpoint: Some(
-                    "https://credential-issuer.example.com/batch_credential"
-                        .parse()
-                        .unwrap()
-                ),
                 deferred_credential_endpoint: Some(
                     "https://credential-issuer.example.com/deferred_credential"
                         .parse()
@@ -81,6 +84,7 @@ mod tests {
                     encryption_required: false
                 }),
                 credential_identifiers_supported: None,
+                batch_credential_issuance: None,
                 signed_metadata: None,
                 display: Some(vec![
                     json!({
@@ -96,44 +100,16 @@ mod tests {
                     "UniversityDegreeCredential".to_string(),
                     CredentialConfigurationsSupportedObject {
                         credential_format: CredentialFormats::<WithParameters>::JwtVcJson(Parameters {
-                            parameters: (
-                                jwt_vc_json::CredentialDefinition {
-                                    type_: vec![
-                                        "VerifiableCredential".to_string(),
-                                        "UniversityDegreeCredential".to_string()
-                                    ],
-                                    credential_subject: CredentialSubject {
-                                        credential_subject: Some(json!({
-                                            "given_name": {
-                                                "display": [
-                                                    {
-                                                        "name": "Given Name",
-                                                        "locale": "en-US"
-                                                    },
-                                                ]
-                                            },
-                                            "family_name": {
-                                                "display": [
-                                                    {
-                                                        "name": "Surname",
-                                                        "locale": "en-US"
-                                                    }
-                                                ]
-                                            },
-                                            "degree": {},
-                                            "gpa": {
-                                                "display": [
-                                                    {
-                                                        "name": "GPA"
-                                                    }
-                                                ]
-                                            }
-                                        }))
-                                    }
-                                },
-                                None
-                            )
-                                .into()
+                            parameters: (jwt_vc_json::CredentialDefinition {
+                                type_: vec![
+                                    "VerifiableCredential".to_string(),
+                                    "UniversityDegreeCredential".to_string()
+                                ],
+                                credential_subject: CredentialSubject {
+                                    credential_subject: None
+                                }
+                            })
+                            .into()
                         }),
                         scope: Some("UniversityDegree".to_string()),
                         cryptographic_binding_methods_supported: vec!["did:example".to_string()],
@@ -146,16 +122,66 @@ mod tests {
                         )]
                         .into_iter()
                         .collect(),
-                        display: vec![json!({
+                        display: vec![serde_json::from_value(json!({
                             "name": "University Credential",
                             "locale": "en-US",
                             "logo": {
-                                "url": "https://university.example.edu/public/logo.png",
+                                "uri": "https://university.example.edu/public/logo.png",
                                 "alt_text": "a square logo of a university"
                             },
                             "background_color": "#12107c",
                             "text_color": "#FFFFFF"
-                        })],
+                        }))
+                        .unwrap()],
+                        claims: vec![
+                            ClaimDescription {
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("credentialSubject".to_string()),
+                                    ClaimPathElement::String("given_name".to_string())
+                                ])
+                                .unwrap(),
+                                mandatory: false,
+                                display: vec![serde_json::from_value(json!({
+                                    "name": "Given Name",
+                                    "locale": "en-US"
+                                }))
+                                .unwrap()],
+                            },
+                            ClaimDescription {
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("credentialSubject".to_string()),
+                                    ClaimPathElement::String("family_name".to_string())
+                                ])
+                                .unwrap(),
+                                mandatory: false,
+                                display: vec![serde_json::from_value(json!({
+                                    "name": "Surname",
+                                    "locale": "en-US"
+                                }))
+                                .unwrap()],
+                            },
+                            ClaimDescription {
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("credentialSubject".to_string()),
+                                    ClaimPathElement::String("degree".to_string())
+                                ])
+                                .unwrap(),
+                                mandatory: false,
+                                display: vec![],
+                            },
+                            ClaimDescription {
+                                path: ClaimPathPointer::try_new(vec![
+                                    ClaimPathElement::String("credentialSubject".to_string()),
+                                    ClaimPathElement::String("gpa".to_string())
+                                ])
+                                .unwrap(),
+                                mandatory: false,
+                                display: vec![serde_json::from_value(json!({
+                                    "name": "GPA",
+                                }))
+                                .unwrap()],
+                            }
+                        ]
                     },
                 ),]
                 .into_iter()

@@ -7,17 +7,19 @@ use oid4vc_core::{authentication::subject::SigningSubject, generate_authorizatio
 use oid4vc_manager::storage::Storage;
 use oid4vci::{
     authorization_response::AuthorizationResponse,
-    credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters},
+    credential_format_profiles::CredentialFormatCollection,
     credential_issuer::credential_configurations_supported::CredentialConfigurationsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
-    credential_response::{CredentialResponse, CredentialResponseType},
+    credential_response::{CredentialResponse, CredentialResponseObject, CredentialResponseType},
     token_request::TokenRequest,
     token_response::TokenResponse,
+    wallet::PushedAuthorizationResponse,
     VerifiableCredentialJwt,
 };
 use reqwest::Url;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
+use uuid::Uuid;
 
 lazy_static! {
     pub static ref CODE: String = generate_authorization_code(16);
@@ -27,6 +29,7 @@ lazy_static! {
     };
     pub static ref ACCESS_TOKEN: String = "czZCaGRSa3F0MzpnWDFmQmF0M2JW".to_string();
     pub static ref C_NONCE: String = "tZignsnFbp".to_string();
+    pub static ref REQUEST_URI: String = Uuid::new_v4().to_string();
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -54,6 +57,13 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
         ]
         .into_iter()
         .collect()
+    }
+
+    fn get_pushed_authorization_response(&self) -> Option<PushedAuthorizationResponse> {
+        Some(PushedAuthorizationResponse {
+            request_uri: REQUEST_URI.clone(),
+            expires_in: 3600,
+        })
     }
 
     fn get_authorization_code(&self) -> Option<AuthorizationCode> {
@@ -85,35 +95,20 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
             expires_in: Some(86400),
             refresh_token: None,
             scope: None,
-            c_nonce: Some(C_NONCE.clone()),
-            c_nonce_expires_in: Some(86400),
         })
     }
 
     fn get_credential_response(
         &self,
         access_token: String,
+        credential_configuration_id: String,
         subject_did: Url,
         issuer_did: Url,
-        credential_format: CFC,
         signer: SigningSubject,
     ) -> Option<CredentialResponse> {
-        let type_ = match serde_json::from_value::<CredentialFormats<WithParameters>>(
-            serde_json::to_value(credential_format).unwrap(),
-        )
-        .unwrap()
-        {
-            CredentialFormats::JwtVcJson(credential) => credential.parameters.credential_definition.type_,
-            _ => unreachable!("Credential format not supported"),
-        };
-
-        let credential_json = match &type_[..] {
-            [_, b] if b == "UniversityDegreeCredential" => {
-                File::open("./tests/common/credentials/university_degree.json").unwrap()
-            }
-            [_, b] if b == "DriverLicenseCredential" => {
-                File::open("./tests/common/credentials/driver_license.json").unwrap()
-            }
+        let credential_json = match credential_configuration_id.as_str() {
+            "UniversityDegree_JWT" => File::open("./tests/common/credentials/university_degree.json").unwrap(),
+            "DriverLicense_JWT" => File::open("./tests/common/credentials/driver_license.json").unwrap(),
             _ => unreachable!(),
         };
 
@@ -123,28 +118,27 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for Memory
 
         (access_token == ACCESS_TOKEN.clone()).then_some(CredentialResponse {
             credential: CredentialResponseType::Immediate {
-                credential: serde_json::to_value(block_on(async {
-                    jwt::encode(
-                        signer.clone(),
-                        Header::new(Algorithm::EdDSA),
-                        VerifiableCredentialJwt::builder()
-                            .sub(subject_did.clone())
-                            .iss(issuer_did.clone())
-                            .iat(0)
-                            .exp(9999999999i64)
-                            .verifiable_credential(verifiable_credential)
-                            .build()
-                            .ok(),
-                        "did:key",
-                    )
-                    .await
-                    .ok()
-                }))
-                .unwrap(),
+                credentials: vec![CredentialResponseObject {
+                    credential: block_on(async {
+                        jwt::encode(
+                            signer.clone(),
+                            Header::new(Algorithm::EdDSA),
+                            VerifiableCredentialJwt::builder()
+                                .sub(subject_did.clone())
+                                .iss(issuer_did.clone())
+                                .iat(0)
+                                .exp(9999999999i64)
+                                .verifiable_credential(verifiable_credential)
+                                .build()
+                                .ok(),
+                            "did:key",
+                        )
+                        .await
+                        .unwrap()
+                    }),
+                }],
                 notification_id: None,
             },
-            c_nonce: Some(C_NONCE.clone()),
-            c_nonce_expires_in: Some(86400),
         })
     }
 

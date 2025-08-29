@@ -3,37 +3,40 @@ use oid4vc_core::{builder_fn, jwt, RFC7519Claims, Subject};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-/// Key Proof Type (JWT or CWT) and the proof itself, as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#proof-types
+/// Proof Type as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-proof-types
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 #[serde(tag = "proof_type")]
-pub enum KeyProofType {
+pub enum Proof {
     #[serde(rename = "jwt")]
     Jwt { jwt: String },
-    #[serde(rename = "cwt")]
-    Cwt { cwt: String },
+    // TODO: add support for other proof types
+    // #[serde(rename = "ldp_vp")]
+    // LdpVp { ldp_vp: String },
+    // #[serde(rename = "attestation")]
+    // Attestation { attestation: String },
 }
 
-impl KeyProofType {
-    pub fn builder() -> KeyProofTypeBuilder {
-        KeyProofTypeBuilder::default()
+impl Proof {
+    pub fn builder() -> ProofBuilder {
+        ProofBuilder::default()
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct KeyProofMetadata {
     pub proof_signing_alg_values_supported: Vec<Algorithm>,
+    // TODO: add `key_attestations_required`
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum ProofType {
     Jwt,
-    Cwt,
-    // TODO: add support for `LdpVp` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#section-7.2.1-2.3
+    // TODO: support other proof types
 }
 
 #[derive(Default)]
-pub struct KeyProofTypeBuilder {
+pub struct ProofBuilder {
     proof_type: Option<ProofType>,
     algorithm: Option<Algorithm>,
     rfc7519_claims: RFC7519Claims,
@@ -46,21 +49,21 @@ pub struct KeyProofTypeBuilder {
 pub struct ProofOfPossession {
     #[serde(flatten)]
     pub rfc7519_claims: RFC7519Claims,
-    pub nonce: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<String>,
 }
 
-impl KeyProofTypeBuilder {
-    pub async fn build(self) -> anyhow::Result<KeyProofType> {
+impl ProofBuilder {
+    pub async fn build(self) -> anyhow::Result<Proof> {
         anyhow::ensure!(self.rfc7519_claims.aud.is_some(), "aud claim is required");
         anyhow::ensure!(self.rfc7519_claims.iat.is_some(), "iat claim is required");
-        anyhow::ensure!(self.nonce.is_some(), "nonce claim is required");
 
         let subject_syntax_type = self
             .subject_syntax_type
             .ok_or(anyhow::anyhow!("subject_syntax_type is required"))?;
 
         match self.proof_type {
-            Some(ProofType::Jwt) => Ok(KeyProofType::Jwt {
+            Some(ProofType::Jwt) => Ok(Proof::Jwt {
                 jwt: jwt::encode(
                     self.signer.ok_or(anyhow::anyhow!("No subject found"))?.clone(),
                     Header {
@@ -70,13 +73,12 @@ impl KeyProofTypeBuilder {
                     },
                     ProofOfPossession {
                         rfc7519_claims: self.rfc7519_claims,
-                        nonce: self.nonce.ok_or(anyhow::anyhow!("No nonce found"))?,
+                        nonce: self.nonce,
                     },
                     &subject_syntax_type,
                 )
                 .await?,
             }),
-            Some(ProofType::Cwt) => todo!(),
             None => Err(anyhow::anyhow!("proof_type is required")),
         }
     }

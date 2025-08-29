@@ -8,12 +8,15 @@ pub mod credential_offer;
 pub mod credential_request;
 pub mod credential_response;
 pub mod errors;
+pub mod nonce_response;
 pub mod notification_request;
 pub mod proof;
+pub mod proofs;
 pub mod token_request;
 pub mod token_response;
 pub mod wallet;
 
 pub use credential::{VerifiableCredentialJwt, VerifiableCredentialJwtBuilder};
-pub use proof::{KeyProofType, ProofType};
+pub use pkce;
+pub use proof::Proof;
 pub use wallet::Wallet;

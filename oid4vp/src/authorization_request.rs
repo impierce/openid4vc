@@ -4,7 +4,7 @@ use anyhow::{anyhow, Result};
 use is_empty::IsEmpty;
 use jsonwebtoken::Algorithm;
 use monostate::MustBe;
-use oid4vc_core::authorization_request::Object;
+use oid4vc_core::authorization_request::{Object, RedirectOrResponseUri};
 use oid4vc_core::builder_fn;
 use oid4vc_core::{
     authorization_request::AuthorizationRequest, client_metadata::ClientMetadataResource, scope::Scope, RFC7519Claims,
@@ -12,6 +12,7 @@ use oid4vc_core::{
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::fmt;
+use url::Url;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClientId {
@@ -36,7 +37,7 @@ impl std::fmt::Display for ClientIdPrefix {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ClientIdPrefix::PreRegistered => write!(f, "pre-registered"),
-            ClientIdPrefix::RedirectUri => write!(f, "redirect_uri"),
+            ClientIdPrefix::RedirectUri => write!(f, "response_uri"),
             ClientIdPrefix::OpenidFederation => write!(f, "openid_federation"),
             ClientIdPrefix::DecentralizedIdentifier => write!(f, "decentralized_identifier"),
             ClientIdPrefix::VerifierAttestation => write!(f, "verifier_attestation"),
@@ -65,7 +66,7 @@ impl std::str::FromStr for ClientId {
         if let Some((prefix_str, identifier)) = s.split_once(':') {
             let prefix = match prefix_str {
                 "pre-registered" => ClientIdPrefix::PreRegistered,
-                "redirect_uri" => ClientIdPrefix::RedirectUri,
+                "response_uri" => ClientIdPrefix::RedirectUri,
                 "openid_federation" => ClientIdPrefix::OpenidFederation,
                 "decentralized_identifier" => ClientIdPrefix::DecentralizedIdentifier,
                 "verifier_attestation" => ClientIdPrefix::VerifierAttestation,
@@ -209,7 +210,7 @@ pub struct AuthorizationRequestBuilder {
     rfc7519_claims: RFC7519Claims,
     dcql_query: Option<DcqlQuery>,
     client_id: Option<ClientId>,
-    redirect_uri: Option<url::Url>,
+    response_uri: Option<Url>,
     // FIX! TODO: Make sure state is required when presentations are requested WITHOUT holder binding proofs.
     state: Option<String>,
     scope: Option<Scope>,
@@ -230,7 +231,7 @@ impl AuthorizationRequestBuilder {
     builder_fn!(response_mode, String);
     builder_fn!(client_id, ClientId);
     builder_fn!(scope, Scope);
-    builder_fn!(redirect_uri, url::Url);
+    builder_fn!(response_uri, Url);
     builder_fn!(nonce, String);
     builder_fn!(client_metadata, ClientMetadataResource<ClientMetadataParameters>);
     builder_fn!(state, String);
@@ -239,27 +240,27 @@ impl AuthorizationRequestBuilder {
 
     pub fn build(mut self) -> Result<AuthorizationRequest<Object<OID4VP>>> {
         match (self.client_id.take(), self.is_empty()) {
-            (None, _) => Err(anyhow!("client_id parameter is required.")),
+            (None, _) => Err(anyhow!("`client_id` parameter is required.")),
             (Some(client_id), false) => {
                 let extension = AuthorizationRequestParameters {
                     response_type: MustBe!("vp_token"),
                     dcql_query: self
                         .dcql_query
                         .take()
-                        .ok_or_else(|| anyhow!("presentation_definition parameter is required."))?,
+                        .ok_or_else(|| anyhow!("`dcql_query` parameter is required."))?,
                     scope: self.scope.take(),
                     response_mode: self
                         .response_mode
                         .take()
-                        .ok_or_else(|| anyhow!("response_mode parameter is required."))?,
+                        .ok_or_else(|| anyhow!("`response_mode` parameter is required."))?,
                     nonce: self
                         .nonce
                         .take()
-                        .ok_or_else(|| anyhow!("nonce parameter is required."))?,
+                        .ok_or_else(|| anyhow!("`nonce` parameter is required."))?,
                     client_metadata: self
                         .client_metadata
                         .take()
-                        .ok_or_else(|| anyhow!("client_metadata or client_metadata_uri is required."))?,
+                        .ok_or_else(|| anyhow!("`client_metadata` or `client_metadata_uri` is required."))?,
                 };
 
                 Ok(AuthorizationRequest::<Object<OID4VP>> {
@@ -267,17 +268,18 @@ impl AuthorizationRequestBuilder {
                     body: Object::<OID4VP> {
                         rfc7519_claims: self.rfc7519_claims,
                         client_id: client_id.to_string(),
-                        redirect_uri: self
-                            .redirect_uri
-                            .take()
-                            .ok_or_else(|| anyhow!("redirect_uri parameter is required."))?,
+                        uri: RedirectOrResponseUri::ResponseUri(
+                            self.response_uri
+                                .take()
+                                .ok_or_else(|| anyhow!("`response_uri` parameter is required."))?,
+                        ),
                         state: self.state.take(),
                         extension,
                     },
                 })
             }
             _ => Err(anyhow!(
-                "one of either request_uri, request or other parameters should be set"
+                "one of either `request_uri`, `request` or other parameters should be set"
             )),
         }
     }
@@ -308,7 +310,7 @@ mod tests {
     fn test_client_metadata_parameters_jwt_vc_json() {
         let build: AuthorizationRequestBuilder = AuthorizationRequestBuilder::default()
             .client_id(ClientId::from_str("decentralized_identifier:example:123").unwrap())
-            .redirect_uri(url::Url::parse("https://client.example.org/callback").unwrap())
+            .response_uri(url::Url::parse("https://client.example.org/callback").unwrap())
             .nonce("n-0S6_WzA2Mj".to_string())
             .client_metadata(ClientMetadataResource::ClientMetadata {
                 client_name: Some("My SimpleSample".to_string()),
@@ -341,7 +343,7 @@ mod tests {
     fn test_client_metadata_parameters_sd_jwt_vc() {
         let build: AuthorizationRequestBuilder = AuthorizationRequestBuilder::default()
             .client_id(ClientId::from_str("decentralized_identifier:example:123").unwrap())
-            .redirect_uri(url::Url::parse("https://client.example.org/callback").unwrap())
+            .response_uri(url::Url::parse("https://client.example.org/callback").unwrap())
             .nonce("n-0S6_WzA2Mj".to_string())
             .client_metadata(ClientMetadataResource::ClientMetadata {
                 client_name: Some("My SimpleSample".to_string()),
@@ -375,7 +377,7 @@ mod tests {
     fn test_client_metadata_parameters_w3c_ldp_vc() {
         let build: AuthorizationRequestBuilder = AuthorizationRequestBuilder::default()
             .client_id(ClientId::from_str("decentralized_identifier:example:123").unwrap())
-            .redirect_uri(url::Url::parse("https://client.example.org/callback").unwrap())
+            .response_uri(url::Url::parse("https://client.example.org/callback").unwrap())
             .nonce("n-0S6_WzA2Mj".to_string())
             .client_metadata(ClientMetadataResource::ClientMetadata {
                 client_name: Some("My SimpleSample".to_string()),
@@ -418,7 +420,7 @@ mod tests {
     fn test_client_metadata_parameters_mso_mdoc_verifier() {
         let build: AuthorizationRequestBuilder = AuthorizationRequestBuilder::default()
             .client_id(ClientId::from_str("decentralized_identifier:example:123").unwrap())
-            .redirect_uri(url::Url::parse("https://client.example.org/callback").unwrap())
+            .response_uri(url::Url::parse("https://client.example.org/callback").unwrap())
             .nonce("n-0S6_WzA2Mj".to_string())
             .client_metadata(ClientMetadataResource::ClientMetadata {
                 client_name: Some("My SimpleSample".to_string()),

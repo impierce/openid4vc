@@ -9,6 +9,7 @@ use oid4vci::{
     credential_response::CredentialResponse,
     token_request::TokenRequest,
     token_response::TokenResponse,
+    wallet::PushedAuthorizationResponse,
 };
 use reqwest::Url;
 
@@ -18,6 +19,7 @@ where
     CFC: CredentialFormatCollection,
 {
     fn get_credential_configurations_supported(&self) -> HashMap<String, CredentialConfigurationsSupportedObject<CFC>>;
+    fn get_pushed_authorization_response(&self) -> Option<PushedAuthorizationResponse>;
     fn get_authorization_response(&self) -> Option<AuthorizationResponse>;
     fn get_authorization_code(&self) -> Option<AuthorizationCode>;
     fn get_pre_authorized_code(&self) -> Option<PreAuthorizedCode>;
@@ -25,9 +27,9 @@ where
     fn get_credential_response(
         &self,
         access_token: String,
+        credential_configuration_id: String,
         subject_did: Url,
         issuer_did: Url,
-        credential_format: CFC,
         subject: SigningSubject,
     ) -> Option<CredentialResponse>;
     fn get_state(&self) -> Option<String>;

@@ -50,7 +50,7 @@ where
     }
 }
 
-/// Authorization Error Response as defined in OpenID4VCI - draft 13 - Section 5.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-authorization-error-respons
+/// Authorization Error Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-authorization-error-respons
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthorizationErrorResponse {
@@ -91,7 +91,7 @@ impl Display for AuthorizationErrorResponse {
         }
     }
 }
-/// Token Error Response as defined in OpenID4VCI - draft 13 - Section 6.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-token-error-response
+/// Token Error Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-token-error-response
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TokenErrorResponse {
@@ -167,45 +167,8 @@ impl Display for CredentialErrorResponse {
         }
     }
 }
-/// Batch Credential Error Response as defined in OpenID4VCI - draft 13 - Section 8.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-batch-credential-error-resp
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum BatchCredentialErrorResponse {
-    InvalidCredentialRequest,
-    UnsupportedCredentialType,
-    UnsupportedCredentialFormat,
-    InvalidProof,
-    InvalidToken,
-    InvalidEncryptionParameters,
-}
 
-impl ErrorStatusCode for BatchCredentialErrorResponse {
-    fn status_code(&self) -> StatusCode {
-        match self {
-            Self::InvalidCredentialRequest => StatusCode::BAD_REQUEST,
-            Self::UnsupportedCredentialType => StatusCode::BAD_REQUEST,
-            Self::UnsupportedCredentialFormat => StatusCode::BAD_REQUEST,
-            Self::InvalidProof => StatusCode::BAD_REQUEST,
-            Self::InvalidToken => StatusCode::UNAUTHORIZED,
-            Self::InvalidEncryptionParameters => StatusCode::BAD_REQUEST,
-        }
-    }
-}
-impl std::error::Error for BatchCredentialErrorResponse {}
-impl Display for BatchCredentialErrorResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::InvalidCredentialRequest => write!(f, "Invalid Credential Request"),
-            Self::UnsupportedCredentialType => write!(f, "Unsupported Credential Type"),
-            Self::UnsupportedCredentialFormat => write!(f, "Unsupported Credential Format"),
-            Self::InvalidProof => write!(f, "Invalid Proof"),
-            Self::InvalidToken => write!(f, "Invalid Token"),
-            Self::InvalidEncryptionParameters => write!(f, "Invalid Encryption Parameters"),
-        }
-    }
-}
-
-/// Deferred Credential Error Response as defined in OpenID4VCI - draft 13 - Section 9.3: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-deferred-credential-error-r
+/// Deferred Credential Error Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-deferred-credential-respons
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DeferredCredentialErrorResponse {

@@ -5,8 +5,7 @@ use serde_with::skip_serializing_none;
 use super::CredentialSubject;
 
 credential_format!("jwt_vc_json-ld", JwtVcJsonLd, {
-    credential_definition: CredentialDefinition,
-    order: Option<Vec<String>>
+    credential_definition: CredentialDefinition
 });
 
 #[skip_serializing_none]

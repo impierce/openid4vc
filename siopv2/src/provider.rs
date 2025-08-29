@@ -129,7 +129,7 @@ impl Provider {
         authorization_request: &AuthorizationRequest<Object<E>>,
         input: <E::ResponseHandle as ResponseHandle>::Input,
     ) -> Result<AuthorizationResponse<E>> {
-        let redirect_uri = authorization_request.body.redirect_uri.to_string();
+        let redirect_uri = authorization_request.body.uri.uri().to_string();
         let state = authorization_request.body.state.clone();
 
         let signing_algorithm = self.get_matching_signing_algorithm(authorization_request).await?;

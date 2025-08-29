@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_with::skip_serializing_none;
 
-/// Grant Type `authorization_code` as described in https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#section-4.1.1-4.1.1
+/// Grant Type `authorization_code` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-4.1.1-5.1.1
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct AuthorizationCode {
@@ -15,7 +15,7 @@ pub struct AuthorizationCode {
     pub authorization_server: Option<Url>,
 }
 
-/// Grant Type `pre-authorized_code` as described in https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#section-4.1.1-4.2.1
+/// Grant Type `pre-authorized_code` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-4.1.1-5.2.1
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
 pub struct PreAuthorizedCode {
@@ -50,7 +50,7 @@ pub enum InputMode {
     Text,
 }
 
-/// Credential Offer Parameters as described in https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-offer-parameters
+/// Credential Offer Parameters as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-offer-parameters
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 pub struct CredentialOfferParameters {
@@ -59,7 +59,7 @@ pub struct CredentialOfferParameters {
     pub grants: Option<Grants>,
 }
 
-/// Credential Offer as described in https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#name-credential-offer
+/// Credential Offer as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-offer
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum CredentialOffer {
@@ -101,13 +101,21 @@ impl std::fmt::Display for CredentialOffer {
     }
 }
 
-/// Grants as described in https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-13.html#section-4.1.1-2.3
+/// Grants as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-4.1.1-2.3
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 pub struct Grants {
     pub authorization_code: Option<AuthorizationCode>,
     #[serde(rename = "urn:ietf:params:oauth:grant-type:pre-authorized_code")]
     pub pre_authorized_code: Option<PreAuthorizedCode>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum GrantType {
+    AuthorizationCode,
+    #[serde(rename = "urn:ietf:params:oauth:grant-type:pre-authorized_code")]
+    PreAuthorizedCode,
 }
 
 #[cfg(test)]
