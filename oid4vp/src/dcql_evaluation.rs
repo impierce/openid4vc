@@ -1,4 +1,4 @@
-use crate::dcql::dcql_query::{ClaimQuery, CredentialQuery, CredentialSetQuery, DcqlQuery};
+use crate::dcql::dcql_query::{ClaimQuery, CredentialQuery, CredentialSetQuery, DcqlQuery, MetaTypes};
 use oid4vc_core::claim_path_pointer::{ClaimValue, ClaimValues};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -85,6 +85,46 @@ pub fn evaluate_credential_query(credential_query: &CredentialQuery, credential_
     if credential_query.claims.as_deref().unwrap_or(&[]).is_empty() {
         return true;
     }
+
+    // If meta is present, check the meta requirements.
+    if let Some(type_values) = &credential_query.meta {
+        match type_values {
+            MetaTypes::W3CFormatMeta { type_values } => {
+                // For W3C Verifiable Credentials, check the "type" field in the credential
+                if let Some(credential_types) = credential_json.get("type").and_then(|t| t.as_array()) {
+                    let credential_type_strings: Vec<&str> =
+                        credential_types.iter().filter_map(|t| t.as_str()).collect();
+
+                    // Check if any of the type_values arrays is a subset of the credential's types
+                    let type_match = type_values.iter().any(|type_option| {
+                        type_option
+                            .iter()
+                            .all(|required_type| credential_type_strings.contains(&required_type.as_str()))
+                    });
+
+                    if !type_match {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            }
+            MetaTypes::SdJwtMeta {
+                vct_values: _vct_values,
+            } => {
+                // TODO: Implement SD-JWT `vct` checking
+            }
+            MetaTypes::MsoMdocMeta {
+                doctype_value: _doctype_value,
+            } => {
+                // TODO: Implement MSO mDoc type checking
+            }
+        }
+    }
+
+    // TODO: Check `trusted_authorities` if present
+    // TODO: Check `require_cryptographic_holder_binding`
+
     // If claims is present, but claim_sets is absent, the Verifier requests all claims listed in claims.
     match &credential_query.claim_sets {
         None => credential_query
@@ -161,28 +201,28 @@ mod tests {
     #[test]
     fn evaluate_single_invalid_claim_query() {
         let testing_credential = json!({
-                "vc": {
-            "@context": [
-                "https://www.w3.org/2018/credentials/v1",
-                "https://www.w3.org/2018/credentials/examples/v1"
-            ],
-            "type": [
-                "VerifiableCredential",
-                "IDCredential"
-            ],
-            "credentialSubject": {
-                "given_name": "Rainer",
-                "family_name": "Zufall",
-                "birthdate": "1998-01-11",
-                "address": {
-                    "street_address": "Sandanger 25",
-                    "locality": "Musterstadt",
-                    "postal_code": "123456",
-                    "country": "DE"
+            "vc": {
+                "@context": [
+                    "https://www.w3.org/2018/credentials/v1",
+                    "https://www.w3.org/2018/credentials/examples/v1"
+                ],
+                "type": [
+                    "VerifiableCredential",
+                    "IDCredential"
+                ],
+                "credentialSubject": {
+                    "given_name": "Rainer",
+                    "family_name": "Zufall",
+                    "birthdate": "1998-01-11",
+                    "address": {
+                        "street_address": "Sandanger 25",
+                        "locality": "Musterstadt",
+                        "postal_code": "123456",
+                        "country": "DE"
+                    }
                 }
             }
-        }
-            });
+        });
         let claim_query = ClaimQuery {
             id: Some("given_name".to_string()),
             path: ClaimPathPointer::try_new(vec![
@@ -240,6 +280,60 @@ mod tests {
         validate_claims(&dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
 
         assert!(evaluate_credential_query(
+            dcql_query,
+            &testing_credential.get("vc").unwrap()
+        ));
+    }
+
+    #[test]
+    fn test_dcql_credential_query_with_incompatible_type_values() {
+        let testing_credential = json!({
+            "iss": "http://192.168.1.127:9090/",
+            "sub": "did:key:z6Mkg1XXGUqfkhAKU1kVd1Pmw6UEj1vxiLj1xc91MBz5owNY",
+            "exp": 99999999,
+            "iat": 0,
+            "vc": {
+                "@context": [
+                    "https://www.w3.org/2018/credentials/v1",
+                    "https://www.w3.org/2018/credentials/examples/v1"
+                ],
+                "type": [
+                    "VerifiableCredential",
+                    "PersonalInformation"
+                ],
+                "issuanceDate": "2022-01-01T00:00:00Z",
+                "issuer": "http://192.168.1.127:9090/",
+                "credentialSubject": {
+                    "id": "did:key:z6Mkg1XXGUqfkhAKU1kVd1Pmw6UEj1vxiLj1xc91MBz5owNY",
+                    "givenName": "Ferris",
+                    "familyName": "Crabman",
+                    "email": "ferris.crabman@crabmail.com",
+                    "birthdate": "1985-05-21"
+                }
+            }
+        });
+        let dcql_request: DcqlRequest = serde_json::from_value(serde_json::json!({
+            "credentials": [
+                {
+                    "id": "login",
+                    "format": "jwt_vc_json",
+                    "meta": {
+                        "type_values": [["VerifiedEmail"]]
+                    },
+                    "claims": [{ "path": ["credentialSubject", "email"] }]
+                }
+            ]
+        }))
+        .unwrap();
+        let dcql_query = &dcql_request.credentials[0];
+
+        let claims_context = ClaimsContext {
+            claim_sets: &dcql_query.claim_sets,
+        };
+        validate_claims(&dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
+
+        // Assert `false` because the credential type does not match the required type in the query.
+        assert!(!evaluate_credential_query(
             dcql_query,
             &testing_credential.get("vc").unwrap()
         ));
