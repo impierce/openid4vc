@@ -347,21 +347,15 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             proofs: None,
         };
 
-        let temp = self
-            .client
+        self.client
             .post(credential_issuer_metadata.credential_endpoint)
             .bearer_auth(token_response.access_token.clone())
             .json(&credential_request)
             .send()
             .await?
-            .json::<serde_json::Value>()
+            .json()
             .await
-            // .map_err(|e| e.into())
-            .unwrap();
-
-        println!("Credential response: {}", serde_json::to_string_pretty(&temp).unwrap());
-
-        serde_json::from_value(temp).map_err(|e| e.into())
+            .map_err(|e| e.into())
     }
 
     pub async fn send_notification_request(
