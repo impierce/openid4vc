@@ -73,9 +73,9 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
 
     pub async fn get_authorization_server_metadata(
         &self,
-        credential_issuer_url: Url,
+        authorization_server_url: Url,
     ) -> Result<AuthorizationServerMetadata> {
-        let mut oauth_authorization_server_endpoint = credential_issuer_url.clone();
+        let mut oauth_authorization_server_endpoint = authorization_server_url.clone();
 
         // TODO(NGDIL): remove this NGDIL specific code. This is a temporary fix to get the authorization server metadata.
         oauth_authorization_server_endpoint
