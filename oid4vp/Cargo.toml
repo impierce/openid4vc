@@ -17,7 +17,6 @@ anyhow = "1.0"
 chrono.workspace = true
 futures = "0.3"
 getset.workspace = true
-identity_core.workspace = true
 identity_credential.workspace = true
 is_empty.workspace = true
 jsonwebtoken.workspace = true

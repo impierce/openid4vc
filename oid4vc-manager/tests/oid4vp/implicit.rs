@@ -155,11 +155,10 @@ async fn test_implicit_flow() {
     .unwrap();
 
     // Create a verifiable presentation using the JWT.
-    let verifiable_presentation_jwt =
-        Presentation::builder(subject_did.parse().unwrap(), identity_core::common::Object::new())
-            .credential(Jwt::from(jwt))
-            .build()
-            .unwrap();
+    let verifiable_presentation_jwt = Presentation::builder(subject_did.parse().unwrap(), Default::default())
+        .credential(Jwt::from(jwt))
+        .build()
+        .unwrap();
 
     let verifiable_presentation_jwt = VerifiablePresentationJwt::builder()
         .iss(subject_did.clone())
