@@ -94,13 +94,19 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
     ) -> Result<AuthorizationServerMetadata> {
         let mut oauth_authorization_server_endpoint = credential_issuer_url.clone();
 
-        // TODO(NGDIL): remove this NGDIL specific code. This is a temporary fix to get the authorization server metadata.
+        // According to RFC8414, the path to the OAuth Authorization Server Metadata is formed by
+        // appending `/.well-known/oauth-authorization-server` to the issuer's origin. If the issuer
+        // URL contains a path, then that path must be appended to the well-known path.
+        // See: https://www.rfc-editor.org/rfc/rfc8414.html#section-3
+        oauth_authorization_server_endpoint.set_path(&format!(
+            "/.well-known/oauth-authorization-server{}",
+            credential_issuer_url.path()
+        ));
+
         oauth_authorization_server_endpoint
             .path_segments_mut()
             .map_err(|_| anyhow::anyhow!("unable to parse credential issuer url"))?
-            .pop_if_empty()
-            .push(".well-known")
-            .push("oauth-authorization-server");
+            .pop_if_empty();
 
         self.client
             .get(oauth_authorization_server_endpoint)
@@ -484,7 +490,7 @@ pub mod tests {
         let mock_server = MockServer::start().await;
 
         Mock::given(method("GET"))
-            .and(path("/some/path/.well-known/oauth-authorization-server"))
+            .and(path("/.well-known/oauth-authorization-server/some/path"))
             .respond_with(ResponseTemplate::new(200).set_body_json(AuthorizationServerMetadata::default()))
             .mount(&mock_server)
             .await;
