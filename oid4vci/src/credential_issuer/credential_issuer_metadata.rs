@@ -57,7 +57,6 @@ mod tests {
         credential_issuer::credential_configurations_supported::ClaimDescription,
         proof::{KeyProofMetadata, ProofType},
     };
-    use jsonwebtoken::Algorithm;
     use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer};
     use serde_json::{from_str, json};
 
@@ -117,7 +116,7 @@ mod tests {
                         proof_types_supported: vec![(
                             ProofType::Jwt,
                             KeyProofMetadata {
-                                proof_signing_alg_values_supported: vec![Algorithm::ES256]
+                                proof_signing_alg_values_supported: vec!["ES256".to_string()]
                             }
                         )]
                         .into_iter()

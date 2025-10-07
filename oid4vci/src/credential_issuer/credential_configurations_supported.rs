@@ -83,7 +83,6 @@ mod tests {
         w3c_verifiable_credentials::{jwt_vc_json, ldp_vc, CredentialSubject},
         CredentialFormats, Parameters,
     };
-    use jsonwebtoken::Algorithm;
     use oid4vc_core::claim_path_pointer::ClaimPathElement;
     use serde_json::{from_str, json};
     use std::collections::HashMap;
@@ -121,7 +120,7 @@ mod tests {
                         proof_types_supported: vec![(
                             ProofType::Jwt,
                             KeyProofMetadata {
-                                proof_signing_alg_values_supported: vec![Algorithm::ES256]
+                                proof_signing_alg_values_supported: vec!["ES256".to_string()]
                             }
                         )]
                         .into_iter()
@@ -406,7 +405,7 @@ mod tests {
                         proof_types_supported: vec![(
                             ProofType::Jwt,
                             KeyProofMetadata {
-                                proof_signing_alg_values_supported: vec![Algorithm::ES256]
+                                proof_signing_alg_values_supported: vec!["ES256".to_string()]
                             }
                         )]
                         .into_iter()

@@ -24,7 +24,7 @@ impl Proof {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct KeyProofMetadata {
-    pub proof_signing_alg_values_supported: Vec<Algorithm>,
+    pub proof_signing_alg_values_supported: Vec<String>,
     // TODO: add `key_attestations_required`
 }
 
