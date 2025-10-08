@@ -94,10 +94,10 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
     ) -> Result<AuthorizationServerMetadata> {
         let mut oauth_authorization_server_endpoint = credential_issuer_url.clone();
 
-        // According to RFC8414, the path to the OAuth Authorization Server Metadata is formed by
+        // According to RFC 8414, the path to the OAuth Authorization Server Metadata is formed by
         // appending `/.well-known/oauth-authorization-server` to the issuer's origin. If the issuer
         // URL contains a path, then that path must be appended to the well-known path.
-        // See: https://www.rfc-editor.org/rfc/rfc8414.html#section-3
+        // See RFC 8414 Section 3: https://www.rfc-editor.org/rfc/rfc8414.html#section-3
         oauth_authorization_server_endpoint.set_path(&format!(
             "/.well-known/oauth-authorization-server{}",
             credential_issuer_url.path()
