@@ -263,7 +263,9 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         self.proof_signing_alg_values_supported
             .iter()
             .find(|supported_algorithm| {
-                credential_issuer_proof_signing_alg_values_supported.contains(supported_algorithm)
+                // Since `Algorithm` does not implement `Display`, we need to use `Debug` in order to convert it to a `String`.
+                let supported_algorithm_str = format!("{supported_algorithm:?}");
+                credential_issuer_proof_signing_alg_values_supported.contains(&supported_algorithm_str)
             })
             .cloned()
             .ok_or(anyhow::anyhow!("No matching supported signing algorithms found."))
@@ -433,7 +435,7 @@ pub mod tests {
                     ProofType::Jwt,
                     KeyProofMetadata {
                         // This proof signing algorithm will not match any of the Wallet's supported signing algorithms.
-                        proof_signing_alg_values_supported: vec![Algorithm::RS256],
+                        proof_signing_alg_values_supported: vec!["RS256".to_string()],
                     },
                 )]),
                 ..Default::default()
@@ -461,7 +463,7 @@ pub mod tests {
                     ProofType::Jwt,
                     KeyProofMetadata {
                         // This proof signing algorithm will match the Wallet's supported signing algorithms.
-                        proof_signing_alg_values_supported: vec![Algorithm::EdDSA],
+                        proof_signing_alg_values_supported: vec!["EdDSA".to_string()],
                     },
                 )]),
                 ..Default::default()
