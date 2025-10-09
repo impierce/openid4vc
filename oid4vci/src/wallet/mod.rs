@@ -58,7 +58,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         supported_subject_syntax_types: Vec<impl TryInto<SubjectSyntaxType>>,
         proof_signing_alg_values_supported: Vec<Algorithm>,
     ) -> anyhow::Result<Self> {
-        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(2);
         let client = ClientBuilder::new(reqwest::Client::new())
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
             .build();
