@@ -108,13 +108,36 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .map_err(|_| anyhow::anyhow!("unable to parse credential issuer url"))?
             .pop_if_empty();
 
+        let response = self.client.get(oauth_authorization_server_endpoint).send().await;
+
+        if let Ok(response) = response {
+            // If the request to the `oauth-authorization-server` endpoint is successful, return the metadata.
+            if response.status().is_success() {
+                return response
+                    .json::<AuthorizationServerMetadata>()
+                    .await
+                    .map_err(|e| anyhow!("Failed to parse authorization server metadata: {}", e));
+            }
+        }
+
+        // If the request to the `oauth-authorization-server` endpoint fails, fallback to the OpenID Provider Configuration endpoint.
+        // See RFC 8414 Section 5: https://www.rfc-editor.org/rfc/rfc8414.html#section-5
+        let mut openid_configuration_endpoint = credential_issuer_url.clone();
+
+        openid_configuration_endpoint
+            .path_segments_mut()
+            .map_err(|_| anyhow::anyhow!("unable to parse credential issuer url"))?
+            .pop_if_empty()
+            .push(".well-known")
+            .push("openid-configuration");
+
         self.client
-            .get(oauth_authorization_server_endpoint)
+            .get(openid_configuration_endpoint)
             .send()
             .await?
             .json::<AuthorizationServerMetadata>()
             .await
-            .map_err(|_| anyhow::anyhow!("Failed to get authorization server metadata"))
+            .map_err(|e| anyhow!("Failed to get metadata from both primary and fallback endpoints: {}", e))
     }
 
     pub async fn get_credential_issuer_metadata(
@@ -491,6 +514,38 @@ pub mod tests {
 
         Mock::given(method("GET"))
             .and(path("/.well-known/oauth-authorization-server/some/path"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(AuthorizationServerMetadata::default()))
+            .mount(&mock_server)
+            .await;
+
+        // Assert that the Wallet can get the Authorization Server Metadata from the Credential Issuer URL with or without a trailing slash.
+        let credential_issuer_url = format!("{}/some/path/", mock_server.uri()).parse().unwrap();
+        assert!(wallet
+            .get_authorization_server_metadata(credential_issuer_url)
+            .await
+            .is_ok());
+
+        let credential_issuer_url = format!("{}/some/path", mock_server.uri()).parse().unwrap();
+        assert!(wallet
+            .get_authorization_server_metadata(credential_issuer_url)
+            .await
+            .is_ok());
+    }
+
+    #[tokio::test]
+    async fn wallet_successfully_retrieves_authorization_server_metadata_from_openid_configuration() {
+        // Create a new Wallet.
+        let wallet: Wallet = Wallet::new(
+            Arc::new(TestSubject::default()),
+            vec!["did:test"],
+            vec![Algorithm::EdDSA],
+        )
+        .unwrap();
+
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/some/path/.well-known/openid-configuration"))
             .respond_with(ResponseTemplate::new(200).set_body_json(AuthorizationServerMetadata::default()))
             .mount(&mock_server)
             .await;
