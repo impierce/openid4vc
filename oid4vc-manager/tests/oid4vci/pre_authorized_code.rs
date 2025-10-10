@@ -6,7 +6,6 @@ use oid4vc_manager::{
     servers::credential_issuer::Server,
 };
 use oid4vci::{
-    credential_format_profiles::{CredentialFormats, WithParameters},
     credential_offer::{CredentialOffer, CredentialOfferParameters, Grants},
     credential_response::{CredentialResponse, CredentialResponseType},
     notification_request::NotificationEvent,
@@ -23,7 +22,7 @@ use std::sync::Arc;
 #[tokio::test]
 async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference: bool) {
     // Setup the credential issuer.
-    let mut credential_issuer = Server::<_, CredentialFormats<WithParameters>>::setup(
+    let mut credential_issuer = Server::<_>::setup(
         CredentialIssuerManager::new(
             None,
             MemoryStorage,

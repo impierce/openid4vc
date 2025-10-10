@@ -7,7 +7,6 @@ use oid4vc_core::{authentication::subject::SigningSubject, generate_authorizatio
 use oid4vc_manager::storage::Storage;
 use oid4vci::{
     authorization_response::AuthorizationResponse,
-    credential_format_profiles::CredentialFormatCollection,
     credential_issuer::credential_configurations_supported::CredentialConfigurationsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
     credential_response::{CredentialResponse, CredentialResponseObject, CredentialResponseType},
@@ -17,7 +16,7 @@ use oid4vci::{
     VerifiableCredentialJwt,
 };
 use reqwest::Url;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
 
@@ -35,8 +34,8 @@ lazy_static! {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MemoryStorage;
 
-impl<CFC: CredentialFormatCollection + DeserializeOwned> Storage<CFC> for MemoryStorage {
-    fn get_credential_configurations_supported(&self) -> HashMap<String, CredentialConfigurationsSupportedObject<CFC>> {
+impl Storage for MemoryStorage {
+    fn get_credential_configurations_supported(&self) -> HashMap<String, CredentialConfigurationsSupportedObject> {
         vec![
             (
                 "UniversityDegree_JWT".to_string(),

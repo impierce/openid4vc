@@ -261,11 +261,7 @@ mod tests {
         );
 
         assert!(
-            response
-                .headers()
-                .get("Content-Type")
-                .and_then(|v| v.to_str().ok())
-                .map_or(false, |content_type| content_type == "application/json"),
+            response.headers().get("Content-Type").and_then(|v| v.to_str().ok()) == Some("application/json"),
             "Content-Type header should be application/json"
         );
     }

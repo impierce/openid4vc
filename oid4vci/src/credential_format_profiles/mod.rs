@@ -23,7 +23,6 @@ macro_rules! credential_format {
             pub struct $name;
             impl $crate::credential_format_profiles::Format for $name {
                 type Parameters = [< $name Parameters >];
-                type Credential = serde_json::Value;
             }
 
             #[serde_with::skip_serializing_none]
@@ -52,7 +51,6 @@ macro_rules! credential_format {
 
 pub trait Format: std::fmt::Debug + Sync + Send + Clone {
     type Parameters: std::fmt::Debug + Serialize + Clone + Send + Sync;
-    type Credential: std::fmt::Debug + Serialize + Clone + Send + Sync;
 }
 
 mod sealed {
@@ -81,21 +79,6 @@ where
     #[serde(flatten)]
     pub parameters: F::Parameters,
 }
-
-#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
-pub struct WithCredential;
-impl FormatExtension for WithCredential {
-    type Container<F: Format> = Credential<F>;
-}
-#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
-pub struct Credential<F>
-where
-    F: Format,
-{
-    pub credential: F::Credential,
-}
-
-pub trait CredentialFormatCollection: Serialize + Send + Sync + Clone + std::fmt::Debug {}
 
 #[derive(Debug, Serialize, Clone, Eq, PartialEq, Deserialize, Default)]
 #[serde(tag = "format")]
@@ -129,8 +112,6 @@ pub enum CredentialConfiguration {
     MsoMdoc(Option<serde_json::Value>),
 }
 
-impl<C> CredentialFormatCollection for CredentialFormats<C> where C: FormatExtension {}
-
 impl<C> CredentialFormats<C>
 where
     C: FormatExtension,
@@ -144,20 +125,6 @@ where
             CredentialFormats::DcSdJwt(_) => CredentialFormats::DcSdJwt(()),
             CredentialFormats::VcSdJwt(_) => CredentialFormats::VcSdJwt(()),
             CredentialFormats::Unknown => CredentialFormats::Unknown,
-        }
-    }
-}
-
-impl CredentialFormats<WithCredential> {
-    pub fn credential(&self) -> anyhow::Result<&serde_json::Value> {
-        match self {
-            CredentialFormats::JwtVcJson(credential) => Ok(&credential.credential),
-            CredentialFormats::JwtVcJsonLd(credential) => Ok(&credential.credential),
-            CredentialFormats::LdpVc(credential) => Ok(&credential.credential),
-            CredentialFormats::MsoMdoc(credential) => Ok(&credential.credential),
-            CredentialFormats::DcSdJwt(credential) => Ok(&credential.credential),
-            CredentialFormats::VcSdJwt(credential) => Ok(&credential.credential),
-            CredentialFormats::Unknown => Err(anyhow::anyhow!("Unknown credential format")),
         }
     }
 }

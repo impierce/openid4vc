@@ -1,7 +1,5 @@
 use crate::{
-    credential_format_profiles::{
-        CredentialConfiguration, CredentialFormatCollection, CredentialFormats, WithParameters,
-    },
+    credential_format_profiles::{CredentialConfiguration, CredentialFormats, WithParameters},
     credential_issuer::credential_configurations_supported::ClaimDescription,
 };
 use oid4vc_core::claim_path_pointer::ClaimPathPointer;
@@ -22,14 +20,11 @@ pub enum OpenidCredential {
 /// described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-using-authorization-details
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
-pub struct AuthorizationDetailsObject<CFC = CredentialFormats<WithParameters>>
-where
-    CFC: CredentialFormatCollection,
-{
+pub struct AuthorizationDetailsObject {
     pub r#type: OpenidCredential,
     pub locations: Option<Vec<Url>>,
     #[serde(flatten)]
-    pub credential_configuration_or_format: CredentialConfigurationOrFormat<CFC>,
+    pub credential_configuration_or_format: CredentialConfigurationOrFormat,
     pub claims: Option<Vec<AuthorizationDetailsClaim>>,
 }
 
@@ -51,16 +46,13 @@ impl From<ClaimDescription> for AuthorizationDetailsClaim {
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 #[serde(untagged)]
-pub enum CredentialConfigurationOrFormat<CFC = CredentialFormats<WithParameters>>
-where
-    CFC: CredentialFormatCollection,
-{
+pub enum CredentialConfigurationOrFormat {
     CredentialConfigurationId {
         credential_configuration_id: String,
         #[serde(flatten)]
         parameters: Option<CredentialConfiguration>,
     },
-    CredentialFormat(CFC),
+    CredentialFormat(CredentialFormats<WithParameters>),
 }
 
 #[cfg(test)]
@@ -87,7 +79,7 @@ mod tests {
         });
 
         assert_eq!(
-            AuthorizationDetailsObject::<CredentialFormats<WithParameters>> {
+            AuthorizationDetailsObject {
                 r#type: OpenidCredential::Type,
                 locations: None,
                 credential_configuration_or_format: CredentialConfigurationOrFormat::CredentialFormat(

@@ -12,12 +12,10 @@ use axum::{
 use axum_auth::AuthBearer;
 use oid4vc_core::Validator;
 use oid4vci::{
-    credential_format_profiles::CredentialFormatCollection,
     credential_request::{CredentialIdentifierOrCredentialConfigurationId, CredentialRequest},
     notification_request::NotificationRequest,
     token_request::TokenRequest,
 };
-use serde::de::DeserializeOwned;
 use tokio::task::JoinHandle;
 use tower_http::cors::AllowOrigin;
 
@@ -25,21 +23,20 @@ use tower_http::cors::AllowOrigin;
 
 pub const TEST_PRE_AUTHORIZED_SUBJECT_DID: &str = "did:example:pre-authorized-subject";
 
-pub struct Server<S, CFC>
+pub struct Server<S>
 where
-    S: Storage<CFC>,
-    CFC: CredentialFormatCollection,
+    S: Storage,
 {
-    pub credential_issuer_manager: CredentialIssuerManager<S, CFC>,
+    pub credential_issuer_manager: CredentialIssuerManager<S>,
     pub server: Option<JoinHandle<()>>,
-    pub extension: Option<Router<CredentialIssuerManager<S, CFC>>>,
+    pub extension: Option<Router<CredentialIssuerManager<S>>>,
     pub detached: bool,
 }
 
-impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection + Clone + DeserializeOwned + 'static> Server<S, CFC> {
+impl<S: Storage + Clone + 'static> Server<S> {
     pub fn setup(
-        credential_issuer_manager: CredentialIssuerManager<S, CFC>,
-        extension: Option<Router<CredentialIssuerManager<S, CFC>>>,
+        credential_issuer_manager: CredentialIssuerManager<S>,
+        extension: Option<Router<CredentialIssuerManager<S>>>,
     ) -> Result<Self> {
         Ok(Self {
             credential_issuer_manager,
@@ -105,8 +102,8 @@ impl<S: Storage<CFC> + Clone, CFC: CredentialFormatCollection + Clone + Deserial
     }
 }
 
-async fn oauth_authorization_server<S: Storage<CFC>, CFC: CredentialFormatCollection>(
-    State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
+async fn oauth_authorization_server<S: Storage>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
 ) -> impl IntoResponse {
     (
         StatusCode::OK,
@@ -118,8 +115,8 @@ async fn oauth_authorization_server<S: Storage<CFC>, CFC: CredentialFormatCollec
     )
 }
 
-async fn openid_credential_issuer<S: Storage<CFC>, CFC: CredentialFormatCollection>(
-    State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
+async fn openid_credential_issuer<S: Storage>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
 ) -> impl IntoResponse {
     (
         StatusCode::OK,
@@ -127,8 +124,8 @@ async fn openid_credential_issuer<S: Storage<CFC>, CFC: CredentialFormatCollecti
     )
 }
 
-async fn credential_offer<S: Storage<CFC>, CFC: CredentialFormatCollection>(
-    State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
+async fn credential_offer<S: Storage>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
 ) -> impl IntoResponse {
     (
         StatusCode::OK,
@@ -136,8 +133,8 @@ async fn credential_offer<S: Storage<CFC>, CFC: CredentialFormatCollection>(
     )
 }
 
-async fn par<S: Storage<CFC>, CFC: CredentialFormatCollection>(
-    State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
+async fn par<S: Storage>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
     Form(_pushed_authorization_request): Form<serde_json::Value>,
 ) -> impl IntoResponse {
     (
@@ -151,8 +148,8 @@ async fn par<S: Storage<CFC>, CFC: CredentialFormatCollection>(
     )
 }
 
-async fn authorize<S: Storage<CFC>, CFC: CredentialFormatCollection>(
-    State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
+async fn authorize<S: Storage>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
     Form(_authorization_request): Form<serde_json::Value>,
 ) -> impl IntoResponse {
     (
@@ -162,8 +159,8 @@ async fn authorize<S: Storage<CFC>, CFC: CredentialFormatCollection>(
     )
 }
 
-async fn token<S: Storage<CFC>, CFC: CredentialFormatCollection>(
-    State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
+async fn token<S: Storage>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
     Form(token_request): Form<TokenRequest>,
 ) -> impl IntoResponse {
     match credential_issuer_manager.storage.get_token_response(token_request) {
@@ -183,8 +180,8 @@ async fn token<S: Storage<CFC>, CFC: CredentialFormatCollection>(
     }
 }
 
-async fn credential<S: Storage<CFC>, CFC: CredentialFormatCollection>(
-    State(credential_issuer_manager): State<CredentialIssuerManager<S, CFC>>,
+async fn credential<S: Storage>(
+    State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
     AuthBearer(access_token): AuthBearer,
     Json(credential_request): Json<CredentialRequest>,
 ) -> impl IntoResponse {

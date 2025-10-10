@@ -1,8 +1,7 @@
 use super::credential_configurations_supported::CredentialConfigurationsSupportedObject;
-use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters};
 use derivative::Derivative;
 use reqwest::Url;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::HashMap;
 
@@ -23,10 +22,7 @@ pub struct BatchCredentialIssuance {
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Derivative)]
 #[derivative(Default)]
-pub struct CredentialIssuerMetadata<CFC = CredentialFormats<WithParameters>>
-where
-    CFC: CredentialFormatCollection,
-{
+pub struct CredentialIssuerMetadata {
     // TODO: Temporary solution
     #[derivative(Default(value = "Url::parse(\"https://example.com\").unwrap()"))]
     pub credential_issuer: Url,
@@ -43,7 +39,33 @@ where
     pub batch_credential_issuance: Option<BatchCredentialIssuance>,
     pub signed_metadata: Option<String>,
     pub display: Option<Vec<serde_json::Value>>,
-    pub credential_configurations_supported: HashMap<String, CredentialConfigurationsSupportedObject<CFC>>,
+    #[serde(default, deserialize_with = "deserialize_credential_configurations_supported")]
+    pub credential_configurations_supported: HashMap<String, CredentialConfigurationsSupportedObject>,
+}
+
+// A custom deserialization function to filter out invalid map entries.
+fn deserialize_credential_configurations_supported<'de, D>(
+    deserializer: D,
+) -> Result<HashMap<String, CredentialConfigurationsSupportedObject>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    // First, deserialize into a map of raw JSON values. This will not fail
+    // unless the JSON structure itself is not a map.
+    let map: HashMap<String, serde_json::Value> = HashMap::deserialize(deserializer)?;
+
+    // Iterate over the raw map and try to deserialize each value.
+    // Collect only the ones that succeed.
+    let valid_map = map
+        .into_iter()
+        .filter_map(|(key, value)| {
+            serde_json::from_value::<CredentialConfigurationsSupportedObject>(value)
+                .ok()
+                .map(|credential_configuration| (key, credential_configuration))
+        })
+        .collect();
+
+    Ok(valid_map)
 }
 
 #[cfg(test)]
@@ -191,5 +213,42 @@ mod tests {
             ))
             .unwrap()
         );
+    }
+
+    #[test]
+    fn test_deserialize_with_invalid_entry() {
+        // The second entry is invalid because it lacks the `credential_definition` field.
+        let json_data = serde_json::json!(
+            {
+                "credential_issuer": "https://credential-issuer.example.org",
+                "credential_endpoint": "https://credential-issuer.example.org",
+                "credential_configurations_supported": {
+                    "ValidCredential": {
+                        "format": "jwt_vc_json",
+                        "credential_definition":{
+                            "type": [
+                                "VerifiableCredential"
+                            ]
+                        }
+                    },
+                    "InvalidCredential": {
+                        "format": "jwt_vc_json",
+                    }
+                }
+            }
+        );
+
+        // Deserialize the JSON data into the CredentialIssuerMetadata struct.
+        let credential_issuer_metadata: CredentialIssuerMetadata = serde_json::from_value(json_data).unwrap();
+
+        // Check that only the valid entry is present in the resulting map.
+        assert!(credential_issuer_metadata
+            .credential_configurations_supported
+            .contains_key("ValidCredential"));
+
+        // Check that the invalid entry has been filtered out.
+        assert!(!credential_issuer_metadata
+            .credential_configurations_supported
+            .contains_key("InvalidCredential"));
     }
 }
