@@ -309,7 +309,7 @@ impl Wallet {
             // If no match is found, use the first supported syntax type as a fallback.
             .or_else(|| self.supported_subject_syntax_types.first())
             .cloned()
-            .ok_or(anyhow::anyhow!("No supported subject syntax types found. 2"))
+            .ok_or(anyhow::anyhow!("No supported subject syntax types found."))
     }
 
     pub async fn get_nonce(&self, nonce_endpoint: Url) -> Result<String> {

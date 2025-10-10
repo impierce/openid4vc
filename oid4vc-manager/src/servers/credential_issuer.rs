@@ -16,7 +16,6 @@ use oid4vci::{
     notification_request::NotificationRequest,
     token_request::TokenRequest,
 };
-use serde::de::DeserializeOwned;
 use tokio::task::JoinHandle;
 use tower_http::cors::AllowOrigin;
 
@@ -34,7 +33,7 @@ where
     pub detached: bool,
 }
 
-impl<S: Storage + Clone + Clone + DeserializeOwned + 'static> Server<S> {
+impl<S: Storage + Clone + 'static> Server<S> {
     pub fn setup(
         credential_issuer_manager: CredentialIssuerManager<S>,
         extension: Option<Router<CredentialIssuerManager<S>>>,
