@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters},
+    credential_format_profiles::{CredentialFormats, WithParameters},
     proof::{KeyProofMetadata, ProofType},
 };
 use oid4vc_core::claim_path_pointer::ClaimPathPointer;
@@ -12,13 +12,10 @@ use url::Url;
 /// Credentials Supported object as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-11.2.3-2.11.1
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
-pub struct CredentialConfigurationsSupportedObject<CFC = CredentialFormats<WithParameters>>
-where
-    CFC: CredentialFormatCollection,
-{
+pub struct CredentialConfigurationsSupportedObject {
     /// This field is flattened into a `format` field and optionally extra format-specific fields.
     #[serde(flatten)]
-    pub credential_format: CFC,
+    pub credential_format: CredentialFormats<WithParameters>,
     // Use `Scope` from oid4vc-core/src/scope.rs.
     pub scope: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]

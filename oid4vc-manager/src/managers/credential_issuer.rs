@@ -2,7 +2,6 @@ use crate::storage::Storage;
 use anyhow::Result;
 use oid4vc_core::Subject;
 use oid4vci::{
-    credential_format_profiles::CredentialFormatCollection,
     credential_issuer::{
         authorization_server_metadata::AuthorizationServerMetadata,
         credential_issuer_metadata::CredentialIssuerMetadata, CredentialIssuer,
@@ -13,14 +12,14 @@ use reqwest::Url;
 use std::{net::TcpListener, sync::Arc};
 
 #[derive(Clone)]
-pub struct CredentialIssuerManager<S: Storage<CFC>, CFC: CredentialFormatCollection> {
-    pub credential_issuer: CredentialIssuer<CFC>,
+pub struct CredentialIssuerManager<S: Storage> {
+    pub credential_issuer: CredentialIssuer,
     pub subject: Arc<dyn Subject>,
     pub storage: S,
     pub listener: Arc<TcpListener>,
 }
 
-impl<S: Storage<CFC>, CFC: CredentialFormatCollection> CredentialIssuerManager<S, CFC> {
+impl<S: Storage> CredentialIssuerManager<S> {
     pub fn new(listener: Option<TcpListener>, storage: S, subject: Arc<dyn Subject>) -> Result<Self> {
         // `TcpListener::bind("127.0.0.1:0")` will bind to a random port.
         let listener = listener.unwrap_or_else(|| TcpListener::bind("127.0.0.1:0").unwrap());

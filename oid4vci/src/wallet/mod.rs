@@ -1,7 +1,6 @@
 use crate::authorization_details::AuthorizationDetailsObject;
 use crate::authorization_request::{AuthorizationRequest, CodeChallengeMethod};
 use crate::authorization_response::AuthorizationResponse;
-use crate::credential_format_profiles::{CredentialFormatCollection, CredentialFormats, WithParameters};
 use crate::credential_issuer::credential_configurations_supported::CredentialConfigurationsSupportedObject;
 use crate::credential_issuer::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
@@ -23,19 +22,14 @@ use reqwest::Url;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
-use serde::de::DeserializeOwned;
 use std::str::FromStr;
 
 #[derive(Debug)]
-pub struct Wallet<CFC = CredentialFormats<WithParameters>>
-where
-    CFC: CredentialFormatCollection,
-{
+pub struct Wallet {
     pub subject: SigningSubject,
     pub supported_subject_syntax_types: Vec<SubjectSyntaxType>,
     pub client: ClientWithMiddleware,
     pub proof_signing_alg_values_supported: Vec<Algorithm>,
-    phantom: std::marker::PhantomData<CFC>,
 }
 
 // TODO: Move everything related to pushed authorization response to a separate module?
@@ -52,7 +46,7 @@ pub struct AuthorizationRequestByReference {
     pub request_uri: String,
 }
 
-impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
+impl Wallet {
     pub fn new(
         subject: SigningSubject,
         supported_subject_syntax_types: Vec<impl TryInto<SubjectSyntaxType>>,
@@ -74,7 +68,6 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
                 .collect::<Result<_>>()?,
             client,
             proof_signing_alg_values_supported,
-            phantom: std::marker::PhantomData,
         })
     }
 
@@ -140,10 +133,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .map_err(|e| anyhow!("Failed to get metadata from both primary and fallback endpoints: {}", e))
     }
 
-    pub async fn get_credential_issuer_metadata(
-        &self,
-        credential_issuer_url: Url,
-    ) -> Result<CredentialIssuerMetadata<CFC>> {
+    pub async fn get_credential_issuer_metadata(&self, credential_issuer_url: Url) -> Result<CredentialIssuerMetadata> {
         let mut openid_credential_issuer_endpoint = credential_issuer_url.clone();
 
         // TODO(NGDIL): remove this NGDIL specific code. This is a temporary fix to get the credential issuer metadata.
@@ -158,7 +148,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .get(openid_credential_issuer_endpoint)
             .send()
             .await?
-            .json::<CredentialIssuerMetadata<CFC>>()
+            .json()
             .await
             .map_err(|_| anyhow::anyhow!("Failed to get credential issuer metadata"))
     }
@@ -172,7 +162,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
         client_id: &str,
         redirect_uri: Url,
         state: String,
-        authorization_details: Vec<AuthorizationDetailsObject<CFC>>,
+        authorization_details: Vec<AuthorizationDetailsObject>,
         issuer_state: String,
         code_challenge: Option<String>,
         code_challenge_method: Option<CodeChallengeMethod>,
@@ -209,7 +199,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
     pub async fn get_authorization_code(
         &self,
         authorization_endpoint: Url,
-        _authorization_details: Vec<AuthorizationDetailsObject<CFC>>,
+        _authorization_details: Vec<AuthorizationDetailsObject>,
         _code_challenge: Option<String>,
         _code_challenge_method: Option<String>,
         pushed_authorization_response: Option<PushedAuthorizationResponse>,
@@ -316,8 +306,10 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
             .find(|supported_syntax_type| {
                 credential_issuer_cryptographic_binding_methods_supported.contains(supported_syntax_type)
             })
+            // If no match is found, use the first supported syntax type as a fallback.
+            .or_else(|| self.supported_subject_syntax_types.first())
             .cloned()
-            .ok_or(anyhow::anyhow!("No supported subject syntax types found."))
+            .ok_or(anyhow::anyhow!("No supported subject syntax types found. 2"))
     }
 
     pub async fn get_nonce(&self, nonce_endpoint: Url) -> Result<String> {
@@ -334,7 +326,7 @@ impl<CFC: CredentialFormatCollection + DeserializeOwned> Wallet<CFC> {
 
     pub async fn get_credential(
         &self,
-        credential_issuer_metadata: CredentialIssuerMetadata<CFC>,
+        credential_issuer_metadata: CredentialIssuerMetadata,
         token_response: &TokenResponse,
         nonce: Option<String>,
         credential_configuration_id: String,
@@ -580,9 +572,7 @@ pub mod tests {
 
         Mock::given(method("GET"))
             .and(path("/some/path/.well-known/openid-credential-issuer"))
-            .respond_with(
-                ResponseTemplate::new(200).set_body_json(CredentialIssuerMetadata::<CredentialFormats>::default()),
-            )
+            .respond_with(ResponseTemplate::new(200).set_body_json(CredentialIssuerMetadata::default()))
             .mount(&mock_server)
             .await;
 

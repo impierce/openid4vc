@@ -10,7 +10,6 @@ use oid4vci::authorization_request::CodeChallengeMethod;
 use oid4vci::pkce;
 use oid4vci::{
     authorization_details::{AuthorizationDetailsObject, CredentialConfigurationOrFormat, OpenidCredential},
-    credential_format_profiles::{CredentialFormats, WithParameters},
     credential_response::{CredentialResponse, CredentialResponseType},
     token_request::TokenRequest,
     Wallet,
@@ -21,8 +20,8 @@ use uuid::Uuid;
 #[tokio::test]
 async fn test_authorization_code_flow() {
     // Setup the credential issuer.
-    let mut credential_issuer: Server<_, _> = Server::setup(
-        CredentialIssuerManager::<_, CredentialFormats<WithParameters>>::new(
+    let mut credential_issuer: Server<_> = Server::setup(
+        CredentialIssuerManager::<_>::new(
             None,
             MemoryStorage,
             Arc::new(KeySubject::from_keypair(

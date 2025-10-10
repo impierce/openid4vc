@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use oid4vc_core::authentication::subject::SigningSubject;
 use oid4vci::{
     authorization_response::AuthorizationResponse,
-    credential_format_profiles::CredentialFormatCollection,
     credential_issuer::credential_configurations_supported::CredentialConfigurationsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
     credential_response::CredentialResponse,
@@ -14,11 +13,8 @@ use oid4vci::{
 use reqwest::Url;
 
 // Represents the Credential Issuer's server logic.
-pub trait Storage<CFC>: Send + Sync + 'static
-where
-    CFC: CredentialFormatCollection,
-{
-    fn get_credential_configurations_supported(&self) -> HashMap<String, CredentialConfigurationsSupportedObject<CFC>>;
+pub trait Storage: Send + Sync {
+    fn get_credential_configurations_supported(&self) -> HashMap<String, CredentialConfigurationsSupportedObject>;
     fn get_pushed_authorization_response(&self) -> Option<PushedAuthorizationResponse>;
     fn get_authorization_response(&self) -> Option<AuthorizationResponse>;
     fn get_authorization_code(&self) -> Option<AuthorizationCode>;
