@@ -61,7 +61,7 @@ where
         .filter_map(|(key, value)| {
             serde_json::from_value::<CredentialConfigurationsSupportedObject>(value)
                 .ok()
-                .and_then(|credential_configuration| Some((key, credential_configuration)))
+                .map(|credential_configuration| (key, credential_configuration))
         })
         .collect();
 
