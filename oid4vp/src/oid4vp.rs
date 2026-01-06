@@ -3,6 +3,7 @@ use crate::authorization_request::{
 };
 use crate::dcql::dcql_query::CredentialQueryId;
 use crate::token::verifiable_presentation_jwt::VerifiablePresentationJwt;
+// use crate::token::verifiable_presentation_jwt_builder::VerifiablePresentationJwtBuilder;
 use crate::token::vp_token::{PresentationFormat, VpToken};
 use anyhow::anyhow;
 use futures::future::join_all;
@@ -46,7 +47,22 @@ impl ResponseHandle for ResponseHandler {
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct DecodedVpToken {
     #[serde(flatten)]
-    pub presentations: HashMap<CredentialQueryId, Vec<VerifiableCredentialJwt>>,
+    pub presentations: HashMap<CredentialQueryId, Vec<VerifiablePresentationJwt>>,
+}
+
+impl DecodedVpToken {
+    pub fn nonce(&self) -> Option<String> {
+        // Making the assumption that all VPs in the token have the same nonce
+        for presentations in self.presentations.values() {
+            for vp in presentations {
+                if let Some(nonce) = vp.nonce() {
+                    return Some(nonce.clone());
+                    // TODO: (Edge case)What if different VPs have different nonces?
+                }
+            }
+        }
+        None
+    }
 }
 
 /// This is the [`Extension`] implementation for the [`OID4VP`] extension.
@@ -172,23 +188,29 @@ impl Extension for OID4VP {
         authorization_response: &AuthorizationResponse<Self>,
     ) -> anyhow::Result<DecodedVpToken> {
         let vp_token = &authorization_response.extension.vp_token;
-        let mut decoded_presentations: HashMap<CredentialQueryId, Vec<VerifiableCredentialJwt>> = HashMap::new();
+        let mut decoded_presentations: HashMap<CredentialQueryId, Vec<VerifiablePresentationJwt>> = HashMap::new();
         for (credential_query_id, presentation_formats) in vp_token.presentations() {
-            let mut all_decoded_credentials = Vec::new();
+            let mut all_decoded_vps = Vec::new();
             for presentation_format in presentation_formats {
                 match presentation_format {
                     PresentationFormat::JwtVcJson(jwt_string) => {
-                        let decoded_presentation: VerifiablePresentationJwt =
-                            validator.decode(jwt_string.clone()).await?;
-                        let credential_futures: Vec<_> = decoded_presentation
-                            .verifiable_presentation()
-                            .verifiable_credential
-                            .iter()
-                            .map(|vc_jwt| validator.decode(vc_jwt.as_str().to_owned()))
+                        // Decode the vp envelope
+                        let decoded_vp: VerifiablePresentationJwt = validator.decode(jwt_string.clone()).await?;
+
+                        // Verify the credentials inside the vp
+                        let inner_vcs = decoded_vp.verifiable_presentation().verifiable_credential.iter();
+
+                        let credential_futures: Vec<_> = inner_vcs
+                            .map(|vc_jwt| validator.decode::<VerifiableCredentialJwt>(vc_jwt.as_str().to_owned()))
                             .collect();
-                        let decoded_credentials: Result<Vec<_>, _> =
-                            join_all(credential_futures).await.into_iter().collect();
-                        all_decoded_credentials.append(&mut decoded_credentials?);
+
+                        // If any of the inner VCs fail, throw an error.
+                        let _verified_inner_vcs: Vec<VerifiableCredentialJwt> = join_all(credential_futures)
+                            .await
+                            .into_iter()
+                            .collect::<Result<_, _>>()?;
+
+                        all_decoded_vps.push(decoded_vp);
                     }
                     // TODO: handle additional formats DcSdJwt, LdpVc and MsoMdoc
                     _ => {
@@ -196,7 +218,7 @@ impl Extension for OID4VP {
                     }
                 }
             }
-            decoded_presentations.insert(credential_query_id.clone(), all_decoded_credentials);
+            decoded_presentations.insert(credential_query_id.clone(), all_decoded_vps);
         }
 
         Ok(DecodedVpToken {
