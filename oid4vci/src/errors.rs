@@ -129,7 +129,7 @@ impl Display for TokenErrorResponse {
     }
 }
 
-/// Credential Error Response as defined in OpenID4VCI - draft 13 - Section 7.3.1: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-ID1.html#name-credential-error-response
+/// Credential Error Response as defined in OpenID4VCI - draft 15 - Section 8.3.1 https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-ID2.html#name-credential-error-response
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CredentialErrorResponse {
@@ -139,6 +139,8 @@ pub enum CredentialErrorResponse {
     InvalidEncryptionParameters,
     InvalidProof,
     InvalidToken,
+    InvalidNonce,
+    CredentialRequestDenied,
 }
 
 impl ErrorStatusCode for CredentialErrorResponse {
@@ -150,6 +152,8 @@ impl ErrorStatusCode for CredentialErrorResponse {
             Self::InvalidProof => StatusCode::BAD_REQUEST,
             Self::InvalidEncryptionParameters => StatusCode::BAD_REQUEST,
             Self::InvalidToken => StatusCode::UNAUTHORIZED,
+            Self::InvalidNonce => StatusCode::BAD_REQUEST,
+            Self::CredentialRequestDenied => StatusCode::FORBIDDEN,
         }
     }
 }
@@ -164,6 +168,8 @@ impl Display for CredentialErrorResponse {
             Self::InvalidEncryptionParameters => write!(f, "Invalid Encryption Parameters"),
             Self::InvalidProof => write!(f, "Invalid Proof"),
             Self::InvalidToken => write!(f, "Invalid Token"),
+            Self::InvalidNonce => write!(f, "Invalid Nonce"),
+            Self::CredentialRequestDenied => write!(f, "Credential Request Denied"),
         }
     }
 }
