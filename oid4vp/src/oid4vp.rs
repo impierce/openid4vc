@@ -3,7 +3,6 @@ use crate::authorization_request::{
 };
 use crate::dcql::dcql_query::CredentialQueryId;
 use crate::token::verifiable_presentation_jwt::VerifiablePresentationJwt;
-// use crate::token::verifiable_presentation_jwt_builder::VerifiablePresentationJwtBuilder;
 use crate::token::vp_token::{PresentationFormat, VpToken};
 use anyhow::anyhow;
 use futures::future::join_all;
