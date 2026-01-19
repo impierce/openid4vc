@@ -50,17 +50,30 @@ pub struct DecodedVpToken {
 }
 
 impl DecodedVpToken {
-    pub fn nonce(&self) -> Option<String> {
-        // Making the assumption that all VPs in the token have the same nonce
-        for presentations in self.presentations.values() {
-            for vp in presentations {
-                if let Some(nonce) = vp.nonce() {
-                    return Some(nonce.clone());
-                    // TODO: (Edge case)What if different VPs have different nonces?
+    // The Verifier MUST validate every individual Verifiable Presentation in an Authorization Response
+    // and ensure that it is linked to the values of the client_id and the nonce parameter it had used for the respective Authorization Request.
+    // If any Verifiable Presentation in the response does not contain the correct nonce value, the response MUST be rejected.
+    pub fn validate_nonce(&self, expected_nonce: &str) -> Result<(), String> {
+        for (credential_id, presentations) in &self.presentations {
+            for (index, vp) in presentations.iter().enumerate() {
+                match vp.nonce() {
+                    Some(nonce) if nonce != expected_nonce => {
+                        return Err(format!(
+                            "Nonce mismatch in VP for credential query ID {:?} at index {}",
+                            credential_id, index
+                        ))
+                    }
+                    None => {
+                        return Err(format!(
+                            "Missing nonce in VP for credential query ID {:?} at index {}",
+                            credential_id, index
+                        ))
+                    }
+                    Some(_) => {}
                 }
             }
         }
-        None
+        Ok(())
     }
 }
 

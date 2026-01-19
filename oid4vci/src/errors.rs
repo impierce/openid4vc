@@ -153,7 +153,7 @@ impl ErrorStatusCode for CredentialErrorResponse {
             Self::InvalidEncryptionParameters => StatusCode::BAD_REQUEST,
             Self::InvalidToken => StatusCode::UNAUTHORIZED,
             Self::InvalidNonce => StatusCode::BAD_REQUEST,
-            Self::CredentialRequestDenied => StatusCode::FORBIDDEN,
+            Self::CredentialRequestDenied => StatusCode::BAD_REQUEST,
         }
     }
 }
