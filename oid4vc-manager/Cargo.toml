@@ -2,6 +2,7 @@
 name = "oid4vc-manager"
 version = "0.1.0"
 edition = "2021"
+license.workspace = true
 
 [dependencies]
 # Fix these dependencies once the crates arre automatically published to crates.io.
