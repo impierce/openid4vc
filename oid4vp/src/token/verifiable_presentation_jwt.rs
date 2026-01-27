@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Getters, PartialEq)]
+#[derive(Serialize, Clone, Deserialize, Debug, Getters, PartialEq)]
 pub struct VerifiablePresentationJwt {
     #[serde(flatten)]
     #[getset(get = "pub")]
@@ -14,6 +14,7 @@ pub struct VerifiablePresentationJwt {
     #[serde(rename = "vp")]
     #[getset(get = "pub")]
     pub(super) verifiable_presentation: Presentation<Jwt>,
+    #[getset(get = "pub")]
     pub(super) nonce: Option<String>,
 }
 

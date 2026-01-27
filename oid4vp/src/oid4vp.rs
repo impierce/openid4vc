@@ -46,7 +46,35 @@ impl ResponseHandle for ResponseHandler {
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct DecodedVpToken {
     #[serde(flatten)]
-    pub presentations: HashMap<CredentialQueryId, Vec<VerifiableCredentialJwt>>,
+    pub presentations: HashMap<CredentialQueryId, Vec<VerifiablePresentationJwt>>,
+}
+
+impl DecodedVpToken {
+    // The Verifier MUST validate every individual Verifiable Presentation in an Authorization Response
+    // and ensure that it is linked to the values of the client_id and the nonce parameter it had used for the respective Authorization Request.
+    // If any Verifiable Presentation in the response does not contain the correct nonce value, the response MUST be rejected.
+    pub fn validate_nonce(&self, expected_nonce: &str) -> Result<(), String> {
+        for (credential_query_id, presentations) in &self.presentations {
+            for (index, vp) in presentations.iter().enumerate() {
+                match vp.nonce() {
+                    Some(nonce) if nonce != expected_nonce => {
+                        return Err(format!(
+                            "Nonce mismatch in VP for credential query ID {:?} at index {}",
+                            credential_query_id, index
+                        ))
+                    }
+                    None => {
+                        return Err(format!(
+                            "Missing nonce in VP for credential query ID {:?} at index {}",
+                            credential_query_id, index
+                        ))
+                    }
+                    Some(_) => {}
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 /// This is the [`Extension`] implementation for the [`OID4VP`] extension.
@@ -172,23 +200,29 @@ impl Extension for OID4VP {
         authorization_response: &AuthorizationResponse<Self>,
     ) -> anyhow::Result<DecodedVpToken> {
         let vp_token = &authorization_response.extension.vp_token;
-        let mut decoded_presentations: HashMap<CredentialQueryId, Vec<VerifiableCredentialJwt>> = HashMap::new();
+        let mut decoded_presentations: HashMap<CredentialQueryId, Vec<VerifiablePresentationJwt>> = HashMap::new();
         for (credential_query_id, presentation_formats) in vp_token.presentations() {
-            let mut all_decoded_credentials = Vec::new();
+            let mut all_decoded_vps = Vec::new();
             for presentation_format in presentation_formats {
                 match presentation_format {
                     PresentationFormat::JwtVcJson(jwt_string) => {
-                        let decoded_presentation: VerifiablePresentationJwt =
-                            validator.decode(jwt_string.clone()).await?;
-                        let credential_futures: Vec<_> = decoded_presentation
-                            .verifiable_presentation()
-                            .verifiable_credential
-                            .iter()
-                            .map(|vc_jwt| validator.decode(vc_jwt.as_str().to_owned()))
+                        // Decode the vp envelope
+                        let decoded_vp: VerifiablePresentationJwt = validator.decode(jwt_string.clone()).await?;
+
+                        // Verify the credentials inside the vp
+                        let inner_vcs = decoded_vp.verifiable_presentation().verifiable_credential.iter();
+
+                        let credential_futures: Vec<_> = inner_vcs
+                            .map(|vc_jwt| validator.decode::<VerifiableCredentialJwt>(vc_jwt.as_str().to_owned()))
                             .collect();
-                        let decoded_credentials: Result<Vec<_>, _> =
-                            join_all(credential_futures).await.into_iter().collect();
-                        all_decoded_credentials.append(&mut decoded_credentials?);
+
+                        // If any of the inner VCs fail, throw an error.
+                        let _verified_inner_vcs: Vec<VerifiableCredentialJwt> = join_all(credential_futures)
+                            .await
+                            .into_iter()
+                            .collect::<Result<_, _>>()?;
+
+                        all_decoded_vps.push(decoded_vp);
                     }
                     // TODO: handle additional formats DcSdJwt, LdpVc and MsoMdoc
                     _ => {
@@ -196,7 +230,7 @@ impl Extension for OID4VP {
                     }
                 }
             }
-            decoded_presentations.insert(credential_query_id.clone(), all_decoded_credentials);
+            decoded_presentations.insert(credential_query_id.clone(), all_decoded_vps);
         }
 
         Ok(DecodedVpToken {
