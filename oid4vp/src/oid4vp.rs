@@ -54,19 +54,19 @@ impl DecodedVpToken {
     // and ensure that it is linked to the values of the client_id and the nonce parameter it had used for the respective Authorization Request.
     // If any Verifiable Presentation in the response does not contain the correct nonce value, the response MUST be rejected.
     pub fn validate_nonce(&self, expected_nonce: &str) -> Result<(), String> {
-        for (credential_id, presentations) in &self.presentations {
+        for (credential_query_id, presentations) in &self.presentations {
             for (index, vp) in presentations.iter().enumerate() {
                 match vp.nonce() {
                     Some(nonce) if nonce != expected_nonce => {
                         return Err(format!(
                             "Nonce mismatch in VP for credential query ID {:?} at index {}",
-                            credential_id, index
+                            credential_query_id, index
                         ))
                     }
                     None => {
                         return Err(format!(
                             "Missing nonce in VP for credential query ID {:?} at index {}",
-                            credential_id, index
+                            credential_query_id, index
                         ))
                     }
                     Some(_) => {}
