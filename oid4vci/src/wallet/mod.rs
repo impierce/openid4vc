@@ -10,6 +10,7 @@ use crate::credential_request::{CredentialIdentifierOrCredentialConfigurationId,
 use crate::nonce_response::NonceResponse;
 use crate::notification_request::{NotificationEvent, NotificationRequest};
 use crate::proof::ProofType;
+use crate::proofs::Proofs;
 use crate::Proof;
 use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
 use anyhow::{anyhow, Result};
@@ -356,18 +357,24 @@ impl Wallet {
             proof_builder = proof_builder.nonce(nonce);
         }
 
-        let proof = Some(
+        let single_proof_object = Some(
             proof_builder
                 .subject_syntax_type(subject_syntax_type.to_string())
                 .build()
                 .await?,
         );
 
+        let jwt_string = match single_proof_object {
+            Some(Proof::Jwt { jwt, .. }) => jwt,
+            _ => return Err(anyhow::anyhow!("No JWT found in proof object")),
+        };
+
+        let proofs = Some(Proofs { jwt: vec![jwt_string] });
+
         let credential_request = CredentialRequest {
             credential_identifier_or_credential_configuration_id:
                 CredentialIdentifierOrCredentialConfigurationId::CredentialConfigurationId(credential_configuration_id),
-            proof,
-            proofs: None,
+            proofs,
         };
 
         self.client

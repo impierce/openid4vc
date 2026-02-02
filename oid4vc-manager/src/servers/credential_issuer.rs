@@ -186,14 +186,18 @@ async fn credential<S: Storage>(
     Json(credential_request): Json<CredentialRequest>,
 ) -> impl IntoResponse {
     // TODO: The bunch of unwrap's here should be replaced with error responses as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-error-response
-    let proof = credential_issuer_manager
+    let validated_proofs = match credential_issuer_manager
         .credential_issuer
-        .validate_proof(
-            credential_request.proof.unwrap(),
+        .validate_proofs(
+            credential_request.proofs.unwrap(),
             Validator::Subject(credential_issuer_manager.credential_issuer.subject.clone()),
         )
         .await
-        .unwrap();
+    {
+        Ok(proofs) if !proofs.is_empty() => proofs,
+        Ok(_) => return (StatusCode::BAD_REQUEST, Json("No valid proofs provided")).into_response(),
+        Err(_) => return (StatusCode::BAD_REQUEST, Json("Invalid proofs")).into_response(),
+    };
 
     let credential_configuration_id = match credential_request.credential_identifier_or_credential_configuration_id {
         CredentialIdentifierOrCredentialConfigurationId::CredentialIdentifier(_) => {
@@ -213,7 +217,7 @@ async fn credential<S: Storage>(
                 .get_credential_response(
                     access_token,
                     credential_configuration_id,
-                    proof
+                    validated_proofs[0]
                         .rfc7519_claims
                         .iss()
                         .clone()
@@ -230,6 +234,7 @@ async fn credential<S: Storage>(
                 .unwrap(),
         ),
     )
+        .into_response()
 }
 
 async fn notification(

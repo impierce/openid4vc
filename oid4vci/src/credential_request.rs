@@ -1,14 +1,13 @@
-use crate::{proof::Proof, proofs::Proofs};
+use crate::{proofs::Proofs};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-/// Credential Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-request
+/// Credential Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct CredentialRequest {
     #[serde(flatten)]
     pub credential_identifier_or_credential_configuration_id: CredentialIdentifierOrCredentialConfigurationId,
-    pub proof: Option<Proof>,
     pub proofs: Option<Proofs>,
     // TODO: add `credential_response_encryption` field when support for JWE is added.
 }
@@ -29,9 +28,8 @@ mod tests {
     fn test_credential_request_with_credential_configuration_identifier() {
         let credential_request_json = json!({
             "credential_configuration_id": "org.iso.18013.5.1.mDL",
-            "proof": {
-                "proof_type": "jwt",
-                "jwt": "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ"
+            "proofs": {
+                "jwt": ["eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ"]
             }
         });
 
@@ -42,10 +40,11 @@ mod tests {
             credential_request,
             CredentialRequest {
                 credential_identifier_or_credential_configuration_id: CredentialIdentifierOrCredentialConfigurationId::CredentialConfigurationId("org.iso.18013.5.1.mDL".to_string()),
-                proofs: None,
-                proof: Some(Proof::Jwt {
-                    jwt: "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ".to_string()
-                })
+                proofs: Some(Proofs {
+                    jwt: vec![
+                        "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ".to_string()
+                    ]
+                }), 
             },
         );
 
@@ -81,7 +80,6 @@ mod tests {
                         "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ".to_string()
                     ]
                 }),
-                proof: None,
             },
         );
 
