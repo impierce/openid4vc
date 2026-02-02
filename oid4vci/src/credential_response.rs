@@ -15,6 +15,7 @@ pub struct CredentialResponse {
 pub enum CredentialResponseType {
     Deferred {
         transaction_id: String,
+        interval: u64,
     },
     Immediate {
         credentials: Vec<CredentialResponseObject>,
@@ -38,13 +39,15 @@ mod tests {
         let credential_response = CredentialResponse {
             credential: CredentialResponseType::Deferred {
                 transaction_id: "123".to_string(),
+                interval: 5,
             },
         };
         let serialized = serde_json::to_value(&credential_response).unwrap();
         assert_eq!(
             serialized,
             json!({
-                "transaction_id": "123"
+                "transaction_id": "123",
+                "interval": 5
             })
         );
         let deserialized: CredentialResponse = serde_json::from_value(serialized).unwrap();

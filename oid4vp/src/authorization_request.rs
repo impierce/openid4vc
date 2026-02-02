@@ -157,7 +157,7 @@ pub struct VpFormatsSupported {
     #[serde(rename = "dc+sd-jwt")]
     pub dc_sd_jwt: Option<DcSdJwtParameters>,
     pub ldp_vc: Option<LdpVcParameters>,
-    pub ldp_vp: Option<LdpVpParameters>,
+    pub di_vp: Option<DiVpParameters>,
     pub mso_mdoc: Option<MsoMdocParameters>,
 }
 
@@ -190,7 +190,7 @@ pub struct LdpVcParameters {
 }
 
 #[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
-pub struct LdpVpParameters {
+pub struct DiVpParameters {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub proof_type_values: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]

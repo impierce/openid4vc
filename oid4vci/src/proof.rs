@@ -10,8 +10,8 @@ pub enum Proof {
     #[serde(rename = "jwt")]
     Jwt { jwt: String },
     // TODO: add support for other proof types
-    // #[serde(rename = "ldp_vp")]
-    // LdpVp { ldp_vp: String },
+    // #[serde(rename = "di_vp")]
+    // DiVp { di_vp: String },
     // #[serde(rename = "attestation")]
     // Attestation { attestation: String },
 }

@@ -5,9 +5,9 @@
         {
             "id": "id_credential",
             "path": "$",
-            "format": "ldp_vp",
+            "format": "di_vp",
             "path_nested": {
-                "format": "ldp_vc",
+                "format": "di_vc",
                 "path": "$.verifiableCredential[0]"
             }
         }
