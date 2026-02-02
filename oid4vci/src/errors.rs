@@ -129,17 +129,16 @@ impl Display for TokenErrorResponse {
     }
 }
 
-/// Credential Error Response as defined in OpenID4VCI - draft 15 - Section 8.3.1 https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-ID2.html#name-credential-error-response
+/// Credential Error Response as defined in OpenID4VCI v 1.0 - https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request-errors
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CredentialErrorResponse {
     InvalidCredentialRequest,
-    UnsupportedCredentialType,
-    UnsupportedCredentialFormat,
-    InvalidEncryptionParameters,
+    UnknownCredentialConfiguration,
+    UnknownCredentialIdentifier,
     InvalidProof,
-    InvalidToken,
     InvalidNonce,
+    InvalidEncryptionParameters,
     CredentialRequestDenied,
 }
 
@@ -147,12 +146,11 @@ impl ErrorStatusCode for CredentialErrorResponse {
     fn status_code(&self) -> StatusCode {
         match self {
             Self::InvalidCredentialRequest => StatusCode::BAD_REQUEST,
-            Self::UnsupportedCredentialType => StatusCode::BAD_REQUEST,
-            Self::UnsupportedCredentialFormat => StatusCode::BAD_REQUEST,
+            Self::UnknownCredentialConfiguration => StatusCode::BAD_REQUEST,
+            Self::UnknownCredentialIdentifier => StatusCode::BAD_REQUEST,
             Self::InvalidProof => StatusCode::BAD_REQUEST,
-            Self::InvalidEncryptionParameters => StatusCode::BAD_REQUEST,
-            Self::InvalidToken => StatusCode::UNAUTHORIZED,
             Self::InvalidNonce => StatusCode::BAD_REQUEST,
+            Self::InvalidEncryptionParameters => StatusCode::BAD_REQUEST,
             Self::CredentialRequestDenied => StatusCode::BAD_REQUEST,
         }
     }
@@ -163,12 +161,11 @@ impl Display for CredentialErrorResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::InvalidCredentialRequest => write!(f, "Invalid Credential Request"),
-            Self::UnsupportedCredentialType => write!(f, "Unsupported Credential Type"),
-            Self::UnsupportedCredentialFormat => write!(f, "Unsupported Credential Format"),
-            Self::InvalidEncryptionParameters => write!(f, "Invalid Encryption Parameters"),
+            Self::UnknownCredentialConfiguration => write!(f, "Unknown Credential Configuration"),
+            Self::UnknownCredentialIdentifier => write!(f, "Unknown Credential Identifier"),
             Self::InvalidProof => write!(f, "Invalid Proof"),
-            Self::InvalidToken => write!(f, "Invalid Token"),
             Self::InvalidNonce => write!(f, "Invalid Nonce"),
+            Self::InvalidEncryptionParameters => write!(f, "Invalid Encryption Parameters"),
             Self::CredentialRequestDenied => write!(f, "Credential Request Denied"),
         }
     }
@@ -179,12 +176,12 @@ impl Display for CredentialErrorResponse {
 #[serde(rename_all = "snake_case")]
 pub enum DeferredCredentialErrorResponse {
     InvalidCredentialRequest,
-    UnsupportedCredentialType,
-    UnsupportedCredentialFormat,
+    UnknownCredentialConfiguration,
+    UnknownCredentialIdentifier,
     InvalidProof,
-    InvalidToken,
+    InvalidNonce,
     InvalidEncryptionParameters,
-    IssuancePending,
+    CredentialRequestDenied,
     InvalidTransactionId,
 }
 
@@ -192,13 +189,13 @@ impl ErrorStatusCode for DeferredCredentialErrorResponse {
     fn status_code(&self) -> StatusCode {
         match self {
             Self::InvalidCredentialRequest => StatusCode::BAD_REQUEST,
-            Self::UnsupportedCredentialType => StatusCode::BAD_REQUEST,
-            Self::UnsupportedCredentialFormat => StatusCode::BAD_REQUEST,
+            Self::UnknownCredentialConfiguration => StatusCode::BAD_REQUEST,
+            Self::UnknownCredentialIdentifier => StatusCode::BAD_REQUEST,
             Self::InvalidProof => StatusCode::BAD_REQUEST,
+            Self::InvalidNonce => StatusCode::BAD_REQUEST,
             Self::InvalidEncryptionParameters => StatusCode::BAD_REQUEST,
-            Self::IssuancePending => StatusCode::BAD_REQUEST,
+            Self::CredentialRequestDenied => StatusCode::BAD_REQUEST,
             Self::InvalidTransactionId => StatusCode::BAD_REQUEST,
-            Self::InvalidToken => StatusCode::UNAUTHORIZED,
         }
     }
 }
@@ -208,12 +205,12 @@ impl Display for DeferredCredentialErrorResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::InvalidCredentialRequest => write!(f, "Invalid Credential Request"),
-            Self::UnsupportedCredentialType => write!(f, "Unsupported Credential Type"),
-            Self::UnsupportedCredentialFormat => write!(f, "Unsupported Credential Format"),
+            Self::UnknownCredentialConfiguration => write!(f, "Unknown Credential Configuration"),
+            Self::UnknownCredentialIdentifier => write!(f, "Unknown Credential Identifier"),
             Self::InvalidProof => write!(f, "Invalid Proof"),
-            Self::InvalidToken => write!(f, "Invalid Token"),
+            Self::InvalidNonce => write!(f, "Invalid Nonce"),
             Self::InvalidEncryptionParameters => write!(f, "Invalid Encryption Parameters"),
-            Self::IssuancePending => write!(f, "Issuance Pending"),
+            Self::CredentialRequestDenied => write!(f, "Credential Request Denied"),
             Self::InvalidTransactionId => write!(f, "Invalid Transaction ID"),
         }
     }
@@ -224,7 +221,6 @@ impl Display for DeferredCredentialErrorResponse {
 pub enum NotificationErrorResponse {
     InvalidNotificationRequest,
     InvalidNotificationId,
-    InvalidToken,
 }
 
 impl ErrorStatusCode for NotificationErrorResponse {
@@ -232,7 +228,6 @@ impl ErrorStatusCode for NotificationErrorResponse {
         match self {
             Self::InvalidNotificationRequest => StatusCode::BAD_REQUEST,
             Self::InvalidNotificationId => StatusCode::BAD_REQUEST,
-            Self::InvalidToken => StatusCode::UNAUTHORIZED,
         }
     }
 }
