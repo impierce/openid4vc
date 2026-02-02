@@ -20,7 +20,8 @@ repository = "https://github.com/impierce/openid4vc"
 chrono = "0.4"
 getset = "0.1"
 http = "1.3.1"
-identity_credential = { git = "https://github.com/iotaledger/identity", rev = "88ea775", default-features = false, features = [
+# Change specific revision to a tag once this is merged: https://github.com/iotaledger/identity/pull/1770
+identity_credential = { git = "https://github.com/iotaledger/identity", rev = "e68d4f5", default-features = false, features = [
     "validator",
     "credential",
     "presentation",
