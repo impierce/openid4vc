@@ -1,7 +1,9 @@
 use crate::authorization_details::AuthorizationDetailsObject;
 use crate::authorization_request::{AuthorizationRequest, CodeChallengeMethod};
 use crate::authorization_response::AuthorizationResponse;
-use crate::credential_issuer::credential_configurations_supported::CredentialConfigurationsSupportedObject;
+use crate::credential_issuer::credential_configurations_supported::{
+    AlgIdentifier, CredentialConfigurationsSupportedObject,
+};
 use crate::credential_issuer::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
 };
@@ -285,7 +287,8 @@ impl Wallet {
             .find(|supported_algorithm| {
                 // Since `Algorithm` does not implement `Display`, we need to use `Debug` in order to convert it to a `String`.
                 let supported_algorithm_str = format!("{supported_algorithm:?}");
-                credential_issuer_proof_signing_alg_values_supported.contains(&supported_algorithm_str)
+                credential_issuer_proof_signing_alg_values_supported
+                    .contains(&AlgIdentifier::String(supported_algorithm_str))
             })
             .cloned()
             .ok_or(anyhow::anyhow!("No matching supported signing algorithms found."))
@@ -463,7 +466,7 @@ pub mod tests {
                     ProofType::Jwt,
                     KeyProofMetadata {
                         // This proof signing algorithm will not match any of the Wallet's supported signing algorithms.
-                        proof_signing_alg_values_supported: vec!["RS256".to_string()],
+                        proof_signing_alg_values_supported: vec![AlgIdentifier::String("RS256".to_string())],
                     },
                 )]),
                 ..Default::default()
@@ -491,7 +494,7 @@ pub mod tests {
                     ProofType::Jwt,
                     KeyProofMetadata {
                         // This proof signing algorithm will match the Wallet's supported signing algorithms.
-                        proof_signing_alg_values_supported: vec!["EdDSA".to_string()],
+                        proof_signing_alg_values_supported: vec![AlgIdentifier::String("EdDSA".to_string())],
                     },
                 )]),
                 ..Default::default()

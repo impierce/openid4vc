@@ -1,3 +1,4 @@
+use crate::credential_issuer::credential_configurations_supported::AlgIdentifier;
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::{builder_fn, jwt, RFC7519Claims, Subject};
 use serde::{Deserialize, Serialize};
@@ -24,7 +25,7 @@ impl Proof {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct KeyProofMetadata {
-    pub proof_signing_alg_values_supported: Vec<String>,
+    pub proof_signing_alg_values_supported: Vec<AlgIdentifier>,
     // TODO: add `key_attestations_required`
 }
 

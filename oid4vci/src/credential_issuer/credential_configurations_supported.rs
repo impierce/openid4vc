@@ -37,6 +37,7 @@ pub struct CredentialMetadata {
 }
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+#[serde(untagged)]
 pub enum AlgIdentifier {
     String(String),
     Integer(i32),
@@ -129,7 +130,7 @@ mod tests {
                         proof_types_supported: vec![(
                             ProofType::Jwt,
                             KeyProofMetadata {
-                                proof_signing_alg_values_supported: vec!["ES256".to_string()]
+                                proof_signing_alg_values_supported: vec![AlgIdentifier::String("ES256".to_string())]
                             }
                         )]
                         .into_iter()
@@ -422,7 +423,7 @@ mod tests {
                         proof_types_supported: vec![(
                             ProofType::Jwt,
                             KeyProofMetadata {
-                                proof_signing_alg_values_supported: vec!["ES256".to_string()]
+                                proof_signing_alg_values_supported: vec![AlgIdentifier::String("ES256".to_string())]
                             }
                         )]
                         .into_iter()
