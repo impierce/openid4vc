@@ -1,6 +1,7 @@
 use crate::storage::Storage;
 use anyhow::Result;
 use oid4vc_core::Subject;
+use oid4vci::credential_offer::CredentialConfigurationIds;
 use oid4vci::{
     credential_issuer::{
         authorization_server_metadata::AuthorizationServerMetadata,
@@ -70,7 +71,7 @@ impl<S: Storage> CredentialIssuerManager<S> {
             .collect();
         Ok(CredentialOfferParameters {
             credential_issuer: self.credential_issuer.metadata.credential_issuer.clone(),
-            credential_configuration_ids,
+            credential_configuration_ids: CredentialConfigurationIds::try_new(credential_configuration_ids).unwrap(),
             grants: Some(Grants {
                 authorization_code: self.storage.get_authorization_code(),
                 pre_authorized_code: self.storage.get_pre_authorized_code(),

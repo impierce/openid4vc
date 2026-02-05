@@ -50,14 +50,22 @@ pub enum InputMode {
     Text,
 }
 
+fn not_empty_vec(v: &Vec<String>) -> bool {
+    !v.is_empty()
+}
+
 /// Credential Offer Parameters as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-offer-parameters
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 pub struct CredentialOfferParameters {
     pub credential_issuer: Url,
-    pub credential_configuration_ids: Vec<String>,
+    pub credential_configuration_ids: CredentialConfigurationIds,
     pub grants: Option<Grants>,
 }
+
+#[nutype(validate(predicate = not_empty_vec),
+         derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Deref))]
+pub struct CredentialConfigurationIds(Vec<String>);
 
 /// Credential Offer as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-offer
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
@@ -147,7 +155,10 @@ mod tests {
             credential_offer,
             CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credential_configuration_ids: vec!["UniversityDegree_JWT".to_string(),],
+                credential_configuration_ids: CredentialConfigurationIds::try_new(vec![
+                    "UniversityDegree_JWT".to_string(),
+                ])
+                .unwrap(),
                 grants: Some(Grants {
                     pre_authorized_code: Some(PreAuthorizedCode {
                         pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
@@ -173,7 +184,10 @@ mod tests {
         assert_eq!(
             CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credential_configuration_ids: vec!["UniversityDegree_LDP_VC".to_string(),],
+                credential_configuration_ids: CredentialConfigurationIds::try_new(vec![
+                    "UniversityDegree_LDP_VC".to_string(),
+                ])
+                .unwrap(),
                 grants: Some(Grants {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
@@ -190,10 +204,11 @@ mod tests {
         assert_eq!(
             CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credential_configuration_ids: vec![
+                credential_configuration_ids: CredentialConfigurationIds::try_new(vec![
                     "UniversityDegreeCredential".to_string(),
                     "org.iso.18013.5.1.mDL".to_string(),
-                ],
+                ])
+                .unwrap(),
                 grants: Some(Grants {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
@@ -219,7 +234,10 @@ mod tests {
         assert_eq!(
             CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credential_configuration_ids: vec!["UniversityDegreeCredential".to_string()],
+                credential_configuration_ids: CredentialConfigurationIds::try_new(vec![
+                    "UniversityDegreeCredential".to_string()
+                ])
+                .unwrap(),
                 grants: Some(Grants {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
