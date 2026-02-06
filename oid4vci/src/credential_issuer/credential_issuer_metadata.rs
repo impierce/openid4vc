@@ -1,5 +1,6 @@
 use super::credential_configurations_supported::CredentialConfigurationsSupportedObject;
 use derivative::Derivative;
+use nutype::nutype;
 use reqwest::Url;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_with::skip_serializing_none;
@@ -14,8 +15,12 @@ pub struct CredentialResponseEncryption {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct BatchCredentialIssuance {
-    pub batch_size: u32,
+    pub batch_size: BatchSize,
 }
+
+#[nutype(validate(predicate = |value: &u32| *value >= 2),
+         derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize))]
+pub struct BatchSize(u32);
 
 /// Credential Issuer Metadata as described here:
 /// https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-issuer-metadata-p
