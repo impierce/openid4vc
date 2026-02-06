@@ -298,6 +298,14 @@ impl Wallet {
         &self,
         credential_configuration: &CredentialConfigurationsSupportedObject,
     ) -> Result<SubjectSyntaxType> {
+        if !credential_configuration
+            .cryptographic_binding_methods_supported
+            .is_empty()
+            && credential_configuration.proof_types_supported.is_empty()
+        {
+            return Err(anyhow::anyhow!("Proof types supported must be defined if cryptographic binding methods are defined in the credential configuration."));
+        }
+
         let credential_issuer_cryptographic_binding_methods_supported: Vec<SubjectSyntaxType> =
             credential_configuration
                 .cryptographic_binding_methods_supported
