@@ -591,7 +591,7 @@ pub mod tests {
         let mock_server = MockServer::start().await;
 
         Mock::given(method("GET"))
-            .and(path("/some/path/.well-known/openid-credential-issuer"))
+            .and(path("/.well-known/openid-credential-issuer/some/path"))
             .respond_with(ResponseTemplate::new(200).set_body_json(CredentialIssuerMetadata::default()))
             .mount(&mock_server)
             .await;
