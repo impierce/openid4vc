@@ -54,7 +54,7 @@ fn not_empty_vec(v: &Vec<String>) -> bool {
     !v.is_empty()
 }
 
-/// Credential Offer Parameters as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-offer-parameters
+/// Credential Offer Parameters as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer-parameters
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 pub struct CredentialOfferParameters {
@@ -67,7 +67,7 @@ pub struct CredentialOfferParameters {
          derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Deref))]
 pub struct CredentialConfigurationIds(Vec<String>);
 
-/// Credential Offer as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-offer
+/// Credential Offer as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum CredentialOffer {
