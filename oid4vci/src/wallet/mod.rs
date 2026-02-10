@@ -139,13 +139,15 @@ impl Wallet {
     pub async fn get_credential_issuer_metadata(&self, credential_issuer_url: Url) -> Result<CredentialIssuerMetadata> {
         let mut openid_credential_issuer_endpoint = credential_issuer_url.clone();
 
+        openid_credential_issuer_endpoint.set_path(&format!(
+            "/.well-known/openid-credential-issuer{}",
+            credential_issuer_url.path()
+        ));
         // TODO(NGDIL): remove this NGDIL specific code. This is a temporary fix to get the credential issuer metadata.
         openid_credential_issuer_endpoint
             .path_segments_mut()
             .map_err(|_| anyhow::anyhow!("unable to parse credential issuer url"))?
-            .pop_if_empty()
-            .push(".well-known")
-            .push("openid-credential-issuer");
+            .pop_if_empty();
 
         self.client
             .get(openid_credential_issuer_endpoint)
