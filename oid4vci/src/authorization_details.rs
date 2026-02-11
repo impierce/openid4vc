@@ -24,6 +24,7 @@ pub struct AuthorizationDetailsObject {
     pub claims: Option<Vec<AuthorizationDetailsClaim>>,
     // Credential Identifiers should only be included in the TokenResponse as per the spec. In requests, this
     // field should be none.
+    // TODO: Ensure that we populate the credential_identifiers field in the TokenReponse. See Section 6.2: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-successful-token-response
     pub credential_identifiers: Option<Vec<String>>,
 }
 
