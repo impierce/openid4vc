@@ -1,3 +1,4 @@
+use crate::authorization_details::AuthorizationDetailsObject;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use url::Url;
@@ -13,12 +14,14 @@ pub enum TokenRequest {
         code: String,
         code_verifier: Option<String>,
         redirect_uri: Option<Url>,
+        authorization_details: Option<Vec<AuthorizationDetailsObject>>,
     },
     #[serde(rename = "urn:ietf:params:oauth:grant-type:pre-authorized_code")]
     PreAuthorizedCode {
         #[serde(rename = "pre-authorized_code")]
         pre_authorized_code: String,
         tx_code: Option<String>,
+        authorization_details: Option<Vec<AuthorizationDetailsObject>>,
     },
 }
 
@@ -42,6 +45,7 @@ mod tests {
                 code: "SplxlOBeZQQYbYS6WxSbIA".to_string(),
                 code_verifier: Some("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk".to_string()),
                 redirect_uri: Some("https://Wallet.example.org/cb".parse().unwrap()),
+                authorization_details: None,
             }
         );
 
@@ -54,7 +58,8 @@ mod tests {
             .unwrap(),
             TokenRequest::PreAuthorizedCode {
                 pre_authorized_code: "SplxlOBeZQQYbYS6WxSbIA".to_string(),
-                tx_code: Some("493536".to_string())
+                tx_code: Some("493536".to_string()),
+                authorization_details: None,
             }
         );
     }
