@@ -94,6 +94,7 @@ impl Storage for MemoryStorage {
             expires_in: Some(86400),
             refresh_token: None,
             scope: None,
+            authorization_details: None,
         })
     }
 

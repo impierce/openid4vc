@@ -1,3 +1,4 @@
+use crate::authorization_details::AuthorizationDetailsObject;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -10,5 +11,5 @@ pub struct TokenResponse {
     pub expires_in: Option<u64>,
     pub refresh_token: Option<String>,
     pub scope: Option<String>,
-    // TODO: add `authorization_details` field when support for Authorization Code Flow is added.
+    pub authorization_details: Option<Vec<AuthorizationDetailsObject>>,
 }
