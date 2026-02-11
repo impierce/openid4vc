@@ -1,4 +1,4 @@
-use crate::{proofs::Proofs};
+use crate::proofs::Proofs;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -44,7 +44,7 @@ mod tests {
                     jwt: vec![
                         "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ".to_string()
                     ]
-                }) 
+                }),
             },
         );
 
