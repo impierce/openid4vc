@@ -50,7 +50,7 @@ pub enum InputMode {
     Text,
 }
 
-fn not_empty_vec(v: &Vec<String>) -> bool {
+fn not_empty_vec(v: &[String]) -> bool {
     !v.is_empty()
 }
 
