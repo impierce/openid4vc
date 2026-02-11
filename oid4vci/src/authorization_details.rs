@@ -14,7 +14,7 @@ pub enum OpenidCredential {
 }
 
 /// Represents an object of the `authorization_details` field of the `AuthorizationRequest` object in the Authorization Code Flow as
-/// described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-using-authorization-details
+/// and in the `TokenRequest` object. : https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#authorization-details
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct AuthorizationDetailsObject {
@@ -22,6 +22,9 @@ pub struct AuthorizationDetailsObject {
     pub locations: Option<Vec<Url>>,
     pub credential_configuration_id: String,
     pub claims: Option<Vec<AuthorizationDetailsClaim>>,
+    // Credential Identifiers should only be included in the TokenResponse as per the spec. In requests, this
+    // field should be none.
+    pub credential_identifiers: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
@@ -65,6 +68,7 @@ mod tests {
                 locations: None,
                 credential_configuration_id: "UniversityDegreeCredential".to_string(),
                 claims: None,
+                credential_identifiers: None,
             },
             serde_json::from_value(json_value).unwrap()
         );
@@ -79,6 +83,7 @@ mod tests {
                 r#type: OpenidCredential::Type,
                 locations: None,
                 credential_configuration_id: "UniversityDegreeCredential".to_string(),
+                credential_identifiers: None,
                 claims: Some(vec![
                     AuthorizationDetailsClaim {
                         path: ClaimPathPointer::try_new(vec![
@@ -117,6 +122,7 @@ mod tests {
                 r#type: OpenidCredential::Type,
                 locations: None,
                 credential_configuration_id: "UniversityDegree_LDP_VC".to_string(),
+                credential_identifiers: None,
 
                 claims: Some(vec![
                     AuthorizationDetailsClaim {
@@ -156,6 +162,7 @@ mod tests {
                 r#type: OpenidCredential::Type,
                 locations: None,
                 credential_configuration_id: "org.iso.18013.5.1.mDL".to_string(),
+                credential_identifiers: None,
 
                 claims: Some(vec![
                     AuthorizationDetailsClaim {
@@ -205,12 +212,14 @@ mod tests {
                     locations: None,
                     credential_configuration_id: "UniversityDegreeCredential".to_string(),
                     claims: None,
+                    credential_identifiers: None,
                 },
                 AuthorizationDetailsObject {
                     r#type: OpenidCredential::Type,
                     locations: None,
                     credential_configuration_id: "org.iso.18013.5.1.mDL".to_string(),
                     claims: None,
+                    credential_identifiers: None,
                 }
             ],
             from_str::<Vec<AuthorizationDetailsObject>>(include_str!(
@@ -224,6 +233,7 @@ mod tests {
                 r#type: OpenidCredential::Type,
                 locations: None,
                 credential_configuration_id: "PID_SD_JWT_VC".to_string(),
+                credential_identifiers: None,
                 claims: Some(vec![
                     AuthorizationDetailsClaim {
                         path: ClaimPathPointer::try_new(vec![ClaimPathElement::String("given_name".to_string())])
@@ -249,6 +259,7 @@ mod tests {
                 locations: Some(vec!["https://credential-issuer.example.com".parse().unwrap()]),
                 credential_configuration_id: "UniversityDegreeCredential".to_string(),
                 claims: None,
+                credential_identifiers: None,
             }],
             from_str::<Vec<AuthorizationDetailsObject>>(include_str!(
                 "../tests/examples/authorization_details_with_as.json"
@@ -262,6 +273,7 @@ mod tests {
                 locations: None,
                 credential_configuration_id: "UniversityDegreeCredential".to_string(),
                 claims: None,
+                credential_identifiers: None,
             }],
             from_str::<Vec<AuthorizationDetailsObject>>(include_str!("../tests/examples/authorization_details.json"))
                 .unwrap()

@@ -95,6 +95,7 @@ async fn test_authorization_code_flow() {
                 locations: None,
                 credential_configuration_id: credential_configuration_id.clone(),
                 claims: None,
+                credential_identifiers: None,
             }
             .into()],
             issuer_state,
