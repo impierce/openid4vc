@@ -44,7 +44,7 @@ mod tests {
                     jwt: vec![
                         "eyJraWQiOiJkaWQ6ZXhhbXBsZTplYmZlYjFmNzEyZWJjNmYxYzI3NmUxMmVjMjEva2V5cy8xIiwiYWxnIjoiRVMyNTYiLCJ0eXAiOiJKV1QifQ".to_string()
                     ]
-                }), 
+                }) 
             },
         );
 
