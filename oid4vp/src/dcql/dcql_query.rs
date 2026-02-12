@@ -30,8 +30,7 @@ pub struct CredentialQuery {
     pub format: Format,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub multiple: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub meta: Option<MetaTypes>,
+    pub meta: MetaTypes,
     #[serde(skip_serializing_if = "Option::is_none")]
     // TODO: Create nutype to create a new type with non-empty predicate. As ref see CredentialQueryId above.
     pub trusted_authorities: Option<Vec<TrustedAuthority>>,
@@ -260,9 +259,9 @@ mod tests {
                     id: test_credential_query_id("my_credential"),
                     format: Format::MsoMdoc,
                     multiple: None,
-                    meta: Some(MetaTypes::MsoMdocMeta {
+                    meta: MetaTypes::MsoMdocMeta {
                         doctype_value: "org.iso.7367.1.mVRC".to_string()
-                    }),
+                    },
                     trusted_authorities: None,
                     require_cryptographic_holder_binding: Some(true),
                     claims: Some(vec![
@@ -299,9 +298,9 @@ mod tests {
                     id: test_credential_query_id("my_credential"),
                     format: Format::DcSdJwt,
                     multiple: None,
-                    meta: Some(MetaTypes::SdJwtMeta {
+                    meta: MetaTypes::SdJwtMeta {
                         vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
-                    }),
+                    },
                     trusted_authorities: None,
                     require_cryptographic_holder_binding: Some(true),
                     claims: Some(vec![
@@ -340,9 +339,9 @@ mod tests {
                     id: test_credential_query_id("my_credential"),
                     format: Format::DcSdJwt,
                     multiple: None,
-                    meta: Some(MetaTypes::SdJwtMeta {
+                    meta: MetaTypes::SdJwtMeta {
                         vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
-                    }),
+                    },
                     trusted_authorities: None,
                     require_cryptographic_holder_binding: Some(true),
                     claims: Some(vec![
@@ -392,9 +391,9 @@ mod tests {
                     id: test_credential_query_id("pid"),
                     format: Format::DcSdJwt,
                     multiple: None,
-                    meta: Some(MetaTypes::SdJwtMeta {
+                    meta: MetaTypes::SdJwtMeta {
                         vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
-                    }),
+                    },
                     trusted_authorities: None,
                     require_cryptographic_holder_binding: Some(true),
                     claims: Some(vec![
@@ -443,9 +442,9 @@ mod tests {
                         id: test_credential_query_id("pid"),
                         format: Format::DcSdJwt,
                         multiple: None,
-                        meta: Some(MetaTypes::SdJwtMeta {
+                        meta: MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://credentials.example.com/identity_credential".to_string()]
-                        }),
+                        },
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
                         claims: Some(vec![
@@ -474,9 +473,9 @@ mod tests {
                         id: test_credential_query_id("mdl"),
                         format: Format::MsoMdoc,
                         multiple: None,
-                        meta: Some(MetaTypes::MsoMdocMeta {
+                        meta: MetaTypes::MsoMdocMeta {
                             doctype_value: "org.iso.7367.1.mVRC".to_string(),
-                        }),
+                        },
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
                         claims: Some(vec![
@@ -516,9 +515,9 @@ mod tests {
                         id: test_credential_query_id("mdl-id"),
                         format: Format::MsoMdoc,
                         multiple: None,
-                        meta: Some(MetaTypes::MsoMdocMeta {
+                        meta: MetaTypes::MsoMdocMeta {
                             doctype_value: "org.iso.18013.5.1.mDL".to_string(),
-                        }),
+                        },
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
                         claims: Some(vec![
@@ -553,9 +552,9 @@ mod tests {
                         id: test_credential_query_id("mdl-address"),
                         format: Format::MsoMdoc,
                         multiple: None,
-                        meta: Some(MetaTypes::MsoMdocMeta {
+                        meta: MetaTypes::MsoMdocMeta {
                             doctype_value: "org.iso.18013.5.1.mDL".to_string(),
-                        }),
+                        },
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
                         claims: Some(vec![
@@ -582,9 +581,9 @@ mod tests {
                         id: test_credential_query_id("photo_card-id"),
                         format: Format::MsoMdoc,
                         multiple: None,
-                        meta: Some(MetaTypes::MsoMdocMeta {
+                        meta: MetaTypes::MsoMdocMeta {
                             doctype_value: "org.iso.23220.photoid.1".to_string(),
-                        }),
+                        },
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
                         claims: Some(vec![
@@ -619,9 +618,9 @@ mod tests {
                         id: test_credential_query_id("photo_card-address"),
                         format: Format::MsoMdoc,
                         multiple: None,
-                        meta: Some(MetaTypes::MsoMdocMeta {
+                        meta: MetaTypes::MsoMdocMeta {
                             doctype_value: "org.iso.23220.photoid.1".to_string(),
-                        }),
+                        },
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
                         claims: Some(vec![
@@ -669,9 +668,9 @@ mod tests {
                         id: test_credential_query_id("pid"),
                         format: Format::DcSdJwt,
                         multiple: None,
-                        meta: Some(MetaTypes::SdJwtMeta {
+                        meta: MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://credentials.example.com/identity_credential".to_string()],
-                        }),
+                        },
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
                         claims: Some(vec![
@@ -700,9 +699,9 @@ mod tests {
                         id: test_credential_query_id("other_pid"),
                         format: Format::DcSdJwt,
                         multiple: None,
-                        meta: Some(MetaTypes::SdJwtMeta {
+                        meta: MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://othercredentials.example/pid".to_string()],
-                        }),
+                        },
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
                         claims: Some(vec![
@@ -731,9 +730,9 @@ mod tests {
                         id: test_credential_query_id("pid_reduced_cred_1"),
                         format: Format::DcSdJwt,
                         multiple: None,
-                        meta: Some(MetaTypes::SdJwtMeta {
+                        meta: MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://credentials.example.com/reduced_identity_credential".to_string()],
-                        }),
+                        },
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
                         claims: Some(vec![
@@ -754,9 +753,9 @@ mod tests {
                         id: test_credential_query_id("pid_reduced_cred_2"),
                         format: Format::DcSdJwt,
                         multiple: None,
-                        meta: Some(MetaTypes::SdJwtMeta {
+                        meta: MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://cred.example/residence_credential".to_string()],
-                        }),
+                        },
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
                         claims: Some(vec![
@@ -782,9 +781,9 @@ mod tests {
                         id: test_credential_query_id("nice_to_have"),
                         format: Format::DcSdJwt,
                         multiple: None,
-                        meta: Some(MetaTypes::SdJwtMeta {
+                        meta: MetaTypes::SdJwtMeta {
                             vct_values: vec!["https://company.example/company_rewards".to_string()],
-                        }),
+                        },
                         trusted_authorities: None,
                         require_cryptographic_holder_binding: Some(true),
                         claims: Some(vec![ClaimQuery {
@@ -955,9 +954,9 @@ mod tests {
                 id: test_credential_query_id("my_credential"),
                 format: Format::MsoMdoc,
                 multiple: None,
-                meta: Some(MetaTypes::SdJwtMeta {
+                meta: MetaTypes::SdJwtMeta {
                     vct_values: vec!["https://credentials.example.com/identity_credential".to_string()],
-                }),
+                },
                 trusted_authorities: None,
                 require_cryptographic_holder_binding: Some(true),
                 claims: None,
@@ -1014,9 +1013,9 @@ mod tests {
             id: test_credential_query_id("basho"),
             format: Format::LdpVc,
             multiple: None,
-            meta: Some(MetaTypes::W3CFormatMeta {
+            meta: MetaTypes::W3CFormatMeta {
                 type_values: vec![vec!["https://example.com/credential".to_string()]],
-            }),
+            },
             trusted_authorities: None,
             require_cryptographic_holder_binding: Some(true),
             claims: Some(vec![ClaimQuery {
@@ -1037,9 +1036,9 @@ mod tests {
             id: test_credential_query_id("robbie"),
             format: Format::DcSdJwt,
             multiple: None,
-            meta: Some(MetaTypes::SdJwtMeta {
+            meta: MetaTypes::SdJwtMeta {
                 vct_values: vec!["https://credentials.example.com/identity_credential".to_string()],
-            }),
+            },
             trusted_authorities: None,
             require_cryptographic_holder_binding: Some(true),
             claims: Some(vec![

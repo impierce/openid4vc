@@ -28,7 +28,7 @@ pub enum ClientIdPrefix {
     RedirectUri,
     OpenidFederation,
     DecentralizedIdentifier,
-    VerifierAttestation,
+    VerifierInfo,
     X509SanDns,
     X509Hash,
 }
@@ -40,7 +40,7 @@ impl std::fmt::Display for ClientIdPrefix {
             ClientIdPrefix::RedirectUri => write!(f, "response_uri"),
             ClientIdPrefix::OpenidFederation => write!(f, "openid_federation"),
             ClientIdPrefix::DecentralizedIdentifier => write!(f, "decentralized_identifier"),
-            ClientIdPrefix::VerifierAttestation => write!(f, "verifier_attestation"),
+            ClientIdPrefix::VerifierInfo => write!(f, "verifier_info"),
             ClientIdPrefix::X509SanDns => write!(f, "x509_san_dns"),
             ClientIdPrefix::X509Hash => write!(f, "x509_hash"),
         }
@@ -69,7 +69,7 @@ impl std::str::FromStr for ClientId {
                 "response_uri" => ClientIdPrefix::RedirectUri,
                 "openid_federation" => ClientIdPrefix::OpenidFederation,
                 "decentralized_identifier" => ClientIdPrefix::DecentralizedIdentifier,
-                "verifier_attestation" => ClientIdPrefix::VerifierAttestation,
+                "verifier_info" => ClientIdPrefix::VerifierInfo,
                 "x509_san_dns" => ClientIdPrefix::X509SanDns,
                 "x509_hash" => ClientIdPrefix::X509Hash,
                 _ => return Err(format!("Unknown client ID prefix: {prefix_str}")),
