@@ -23,14 +23,14 @@ pub struct ClientId {
 }
 
 /// The Client ID Scheme enables the use of different mechanisms to obtain and validate the Verifier's metadata. As
-/// described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html#name-client-identifier-prefix-an
+/// described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-client-identifier-prefix-an
 #[derive(Debug, PartialEq, Clone)]
 pub enum ClientIdPrefix {
     PreRegistered,
     RedirectUri,
     OpenidFederation,
     DecentralizedIdentifier,
-    VerifierInfo,
+    VerifierAttestation,
     X509SanDns,
     X509Hash,
 }
@@ -42,7 +42,7 @@ impl std::fmt::Display for ClientIdPrefix {
             ClientIdPrefix::RedirectUri => write!(f, "response_uri"),
             ClientIdPrefix::OpenidFederation => write!(f, "openid_federation"),
             ClientIdPrefix::DecentralizedIdentifier => write!(f, "decentralized_identifier"),
-            ClientIdPrefix::VerifierInfo => write!(f, "verifier_info"),
+            ClientIdPrefix::VerifierAttestation => write!(f, "verifier_attestation"),
             ClientIdPrefix::X509SanDns => write!(f, "x509_san_dns"),
             ClientIdPrefix::X509Hash => write!(f, "x509_hash"),
         }
@@ -71,7 +71,7 @@ impl std::str::FromStr for ClientId {
                 "response_uri" => ClientIdPrefix::RedirectUri,
                 "openid_federation" => ClientIdPrefix::OpenidFederation,
                 "decentralized_identifier" => ClientIdPrefix::DecentralizedIdentifier,
-                "verifier_info" => ClientIdPrefix::VerifierInfo,
+                "verifier_attestation" => ClientIdPrefix::VerifierAttestation,
                 "x509_san_dns" => ClientIdPrefix::X509SanDns,
                 "x509_hash" => ClientIdPrefix::X509Hash,
                 _ => return Err(format!("Unknown client ID prefix: {prefix_str}")),
@@ -111,7 +111,7 @@ pub enum CredentialFormatIdentifier {
     DcSdJwt,
 }
 
-/// [`AuthorizationRequest`] claims specific to [`OID4VP`].
+/// [`AuthorizationRequest`] claims specific to [`OID4VP`] and as defined in the spec: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-authorization-request.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationRequestParameters {
@@ -123,6 +123,34 @@ pub struct AuthorizationRequestParameters {
     pub nonce: String,
     #[serde(flatten)]
     pub client_metadata: ClientMetadataResource<ClientMetadataParameters>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_data: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub verifier_info: Option<Vec<VerifierInfoAttestation>>,
+    // TODO: When support for `request_uri` is added, this field should be used to indicate the HTTP method to retrieve the request object from the `request_uri`.
+    // We must then add validation to ensure that `request_uri_method` is only set when `request_uri` is set.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_uri_method: Option<RequestUriMethod>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum RequestUriMethod {
+    Get,
+    Post,
+}
+#[nutype(
+    validate(predicate = not_empty),
+    derive(Debug, PartialEq, Clone, Serialize, Deserialize)
+)]
+pub struct CredentialIds(Vec<String>);
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
+pub struct VerifierInfoAttestation {
+    pub format: String,
+    pub data: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub credential_ids: Option<CredentialIds>,
 }
 
 #[nutype(
@@ -238,6 +266,9 @@ pub struct AuthorizationRequestBuilder {
     nonce: Option<String>,
     client_metadata: Option<ClientMetadataResource<ClientMetadataParameters>>,
     custom_url_scheme: Option<String>,
+    transaction_data: Option<Vec<String>>,
+    verifier_info: Option<Vec<VerifierInfoAttestation>>,
+    request_uri_method: Option<RequestUriMethod>,
 }
 
 impl AuthorizationRequestBuilder {
@@ -257,6 +288,9 @@ impl AuthorizationRequestBuilder {
     builder_fn!(state, String);
     builder_fn!(dcql_query, DcqlQuery);
     builder_fn!(custom_url_scheme, String);
+    builder_fn!(transaction_data, Vec<String>);
+    builder_fn!(verifier_info, Vec<VerifierInfoAttestation>);
+    builder_fn!(request_uri_method, RequestUriMethod);
 
     pub fn build(mut self) -> Result<AuthorizationRequest<Object<OID4VP>>> {
         match (self.client_id.take(), self.is_empty()) {
@@ -281,6 +315,9 @@ impl AuthorizationRequestBuilder {
                         .client_metadata
                         .take()
                         .ok_or_else(|| anyhow!("`client_metadata` or `client_metadata_uri` is required."))?,
+                    transaction_data: self.transaction_data.take(),
+                    verifier_info: self.verifier_info.take(),
+                    request_uri_method: self.request_uri_method.take(),
                 };
 
                 Ok(AuthorizationRequest::<Object<OID4VP>> {
