@@ -111,18 +111,6 @@ pub enum CredentialFormatIdentifier {
     DcSdJwt,
 }
 
-#[nutype(
-    validate(predicate = not_empty),
-    derive(Debug, PartialEq, Clone, Serialize, Deserialize)
-)]
-pub struct TransactionData(Vec<String>);
-
-#[nutype(
-    validate(predicate = not_empty),
-    derive(Debug, PartialEq, Clone, Serialize, Deserialize)
-)]
-pub struct VerifierInfo(Vec<VerifierInfoAttestation>);
-
 /// [`AuthorizationRequest`] claims specific to [`OID4VP`] and as defined in the spec: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-authorization-request.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -145,6 +133,26 @@ pub struct AuthorizationRequestParameters {
     pub request_uri_method: Option<RequestUriMethod>,
 }
 
+#[nutype(
+    validate(predicate = not_empty),
+    derive(Debug, PartialEq, Clone, Serialize, Deserialize)
+)]
+pub struct TransactionData(Vec<String>);
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
+pub struct VerifierInfoAttestation {
+    pub format: String,
+    pub data: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub credential_ids: Option<CredentialIds>,
+}
+
+#[nutype(
+    validate(predicate = not_empty),
+    derive(Debug, PartialEq, Clone, Serialize, Deserialize)
+)]
+pub struct VerifierInfo(Vec<VerifierInfoAttestation>);
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum RequestUriMethod {
@@ -156,14 +164,6 @@ pub enum RequestUriMethod {
     derive(Debug, PartialEq, Clone, Serialize, Deserialize)
 )]
 pub struct CredentialIds(Vec<String>);
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
-pub struct VerifierInfoAttestation {
-    pub format: String,
-    pub data: serde_json::Value,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub credential_ids: Option<CredentialIds>,
-}
 
 #[nutype(
     validate(predicate = not_empty),
