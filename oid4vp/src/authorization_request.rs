@@ -4,8 +4,10 @@ use anyhow::{anyhow, Result};
 use is_empty::IsEmpty;
 use jsonwebtoken::Algorithm;
 use monostate::MustBe;
+use nutype::nutype;
 use oid4vc_core::authorization_request::{Object, RedirectOrResponseUri};
 use oid4vc_core::builder_fn;
+use oid4vc_core::utils::predicates::not_empty;
 use oid4vc_core::{
     authorization_request::AuthorizationRequest, client_metadata::ClientMetadataResource, scope::Scope, RFC7519Claims,
 };
@@ -123,6 +125,12 @@ pub struct AuthorizationRequestParameters {
     pub client_metadata: ClientMetadataResource<ClientMetadataParameters>,
 }
 
+#[nutype(
+    validate(predicate = not_empty),
+    derive(Debug, PartialEq, Clone, Serialize, Deserialize)
+)]
+pub struct EncryptedResponseEncValues(Vec<String>);
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 pub struct ClientMetadataParameters {
     /// Object defining the formats and proof types of Verifiable Presentations and Verifiable Credentials that a
@@ -131,7 +139,7 @@ pub struct ClientMetadataParameters {
     pub vp_formats_supported: VpFormatsSupported,
     /// TODO: Implement encryption response support.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub encrypted_response_enc_values_supported: Option<Vec<String>>,
+    pub encrypted_response_enc_values_supported: Option<EncryptedResponseEncValues>,
     /// TODO: Not yet implemented. Requires further implementation of a JWK library.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jwks: Option<JsonWebKeySet>,
@@ -161,30 +169,42 @@ pub struct VpFormatsSupported {
     pub mso_mdoc: Option<MsoMdocParameters>,
 }
 
+#[nutype(
+    validate(predicate = not_empty),
+    derive(Debug, PartialEq, Clone, Serialize, Deserialize)
+)]
+pub struct AlgValues(Vec<Algorithm>);
+
 #[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
 pub struct JwtVcJsonParameters {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub alg_values: Option<Vec<Algorithm>>,
+    pub alg_values: Option<AlgValues>,
 }
 
 #[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
 pub struct JwtVpJsonParameters {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub alg_values: Option<Vec<Algorithm>>,
+    pub alg_values: Option<AlgValues>,
 }
 
 #[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
 pub struct DcSdJwtParameters {
     #[serde(rename = "sd-jwt_alg_values", skip_serializing_if = "Option::is_none")]
-    pub sd_jwt_alg_values: Option<Vec<Algorithm>>,
+    pub sd_jwt_alg_values: Option<AlgValues>,
     #[serde(rename = "kb-jwt_alg_values", skip_serializing_if = "Option::is_none")]
-    pub kb_jwt_alg_values: Option<Vec<Algorithm>>,
+    pub kb_jwt_alg_values: Option<AlgValues>,
 }
+
+#[nutype(
+    validate(predicate = not_empty),
+    derive(Debug, PartialEq, Clone, Serialize, Deserialize)
+)]
+pub struct ProofTypeValues(Vec<String>);
 
 #[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
 pub struct LdpVcParameters {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub proof_type_values: Option<Vec<String>>,
+    pub proof_type_values: Option<ProofTypeValues>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cryptosuite_values: Option<Vec<String>>,
 }
@@ -318,7 +338,7 @@ mod tests {
                 extension: ClientMetadataParameters {
                     vp_formats_supported: VpFormatsSupported {
                         jwt_vc_json: Some(JwtVcJsonParameters {
-                            alg_values: Some(vec![Algorithm::ES256, Algorithm::ES384]),
+                            alg_values: Some(AlgValues::try_new(vec![Algorithm::ES256, Algorithm::ES384]).unwrap()),
                         }),
                         ..Default::default()
                     },
@@ -351,8 +371,12 @@ mod tests {
                 extension: ClientMetadataParameters {
                     vp_formats_supported: VpFormatsSupported {
                         dc_sd_jwt: Some(DcSdJwtParameters {
-                            sd_jwt_alg_values: Some(vec![Algorithm::ES256, Algorithm::ES384]),
-                            kb_jwt_alg_values: Some(vec![Algorithm::ES256, Algorithm::ES384]),
+                            sd_jwt_alg_values: Some(
+                                AlgValues::try_new(vec![Algorithm::ES256, Algorithm::ES384]).unwrap(),
+                            ),
+                            kb_jwt_alg_values: Some(
+                                AlgValues::try_new(vec![Algorithm::ES256, Algorithm::ES384]).unwrap(),
+                            ),
                         }),
                         ..Default::default()
                     },
@@ -385,10 +409,13 @@ mod tests {
                 extension: ClientMetadataParameters {
                     vp_formats_supported: VpFormatsSupported {
                         ldp_vc: Some(LdpVcParameters {
-                            proof_type_values: Some(vec![
-                                "DataIntegrityProof".to_string(),
-                                "Ed25519Signature2020".to_string(),
-                            ]),
+                            proof_type_values: Some(
+                                ProofTypeValues::try_new(vec![
+                                    "DataIntegrityProof".to_string(),
+                                    "Ed25519Signature2020".to_string(),
+                                ])
+                                .unwrap(),
+                            ),
                             cryptosuite_values: Some(vec![
                                 "ecdsa-rdfc-2019".to_string(),
                                 "ecdsa-sd-2023".to_string(),
@@ -449,5 +476,14 @@ mod tests {
         };
 
         assert_eq!(auth_metadata, &expected);
+    }
+
+    #[test]
+    fn test_encrypted_response_enc_values_non_empty() {
+        let valid = EncryptedResponseEncValues::try_new(vec!["A128GCM".to_string(), "A256GCM".to_string()]);
+        assert!(valid.is_ok());
+
+        let invalid = EncryptedResponseEncValues::try_new(vec![]);
+        assert!(invalid.is_err());
     }
 }

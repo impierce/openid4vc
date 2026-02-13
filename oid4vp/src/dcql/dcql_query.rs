@@ -919,14 +919,14 @@ mod tests {
     }
 
     #[test]
-    fn test_omitted_meta_is_ok() {
+    fn test_omitted_meta_is_not_ok() {
         let valid_json = r#"{
             "id": "my_credential",
             "format": "ldp_vc",
             "claims": []
         }"#;
         let result = from_str::<CredentialQuery>(valid_json);
-        assert!(result.is_ok());
+        assert!(result.is_err());
     }
 
     #[test]
