@@ -111,6 +111,18 @@ pub enum CredentialFormatIdentifier {
     DcSdJwt,
 }
 
+#[nutype(
+    validate(predicate = not_empty),
+    derive(Debug, PartialEq, Clone, Serialize, Deserialize)
+)]
+pub struct TransactionData(Vec<String>);
+
+#[nutype(
+    validate(predicate = not_empty),
+    derive(Debug, PartialEq, Clone, Serialize, Deserialize)
+)]
+pub struct VerifierInfo(Vec<VerifierInfoAttestation>);
+
 /// [`AuthorizationRequest`] claims specific to [`OID4VP`] and as defined in the spec: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-authorization-request.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -124,9 +136,9 @@ pub struct AuthorizationRequestParameters {
     #[serde(flatten)]
     pub client_metadata: ClientMetadataResource<ClientMetadataParameters>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub transaction_data: Option<Vec<String>>,
+    pub transaction_data: Option<TransactionData>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub verifier_info: Option<Vec<VerifierInfoAttestation>>,
+    pub verifier_info: Option<VerifierInfo>,
     // TODO: When support for `request_uri` is added, this field should be used to indicate the HTTP method to retrieve the request object from the `request_uri`.
     // We must then add validation to ensure that `request_uri_method` is only set when `request_uri` is set.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -266,8 +278,8 @@ pub struct AuthorizationRequestBuilder {
     nonce: Option<String>,
     client_metadata: Option<ClientMetadataResource<ClientMetadataParameters>>,
     custom_url_scheme: Option<String>,
-    transaction_data: Option<Vec<String>>,
-    verifier_info: Option<Vec<VerifierInfoAttestation>>,
+    transaction_data: Option<TransactionData>,
+    verifier_info: Option<VerifierInfo>,
     request_uri_method: Option<RequestUriMethod>,
 }
 
@@ -288,8 +300,8 @@ impl AuthorizationRequestBuilder {
     builder_fn!(state, String);
     builder_fn!(dcql_query, DcqlQuery);
     builder_fn!(custom_url_scheme, String);
-    builder_fn!(transaction_data, Vec<String>);
-    builder_fn!(verifier_info, Vec<VerifierInfoAttestation>);
+    builder_fn!(transaction_data, TransactionData);
+    builder_fn!(verifier_info, VerifierInfo);
     builder_fn!(request_uri_method, RequestUriMethod);
 
     pub fn build(mut self) -> Result<AuthorizationRequest<Object<OID4VP>>> {
