@@ -75,7 +75,7 @@ This specification list is based off OpenID4VCI 1.0 document linked above.
 | 5.1.2     | Authorization Request using `scope` parameter                 |     ❌      |
 | 5.1.2     | Use of `resource` parameter (RFC 8707)                        |     ❌      |
 | 5.1.3     | `issuer_state` request parameter                              |     ✅      |
-| 5.1.4     | Pushed Authorization Request (PAR) support                    |     ❌      |
+| 5.1.4     | Pushed Authorization Request (PAR) support                    |     ✅      |
 |           | PKCE support (RFC 7636)                                       |     ✅      |
 | 5.2       | Successful Authorization Response                             |     ✅      |
 | 5.3       | Authorization Error Response                                  |     ✅      |
@@ -135,7 +135,7 @@ This specification list is based off OpenID4VCI 1.0 document linked above.
 | Spec Ref. | Feature                   | Implemented |
 | --------- | ------------------------- | :---------: |
 | F.1       | Proof type: `jwt`         |     ✅      |
-| F.2       | Proof type: `di_vp`       |     ✅      |
+| F.2       | Proof type: `di_vp`       |     ❌      |
 | F.3       | Proof type: `attestation` |     ❌      |
 | F.4       | Proof verification logic  |     ❌      |
 

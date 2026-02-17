@@ -23,7 +23,7 @@ pub struct BatchCredentialIssuance {
 pub struct BatchSize(u32);
 
 /// Credential Issuer Metadata as described here:
-/// https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-issuer-metadata-p
+/// https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Derivative)]
 #[derivative(Default)]

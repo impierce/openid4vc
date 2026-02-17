@@ -255,17 +255,17 @@ impl Wallet {
     }
 
     // Select supported signing algorithm that matches the Credential Issuer's supported Proof Types.
-    // Supplying the `proof` parameter to the Credential Request is only required when the `proof_types_supported`
+    // Supplying the `proofs` parameter to the Credential Request is only required when the `proof_types_supported`
     // parameter is present in the Credential Configuration in the Credential Issuer's metadata. However, if the
-    // `proof_types_supported` is not present, the Wallet will still provide the `proof` signed with its own preferred
-    // signing algorithm. For more information see: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-8.2-2.3.1
+    // `proof_types_supported` is not present, the Wallet will still provide the `proofs` signed with its own preferred
+    // signing algorithm. For more information see: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request
     fn select_signing_algorithm(
         &self,
         credential_configuration: &CredentialConfigurationsSupportedObject,
     ) -> Result<Algorithm> {
         let proof_types_supported = &credential_configuration.proof_types_supported;
 
-        // If the Credential Issuer does not define any supported Proof Types, then the Wallet wil uses its own default signing algorithm.
+        // If the Credential Issuer does not define any supported Proof Types, then the Wallet will use its own default signing algorithm.
         if proof_types_supported.is_empty() {
             return self
                 .proof_signing_alg_values_supported

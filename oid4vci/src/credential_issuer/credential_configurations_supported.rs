@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use url::Url;
 
-/// Credentials Supported object as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-11.2.3-2.11.1
+/// Credentials Supported object as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-12.2.4-2.11.1
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
 pub struct CredentialConfigurationsSupportedObject {
