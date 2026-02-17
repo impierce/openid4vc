@@ -46,7 +46,7 @@ This specification list is based off OpenID4VCI 1.0 document linked above.
 | A.2       | Support for `mso_mdoc` format       |     ❌      |
 | A.3       | Support for `dc+sd-jwt` format      |     ✅      |
 
-## §4 — Credential Offer
+## 4 — Credential Offer
 
 | Spec Ref. | Feature                                                                        | Implemented |
 | --------- | ------------------------------------------------------------------------------ | :---------: |
@@ -64,7 +64,7 @@ This specification list is based off OpenID4VCI 1.0 document linked above.
 |           | Deep linking with `openid-credential-offer://` scheme                          |     ✅      |
 |           | QR code presentation of offers                                                 |     ✅      |
 
-## §5 — Authorization Endpoint
+## 5 — Authorization Endpoint
 
 | Spec Ref. | Feature                                                       | Implemented |
 | --------- | ------------------------------------------------------------- | :---------: |
@@ -80,7 +80,7 @@ This specification list is based off OpenID4VCI 1.0 document linked above.
 | 5.2       | Successful Authorization Response                             |     ✅      |
 | 5.3       | Authorization Error Response                                  |     ✅      |
 
-## §6 — Token Endpoint
+## 6 — Token Endpoint
 
 | Spec Ref. | Feature                                                                 | Implemented |
 | --------- | ----------------------------------------------------------------------- | :---------: |
@@ -96,7 +96,7 @@ This specification list is based off OpenID4VCI 1.0 document linked above.
 | 6.3       | Error: `invalid_grant` (wrong tx_code / expired pre-auth code)          |     ✅      |
 | 6.3       | Error: `invalid_client` (anonymous access not supported)                |     ✅      |
 
-## §7 — Nonce Endpoint
+## 7 — Nonce Endpoint
 
 | Spec Ref. | Feature                                    | Implemented |
 | --------- | ------------------------------------------ | :---------: |
@@ -105,7 +105,7 @@ This specification list is based off OpenID4VCI 1.0 document linked above.
 | 7.2       | Nonce Response with `c_nonce` parameter    |     ✅      |
 | 7.2       | `Cache-Control: no-store` on response      |     ✅      |
 
-## §8 — Credential Endpoint
+## 8 — Credential Endpoint
 
 | Spec Ref. | Feature                                                   | Implemented |
 | --------- | --------------------------------------------------------- | :---------: |
