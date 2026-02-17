@@ -370,6 +370,7 @@ impl Wallet {
             proof_builder = proof_builder.nonce(nonce);
         }
 
+        // TODO: Update ProofBuilder to produce Proofs instead of Proof.
         let single_proof_object = Some(
             proof_builder
                 .subject_syntax_type(subject_syntax_type.to_string())

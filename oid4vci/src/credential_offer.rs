@@ -1,5 +1,6 @@
 use anyhow::Result;
 use nutype::nutype;
+use oid4vc_core::utils::predicates::not_empty;
 use oid4vc_core::{to_query_value, JsonObject};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -50,10 +51,6 @@ pub enum InputMode {
     Text,
 }
 
-fn not_empty_vec(v: &[String]) -> bool {
-    !v.is_empty()
-}
-
 /// Credential Offer Parameters as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer-parameters
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
@@ -63,7 +60,7 @@ pub struct CredentialOfferParameters {
     pub grants: Option<Grants>,
 }
 
-#[nutype(validate(predicate = not_empty_vec),
+#[nutype(validate(predicate = not_empty),
          derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Deref))]
 pub struct CredentialConfigurationIds(Vec<String>);
 
