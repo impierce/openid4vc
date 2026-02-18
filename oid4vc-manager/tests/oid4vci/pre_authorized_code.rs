@@ -5,6 +5,7 @@ use oid4vc_manager::{
     managers::credential_issuer::CredentialIssuerManager, methods::key_method::KeySubject,
     servers::credential_issuer::Server,
 };
+use oid4vci::credential_offer::CredentialConfigurationIds;
 use oid4vci::{
     credential_offer::{CredentialOffer, CredentialOfferParameters, Grants},
     credential_response::{CredentialResponse, CredentialResponseType},
@@ -90,6 +91,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         }) => TokenRequest::PreAuthorizedCode {
             pre_authorized_code: pre_authorized_code.unwrap().pre_authorized_code,
             tx_code: Some("493536".to_string()),
+            authorization_details: None,
         },
         None => unreachable!(),
     };
@@ -101,7 +103,10 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         .unwrap();
 
     // Sort the credential_configuration_ids for predictable testing.
-    credential_offer.credential_configuration_ids.sort();
+    let mut ids = credential_offer.credential_configuration_ids.into_inner();
+    ids.sort();
+    credential_offer.credential_configuration_ids =
+        CredentialConfigurationIds::try_new(ids).expect("validated as non-empty");
 
     // The credential offer contains two credential_configuration_ids which are supported by the credential issuer.
     let credentials: Vec<_> = credential_offer
@@ -189,7 +194,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         use oid4vc_manager::servers::credential_issuer::TEST_PRE_AUTHORIZED_SUBJECT_DID;
 
         let mut credentials = credentials.into_iter();
-        let mut credential_configuration_ids = credential_offer.credential_configuration_ids.into_iter();
+        let mut credential_configuration_ids = credential_offer.credential_configuration_ids.into_inner().into_iter();
 
         let drivers_license_credential = credentials.next().unwrap();
         let credential_configuration_id = credential_configuration_ids.next().unwrap();

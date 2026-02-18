@@ -1,7 +1,9 @@
 use crate::authorization_details::AuthorizationDetailsObject;
 use crate::authorization_request::{AuthorizationRequest, CodeChallengeMethod};
 use crate::authorization_response::AuthorizationResponse;
-use crate::credential_issuer::credential_configurations_supported::CredentialConfigurationsSupportedObject;
+use crate::credential_issuer::credential_configurations_supported::{
+    AlgIdentifier, CredentialConfigurationsSupportedObject,
+};
 use crate::credential_issuer::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
 };
@@ -10,6 +12,7 @@ use crate::credential_request::{CredentialIdentifierOrCredentialConfigurationId,
 use crate::nonce_response::NonceResponse;
 use crate::notification_request::{NotificationEvent, NotificationRequest};
 use crate::proof::ProofType;
+use crate::proofs::Proofs;
 use crate::Proof;
 use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
 use anyhow::{anyhow, Result};
@@ -135,14 +138,8 @@ impl Wallet {
 
     pub async fn get_credential_issuer_metadata(&self, credential_issuer_url: Url) -> Result<CredentialIssuerMetadata> {
         let mut openid_credential_issuer_endpoint = credential_issuer_url.clone();
-
-        // TODO(NGDIL): remove this NGDIL specific code. This is a temporary fix to get the credential issuer metadata.
-        openid_credential_issuer_endpoint
-            .path_segments_mut()
-            .map_err(|_| anyhow::anyhow!("unable to parse credential issuer url"))?
-            .pop_if_empty()
-            .push(".well-known")
-            .push("openid-credential-issuer");
+        let path = credential_issuer_url.path().trim_end_matches('/');
+        openid_credential_issuer_endpoint.set_path(&format!("/.well-known/openid-credential-issuer{path}"));
 
         self.client
             .get(openid_credential_issuer_endpoint)
@@ -250,17 +247,17 @@ impl Wallet {
     }
 
     // Select supported signing algorithm that matches the Credential Issuer's supported Proof Types.
-    // Supplying the `proof` parameter to the Credential Request is only required when the `proof_types_supported`
+    // Supplying the `proofs` parameter to the Credential Request is only required when the `proof_types_supported`
     // parameter is present in the Credential Configuration in the Credential Issuer's metadata. However, if the
-    // `proof_types_supported` is not present, the Wallet will still provide the `proof` signed with its own preferred
-    // signing algorithm. For more information see: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-8.2-2.3.1
+    // `proof_types_supported` is not present, the Wallet will still provide the `proofs` signed with its own preferred
+    // signing algorithm. For more information see: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request
     fn select_signing_algorithm(
         &self,
         credential_configuration: &CredentialConfigurationsSupportedObject,
     ) -> Result<Algorithm> {
         let proof_types_supported = &credential_configuration.proof_types_supported;
 
-        // If the Credential Issuer does not define any supported Proof Types, then the Wallet wil uses its own default signing algorithm.
+        // If the Credential Issuer does not define any supported Proof Types, then the Wallet will use its own default signing algorithm.
         if proof_types_supported.is_empty() {
             return self
                 .proof_signing_alg_values_supported
@@ -284,7 +281,8 @@ impl Wallet {
             .find(|supported_algorithm| {
                 // Since `Algorithm` does not implement `Display`, we need to use `Debug` in order to convert it to a `String`.
                 let supported_algorithm_str = format!("{supported_algorithm:?}");
-                credential_issuer_proof_signing_alg_values_supported.contains(&supported_algorithm_str)
+                credential_issuer_proof_signing_alg_values_supported
+                    .contains(&AlgIdentifier::String(supported_algorithm_str))
             })
             .cloned()
             .ok_or(anyhow::anyhow!("No matching supported signing algorithms found."))
@@ -294,6 +292,14 @@ impl Wallet {
         &self,
         credential_configuration: &CredentialConfigurationsSupportedObject,
     ) -> Result<SubjectSyntaxType> {
+        if !credential_configuration
+            .cryptographic_binding_methods_supported
+            .is_empty()
+            && credential_configuration.proof_types_supported.is_empty()
+        {
+            return Err(anyhow::anyhow!("Proof types supported must be defined if cryptographic binding methods are defined in the credential configuration."));
+        }
+
         let credential_issuer_cryptographic_binding_methods_supported: Vec<SubjectSyntaxType> =
             credential_configuration
                 .cryptographic_binding_methods_supported
@@ -356,18 +362,25 @@ impl Wallet {
             proof_builder = proof_builder.nonce(nonce);
         }
 
-        let proof = Some(
+        // TODO: Update ProofBuilder to produce Proofs instead of Proof.
+        let single_proof_object = Some(
             proof_builder
                 .subject_syntax_type(subject_syntax_type.to_string())
                 .build()
                 .await?,
         );
 
+        let jwt_string = match single_proof_object {
+            Some(Proof::Jwt { jwt, .. }) => jwt,
+            _ => return Err(anyhow::anyhow!("No JWT found in proof object")),
+        };
+
+        let proofs = Some(Proofs { jwt: vec![jwt_string] });
+
         let credential_request = CredentialRequest {
             credential_identifier_or_credential_configuration_id:
                 CredentialIdentifierOrCredentialConfigurationId::CredentialConfigurationId(credential_configuration_id),
-            proof,
-            proofs: None,
+            proofs,
         };
 
         self.client
@@ -456,7 +469,7 @@ pub mod tests {
                     ProofType::Jwt,
                     KeyProofMetadata {
                         // This proof signing algorithm will not match any of the Wallet's supported signing algorithms.
-                        proof_signing_alg_values_supported: vec!["RS256".to_string()],
+                        proof_signing_alg_values_supported: vec![AlgIdentifier::String("RS256".to_string())],
                     },
                 )]),
                 ..Default::default()
@@ -484,7 +497,7 @@ pub mod tests {
                     ProofType::Jwt,
                     KeyProofMetadata {
                         // This proof signing algorithm will match the Wallet's supported signing algorithms.
-                        proof_signing_alg_values_supported: vec!["EdDSA".to_string()],
+                        proof_signing_alg_values_supported: vec![AlgIdentifier::String("EdDSA".to_string())],
                     },
                 )]),
                 ..Default::default()
@@ -571,7 +584,7 @@ pub mod tests {
         let mock_server = MockServer::start().await;
 
         Mock::given(method("GET"))
-            .and(path("/some/path/.well-known/openid-credential-issuer"))
+            .and(path("/.well-known/openid-credential-issuer/some/path"))
             .respond_with(ResponseTemplate::new(200).set_body_json(CredentialIssuerMetadata::default()))
             .mount(&mock_server)
             .await;

@@ -1,17 +1,18 @@
+use crate::credential_issuer::credential_configurations_supported::AlgIdentifier;
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::{builder_fn, jwt, RFC7519Claims, Subject};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-/// Proof Type as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-proof-types
+/// Proof Type as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-proof-types
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 #[serde(tag = "proof_type")]
 pub enum Proof {
     #[serde(rename = "jwt")]
     Jwt { jwt: String },
     // TODO: add support for other proof types
-    // #[serde(rename = "ldp_vp")]
-    // LdpVp { ldp_vp: String },
+    // #[serde(rename = "di_vp")]
+    // DiVp { di_vp: String },
     // #[serde(rename = "attestation")]
     // Attestation { attestation: String },
 }
@@ -24,7 +25,7 @@ impl Proof {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct KeyProofMetadata {
-    pub proof_signing_alg_values_supported: Vec<String>,
+    pub proof_signing_alg_values_supported: Vec<AlgIdentifier>,
     // TODO: add `key_attestations_required`
 }
 

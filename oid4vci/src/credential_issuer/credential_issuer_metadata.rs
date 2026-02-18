@@ -1,5 +1,6 @@
 use super::credential_configurations_supported::CredentialConfigurationsSupportedObject;
 use derivative::Derivative;
+use nutype::nutype;
 use reqwest::Url;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_with::skip_serializing_none;
@@ -14,11 +15,15 @@ pub struct CredentialResponseEncryption {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct BatchCredentialIssuance {
-    pub batch_size: u32,
+    pub batch_size: BatchSize,
 }
 
+#[nutype(validate(predicate = |value: &u32| *value >= 2),
+         derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize))]
+pub struct BatchSize(u32);
+
 /// Credential Issuer Metadata as described here:
-/// https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-issuer-metadata-p
+/// https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Derivative)]
 #[derivative(Default)]
@@ -71,12 +76,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::credential_format_profiles::ietf_sd_jwt_vc::dc_sd_jwt::DcSdJwtParameters;
     use crate::{
-        credential_format_profiles::{
-            w3c_verifiable_credentials::{jwt_vc_json, CredentialSubject},
-            CredentialFormats, Parameters, WithParameters,
+        credential_format_profiles::{CredentialFormats, Parameters, WithParameters},
+        credential_issuer::credential_configurations_supported::{
+            AlgIdentifier, ClaimDescription, CredentialConfigurationsSupportedObject, CredentialMetadata,
         },
-        credential_issuer::credential_configurations_supported::ClaimDescription,
         proof::{KeyProofMetadata, ProofType},
     };
     use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer};
@@ -84,132 +89,211 @@ mod tests {
 
     #[test]
     fn test_oid4vci_examples() {
-        // Examples from
-        // https://github.com/openid/OpenID4VCI/tree/80b2214814106e55e5fd09af3415ba4fc124b6be/examples
+        // Examples from: https://github.com/openid/OpenID4VCI/blob/main/1.0/examples/credential_issuer_metadata_sd_jwt_long.json
 
         assert_eq!(
             CredentialIssuerMetadata {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
                 authorization_servers: vec!["https://server.example.com".parse().unwrap()],
-                nonce_endpoint: None,
-                credential_endpoint: Url::parse("https://credential-issuer.example.com").unwrap(),
+                nonce_endpoint: Some("https://credential-issuer.example.com/nonce".parse().unwrap()),
+                credential_endpoint: Url::parse("https://credential-issuer.example.com/credential").unwrap(),
                 deferred_credential_endpoint: Some(
                     "https://credential-issuer.example.com/deferred_credential"
                         .parse()
                         .unwrap()
                 ),
-                notification_endpoint: None,
+                notification_endpoint: Some("https://credential-issuer.example.com/notification".parse().unwrap()),
                 credential_response_encryption: Some(CredentialResponseEncryption {
                     alg_values_supported: vec!["ECDH-ES".to_string()],
                     enc_values_supported: vec!["A128GCM".to_string()],
-                    encryption_required: false
+                    encryption_required: true,
                 }),
                 credential_identifiers_supported: None,
-                batch_credential_issuance: None,
+                batch_credential_issuance: Some(BatchCredentialIssuance {
+                    batch_size: BatchSize::try_new(10).unwrap(),
+                }),
                 signed_metadata: None,
                 display: Some(vec![
                     json!({
                         "name": "Example University",
-                        "locale": "en-US"
+                        "locale": "en-US",
+                        "logo": {
+                            "uri": "https://university.example.edu/public/logo.png",
+                            "alt_text": "a square logo of a university"
+                        }
                     }),
                     json!({
                         "name": "Example Université",
-                        "locale": "fr-FR"
+                        "locale": "fr-FR",
+                        "logo": {
+                            "uri": "https://university.example.edu/public/logo.png",
+                            "alt_text": "Un logo universitaire carré"
+                        }
                     })
                 ]),
                 credential_configurations_supported: vec![(
-                    "UniversityDegreeCredential".to_string(),
+                    "SD_JWT_VC_example_in_OpenID4VCI".to_string(),
                     CredentialConfigurationsSupportedObject {
-                        credential_format: CredentialFormats::<WithParameters>::JwtVcJson(Parameters {
-                            parameters: (jwt_vc_json::CredentialDefinition {
-                                type_: vec![
-                                    "VerifiableCredential".to_string(),
-                                    "UniversityDegreeCredential".to_string()
-                                ],
-                                credential_subject: CredentialSubject {
-                                    credential_subject: None
-                                }
-                            })
-                            .into()
+                        credential_format: CredentialFormats::<WithParameters>::DcSdJwt(Parameters {
+                            parameters: DcSdJwtParameters {
+                                vct: "SD_JWT_VC_example_in_OpenID4VCI".to_string(),
+                            }
                         }),
-                        scope: Some("UniversityDegree".to_string()),
-                        cryptographic_binding_methods_supported: vec!["did:example".to_string()],
-                        credential_signing_alg_values_supported: vec!["ES256".to_string()],
+                        scope: Some("SD_JWT_VC_example_in_OpenID4VCI".to_string()),
+                        cryptographic_binding_methods_supported: vec!["jwk".to_string()],
+                        credential_signing_alg_values_supported: vec![AlgIdentifier::String("ES256".to_string())],
                         proof_types_supported: vec![(
                             ProofType::Jwt,
                             KeyProofMetadata {
-                                proof_signing_alg_values_supported: vec!["ES256".to_string()]
+                                proof_signing_alg_values_supported: vec![AlgIdentifier::String("ES256".to_string())]
                             }
                         )]
                         .into_iter()
                         .collect(),
-                        display: vec![serde_json::from_value(json!({
-                            "name": "University Credential",
-                            "locale": "en-US",
-                            "logo": {
-                                "uri": "https://university.example.edu/public/logo.png",
-                                "alt_text": "a square logo of a university"
-                            },
-                            "background_color": "#12107c",
-                            "text_color": "#FFFFFF"
-                        }))
-                        .unwrap()],
-                        claims: vec![
-                            ClaimDescription {
-                                path: ClaimPathPointer::try_new(vec![
-                                    ClaimPathElement::String("credentialSubject".to_string()),
-                                    ClaimPathElement::String("given_name".to_string())
-                                ])
-                                .unwrap(),
-                                mandatory: false,
-                                display: vec![serde_json::from_value(json!({
-                                    "name": "Given Name",
-                                    "locale": "en-US"
-                                }))
-                                .unwrap()],
-                            },
-                            ClaimDescription {
-                                path: ClaimPathPointer::try_new(vec![
-                                    ClaimPathElement::String("credentialSubject".to_string()),
-                                    ClaimPathElement::String("family_name".to_string())
-                                ])
-                                .unwrap(),
-                                mandatory: false,
-                                display: vec![serde_json::from_value(json!({
-                                    "name": "Surname",
-                                    "locale": "en-US"
-                                }))
-                                .unwrap()],
-                            },
-                            ClaimDescription {
-                                path: ClaimPathPointer::try_new(vec![
-                                    ClaimPathElement::String("credentialSubject".to_string()),
-                                    ClaimPathElement::String("degree".to_string())
-                                ])
-                                .unwrap(),
-                                mandatory: false,
-                                display: vec![],
-                            },
-                            ClaimDescription {
-                                path: ClaimPathPointer::try_new(vec![
-                                    ClaimPathElement::String("credentialSubject".to_string()),
-                                    ClaimPathElement::String("gpa".to_string())
-                                ])
-                                .unwrap(),
-                                mandatory: false,
-                                display: vec![serde_json::from_value(json!({
-                                    "name": "GPA",
-                                }))
-                                .unwrap()],
-                            }
-                        ]
+                        credential_metadata: Some(CredentialMetadata {
+                            display: Some(vec![serde_json::from_value(json!({
+                                "name": "IdentityCredential",
+                                "locale": "en-US",
+                                "logo": {
+                                    "uri": "https://university.example.edu/public/logo_credential.png",
+                                    "alt_text": "a square logo of a university credential"
+                                },
+                                "description": "A credential that signals the membership of a university",
+                                "background_color": "#12107c",
+                                "text_color": "#FFFFFF"
+                            }))
+                            .unwrap()]),
+                            claims: Some(vec![
+                                ClaimDescription {
+                                    path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
+                                        "given_name".to_string()
+                                    )])
+                                    .unwrap(),
+                                    mandatory: false,
+                                    display: vec![
+                                        serde_json::from_value(json!({"name": "Given Name", "locale": "en-US"}))
+                                            .unwrap(),
+                                        serde_json::from_value(json!({"name": "Vorname", "locale": "de-DE"})).unwrap(),
+                                    ],
+                                },
+                                ClaimDescription {
+                                    path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
+                                        "family_name".to_string()
+                                    )])
+                                    .unwrap(),
+                                    mandatory: false,
+                                    display: vec![
+                                        serde_json::from_value(json!({"name": "Surname", "locale": "en-US"})).unwrap(),
+                                        serde_json::from_value(json!({"name": "Nachname", "locale": "de-DE"})).unwrap(),
+                                    ],
+                                },
+                                ClaimDescription {
+                                    path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
+                                        "email".to_string()
+                                    )])
+                                    .unwrap(),
+                                    mandatory: false,
+                                    display: vec![],
+                                },
+                                ClaimDescription {
+                                    path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
+                                        "phone_number".to_string()
+                                    )])
+                                    .unwrap(),
+                                    mandatory: false,
+                                    display: vec![],
+                                },
+                                ClaimDescription {
+                                    path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
+                                        "address".to_string()
+                                    )])
+                                    .unwrap(),
+                                    mandatory: false,
+                                    display: vec![
+                                        serde_json::from_value(
+                                            json!({"name": "Place of residence", "locale": "en-US"})
+                                        )
+                                        .unwrap(),
+                                        serde_json::from_value(json!({"name": "Wohnsitz", "locale": "de-DE"})).unwrap(),
+                                    ],
+                                },
+                                ClaimDescription {
+                                    path: ClaimPathPointer::try_new(vec![
+                                        ClaimPathElement::String("address".to_string()),
+                                        ClaimPathElement::String("street_address".to_string()),
+                                    ])
+                                    .unwrap(),
+                                    mandatory: false,
+                                    display: vec![],
+                                },
+                                ClaimDescription {
+                                    path: ClaimPathPointer::try_new(vec![
+                                        ClaimPathElement::String("address".to_string()),
+                                        ClaimPathElement::String("locality".to_string()),
+                                    ])
+                                    .unwrap(),
+                                    mandatory: false,
+                                    display: vec![],
+                                },
+                                ClaimDescription {
+                                    path: ClaimPathPointer::try_new(vec![
+                                        ClaimPathElement::String("address".to_string()),
+                                        ClaimPathElement::String("region".to_string()),
+                                    ])
+                                    .unwrap(),
+                                    mandatory: false,
+                                    display: vec![],
+                                },
+                                ClaimDescription {
+                                    path: ClaimPathPointer::try_new(vec![
+                                        ClaimPathElement::String("address".to_string()),
+                                        ClaimPathElement::String("country".to_string()),
+                                    ])
+                                    .unwrap(),
+                                    mandatory: false,
+                                    display: vec![],
+                                },
+                                ClaimDescription {
+                                    path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
+                                        "birthdate".to_string()
+                                    )])
+                                    .unwrap(),
+                                    mandatory: false,
+                                    display: vec![],
+                                },
+                                ClaimDescription {
+                                    path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
+                                        "is_over_18".to_string()
+                                    )])
+                                    .unwrap(),
+                                    mandatory: false,
+                                    display: vec![],
+                                },
+                                ClaimDescription {
+                                    path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
+                                        "is_over_21".to_string()
+                                    )])
+                                    .unwrap(),
+                                    mandatory: false,
+                                    display: vec![],
+                                },
+                                ClaimDescription {
+                                    path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
+                                        "is_over_65".to_string()
+                                    )])
+                                    .unwrap(),
+                                    mandatory: false,
+                                    display: vec![],
+                                },
+                            ])
+                        })
                     },
-                ),]
+                )]
                 .into_iter()
                 .collect(),
             },
             from_str::<CredentialIssuerMetadata>(include_str!(
-                "../../tests/examples/credential_issuer_metadata_jwt_vc_json.json"
+                "../../tests/examples/credential_issuer_metadata_sd_jwt_long.json"
             ))
             .unwrap()
         );

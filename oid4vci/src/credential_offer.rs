@@ -1,5 +1,6 @@
 use anyhow::Result;
 use nutype::nutype;
+use oid4vc_core::utils::predicates::not_empty;
 use oid4vc_core::{to_query_value, JsonObject};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -7,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_with::skip_serializing_none;
 
-/// Grant Type `authorization_code` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-4.1.1-5.1.1
+/// Grant Type `authorization_code` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-5.1.1
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct AuthorizationCode {
@@ -15,7 +16,7 @@ pub struct AuthorizationCode {
     pub authorization_server: Option<Url>,
 }
 
-/// Grant Type `pre-authorized_code` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-4.1.1-5.2.1
+/// Grant Type `pre-authorized_code` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-5.2.1
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
 pub struct PreAuthorizedCode {
@@ -50,16 +51,20 @@ pub enum InputMode {
     Text,
 }
 
-/// Credential Offer Parameters as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-offer-parameters
+/// Credential Offer Parameters as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer-parameters
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 pub struct CredentialOfferParameters {
     pub credential_issuer: Url,
-    pub credential_configuration_ids: Vec<String>,
+    pub credential_configuration_ids: CredentialConfigurationIds,
     pub grants: Option<Grants>,
 }
 
-/// Credential Offer as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-credential-offer
+#[nutype(validate(predicate = not_empty),
+         derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Deref))]
+pub struct CredentialConfigurationIds(Vec<String>);
+
+/// Credential Offer as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum CredentialOffer {
@@ -101,7 +106,7 @@ impl std::fmt::Display for CredentialOffer {
     }
 }
 
-/// Grants as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-4.1.1-2.3
+/// Grants as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-2.3
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 pub struct Grants {
@@ -147,7 +152,10 @@ mod tests {
             credential_offer,
             CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credential_configuration_ids: vec!["UniversityDegree_JWT".to_string(),],
+                credential_configuration_ids: CredentialConfigurationIds::try_new(vec![
+                    "UniversityDegree_JWT".to_string(),
+                ])
+                .unwrap(),
                 grants: Some(Grants {
                     pre_authorized_code: Some(PreAuthorizedCode {
                         pre_authorized_code: "adhjhdjajkdkhjhdj".to_string(),
@@ -173,7 +181,10 @@ mod tests {
         assert_eq!(
             CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credential_configuration_ids: vec!["UniversityDegree_LDP_VC".to_string(),],
+                credential_configuration_ids: CredentialConfigurationIds::try_new(vec![
+                    "UniversityDegree_LDP_VC".to_string(),
+                ])
+                .unwrap(),
                 grants: Some(Grants {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
@@ -190,10 +201,11 @@ mod tests {
         assert_eq!(
             CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credential_configuration_ids: vec![
+                credential_configuration_ids: CredentialConfigurationIds::try_new(vec![
                     "UniversityDegreeCredential".to_string(),
                     "org.iso.18013.5.1.mDL".to_string(),
-                ],
+                ])
+                .unwrap(),
                 grants: Some(Grants {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
@@ -219,7 +231,10 @@ mod tests {
         assert_eq!(
             CredentialOfferParameters {
                 credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
-                credential_configuration_ids: vec!["UniversityDegreeCredential".to_string()],
+                credential_configuration_ids: CredentialConfigurationIds::try_new(vec![
+                    "UniversityDegreeCredential".to_string()
+                ])
+                .unwrap(),
                 grants: Some(Grants {
                     authorization_code: None,
                     pre_authorized_code: Some(PreAuthorizedCode {
