@@ -2,8 +2,6 @@ use crate::credential_format;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use super::CredentialSubject;
-
 credential_format!("ldp_vc", LdpVc, {
     credential_definition: CredentialDefinition
 });
@@ -15,6 +13,4 @@ pub struct CredentialDefinition {
     pub context: Vec<String>,
     #[serde(rename = "type")]
     pub type_: Vec<String>,
-    #[serde(flatten)]
-    pub credential_subject: CredentialSubject,
 }

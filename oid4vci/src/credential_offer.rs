@@ -1,5 +1,6 @@
 use anyhow::Result;
 use nutype::nutype;
+use oid4vc_core::utils::predicates::not_empty;
 use oid4vc_core::{to_query_value, JsonObject};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -7,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_with::skip_serializing_none;
 
-/// Grant Type `authorization_code` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-4.1.1-5.1.1
+/// Grant Type `authorization_code` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-5.1.1
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct AuthorizationCode {
@@ -15,7 +16,7 @@ pub struct AuthorizationCode {
     pub authorization_server: Option<Url>,
 }
 
-/// Grant Type `pre-authorized_code` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-4.1.1-5.2.1
+/// Grant Type `pre-authorized_code` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-5.2.1
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
 pub struct PreAuthorizedCode {
@@ -50,10 +51,6 @@ pub enum InputMode {
     Text,
 }
 
-fn not_empty_vec(v: &[String]) -> bool {
-    !v.is_empty()
-}
-
 /// Credential Offer Parameters as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer-parameters
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
@@ -63,7 +60,7 @@ pub struct CredentialOfferParameters {
     pub grants: Option<Grants>,
 }
 
-#[nutype(validate(predicate = not_empty_vec),
+#[nutype(validate(predicate = not_empty),
          derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Deref))]
 pub struct CredentialConfigurationIds(Vec<String>);
 
@@ -109,7 +106,7 @@ impl std::fmt::Display for CredentialOffer {
     }
 }
 
-/// Grants as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-4.1.1-2.3
+/// Grants as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-2.3
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 pub struct Grants {
