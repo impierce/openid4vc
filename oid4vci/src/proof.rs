@@ -4,7 +4,7 @@ use oid4vc_core::{builder_fn, jwt, RFC7519Claims, Subject};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-/// Proof Type as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#name-proof-types
+/// Proof Type as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-proof-types
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 #[serde(tag = "proof_type")]
 pub enum Proof {

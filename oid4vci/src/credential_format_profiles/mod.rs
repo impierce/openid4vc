@@ -170,8 +170,7 @@ mod tests {
                         type_: vec![
                             "VerifiableCredential".to_string(),
                             "DriverLicenseCredential".to_string(),
-                        ],
-                        credential_subject: Default::default(),
+                        ]
                     },
                 },
             })
