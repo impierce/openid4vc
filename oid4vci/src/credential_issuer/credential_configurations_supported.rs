@@ -90,7 +90,7 @@ pub struct CredentialConfigurationsSupportedDisplay {
 mod tests {
     use super::*;
     use crate::credential_format_profiles::{
-        w3c_verifiable_credentials::{jwt_vc_json, ldp_vc, CredentialSubject},
+        w3c_verifiable_credentials::{jwt_vc_json, ldp_vc},
         CredentialFormats, Parameters,
     };
     use oid4vc_core::claim_path_pointer::ClaimPathElement;
@@ -117,10 +117,7 @@ mod tests {
                                 type_: vec![
                                     "VerifiableCredential".to_string(),
                                     "UniversityDegreeCredential".to_string()
-                                ],
-                                credential_subject: CredentialSubject {
-                                    credential_subject: None
-                                },
+                                ]
                             })
                             .into()
                         }),
@@ -223,10 +220,7 @@ mod tests {
                                 type_: vec![
                                     "VerifiableCredential".to_string(),
                                     "UniversityDegreeCredential".to_string()
-                                ],
-                                credential_subject: CredentialSubject {
-                                    credential_subject: None
-                                },
+                                ]
                             })
                             .into()
                         }),
