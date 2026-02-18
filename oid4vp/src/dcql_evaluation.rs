@@ -4,7 +4,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 /// Processing a dcql_query with credential sets as described in OID4VP - draft 28 - Section 6.4.2 Selecting Credentials:
-/// https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html#name-selecting-credentials
+/// https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-selecting-credentials
 fn set_is_required(credential_set: &CredentialSetQuery) -> bool {
     credential_set.required.unwrap_or(true)
 }
@@ -78,7 +78,7 @@ fn evaluate_single_claim_query(claim_query: &ClaimQuery, credential_json: &Value
 }
 
 /// Processing with claims_sets as described in OID4VP - draft 28 Section 6.4.1 Selecting Claims:
-/// https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html#name-selecting-claims
+/// https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-selecting-claims
 pub fn evaluate_credential_query(credential_query: &CredentialQuery, credential_json: &Value) -> bool {
     // If claims is absent, the Verifier is requesting no claims that are selectively disclosable;
     // the Wallet MUST return only the claims that are mandatory to present (e.g., SD-JWT and Key Binding JWT for a Credential of format IETF SD-JWT VC).

@@ -19,7 +19,7 @@ This workspace includes Rust implementations for the following DCP specification
 | Specification | Description | Version
 | -------------------| ------------------------------------------ | -------
 | [OID4VCI](oid4vci) | OpenID for Verifiable Credential Issuance | [Working Group Draft 15 published: 19 December 2024](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html)
-| [OID4VP](oid4vp) | OpenID for Verifiable Presentations | [Working Group Draft 28 published: 24 April 2025](https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html)
+| [OID4VP](oid4vp) | OpenID for Verifiable Presentations | [OID4VP 1.0 published 9 July 2025](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html)
 | [SIOPv2](siopv2) | Self-Issued OpenID Provider v2 | [Working Group Draft 13 published: 28 November 2023](https://openid.net/specs/openid-connect-self-issued-v2-1_0-13.html)
 
 ### OID4VC Manager

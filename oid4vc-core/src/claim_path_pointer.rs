@@ -30,7 +30,7 @@ pub enum ClaimPathElement {
 
 impl ClaimPathPointer {
     /// As described in OID4VP - draft 28 Section 7.1 for JSON-based credentials:
-    /// https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html#name-semantics-for-json-based-cr
+    /// https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-semantics-for-json-based-cr
     /// TODO: Add semantics for ISO Mdoc credential format.
     pub fn get_values_from_json(&self, json_data: &Value) -> Vec<Value> {
         let mut current_selections: Vec<&Value> = vec![json_data];
@@ -75,7 +75,7 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    // Example test case from: https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html#name-claims-path-pointer-example
+    // Example test case from: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-claims-path-pointer-example
     #[test]
     fn test_claim_path_pointer() {
         let example: serde_json::Value = json!({

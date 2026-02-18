@@ -216,7 +216,7 @@ pub struct CredentialSetQuery {
 pub struct TrustedAuthority {
     #[serde(rename = "type")]
     // TODO: type_ should have stronger typing, see types defined by the spec:
-    // https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html#name-authority-key-identifier
+    // https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-trusted-authorities-query
     pub type_: String,
     pub values: Vec<String>,
 }

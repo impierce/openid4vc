@@ -175,7 +175,7 @@ pub struct EncryptedResponseEncValues(Vec<String>);
 pub struct ClientMetadataParameters {
     /// Object defining the formats and proof types of Verifiable Presentations and Verifiable Credentials that a
     /// Verifier supports.
-    /// As described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html#name-wallet-metadata-authorizati
+    /// As described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-additional-wallet-metadata-
     pub vp_formats_supported: VpFormatsSupported,
     /// TODO: Implement encryption response support.
     #[serde(skip_serializing_if = "Option::is_none")]
