@@ -6,18 +6,14 @@ pub struct MetaContext<'a> {
     pub format: &'a Format,
 }
 
-pub fn validate_meta(meta: &Option<MetaTypes>, ctx: &MetaContext) -> Result<(), ValidationError> {
-    let Some(meta_value) = meta else {
-        return Ok(()); // meta is considered an OPTIONAL field. Returns OK if it is none.
-    };
-
-    match (&ctx.format, meta_value) {
+pub fn validate_meta(meta: &MetaTypes, ctx: &MetaContext) -> Result<(), ValidationError> {
+    match (&ctx.format, meta) {
         (Format::LdpVc, MetaTypes::W3CFormatMeta { type_values }) => validate_w3c_type_values(type_values),
         (Format::JwtVcJson, MetaTypes::W3CFormatMeta { type_values }) => validate_w3c_type_values(type_values),
         (Format::DcSdJwt, MetaTypes::SdJwtMeta { vct_values }) => validate_sd_jwt_vct_values(vct_values),
         (Format::MsoMdoc, MetaTypes::MsoMdocMeta { doctype_value }) => validate_mso_mdoc_doctype(doctype_value),
-        (format, meta_value) => Err(ValidationError::new("incorrect_meta_format")
-            .with_message(format!("{meta_value:?} is not compatible with format: {format:?}").into())),
+        (format, meta) => Err(ValidationError::new("incorrect_meta_format")
+            .with_message(format!("{meta:?} is not compatible with format: {format:?}").into())),
     }
 }
 

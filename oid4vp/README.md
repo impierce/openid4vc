@@ -4,9 +4,9 @@ This is a Rust library for the OpenID for Verifiable Presentations (OpenID4VP) s
 Digital Credentials Protocols
 Working Group](https://openid.net/wg/digital-credentials-protocols/).
 
-| Specification    | Description                         | Version                                                                                                                    |
-| ---------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| [OID4VP](oid4vp) | OpenID for Verifiable Presentations | [Working Group Draft 28 published: 24 April 2025 ](https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html) |
+| Specification    | Description                         | Version                                                                                                   |
+| ---------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| [OID4VP](oid4vp) | OpenID for Verifiable Presentations | [OID4VP 1.0 published: 9 July 2025 ](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) |
 
 An overview of all the OpenID Digital Credentials Protocols implementation in Rust can be found [here](../README.md).
 
