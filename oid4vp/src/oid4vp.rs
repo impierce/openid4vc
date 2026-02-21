@@ -131,6 +131,7 @@ impl Extension for OID4VP {
                         .dc_sd_jwt
                         .and_then(|params| params.sd_jwt_alg_values)
                 })
+                .map(|alg_values| alg_values.into_inner())
                 .ok_or_else(|| anyhow!("No supported algorithms found")),
             _ => unreachable!("ClientMetadataUri should have been resolved above"),
         }

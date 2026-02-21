@@ -12,6 +12,7 @@ use oid4vc_core::{
 };
 use oid4vc_manager::{methods::key_method::KeySubject, ProviderManager, RelyingPartyManager};
 use oid4vci::VerifiableCredentialJwt;
+use oid4vp::authorization_request::AlgValues;
 use oid4vp::authorization_request::{JwtVcJsonParameters, VpFormatsSupported};
 use oid4vp::token::verifiable_presentation_jwt::VerifiablePresentationJwt;
 use oid4vp::{
@@ -93,7 +94,7 @@ async fn test_implicit_flow() {
             extension: ClientMetadataParameters {
                 vp_formats_supported: VpFormatsSupported {
                     jwt_vc_json: Some(JwtVcJsonParameters {
-                        alg_values: Some(vec![Algorithm::EdDSA]),
+                        alg_values: Some(AlgValues::try_new(vec![Algorithm::EdDSA]).unwrap()),
                     }),
                     ..Default::default()
                 },

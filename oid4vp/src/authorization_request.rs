@@ -4,8 +4,10 @@ use anyhow::{anyhow, Result};
 use is_empty::IsEmpty;
 use jsonwebtoken::Algorithm;
 use monostate::MustBe;
+use nutype::nutype;
 use oid4vc_core::authorization_request::{Object, RedirectOrResponseUri};
 use oid4vc_core::builder_fn;
+use oid4vc_core::utils::predicates::not_empty;
 use oid4vc_core::{
     authorization_request::AuthorizationRequest, client_metadata::ClientMetadataResource, scope::Scope, RFC7519Claims,
 };
@@ -21,7 +23,7 @@ pub struct ClientId {
 }
 
 /// The Client ID Scheme enables the use of different mechanisms to obtain and validate the Verifier's metadata. As
-/// described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html#name-client-identifier-prefix-an
+/// described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-client-identifier-prefix-an
 #[derive(Debug, PartialEq, Clone)]
 pub enum ClientIdPrefix {
     PreRegistered,
@@ -109,7 +111,7 @@ pub enum CredentialFormatIdentifier {
     DcSdJwt,
 }
 
-/// [`AuthorizationRequest`] claims specific to [`OID4VP`].
+/// [`AuthorizationRequest`] claims specific to [`OID4VP`] and as defined in the spec: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-authorization-request.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationRequestParameters {
@@ -121,17 +123,63 @@ pub struct AuthorizationRequestParameters {
     pub nonce: String,
     #[serde(flatten)]
     pub client_metadata: ClientMetadataResource<ClientMetadataParameters>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_data: Option<TransactionData>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub verifier_info: Option<VerifierInfo>,
+    // TODO: When support for `request_uri` is added, this field should be used to indicate the HTTP method to retrieve the request object from the `request_uri`.
+    // We must then add validation to ensure that `request_uri_method` is only set when `request_uri` is set.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_uri_method: Option<RequestUriMethod>,
 }
+
+#[nutype(
+    validate(predicate = not_empty),
+    derive(Debug, PartialEq, Clone, Serialize, Deserialize)
+)]
+pub struct TransactionData(Vec<String>);
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
+pub struct VerifierInfoAttestation {
+    pub format: String,
+    pub data: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub credential_ids: Option<CredentialIds>,
+}
+
+#[nutype(
+    validate(predicate = not_empty),
+    derive(Debug, PartialEq, Clone, Serialize, Deserialize)
+)]
+pub struct VerifierInfo(Vec<VerifierInfoAttestation>);
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum RequestUriMethod {
+    Get,
+    Post,
+}
+#[nutype(
+    validate(predicate = not_empty),
+    derive(Debug, PartialEq, Clone, Serialize, Deserialize)
+)]
+pub struct CredentialIds(Vec<String>);
+
+#[nutype(
+    validate(predicate = not_empty),
+    derive(Debug, PartialEq, Clone, Serialize, Deserialize)
+)]
+pub struct EncryptedResponseEncValues(Vec<String>);
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 pub struct ClientMetadataParameters {
     /// Object defining the formats and proof types of Verifiable Presentations and Verifiable Credentials that a
     /// Verifier supports.
-    /// As described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0-28.html#name-wallet-metadata-authorizati
+    /// As described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-additional-wallet-metadata-
     pub vp_formats_supported: VpFormatsSupported,
     /// TODO: Implement encryption response support.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub encrypted_response_enc_values_supported: Option<Vec<String>>,
+    pub encrypted_response_enc_values_supported: Option<EncryptedResponseEncValues>,
     /// TODO: Not yet implemented. Requires further implementation of a JWK library.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jwks: Option<JsonWebKeySet>,
@@ -161,30 +209,42 @@ pub struct VpFormatsSupported {
     pub mso_mdoc: Option<MsoMdocParameters>,
 }
 
+#[nutype(
+    validate(predicate = not_empty),
+    derive(Debug, PartialEq, Clone, Serialize, Deserialize)
+)]
+pub struct AlgValues(Vec<Algorithm>);
+
 #[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
 pub struct JwtVcJsonParameters {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub alg_values: Option<Vec<Algorithm>>,
+    pub alg_values: Option<AlgValues>,
 }
 
 #[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
 pub struct JwtVpJsonParameters {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub alg_values: Option<Vec<Algorithm>>,
+    pub alg_values: Option<AlgValues>,
 }
 
 #[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
 pub struct DcSdJwtParameters {
     #[serde(rename = "sd-jwt_alg_values", skip_serializing_if = "Option::is_none")]
-    pub sd_jwt_alg_values: Option<Vec<Algorithm>>,
+    pub sd_jwt_alg_values: Option<AlgValues>,
     #[serde(rename = "kb-jwt_alg_values", skip_serializing_if = "Option::is_none")]
-    pub kb_jwt_alg_values: Option<Vec<Algorithm>>,
+    pub kb_jwt_alg_values: Option<AlgValues>,
 }
+
+#[nutype(
+    validate(predicate = not_empty),
+    derive(Debug, PartialEq, Clone, Serialize, Deserialize)
+)]
+pub struct ProofTypeValues(Vec<String>);
 
 #[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
 pub struct LdpVcParameters {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub proof_type_values: Option<Vec<String>>,
+    pub proof_type_values: Option<ProofTypeValues>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cryptosuite_values: Option<Vec<String>>,
 }
@@ -218,6 +278,9 @@ pub struct AuthorizationRequestBuilder {
     nonce: Option<String>,
     client_metadata: Option<ClientMetadataResource<ClientMetadataParameters>>,
     custom_url_scheme: Option<String>,
+    transaction_data: Option<TransactionData>,
+    verifier_info: Option<VerifierInfo>,
+    request_uri_method: Option<RequestUriMethod>,
 }
 
 impl AuthorizationRequestBuilder {
@@ -237,6 +300,9 @@ impl AuthorizationRequestBuilder {
     builder_fn!(state, String);
     builder_fn!(dcql_query, DcqlQuery);
     builder_fn!(custom_url_scheme, String);
+    builder_fn!(transaction_data, TransactionData);
+    builder_fn!(verifier_info, VerifierInfo);
+    builder_fn!(request_uri_method, RequestUriMethod);
 
     pub fn build(mut self) -> Result<AuthorizationRequest<Object<OID4VP>>> {
         match (self.client_id.take(), self.is_empty()) {
@@ -261,6 +327,9 @@ impl AuthorizationRequestBuilder {
                         .client_metadata
                         .take()
                         .ok_or_else(|| anyhow!("`client_metadata` or `client_metadata_uri` is required."))?,
+                    transaction_data: self.transaction_data.take(),
+                    verifier_info: self.verifier_info.take(),
+                    request_uri_method: self.request_uri_method.take(),
                 };
 
                 Ok(AuthorizationRequest::<Object<OID4VP>> {
@@ -318,7 +387,7 @@ mod tests {
                 extension: ClientMetadataParameters {
                     vp_formats_supported: VpFormatsSupported {
                         jwt_vc_json: Some(JwtVcJsonParameters {
-                            alg_values: Some(vec![Algorithm::ES256, Algorithm::ES384]),
+                            alg_values: Some(AlgValues::try_new(vec![Algorithm::ES256, Algorithm::ES384]).unwrap()),
                         }),
                         ..Default::default()
                     },
@@ -351,8 +420,12 @@ mod tests {
                 extension: ClientMetadataParameters {
                     vp_formats_supported: VpFormatsSupported {
                         dc_sd_jwt: Some(DcSdJwtParameters {
-                            sd_jwt_alg_values: Some(vec![Algorithm::ES256, Algorithm::ES384]),
-                            kb_jwt_alg_values: Some(vec![Algorithm::ES256, Algorithm::ES384]),
+                            sd_jwt_alg_values: Some(
+                                AlgValues::try_new(vec![Algorithm::ES256, Algorithm::ES384]).unwrap(),
+                            ),
+                            kb_jwt_alg_values: Some(
+                                AlgValues::try_new(vec![Algorithm::ES256, Algorithm::ES384]).unwrap(),
+                            ),
                         }),
                         ..Default::default()
                     },
@@ -385,10 +458,13 @@ mod tests {
                 extension: ClientMetadataParameters {
                     vp_formats_supported: VpFormatsSupported {
                         ldp_vc: Some(LdpVcParameters {
-                            proof_type_values: Some(vec![
-                                "DataIntegrityProof".to_string(),
-                                "Ed25519Signature2020".to_string(),
-                            ]),
+                            proof_type_values: Some(
+                                ProofTypeValues::try_new(vec![
+                                    "DataIntegrityProof".to_string(),
+                                    "Ed25519Signature2020".to_string(),
+                                ])
+                                .unwrap(),
+                            ),
                             cryptosuite_values: Some(vec![
                                 "ecdsa-rdfc-2019".to_string(),
                                 "ecdsa-sd-2023".to_string(),
@@ -449,5 +525,14 @@ mod tests {
         };
 
         assert_eq!(auth_metadata, &expected);
+    }
+
+    #[test]
+    fn test_encrypted_response_enc_values_non_empty() {
+        let valid = EncryptedResponseEncValues::try_new(vec!["A128GCM".to_string(), "A256GCM".to_string()]);
+        assert!(valid.is_ok());
+
+        let invalid = EncryptedResponseEncValues::try_new(vec![]);
+        assert!(invalid.is_err());
     }
 }
