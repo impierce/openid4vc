@@ -78,18 +78,18 @@ pub enum VpTokenValidationError {
 }
 
 /// A type validating [`VpToken`]s.
-pub struct VpTokenValidator<V: JwsVerifier, VMR: VerificationMaterialResolver> {
+pub struct VpTokenValidator<'a, V: JwsVerifier, VMR: VerificationMaterialResolver> {
     jwt_presentation_validator: JwtPresentationValidator<V>,
     jwt_credential_validator: JwtCredentialValidator<V>,
     sd_jwt_credential_validator: SdJwtCredentialValidator<V>,
-    signature_verifier: V,
-    verification_material_resolver: VMR,
+    signature_verifier: &'a V,
+    verification_material_resolver: &'a VMR,
 }
 
-impl<SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidator<SV, VMR> {
+impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidator<'a, SV, VMR> {
     /// Create a new [`VpTokenValidator`] that delegates cryptographic signature verification to
     /// `signature_verifier` and resolves DIDs using `verification_material_resolver`
-    pub fn new(signature_verifier: SV, verification_material_resolver: VMR) -> Self {
+    pub fn new(signature_verifier: &'a SV, verification_material_resolver: &'a VMR) -> Self {
         Self {
             jwt_presentation_validator: JwtPresentationValidator::with_signature_verifier(signature_verifier.clone()),
             jwt_credential_validator: JwtCredentialValidator::with_signature_verifier(signature_verifier.clone()),
@@ -425,7 +425,7 @@ impl<SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidato
 
         // 1. Verify Issuer Signature
         sd_jwt_vc
-            .verify_signature(&self.signature_verifier, &public_key_jwk)
+            .verify_signature(self.signature_verifier, &public_key_jwk)
             .map_err(|e| VpTokenValidationError::SdJwtValidation(e.to_string()))?;
 
         // 2. Verify Key Binding (Holder Binding) if required
@@ -582,7 +582,7 @@ mod tests {
             .unwrap();
 
         assert!(
-            VpTokenValidator::new(SignatureVerifier, TestVerificationMaterialResolver)
+            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
                 .validate_vp_token(
                     &dcql_query,
                     &vp_token,
@@ -625,7 +625,7 @@ mod tests {
             .unwrap();
 
         assert!(
-            VpTokenValidator::new(SignatureVerifier, TestVerificationMaterialResolver)
+            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
                 .validate_vp_token(
                     &dcql_query,
                     &vp_token,
@@ -672,7 +672,7 @@ mod tests {
             .unwrap();
 
         assert!(
-            VpTokenValidator::new(SignatureVerifier, TestVerificationMaterialResolver)
+            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
                 .validate_vp_token(
                     &dcql_query,
                     &vp_token,
@@ -720,7 +720,7 @@ mod tests {
             .unwrap();
 
         assert!(matches!(
-            VpTokenValidator::new(SignatureVerifier, TestVerificationMaterialResolver)
+            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
                 .validate_vp_token(
                     &dcql_query,
                     &vp_token,
@@ -769,7 +769,7 @@ mod tests {
             .unwrap();
 
         assert!(matches!(
-            VpTokenValidator::new(SignatureVerifier, TestVerificationMaterialResolver)
+            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
                 .validate_vp_token(
                     &dcql_query,
                     &vp_token,
@@ -825,7 +825,7 @@ mod tests {
             .unwrap();
 
         assert!(matches!(
-            VpTokenValidator::new(SignatureVerifier, TestVerificationMaterialResolver)
+            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
                 .validate_vp_token(
                     &dcql_query,
                     &vp_token,
@@ -876,7 +876,7 @@ mod tests {
             .unwrap();
 
         assert!(matches!(
-            VpTokenValidator::new(SignatureVerifier, TestVerificationMaterialResolver)
+            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
                 .validate_vp_token(
                     &dcql_query,
                     &vp_token,
@@ -929,7 +929,7 @@ mod tests {
             .unwrap();
 
         assert!(matches!(
-            VpTokenValidator::new(SignatureVerifier, TestVerificationMaterialResolver)
+            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
                 .validate_vp_token(
                     &dcql_query,
                     &vp_token,

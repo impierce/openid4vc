@@ -200,10 +200,8 @@ async fn test_implicit_flow() {
         .await
         .unwrap();
 
-    let signature_verifier = SignatureVerifier;
-
     assert!(
-        VpTokenValidator::new(signature_verifier, TestVerificationMaterialResolver)
+        VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
             .validate_vp_token(
                 &DCQL_QUERY,
                 &authorization_response.extension.vp_token,
