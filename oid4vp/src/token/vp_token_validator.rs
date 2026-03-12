@@ -100,12 +100,12 @@ impl<SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidato
     /// Validate the provided [`VpToken`] against the given [`DcqlQuery`].
     ///
     /// This process involves:
-    /// 1. Iterating through presentations in the `vp_token`.
-    /// 2. Matching each presentation to a `CredentialQuery` in the `dcql_query`.
-    /// 3. Validating the format-specific structure and signatures of each presentation.
-    /// 4. Decoding the credentials into a common format (`JsonObject`).
-    /// 5. Evaluating the decoded credentials against the full logic of the `dcql_query` (including sets and claims).
-    /// 6. Validating the structural submission of the presentations (e.g. required sets satisfied).
+    /// 1. Validating the structural submission of the presentations (e.g. required sets satisfied).
+    /// 2. Iterating through presentations in the `vp_token`.
+    /// 3. Matching each presentation to a `CredentialQuery` in the `dcql_query`.
+    /// 4. Validating the format-specific structure and signatures of each presentation.
+    /// 5. Decoding the credentials into a common format (`JsonObject`).
+    /// 6. Evaluating the decoded credentials against the full logic of the `dcql_query` (including sets and claims).
     pub async fn validate_vp_token(
         &self,
         dcql_query: &DcqlQuery,
@@ -113,6 +113,10 @@ impl<SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidato
         client_id: &str,
         nonce: Option<&str>,
     ) -> Result<DecodedVpToken, VpTokenValidationError> {
+        // Validate that the structural requirements (e.g. required groups) of the DCQL query are met
+        validate_presentation_submission(&vp_token.presentations, dcql_query)
+            .map_err(VpTokenValidationError::PresentationSubmissionValidation)?;
+
         let mut builder = DecodedVpTokenBuilder::new();
 
         for (credential_query_id, presentations) in vp_token.presentations.iter() {
@@ -154,10 +158,6 @@ impl<SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidato
         if !evaluate_dcql_query(dcql_query, &decoded_vp_token) {
             return Err(VpTokenValidationError::DcqlEvaluationFailed);
         }
-
-        // Validate that the structural requirements (e.g. required groups) of the DCQL query are met
-        validate_presentation_submission(&vp_token.presentations, dcql_query)
-            .map_err(VpTokenValidationError::PresentationSubmissionValidation)?;
 
         Ok(decoded_vp_token)
     }
@@ -319,11 +319,6 @@ impl<SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidato
             .jwt_presentation_validator
             .validate(presentation_jwt, &holder, options)?;
 
-        let custom_claims = decoded_jwt_presentation
-            .custom_claims
-            .as_ref()
-            .ok_or(VpTokenValidationError::MissingCustomClaims)?;
-
         // 4. Check Audience
         let aud = decoded_jwt_presentation.aud.as_ref().map(|aud| aud.to_string());
 
@@ -334,13 +329,20 @@ impl<SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidato
             });
         }
 
-        // 5. Check Nonce
-        let jwt_nonce = custom_claims.get("nonce").and_then(|v| v.as_str());
-        if jwt_nonce != nonce {
-            return Err(VpTokenValidationError::InvalidNonce {
-                expected: nonce.map(String::from),
-                found: jwt_nonce.map(String::from),
-            });
+        // 5. Check Nonce (if provided)
+        if nonce.is_some() {
+            let custom_claims = decoded_jwt_presentation
+                .custom_claims
+                .as_ref()
+                .ok_or(VpTokenValidationError::MissingCustomClaims)?;
+
+            let jwt_nonce = custom_claims.get("nonce").and_then(|v| v.as_str());
+            if jwt_nonce != nonce {
+                return Err(VpTokenValidationError::InvalidNonce {
+                    expected: nonce.map(String::from),
+                    found: jwt_nonce.map(String::from),
+                });
+            }
         }
 
         Ok(decoded_jwt_presentation)
@@ -822,7 +824,7 @@ mod tests {
             // The JWT VC JSON credential is valid and the nonce matches, but the DCQL query is looking for a VC SD-JWT
             // credential, so the validation should fail with a PresentationValidation error indicating that the
             // credential format does not match the expected format.
-            VpTokenValidationError::PresentationValidation { .. }
+            VpTokenValidationError::PresentationValidation(_)
         ));
     }
 
@@ -878,7 +880,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn credential_query_id_mismatch_results_in_not_found_error() {
+    async fn credential_query_id_mismatch_results_in_presentation_submission_validation_error() {
         let dcql_query = DcqlQuery {
             credentials: vec![CredentialQuery {
                 id: CredentialQueryId::try_new("CredentialQuery").unwrap(),
@@ -925,9 +927,9 @@ mod tests {
                 .unwrap_err(),
             // The JWT VC JSON credential is valid, the nonce matches, and the client ID matches, but the VP token
             // contains a presentation for a Credential Query with a different ID than the one in the DCQL query, so
-            // the validation should fail with a CredentialQueryNotFound error indicating that there is no
+            // the validation should fail with a MissingRequiredCredential error indicating that there is no
             // presentation in the VP token for the Credential Query in the DCQL query.
-            VpTokenValidationError::CredentialQueryNotFound { .. }
+            VpTokenValidationError::PresentationSubmissionValidation(VpTokenBuilderError::MissingRequiredCredential(_))
         ));
     }
 }

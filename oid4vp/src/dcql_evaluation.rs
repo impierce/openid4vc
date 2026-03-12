@@ -90,71 +90,73 @@ pub fn evaluate_credential_query(
         return true;
     }
 
-    // TODO: How do we handle multiple presentations when the `multiple` claim is `true`?
-    let decoded_presentation = if let Some(decoded_presentation) = decoded_presentations.first() {
-        decoded_presentation
-    } else {
+    // If `multiple` is `false`, the Verifier is requesting that only one presentation of a Credential matching the Credential Query be returned.
+    if !credential_query.multiple.unwrap_or_default() && decoded_presentations.len() > 1 {
         return false;
-    };
+    }
 
-    // If meta is present, check the meta requirements.
-    match &credential_query.meta {
-        MetaTypes::W3CFormatMeta { type_values } => {
-            // For W3C Verifiable Credentials, check the "type" field in the credential
-            if let Some(credential_types) = decoded_presentation.get("type").and_then(|t| t.as_array()) {
-                let credential_type_strings: Vec<&str> = credential_types.iter().filter_map(|t| t.as_str()).collect();
+    decoded_presentations.iter().any(|decoded_presentation| {
+        // If meta is present, check the meta requirements.
+        match &credential_query.meta {
+            MetaTypes::W3CFormatMeta { type_values } => {
+                // For W3C Verifiable Credentials, check the "type" field in the credential
+                if let Some(credential_types) = decoded_presentation.get("type").and_then(|t| t.as_array()) {
+                    let credential_type_strings: Vec<&str> =
+                        credential_types.iter().filter_map(|t| t.as_str()).collect();
 
-                // Check if any of the type_values arrays is a subset of the credential's types
-                let type_match = type_values.iter().any(|type_option| {
-                    type_option
-                        .iter()
-                        .all(|required_type| credential_type_strings.contains(&required_type.as_str()))
-                });
+                    // Check if any of the type_values arrays is a subset of the credential's types
+                    let type_match = type_values.iter().any(|type_option| {
+                        type_option
+                            .iter()
+                            .all(|required_type| credential_type_strings.contains(&required_type.as_str()))
+                    });
 
-                if !type_match {
+                    if !type_match {
+                        return false;
+                    }
+                } else {
                     return false;
                 }
-            } else {
-                return false;
+            }
+            MetaTypes::SdJwtMeta {
+                vct_values: _vct_values,
+            } => {
+                // TODO: Implement SD-JWT `vct` checking
+            }
+            MetaTypes::MsoMdocMeta {
+                doctype_value: _doctype_value,
+            } => {
+                // TODO: Implement MSO mDoc type checking
             }
         }
-        MetaTypes::SdJwtMeta {
-            vct_values: _vct_values,
-        } => {
-            // TODO: Implement SD-JWT `vct` checking
-        }
-        MetaTypes::MsoMdocMeta {
-            doctype_value: _doctype_value,
-        } => {
-            // TODO: Implement MSO mDoc type checking
-        }
-    }
 
-    // TODO: Check `trusted_authorities` if present
-    // TODO: Check `require_cryptographic_holder_binding`
+        // TODO: Check `trusted_authorities` if present
+        // TODO: Check `require_cryptographic_holder_binding`
 
-    // If claims is present, but claim_sets is absent, the Verifier requests all claims listed in claims.
-    match &credential_query.claim_sets {
-        None => {
-            credential_query.claims.as_deref().unwrap_or(&[]).iter().all(|claim| {
-                evaluate_single_claim_query(claim, &serde_json::Value::Object(decoded_presentation.clone()))
-            })
+        let presentation_value = serde_json::Value::Object(decoded_presentation.clone());
+
+        // If claims is present, but claim_sets is absent, the Verifier requests all claims listed in claims.
+        match &credential_query.claim_sets {
+            None => credential_query
+                .claims
+                .as_deref()
+                .unwrap_or(&[])
+                .iter()
+                .all(|claim| evaluate_single_claim_query(claim, &presentation_value)),
+
+            // If both claims and claim_sets are present, the Verifier requests one combination of the claims listed in claim_sets. The order of the options conveyed in the claim_sets array expresses the Verifier's preference for what is returned;
+            // the Wallet SHOULD return the first option that it can satisfy. If the Wallet cannot satisfy any of the options, it MUST NOT return any claims.
+            Some(claim_sets) => claim_sets.iter().any(|claim_set| {
+                claim_set.iter().all(|claim_id| {
+                    credential_query
+                        .claims
+                        .as_ref()
+                        .and_then(|claims| claims.iter().find(|claim| claim.id.as_ref() == Some(claim_id)))
+                        .is_some_and(|claim| evaluate_single_claim_query(claim, &presentation_value))
+                })
+            }),
         }
-
-        // If both claims and claim_sets are present, the Verifier requests one combination of the claims listed in claim_sets. The order of the options conveyed in the claim_sets array expresses the Verifier's preference for what is returned;
-        // the Wallet SHOULD return the first option that it can satisfy. If the Wallet cannot satisfy any of the options, it MUST NOT return any claims.
-        Some(claim_sets) => claim_sets.iter().any(|claim_set| {
-            claim_set.iter().all(|claim_id| {
-                credential_query
-                    .claims
-                    .as_ref()
-                    .and_then(|claims| claims.iter().find(|claim| claim.id.as_ref() == Some(claim_id)))
-                    .is_some_and(|claim| {
-                        evaluate_single_claim_query(claim, &serde_json::Value::Object(decoded_presentation.clone()))
-                    })
-            })
-        }),
-    }
+    })
 }
 
 pub fn matches_claim_values(actual_value: &Value, required_value: &ClaimValues) -> bool {
