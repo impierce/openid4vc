@@ -59,6 +59,8 @@ pub enum VpTokenValidationError {
         expected: Option<String>,
         found: Option<String>,
     },
+    #[error("Missing holder binding")]
+    MissingHolderBinding,
     #[error("Missing custom claims in presentation")]
     MissingCustomClaims,
     #[error("Decoded credentials should not be empty")]
@@ -127,20 +129,27 @@ impl<SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidato
                 .find(|credential_query| credential_query.id == *credential_query_id)
                 .ok_or_else(|| VpTokenValidationError::CredentialQueryNotFound(credential_query_id.clone()))?;
 
+            let require_holder_binding = credential_query.require_cryptographic_holder_binding.unwrap_or(true);
+
             // Decode and validate signatures based on format
             let current_query_decoded_credentials = match credential_query.format {
                 Format::JwtVcJson => {
                     self.validate_jwt_vc_json_presentations(
                         presentations.as_slice(),
-                        credential_query,
                         client_id,
                         nonce,
+                        require_holder_binding,
                     )
                     .await?
                 }
                 Format::DcSdJwt => {
-                    self.validate_dc_sd_jwt_presentations(presentations.as_slice(), client_id, nonce)
-                        .await?
+                    self.validate_dc_sd_jwt_presentations(
+                        presentations.as_slice(),
+                        client_id,
+                        nonce,
+                        require_holder_binding,
+                    )
+                    .await?
                 }
                 Format::VcSdJwt => {
                     self.validate_vc_sd_jwt_presentations(presentations.as_slice(), credential_query, client_id, nonce)
@@ -168,9 +177,9 @@ impl<SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidato
     async fn validate_jwt_vc_json_presentations(
         &self,
         presentations: &[StringOrObject],
-        credential_query: &CredentialQuery,
         client_id: &str,
         nonce: Option<&str>,
+        require_holder_binding: bool,
     ) -> Result<Vec<JsonObject>, VpTokenValidationError> {
         let mut decoded_credentials = vec![];
         // TODO: check `multiple`
@@ -183,7 +192,7 @@ impl<SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidato
             // If holder binding is required, we validate the presentation JWT itself (which proves possession).
             // Otherwise, we treat the input directly as a credential JWT (if that's the model, though typically
             // VP-Token implies a presentation wrapper).
-            let credential_jwts = if credential_query.require_cryptographic_holder_binding.unwrap_or(true) {
+            let credential_jwts = if require_holder_binding {
                 let decoded_jwt_presentation: DecodedJwtPresentation<Jwt> =
                     self.validate_presentation_jwt(&jwt, client_id, nonce).await?;
 
@@ -211,6 +220,7 @@ impl<SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidato
         presentations: &[StringOrObject],
         client_id: &str,
         nonce: Option<&str>,
+        require_holder_binding: bool,
     ) -> Result<Vec<JsonObject>, VpTokenValidationError> {
         let mut decoded_credentials = vec![];
         // TODO: check `multiple`
@@ -221,7 +231,9 @@ impl<SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidato
             let sd_jwt_vc = SdJwtVc::parse(presentation_str)
                 .map_err(|e| VpTokenValidationError::SdJwtParsingError(e.to_string()))?;
 
-            let decoded_sd_jwt_vc = self.validate_sd_jwt_vc(&sd_jwt_vc, client_id, nonce).await?;
+            let decoded_sd_jwt_vc = self
+                .validate_sd_jwt_vc(&sd_jwt_vc, client_id, nonce, require_holder_binding)
+                .await?;
 
             let obj = serde_json::to_value(decoded_sd_jwt_vc)?
                 .as_object()
@@ -272,7 +284,7 @@ impl<SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidato
             };
 
             for sd_jwt in sd_jwts {
-                let decoded_vc_sd_jwt = self.validate_vcdm2_sd_jwt(&sd_jwt, client_id, nonce).await?;
+                let decoded_vc_sd_jwt = self.validate_vcdm2_sd_jwt(&sd_jwt).await?;
 
                 let obj = serde_json::to_value(decoded_vc_sd_jwt)?
                     .as_object()
@@ -385,6 +397,7 @@ impl<SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidato
         sd_jwt_vc: &SdJwtVc,
         client_id: &str,
         nonce: Option<&str>,
+        require_holder_binding: bool,
     ) -> Result<JsonObject, VpTokenValidationError> {
         let kid_str = sd_jwt_vc
             .headers()
@@ -415,22 +428,26 @@ impl<SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidato
             .verify_signature(&self.signature_verifier, &public_key_jwk)
             .map_err(|e| VpTokenValidationError::SdJwtValidation(e.to_string()))?;
 
-        // 2. Verify Key Binding (Holder Binding)
-        if let Some(key_binding_jwt) = sd_jwt_vc.key_binding_jwt() {
-            if key_binding_jwt.claims().aud != client_id {
-                return Err(VpTokenValidationError::InvalidAudience {
-                    expected: Some(client_id.to_string()),
-                    found: Some(key_binding_jwt.claims().aud.clone()),
-                });
-            }
-
-            if let Some(nonce) = nonce {
-                if key_binding_jwt.claims().nonce != nonce {
-                    return Err(VpTokenValidationError::InvalidNonce {
-                        expected: Some(nonce.to_string()),
-                        found: Some(key_binding_jwt.claims().nonce.clone()),
+        // 2. Verify Key Binding (Holder Binding) if required
+        if require_holder_binding {
+            if let Some(key_binding_jwt) = sd_jwt_vc.key_binding_jwt() {
+                if key_binding_jwt.claims().aud != client_id {
+                    return Err(VpTokenValidationError::InvalidAudience {
+                        expected: Some(client_id.to_string()),
+                        found: Some(key_binding_jwt.claims().aud.clone()),
                     });
                 }
+
+                if let Some(nonce) = nonce {
+                    if key_binding_jwt.claims().nonce != nonce {
+                        return Err(VpTokenValidationError::InvalidNonce {
+                            expected: Some(nonce.to_string()),
+                            found: Some(key_binding_jwt.claims().nonce.clone()),
+                        });
+                    }
+                }
+            } else {
+                return Err(VpTokenValidationError::MissingHolderBinding);
             }
         }
 
@@ -441,12 +458,7 @@ impl<SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidato
     }
 
     /// Internal helper to validate VCDM 2.0 SD-JWT.
-    async fn validate_vcdm2_sd_jwt(
-        &self,
-        vcdm2_sd_jwt: &SdJwt,
-        _client_id: &str,
-        _nonce: Option<&str>,
-    ) -> Result<CredentialV2, VpTokenValidationError> {
+    async fn validate_vcdm2_sd_jwt(&self, vcdm2_sd_jwt: &SdJwt) -> Result<CredentialV2, VpTokenValidationError> {
         let kid_str = vcdm2_sd_jwt
             .headers()
             .get("kid")
@@ -517,6 +529,7 @@ impl DecodedVpTokenBuilder {
     }
 }
 
+// TODO: We need to add credential signing functionality to `VpTokenBuilder` in order to have more thorough tests for the validator. For now, we are using pre-generated JWTs and SD-JWTs.
 #[cfg(test)]
 mod tests {
     use super::*;
