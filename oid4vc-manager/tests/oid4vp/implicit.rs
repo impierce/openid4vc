@@ -4,24 +4,27 @@ use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
 use oid4vc_core::authentication::subject::Subject;
+use oid4vc_core::verification_material_resolver::test_utils::TestVerificationMaterialResolver;
+use oid4vc_core::verifier::SignatureVerifier;
 use oid4vc_core::{
     authorization_request::{AuthorizationRequest, Object},
     authorization_response::AuthorizationResponse,
     client_metadata::ClientMetadataResource,
     jwt,
 };
-use oid4vc_manager::{methods::key_method::KeySubject, ProviderManager, RelyingPartyManager};
+use oid4vc_manager::{methods::key_method::KeySubject, ProviderManager};
 use oid4vci::VerifiableCredentialJwt;
 use oid4vp::authorization_request::AlgValues;
 use oid4vp::authorization_request::{JwtVcJsonParameters, VpFormatsSupported};
 use oid4vp::token::verifiable_presentation_jwt::VerifiablePresentationJwt;
+use oid4vp::token::vp_token::Presentations;
+use oid4vp::token::vp_token_validator::VpTokenValidator;
 use oid4vp::{
     authorization_request::{ClientId, ClientMetadataParameters},
     oid4vp::OID4VP,
 };
 use oid4vp::{
     dcql::dcql_query::{CredentialQueryId, DcqlQuery},
-    token::vp_token::PresentationFormat,
     token::vp_token_builder::VpTokenBuilder,
 };
 
@@ -56,12 +59,12 @@ async fn test_implicit_flow() {
     const TEST_DID_METHOD: &str = "did:key";
 
     // Create a new issuer.
-    let issuer = KeySubject::from_keypair(
+    let issuer = Arc::new(KeySubject::from_keypair(
         generate::<Ed25519KeyPair>(Some(
             "this-is-a-very-UNSAFE-issuer-secret-key".as_bytes().try_into().unwrap(),
         )),
         None,
-    );
+    ));
     let issuer_did = issuer.identifier(TEST_DID_METHOD, Algorithm::EdDSA).await.unwrap();
 
     // Create a new subject.
@@ -77,11 +80,11 @@ async fn test_implicit_flow() {
         .identifier(TEST_DID_METHOD, Algorithm::EdDSA)
         .await
         .unwrap();
-    let relying_party_manager =
-        RelyingPartyManager::new(relying_party, TEST_DID_METHOD, vec![Algorithm::EdDSA]).unwrap();
 
     let relying_party_did_with_prefix =
         ClientId::from_str(&format!("decentralized_identifier:{}", relying_party_did)).unwrap();
+
+    let nonce = "nonce";
 
     // Create authorization request with response_type `id_token vp_token`
     let authorization_request = AuthorizationRequest::<Object<OID4VP>>::builder()
@@ -106,7 +109,7 @@ async fn test_implicit_flow() {
             )]),
         })
         .response_mode("query".to_string())
-        .nonce("nonce".to_string())
+        .nonce(nonce)
         .build()
         .unwrap();
 
@@ -129,7 +132,6 @@ async fn test_implicit_flow() {
                 "VerifiableCredential",
                 "PersonalInformation"
             ],
-            "issuanceDate": "2022-01-01T00:00:00Z",
             "issuer": issuer_did,
             "credentialSubject": {
             "id": subject_did,
@@ -144,7 +146,7 @@ async fn test_implicit_flow() {
 
     // Encode the verifiable credential as a JWT.
     let jwt = jwt::encode(
-        subject.clone(),
+        issuer.clone(),
         Header {
             alg: Algorithm::EdDSA,
             ..Default::default()
@@ -186,9 +188,9 @@ async fn test_implicit_flow() {
     .unwrap();
 
     let vp_token = VpTokenBuilder::builder_dcql_query(DCQL_QUERY.clone())
-        .add_presentation(
+        .add_presentations(
             CredentialQueryId::try_new("my_credential".to_string()).unwrap(),
-            PresentationFormat::JwtVcJson(verifiable_presentation_jwt),
+            Presentations::try_new(vec![verifiable_presentation_jwt.into()]).unwrap(),
         )
         .build()
         .unwrap();
@@ -198,9 +200,17 @@ async fn test_implicit_flow() {
         .await
         .unwrap();
 
-    // Validate the authorization_response.
-    assert!(relying_party_manager
-        .validate_response(&authorization_response)
-        .await
-        .is_ok());
+    let signature_verifier = SignatureVerifier;
+
+    assert!(
+        VpTokenValidator::new(signature_verifier, TestVerificationMaterialResolver)
+            .validate_vp_token(
+                &DCQL_QUERY,
+                &authorization_response.extension.vp_token,
+                &relying_party_did_with_prefix.to_string(),
+                Some(nonce),
+            )
+            .await
+            .is_ok()
+    );
 }

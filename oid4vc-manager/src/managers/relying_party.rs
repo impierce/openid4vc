@@ -43,10 +43,14 @@ impl RelyingPartyManager {
             .await
     }
 
+    #[deprecated(
+        note = "This function is only used for validating `SIOPv2` Authorization Responses. For validating `OID4VP` Authorization Responses use the `VpTokenValidator` instead."
+    )]
     pub async fn validate_response<E: Extension>(
         &self,
         authorization_response: &AuthorizationResponse<E>,
     ) -> Result<<E::ResponseHandle as ResponseHandle>::ResponseItem> {
+        #[allow(deprecated)]
         self.relying_party.validate_response(authorization_response).await
     }
 

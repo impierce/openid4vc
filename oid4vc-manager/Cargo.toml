@@ -17,7 +17,7 @@ axum = "0.6"
 axum-auth = "0.4"
 chrono.workspace = true
 derivative = "2.2"
-did-key = "0.2"
+did-key.workspace = true
 did_url = "0.1"
 futures = "0.3"
 getset.workspace = true
@@ -38,6 +38,10 @@ url.workspace = true
 oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
 
 ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
+identity_did.workspace = true
+identity_document.workspace = true
+identity_jose.workspace = true
+identity_verification.workspace = true
 lazy_static = "1.4"
 rand = "0.8"
 rstest = "0.18"

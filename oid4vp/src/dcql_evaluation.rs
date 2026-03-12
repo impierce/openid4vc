@@ -1,15 +1,17 @@
-use crate::dcql::dcql_query::{ClaimQuery, CredentialQuery, CredentialSetQuery, DcqlQuery, MetaTypes};
+use crate::{
+    dcql::dcql_query::{ClaimQuery, CredentialQuery, CredentialSetQuery, DcqlQuery, MetaTypes},
+    token::vp_token_validator::{DecodedPresentations, DecodedVpToken},
+};
 use oid4vc_core::claim_path_pointer::{ClaimValue, ClaimValues};
 use serde_json::Value;
-use std::collections::HashMap;
 
-/// Processing a dcql_query with credential sets as described in OID4VP - draft 28 - Section 6.4.2 Selecting Credentials:
+/// Processing a dcql_query with credential sets as described in OID4VP - Section 6.4.2 Selecting Credentials:
 /// https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-selecting-credentials
 fn set_is_required(credential_set: &CredentialSetQuery) -> bool {
     credential_set.required.unwrap_or(true)
 }
 
-pub fn evaluate_dcql_query(dcql_query: &DcqlQuery, available_credentials: &HashMap<String, &Value>) -> bool {
+pub fn evaluate_dcql_query(dcql_query: &DcqlQuery, decoded_vp_token: &DecodedVpToken) -> bool {
     // If there are credential sets, check if all required sets can be satisfied.
     if let Some(credential_sets) = &dcql_query.credential_sets {
         // All of the Credential Set Queries in the credential_sets array where
@@ -21,7 +23,7 @@ pub fn evaluate_dcql_query(dcql_query: &DcqlQuery, available_credentials: &HashM
             }
 
             // Check if the required set has at least one satisfiable option.
-            evaluate_credential_set(credential_set, &dcql_query.credentials, available_credentials)
+            evaluate_credential_set(credential_set, &dcql_query.credentials, decoded_vp_token)
         });
 
         return required_sets_satisfied;
@@ -29,9 +31,8 @@ pub fn evaluate_dcql_query(dcql_query: &DcqlQuery, available_credentials: &HashM
 
     // If credential_sets is not provided, the Verifier requests presentations for all Credentials in credentials to be returned.
     dcql_query.credentials.iter().all(|credential_query| {
-        let credential_id = credential_query.id.as_ref();
-        if let Some(credential_json) = available_credentials.get(credential_id) {
-            evaluate_credential_query(credential_query, credential_json)
+        if let Some(decoded_presentations) = decoded_vp_token.decoded_presentations().get(&credential_query.id) {
+            evaluate_credential_query(credential_query, decoded_presentations)
         } else {
             false
         }
@@ -43,12 +44,12 @@ pub fn evaluate_dcql_query(dcql_query: &DcqlQuery, available_credentials: &HashM
 pub fn evaluate_credential_set(
     credential_set: &CredentialSetQuery,
     all_credentials: &[CredentialQuery],
-    available_credentials: &HashMap<String, &Value>,
+    available_credentials: &DecodedVpToken,
 ) -> bool {
     credential_set.options.iter().any(|option| {
-        option.iter().all(|credential_id| {
-            if let Some(credential_query) = all_credentials.iter().find(|cq| cq.id.as_ref() == credential_id) {
-                if let Some(credential_json) = available_credentials.get(credential_id) {
+        option.iter().all(|credential_query_id| {
+            if let Some(credential_query) = all_credentials.iter().find(|cq| cq.id == *credential_query_id) {
+                if let Some(credential_json) = available_credentials.decoded_presentations().get(credential_query_id) {
                     evaluate_credential_query(credential_query, credential_json)
                 } else {
                     false
@@ -77,20 +78,30 @@ fn evaluate_single_claim_query(claim_query: &ClaimQuery, credential_json: &Value
     true
 }
 
-/// Processing with claims_sets as described in OID4VP - draft 28 Section 6.4.1 Selecting Claims:
+/// Processing with claims_sets as described in OID4VP Section 6.4.1 Selecting Claims:
 /// https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-selecting-claims
-pub fn evaluate_credential_query(credential_query: &CredentialQuery, credential_json: &Value) -> bool {
+pub fn evaluate_credential_query(
+    credential_query: &CredentialQuery,
+    decoded_presentations: &DecodedPresentations,
+) -> bool {
     // If claims is absent, the Verifier is requesting no claims that are selectively disclosable;
     // the Wallet MUST return only the claims that are mandatory to present (e.g., SD-JWT and Key Binding JWT for a Credential of format IETF SD-JWT VC).
     if credential_query.claims.as_deref().unwrap_or(&[]).is_empty() {
         return true;
     }
 
+    // TODO: How do we handle multiple presentations when the `multiple` claim is `true`?
+    let decoded_presentation = if let Some(decoded_presentation) = decoded_presentations.first() {
+        decoded_presentation
+    } else {
+        return false;
+    };
+
     // If meta is present, check the meta requirements.
     match &credential_query.meta {
         MetaTypes::W3CFormatMeta { type_values } => {
             // For W3C Verifiable Credentials, check the "type" field in the credential
-            if let Some(credential_types) = credential_json.get("type").and_then(|t| t.as_array()) {
+            if let Some(credential_types) = decoded_presentation.get("type").and_then(|t| t.as_array()) {
                 let credential_type_strings: Vec<&str> = credential_types.iter().filter_map(|t| t.as_str()).collect();
 
                 // Check if any of the type_values arrays is a subset of the credential's types
@@ -124,12 +135,11 @@ pub fn evaluate_credential_query(credential_query: &CredentialQuery, credential_
 
     // If claims is present, but claim_sets is absent, the Verifier requests all claims listed in claims.
     match &credential_query.claim_sets {
-        None => credential_query
-            .claims
-            .as_deref()
-            .unwrap_or(&[])
-            .iter()
-            .all(|claim| evaluate_single_claim_query(claim, credential_json)),
+        None => {
+            credential_query.claims.as_deref().unwrap_or(&[]).iter().all(|claim| {
+                evaluate_single_claim_query(claim, &serde_json::Value::Object(decoded_presentation.clone()))
+            })
+        }
 
         // If both claims and claim_sets are present, the Verifier requests one combination of the claims listed in claim_sets. The order of the options conveyed in the claim_sets array expresses the Verifier's preference for what is returned;
         // the Wallet SHOULD return the first option that it can satisfy. If the Wallet cannot satisfy any of the options, it MUST NOT return any claims.
@@ -139,7 +149,9 @@ pub fn evaluate_credential_query(credential_query: &CredentialQuery, credential_
                     .claims
                     .as_ref()
                     .and_then(|claims| claims.iter().find(|claim| claim.id.as_ref() == Some(claim_id)))
-                    .is_some_and(|claim| evaluate_single_claim_query(claim, credential_json))
+                    .is_some_and(|claim| {
+                        evaluate_single_claim_query(claim, &serde_json::Value::Object(decoded_presentation.clone()))
+                    })
             })
         }),
     }
@@ -156,7 +168,10 @@ pub fn matches_claim_values(actual_value: &Value, required_value: &ClaimValues) 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dcql::claims::{validate_claims, ClaimsContext};
+    use crate::{
+        dcql::claims::{validate_claims, ClaimsContext},
+        token::vp_token_validator::DecodedVpTokenBuilder,
+    };
     use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer, ClaimValue, ClaimValues};
     use serde_json::json;
 
@@ -169,12 +184,11 @@ mod tests {
     fn test_get_value_from_json() {
         let testing_credential: Value = serde_json::from_str(TESTCREDENTIAL).unwrap();
         let path = ClaimPathPointer::try_new(vec![
-            ClaimPathElement::String("vc".to_string()),
             ClaimPathElement::String("credentialSubject".to_string()),
             ClaimPathElement::String("given_name".to_string()),
         ])
         .unwrap();
-        let values = path.get_values_from_json(&testing_credential);
+        let values = path.get_values_from_json(&testing_credential["vc"]);
         assert_eq!(values, vec![json!("Max")]);
     }
 
@@ -184,7 +198,6 @@ mod tests {
         let claim_query = ClaimQuery {
             id: Some("given_name".to_string()),
             path: ClaimPathPointer::try_new(vec![
-                ClaimPathElement::String("vc".to_string()),
                 ClaimPathElement::String("credentialSubject".to_string()),
                 ClaimPathElement::String("given_name".to_string()),
             ])
@@ -192,7 +205,7 @@ mod tests {
             values: Some(ClaimValues::try_new(vec![ClaimValue::String("Max".to_string())]).unwrap()),
         };
         // Returns true
-        assert!(evaluate_single_claim_query(&claim_query, &testing_credential));
+        assert!(evaluate_single_claim_query(&claim_query, &testing_credential["vc"]));
     }
 
     #[test]
@@ -278,7 +291,8 @@ mod tests {
 
         assert!(evaluate_credential_query(
             dcql_query,
-            &testing_credential.get("vc").unwrap()
+            &DecodedPresentations::try_new(vec![testing_credential.get("vc").unwrap().as_object().unwrap().clone()])
+                .unwrap()
         ));
     }
 
@@ -332,7 +346,8 @@ mod tests {
         // Assert `false` because the credential type does not match the required type in the query.
         assert!(!evaluate_credential_query(
             dcql_query,
-            &testing_credential.get("vc").unwrap()
+            &DecodedPresentations::try_new(vec![testing_credential.get("vc").unwrap().as_object().unwrap().clone()])
+                .unwrap()
         ));
     }
 
@@ -349,10 +364,16 @@ mod tests {
             }
         });
 
-        let mut available_credentials = HashMap::new();
-        available_credentials.insert("pid".to_string(), &pid_credential);
+        let mut builder = DecodedVpTokenBuilder::new();
 
-        assert!(evaluate_dcql_query(&dcql_query, &available_credentials));
+        builder = builder
+            .insert(
+                "pid".parse().unwrap(),
+                vec![pid_credential.as_object().unwrap().clone()],
+            )
+            .unwrap();
+
+        assert!(evaluate_dcql_query(&dcql_query, &builder.build()));
 
         // Alternative credentials (pid_reduced_cred_1 + pid_reduced_cred_2)
         let reduced_cred_1 = json!({
@@ -366,15 +387,25 @@ mod tests {
             "region": "HERE"
         });
 
-        let mut available_credentials = HashMap::new();
-        available_credentials.insert("pid_reduced_cred_1".to_string(), &reduced_cred_1);
-        available_credentials.insert("pid_reduced_cred_2".to_string(), &reduced_cred_2);
+        let mut builder = DecodedVpTokenBuilder::new();
+        builder = builder
+            .insert(
+                "pid_reduced_cred_1".parse().unwrap(),
+                vec![reduced_cred_1.as_object().unwrap().clone()],
+            )
+            .unwrap();
+        builder = builder
+            .insert(
+                "pid_reduced_cred_2".parse().unwrap(),
+                vec![reduced_cred_2.as_object().unwrap().clone()],
+            )
+            .unwrap();
 
-        assert!(evaluate_dcql_query(&dcql_query, &available_credentials));
+        assert!(evaluate_dcql_query(&dcql_query, &builder.build()));
 
         // If there were no credentials, the query should fail.
-        let available_credentials = HashMap::new();
+        let builder = DecodedVpTokenBuilder::new();
 
-        assert!(!evaluate_dcql_query(&dcql_query, &available_credentials));
+        assert!(!evaluate_dcql_query(&dcql_query, &builder.build()));
     }
 }

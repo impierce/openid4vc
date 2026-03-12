@@ -51,6 +51,9 @@ impl RelyingParty {
         .await
     }
 
+    #[deprecated(
+        note = "This function is only used for validating `SIOPv2` Authorization Responses. For validating `OID4VP` Authorization Responses use the `VpTokenValidator` instead."
+    )]
     /// Validates a [`AuthorizationResponse`] by decoding the header of the id_token, fetching the public key corresponding to
     /// the key identifier and finally decoding the id_token using the public key and by validating the signature.
     pub async fn validate_response<E: Extension>(

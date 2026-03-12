@@ -77,7 +77,7 @@ where
     Ok(message)
 }
 
-fn base64_url_encode<T>(value: &T) -> Result<String>
+pub fn base64_url_encode<T>(value: &T) -> Result<String>
 where
     T: ?Sized + Serialize,
 {
