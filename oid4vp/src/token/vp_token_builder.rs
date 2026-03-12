@@ -141,11 +141,11 @@ mod tests {
         // Test: Add presentation for credential that wasn't requested
         let result = VpTokenBuilder::builder_dcql_query(dcql_query)
             .add_presentations(
-                CredentialQueryId::try_new("requested-cred".to_string()).unwrap(),
+                CredentialQueryId::try_new("requested-cred").unwrap(),
                 Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
             )
             .add_presentations(
-                CredentialQueryId::try_new("unrequested-cred".to_string()).unwrap(),
+                CredentialQueryId::try_new("unrequested-cred").unwrap(),
                 Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
             )
             .build();
@@ -196,7 +196,7 @@ mod tests {
         // Provide only required credential, skip optional (should pass)
         let result = VpTokenBuilder::builder_dcql_query(dcql_query)
             .add_presentations(
-                CredentialQueryId::try_new("mdl-id".to_string()).unwrap(),
+                CredentialQueryId::try_new("mdl-id").unwrap(),
                 Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
             )
             .build();
@@ -242,12 +242,12 @@ mod tests {
 
         let result = VpTokenBuilder::builder_dcql_query(dcql_query)
             .add_presentations(
-                CredentialQueryId::try_new("mdl-id".to_string()).unwrap(),
+                CredentialQueryId::try_new("mdl-id").unwrap(),
                 Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
             )
             .add_presentations(
                 // This credential is unrequested and should cause an error
-                CredentialQueryId::try_new("thats-not-right".to_string()).unwrap(),
+                CredentialQueryId::try_new("thats-not-right").unwrap(),
                 Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
             )
             .build();
@@ -295,11 +295,11 @@ mod tests {
 
         let result = VpTokenBuilder::builder_dcql_query(dcql_query)
             .add_presentations(
-                CredentialQueryId::try_new("mdl-id".to_string()).unwrap(),
+                CredentialQueryId::try_new("mdl-id").unwrap(),
                 Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
             )
             .add_presentations(
-                CredentialQueryId::try_new("optional-cred".to_string()).unwrap(),
+                CredentialQueryId::try_new("optional-cred").unwrap(),
                 Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
             )
             .build();
@@ -394,11 +394,11 @@ mod tests {
 
         let result = VpTokenBuilder::builder_dcql_query(dcql_query)
             .add_presentations(
-                CredentialQueryId::try_new("unrequested-cred".to_string()).unwrap(),
+                CredentialQueryId::try_new("unrequested-cred").unwrap(),
                 Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
             )
             .add_presentations(
-                CredentialQueryId::try_new("optional-cred".to_string()).unwrap(),
+                CredentialQueryId::try_new("optional-cred").unwrap(),
                 Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
             )
             .build();

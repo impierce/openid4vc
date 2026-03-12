@@ -189,7 +189,7 @@ async fn test_implicit_flow() {
 
     let vp_token = VpTokenBuilder::builder_dcql_query(DCQL_QUERY.clone())
         .add_presentations(
-            CredentialQueryId::try_new("my_credential".to_string()).unwrap(),
+            CredentialQueryId::try_new("my_credential").unwrap(),
             Presentations::try_new(vec![verifiable_presentation_jwt.into()]).unwrap(),
         )
         .build()

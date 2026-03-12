@@ -196,7 +196,7 @@ mod tests {
     // https://github.com/openid/OpenID4VP/tree/main/1.0/examples/query_lang
 
     fn test_credential_query_id(id: &str) -> CredentialQueryId {
-        CredentialQueryId::try_new(id.to_string()).unwrap()
+        CredentialQueryId::try_new(id).unwrap()
     }
 
     fn test_claim_path(elements: Vec<ClaimPathElement>) -> ClaimPathPointer {
@@ -603,15 +603,15 @@ mod tests {
                 credential_sets: Some(vec![
                     CredentialSetQuery {
                         options: vec![
-                            vec![CredentialQueryId::try_new("mdl-id".to_string()).unwrap()],
-                            vec![CredentialQueryId::try_new("photo_card-id".to_string()).unwrap()]
+                            vec![CredentialQueryId::try_new("mdl-id").unwrap()],
+                            vec![CredentialQueryId::try_new("photo_card-id").unwrap()]
                         ],
                         required: Some(true),
                     },
                     CredentialSetQuery {
                         options: vec![
-                            vec![CredentialQueryId::try_new("mdl-address".to_string()).unwrap()],
-                            vec![CredentialQueryId::try_new("photo_card-address".to_string()).unwrap()]
+                            vec![CredentialQueryId::try_new("mdl-address").unwrap()],
+                            vec![CredentialQueryId::try_new("photo_card-address").unwrap()]
                         ],
                         required: Some(false),
                     }
@@ -760,17 +760,17 @@ mod tests {
                 credential_sets: Some(vec![
                     CredentialSetQuery {
                         options: vec![
-                            vec![CredentialQueryId::try_new("pid".to_string()).unwrap()],
-                            vec![CredentialQueryId::try_new("other_pid".to_string()).unwrap()],
+                            vec![CredentialQueryId::try_new("pid").unwrap()],
+                            vec![CredentialQueryId::try_new("other_pid").unwrap()],
                             vec![
-                                CredentialQueryId::try_new("pid_reduced_cred_1".to_string()).unwrap(),
-                                CredentialQueryId::try_new("pid_reduced_cred_2".to_string()).unwrap()
+                                CredentialQueryId::try_new("pid_reduced_cred_1").unwrap(),
+                                CredentialQueryId::try_new("pid_reduced_cred_2").unwrap()
                             ]
                         ],
                         required: Some(true)
                     },
                     CredentialSetQuery {
-                        options: vec![vec![CredentialQueryId::try_new("nice_to_have".to_string()).unwrap()]],
+                        options: vec![vec![CredentialQueryId::try_new("nice_to_have").unwrap()]],
                         required: Some(false),
                     }
                 ])
