@@ -9,7 +9,6 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-# Fix these dependencies once the crates arre automatically published to crates.io.
 oid4vc-core = { path = "../oid4vc-core" }
 oid4vci = { path = "../oid4vci" }
 
@@ -18,6 +17,10 @@ chrono.workspace = true
 futures = "0.3"
 getset.workspace = true
 identity_credential.workspace = true
+identity_did.workspace = true
+identity_document.workspace = true
+identity_jose.workspace = true
+identity_verification.workspace = true
 is_empty.workspace = true
 jsonwebtoken.workspace = true
 lazy_static = "1.4.0"
@@ -29,6 +32,9 @@ reqwest-retry.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
+thiserror.workspace = true
 tokio.workspace = true
 url.workspace = true
-validator.workspace = true
+
+[dev-dependencies]
+oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }

@@ -1,12 +1,28 @@
 use super::dcql_query::ClaimQuery;
-use validator::ValidationError;
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum DcqlClaimsError {
+    #[error("Claims cannot be empty when claim_sets is used")]
+    EmptyClaims,
+    #[error("Claim ID is required when claim_sets is present, missing at index {0}")]
+    MissingClaimId(usize),
+    #[error("Claim ID '{0}' at index {1} contains invalid characters. Only alphanumeric, underscore, and hyphen characters are allowed")]
+    InvalidClaimIdFormat(String, usize),
+    #[error("Claim ID cannot be empty at index {0}")]
+    EmptyClaimId(usize),
+    #[error("Duplicate claim ID '{0}' found at index {1}")]
+    DuplicateClaimId(String, usize),
+    #[error("Claim ID '{0}' not found in claims at claim_set[{1}][{2}]")]
+    InvalidClaimIdReference(String, usize, usize),
+}
 
 #[derive(Debug)]
 pub struct ClaimsContext<'a> {
     pub claim_sets: &'a Option<Vec<Vec<String>>>,
 }
 
-pub fn validate_claims(claims: &[ClaimQuery], ctx: &ClaimsContext) -> Result<(), ValidationError> {
+pub fn validate_claims(claims: &[ClaimQuery], ctx: &ClaimsContext) -> Result<(), DcqlClaimsError> {
     if let Some(claim_sets) = ctx.claim_sets {
         validate_claims_with_sets(claims, claim_sets)?;
     } else {
@@ -16,19 +32,15 @@ pub fn validate_claims(claims: &[ClaimQuery], ctx: &ClaimsContext) -> Result<(),
     Ok(())
 }
 
-pub fn validate_claims_with_sets(claims: &[ClaimQuery], claim_sets: &[Vec<String>]) -> Result<(), ValidationError> {
+pub fn validate_claims_with_sets(claims: &[ClaimQuery], claim_sets: &[Vec<String>]) -> Result<(), DcqlClaimsError> {
     if claims.is_empty() {
-        return Err(
-            ValidationError::new("empty_claims").with_message("Claims cannot be empty when claim_sets is used".into())
-        );
+        return Err(DcqlClaimsError::EmptyClaims);
     }
 
     // When claim_sets is present, each claim is required to have an ID.
     for (i, claim) in claims.iter().enumerate() {
         if claim.id.is_none() {
-            return Err(ValidationError::new("missing_claim_id").with_message(
-                format!("Claim ID is required when claim_sets is present, missing at index {i}").into(),
-            ));
+            return Err(DcqlClaimsError::MissingClaimId(i));
         }
     }
 
@@ -43,7 +55,7 @@ pub fn validate_claims_with_sets(claims: &[ClaimQuery], claim_sets: &[Vec<String
     Ok(())
 }
 
-pub fn validate_claims_without_sets(claims: &[ClaimQuery]) -> Result<(), ValidationError> {
+pub fn validate_claims_without_sets(claims: &[ClaimQuery]) -> Result<(), DcqlClaimsError> {
     // When claim_sets is not present, IDs are optional but must be unique if they exist
     validate_claim_ids(claims)?;
 
@@ -51,22 +63,19 @@ pub fn validate_claims_without_sets(claims: &[ClaimQuery]) -> Result<(), Validat
 }
 
 /// Validates that the claim IDs in the claims are unique and follow the required format.
-fn validate_claim_ids(claims: &[ClaimQuery]) -> Result<(), ValidationError> {
+fn validate_claim_ids(claims: &[ClaimQuery]) -> Result<(), DcqlClaimsError> {
     let mut seen_ids = std::collections::HashSet::new();
 
     for (i, claim) in claims.iter().enumerate() {
         if let Some(id) = &claim.id {
             if !is_valid_claim_id_format(id) {
-                return Err(ValidationError::new("invalid_claim_id_format")
-                    .with_message(format!("Claim ID '{id}' at index {i} contains invalid characters. Only alphanumeric, underscore, and hyphen characters are allowed").into()));
+                return Err(DcqlClaimsError::InvalidClaimIdFormat(id.clone(), i));
             }
             if id.is_empty() {
-                return Err(ValidationError::new("empty_claim_id")
-                    .with_message(format!("Claim ID cannot be empty at index {i}").into()));
+                return Err(DcqlClaimsError::EmptyClaimId(i));
             }
             if !seen_ids.insert(id) {
-                return Err(ValidationError::new("duplicate_claim_id")
-                    .with_message(format!("Duplicate claim ID '{id}' found at index {i}").into()));
+                return Err(DcqlClaimsError::DuplicateClaimId(id.clone(), i));
             }
         }
     }
@@ -74,12 +83,11 @@ fn validate_claim_ids(claims: &[ClaimQuery]) -> Result<(), ValidationError> {
 }
 
 /// Validates that claim IDs in claim_sets reference valid claims.
-fn validate_claims_sets_references(claim_ids: &[&String], claim_sets: &[Vec<String>]) -> Result<(), ValidationError> {
+fn validate_claims_sets_references(claim_ids: &[&String], claim_sets: &[Vec<String>]) -> Result<(), DcqlClaimsError> {
     for (i, set) in claim_sets.iter().enumerate() {
         for (j, id) in set.iter().enumerate() {
             if !claim_ids.contains(&id) {
-                return Err(ValidationError::new("invalid_claim_id")
-                    .with_message(format!("Claim ID '{id}' not found in claims at claim_set[{i}][{j}]").into()));
+                return Err(DcqlClaimsError::InvalidClaimIdReference(id.clone(), i, j));
             }
         }
     }
@@ -232,7 +240,7 @@ mod tests {
         let result = validate_claims(credential.claims.as_deref().unwrap_or(&[]), &ctx);
         assert!(result.is_err(), "Duplicate IDs found");
         let err = result.unwrap_err();
-        assert_eq!(err.code.as_ref(), "duplicate_claim_id");
+        assert!(matches!(err, DcqlClaimsError::DuplicateClaimId(..)));
     }
 
     #[test]
@@ -247,7 +255,7 @@ mod tests {
         let result = validate_claims(credential.claims.as_deref().unwrap_or(&[]), &ctx);
         assert!(result.is_err(), "IDs are missing but claim_sets are present");
         let err = result.unwrap_err();
-        assert_eq!(err.code.as_ref(), "missing_claim_id");
+        assert!(matches!(err, DcqlClaimsError::MissingClaimId(..)));
     }
 
     #[test]
@@ -262,7 +270,7 @@ mod tests {
         let result = validate_claims(credential.claims.as_deref().unwrap_or(&[]), &ctx);
         assert!(result.is_err(), "Nonexistent ID found in claim_sets");
         let err = result.unwrap_err();
-        assert_eq!(err.code.as_ref(), "invalid_claim_id");
+        assert!(matches!(err, DcqlClaimsError::InvalidClaimIdReference(..)));
     }
 
     #[test]
@@ -275,9 +283,9 @@ mod tests {
             claim_sets: &credential.claim_sets,
         };
 
-        let result: Result<(), ValidationError> = validate_claims(credential.claims.as_deref().unwrap_or(&[]), &ctx);
+        let result: Result<(), DcqlClaimsError> = validate_claims(credential.claims.as_deref().unwrap_or(&[]), &ctx);
         assert!(result.is_err(), "Invalid ID format");
         let err = result.unwrap_err();
-        assert_eq!(err.code.as_ref(), "invalid_claim_id_format");
+        assert!(matches!(err, DcqlClaimsError::InvalidClaimIdFormat(..)));
     }
 }

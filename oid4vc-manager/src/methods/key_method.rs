@@ -162,9 +162,9 @@ mod tests {
         // Let the relying party validate the authorization_response.
         let relying_party_manager =
             RelyingPartyManager::new(Arc::new(KeySubject::new()), "did:key", vec![Algorithm::EdDSA]).unwrap();
-        assert!(relying_party_manager
-            .validate_response(&authorization_response)
-            .await
-            .is_ok());
+
+        #[allow(deprecated)]
+        let res = relying_party_manager.validate_response(&authorization_response).await;
+        assert!(res.is_ok());
     }
 }

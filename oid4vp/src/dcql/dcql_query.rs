@@ -1,15 +1,31 @@
-use super::claims::{validate_claims, ClaimsContext};
-use super::meta::{validate_meta, MetaContext};
+use super::claims::{validate_claims, ClaimsContext, DcqlClaimsError};
+use super::meta::{validate_meta, MetaContext, MetaError};
 use nutype::nutype;
 use oid4vc_core::claim_path_pointer::{ClaimPathPointer, ClaimValues};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::HashSet;
-use validator::{Validate, ValidationError, ValidationErrors};
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum DcqlQueryError {
+    #[error("Duplicate credential ID '{0}' found at index {1}")]
+    DuplicateCredentialId(String, usize),
+    #[error("Credential set options cannot be empty")]
+    EmptyCredentialSetOptions,
+    #[error("Credential set option cannot be empty at option index {0}")]
+    EmptyCredentialSetOption(usize),
+    #[error("Unknown credential query ID '{0}' in credential set option {1}")]
+    UnknownCredentialQueryId(String, usize),
+    #[error("Meta validation failed: {0}")]
+    MetaError(#[from] MetaError),
+    #[error("Claims validation failed: {0}")]
+    ClaimsError(#[from] DcqlClaimsError),
+}
 
 #[nutype(
     validate(not_empty, predicate = valid_credential_query_id),
-    derive(Debug, Clone, PartialEq, Serialize, Deserialize, Hash, Eq, Display, AsRef)
+    derive(Debug, Clone, PartialEq, Serialize, Deserialize, Hash, Eq, Display, AsRef, FromStr)
 )]
 pub struct CredentialQueryId(String);
 
@@ -17,14 +33,14 @@ fn valid_credential_query_id(s: &str) -> bool {
     s.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-')
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Validate)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct DcqlQuery {
     pub credentials: Vec<CredentialQuery>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub credential_sets: Option<Vec<CredentialSetQuery>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Validate)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct CredentialQuery {
     pub id: CredentialQueryId,
     pub format: Format,
@@ -62,22 +78,18 @@ pub enum Format {
     JwtVcJson,
     #[serde(rename = "dc+sd-jwt")]
     DcSdJwt,
+    #[serde(rename = "vc+sd-jwt")]
+    VcSdJwt,
     MsoMdoc,
 }
 
 impl DcqlQuery {
-    pub fn validate_all(&self) -> Result<(), ValidationErrors> {
-        self.validate()?;
-
+    pub fn validate_all(&self) -> Result<(), DcqlQueryError> {
         // Check for duplicate credential IDs as the same id must not be present in the Authorization Request more than once.
         let mut seen_ids = HashSet::new();
         for (index, credential) in self.credentials.iter().enumerate() {
             if !seen_ids.insert(&credential.id) {
-                let mut errors = ValidationErrors::new();
-                let validation_error = ValidationError::new("duplicate_credential_id")
-                    .with_message(format!("Duplicate credential ID '{}' at index {}", credential.id, index).into());
-                errors.add("credentials", validation_error);
-                return Err(errors);
+                return Err(DcqlQueryError::DuplicateCredentialId(credential.id.to_string(), index));
             }
         }
         for credential in &self.credentials {
@@ -91,123 +103,66 @@ impl DcqlQuery {
         Ok(())
     }
 
-    fn validate_credential_sets(&self, credential_sets: &[CredentialSetQuery]) -> Result<(), ValidationErrors> {
-        let mut errors = ValidationErrors::new();
+    fn validate_credential_sets(&self, credential_sets: &[CredentialSetQuery]) -> Result<(), DcqlQueryError> {
         let credential_ids: HashSet<&CredentialQueryId> = self.credentials.iter().map(|cred| &cred.id).collect();
 
         for credential_set in credential_sets.iter() {
-            if let Err(set_errors) = self.validate_single_credential_set(credential_set, &credential_ids) {
-                for (_, field_errors) in set_errors.field_errors() {
-                    for error in field_errors {
-                        errors.add("credential_sets", error.clone());
-                    }
-                }
-            }
+            self.validate_single_credential_set(credential_set, &credential_ids)?;
         }
 
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(errors)
-        }
+        Ok(())
     }
 
     fn validate_single_credential_set(
         &self,
         credential_set: &CredentialSetQuery,
-        credential_ids: &HashSet<&CredentialQueryId>,
-    ) -> Result<(), ValidationErrors> {
-        let mut errors = ValidationErrors::new();
-
+        credential_query_ids: &HashSet<&CredentialQueryId>,
+    ) -> Result<(), DcqlQueryError> {
         // Validate that the options field in credential_set is not empty (as a whole).
         if credential_set.options.is_empty() {
-            let validation_error =
-                ValidationError::new("empty_options").with_message("credential_set options cannot be empty".into());
-            errors.add("options", validation_error);
+            return Err(DcqlQueryError::EmptyCredentialSetOptions);
         }
 
         // Validate that each option in credential_set is not empty.
         for (option_index, option) in credential_set.options.iter().enumerate() {
             if option.is_empty() {
-                let validation_error =
-                    ValidationError::new("empty_option").with_message("options cannot be empty".into());
-                errors.add("options", validation_error);
+                return Err(DcqlQueryError::EmptyCredentialSetOption(option_index));
             }
 
             // Validate that each credential ID in the option exists in the credential arrays.
-            for (credential_index, credential_id_str) in option.iter().enumerate() {
-                match CredentialQueryId::try_new(credential_id_str.clone()) {
-                    Ok(credential_id) => {
-                        if !credential_ids.contains(&credential_id) {
-                            let validation_error = ValidationError::new("unknown_credential_id").with_message(
-                                format!(
-                                    "Credential ID '{}' in option[{}] does not match any known credential ID",
-                                    credential_id_str, option_index
-                                )
-                                .into(),
-                            );
-                            errors.add("options", validation_error);
-                        }
-                    }
-                    Err(_) => {
-                        let validation_error = ValidationError::new("invalid_credential_id_format").with_message(
-                            format!(
-                                "Invalid credential ID format '{}' in options[{}][{}]",
-                                credential_id_str, option_index, credential_index
-                            )
-                            .into(),
-                        );
-                        errors.add("options", validation_error);
-                    }
+            for credential_query_id in option {
+                if !credential_query_ids.contains(&credential_query_id) {
+                    return Err(DcqlQueryError::UnknownCredentialQueryId(
+                        credential_query_id.to_string(),
+                        option_index,
+                    ));
                 }
             }
         }
 
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(errors)
-        }
-    }
-}
-
-impl CredentialSetQuery {
-    pub fn validate_all(&self) -> Result<(), ValidationErrors> {
-        self.validate()?;
         Ok(())
     }
 }
 
 impl CredentialQuery {
-    pub fn validate_all(&self) -> Result<(), ValidationErrors> {
-        self.validate()?;
-
+    pub fn validate_all(&self) -> Result<(), DcqlQueryError> {
         let meta_ctx = MetaContext { format: &self.format };
 
-        if let Err(e) = validate_meta(&self.meta, &meta_ctx) {
-            let mut errors = ValidationErrors::new();
-            errors.add("meta", e);
-            return Err(errors);
-        }
+        validate_meta(&self.meta, &meta_ctx)?;
 
         let claims_ctx = ClaimsContext {
             claim_sets: &self.claim_sets,
         };
 
-        if let Err(e) = validate_claims(self.claims.as_deref().unwrap_or(&[]), &claims_ctx) {
-            let mut errors = ValidationErrors::new();
-            errors.add("claims", e);
-            return Err(errors);
-        }
+        validate_claims(self.claims.as_deref().unwrap_or(&[]), &claims_ctx)?;
 
         Ok(())
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Validate)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct CredentialSetQuery {
-    // TODO: Create nutype  with non-empty predicate (see CredentialQueryId)
-    pub options: Vec<Vec<String>>,
+    pub options: Vec<Vec<CredentialQueryId>>,
     #[serde(default = "default_as_true", skip_serializing_if = "Option::is_none")]
     pub required: Option<bool>,
 }
@@ -222,7 +177,7 @@ pub struct TrustedAuthority {
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Serialize, Deserialize, PartialEq, Validate, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct ClaimQuery {
     // TODO: Use nutype for id, see CredentialQueryId as reference.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -238,10 +193,10 @@ mod tests {
     use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer, ClaimValue, ClaimValues};
     use serde_json::from_str;
     // OID4VP Credential Test Examples from
-    // https://github.com/openid/OpenID4VP/tree/main/examples/query_lang
+    // https://github.com/openid/OpenID4VP/tree/main/1.0/examples/query_lang
 
     fn test_credential_query_id(id: &str) -> CredentialQueryId {
-        CredentialQueryId::try_new(id.to_string()).unwrap()
+        CredentialQueryId::try_new(id).unwrap()
     }
 
     fn test_claim_path(elements: Vec<ClaimPathElement>) -> ClaimPathPointer {
@@ -251,6 +206,7 @@ mod tests {
     fn test_claim_values(values: Vec<ClaimValue>) -> ClaimValues {
         ClaimValues::try_new(values).unwrap()
     }
+
     #[test]
     fn test_oid4vp_example_simple_mdoc() {
         assert_eq!(
@@ -646,11 +602,17 @@ mod tests {
                 ],
                 credential_sets: Some(vec![
                     CredentialSetQuery {
-                        options: vec![vec!["mdl-id".to_string()], vec!["photo_card-id".to_string()]],
+                        options: vec![
+                            vec![CredentialQueryId::try_new("mdl-id").unwrap()],
+                            vec![CredentialQueryId::try_new("photo_card-id").unwrap()]
+                        ],
                         required: Some(true),
                     },
                     CredentialSetQuery {
-                        options: vec![vec!["mdl-address".to_string()], vec!["photo_card-address".to_string()]],
+                        options: vec![
+                            vec![CredentialQueryId::try_new("mdl-address").unwrap()],
+                            vec![CredentialQueryId::try_new("photo_card-address").unwrap()]
+                        ],
                         required: Some(false),
                     }
                 ])
@@ -798,14 +760,17 @@ mod tests {
                 credential_sets: Some(vec![
                     CredentialSetQuery {
                         options: vec![
-                            vec!["pid".to_string()],
-                            vec!["other_pid".to_string()],
-                            vec!["pid_reduced_cred_1".to_string(), "pid_reduced_cred_2".to_string()]
+                            vec![CredentialQueryId::try_new("pid").unwrap()],
+                            vec![CredentialQueryId::try_new("other_pid").unwrap()],
+                            vec![
+                                CredentialQueryId::try_new("pid_reduced_cred_1").unwrap(),
+                                CredentialQueryId::try_new("pid_reduced_cred_2").unwrap()
+                            ]
                         ],
                         required: Some(true)
                     },
                     CredentialSetQuery {
-                        options: vec![vec!["nice_to_have".to_string()]],
+                        options: vec![vec![CredentialQueryId::try_new("nice_to_have").unwrap()]],
                         required: Some(false),
                     }
                 ])
@@ -946,25 +911,6 @@ mod tests {
             serde_json::from_value(json).expect("Failed to deserialize CredentialQuery");
 
         assert_eq!(credential_query.require_cryptographic_holder_binding, Some(true))
-    }
-    #[test]
-    fn test_dcql_query() {
-        let temporary = DcqlQuery {
-            credentials: vec![CredentialQuery {
-                id: test_credential_query_id("my_credential"),
-                format: Format::MsoMdoc,
-                multiple: None,
-                meta: MetaTypes::SdJwtMeta {
-                    vct_values: vec!["https://credentials.example.com/identity_credential".to_string()],
-                },
-                trusted_authorities: None,
-                require_cryptographic_holder_binding: Some(true),
-                claims: None,
-                claim_sets: None,
-            }],
-            credential_sets: None,
-        };
-        temporary.validate().unwrap();
     }
 
     #[test]

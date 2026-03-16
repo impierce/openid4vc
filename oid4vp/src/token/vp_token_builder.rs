@@ -1,12 +1,24 @@
 use crate::dcql::dcql_query::{CredentialQuery, CredentialQueryId, DcqlQuery};
-use crate::token::vp_token::{PresentationFormat, VpToken};
+use crate::token::vp_token::{Presentations, VpToken};
 use anyhow::Result;
 use std::collections::HashMap;
-use validator::{Validate, ValidationError, ValidationErrors};
+use thiserror::Error;
 
-#[derive(Default, Validate)]
+#[derive(Debug, Error)]
+pub enum VpTokenBuilderError {
+    #[error("Required credential set not satisfied: {0:?}")]
+    RequiredCredentialSetNotSatisfied(crate::dcql::dcql_query::CredentialSetQuery),
+    #[error("Missing required credential: {0}")]
+    MissingRequiredCredential(CredentialQueryId),
+    #[error("Unrequested credential: {0}")]
+    UnrequestedCredential(CredentialQueryId),
+    #[error("Multiple presentations not allowed for credential: {0}")]
+    MultipleNotAllowed(CredentialQueryId),
+}
+
+#[derive(Default)]
 pub struct VpTokenBuilder {
-    presentations: HashMap<CredentialQueryId, Vec<PresentationFormat>>,
+    presentations: HashMap<CredentialQueryId, Presentations>,
     dcql_query: Option<DcqlQuery>,
 }
 
@@ -22,25 +34,14 @@ impl VpTokenBuilder {
         }
     }
 
-    pub fn add_presentation(mut self, credential_id: CredentialQueryId, presentation: PresentationFormat) -> Self {
-        self.presentations.entry(credential_id).or_default().push(presentation);
-        self
-    }
-
     // for multiple presentations for the same credential_id
-    pub fn add_presentations(
-        mut self,
-        credential_id: CredentialQueryId,
-        presentations: Vec<PresentationFormat>,
-    ) -> Self {
+    pub fn add_presentations(mut self, credential_id: CredentialQueryId, presentations: Presentations) -> Self {
         self.presentations.insert(credential_id, presentations);
         self
     }
 
-    pub fn build(self) -> Result<VpToken, ValidationErrors> {
-        self.validate()?;
+    pub fn build(self) -> Result<VpToken, VpTokenBuilderError> {
         if let Some(ref dcql_query) = self.dcql_query {
-            dcql_query.validate()?;
             self.validate_against_dcql(dcql_query)?;
         }
 
@@ -49,59 +50,65 @@ impl VpTokenBuilder {
         })
     }
 
-    // Validate the VpToken against the provided DcqlQuery.
-    fn validate_against_dcql(&self, dcql_query: &DcqlQuery) -> Result<(), ValidationErrors> {
-        let mut errors = ValidationErrors::new();
+    /// Validate the presentations against the DCQL query's requirements (credential sets, multiple constraints, unrequested credentials).
+    fn validate_against_dcql(&self, dcql_query: &DcqlQuery) -> Result<(), VpTokenBuilderError> {
+        validate_presentation_submission(&self.presentations, dcql_query)
+    }
+}
 
-        let credential_queries: HashMap<CredentialQueryId, &CredentialQuery> =
-            dcql_query.credentials.iter().map(|cq| (cq.id.clone(), cq)).collect();
+/// Validates that the provided map of presentations satisfies the structural requirements
+/// of the DCQL query (required sets, multiple constraints, unrequested credentials).
+pub fn validate_presentation_submission(
+    presentations: &HashMap<CredentialQueryId, Presentations>,
+    dcql_query: &DcqlQuery,
+) -> Result<(), VpTokenBuilderError> {
+    let credential_queries: HashMap<CredentialQueryId, &CredentialQuery> =
+        dcql_query.credentials.iter().map(|cq| (cq.id.clone(), cq)).collect();
 
-        if let Some(credential_sets) = &dcql_query.credential_sets {
-            // Check if all required credential sets are satisfied.
-            for credential_set in credential_sets {
-                if credential_set.required.unwrap_or(true) && !self.is_credential_set_satisfied(credential_set) {
-                    errors.add(
-                        "credential_sets",
-                        ValidationError::new("required_credential_set_not_satisfied"),
-                    );
-                }
-            }
-        } else {
-            // If there are no credential sets, we assume all credentials are required.
-            for credential_query in &dcql_query.credentials {
-                if !self.presentations.contains_key(&credential_query.id) {
-                    errors.add("presentations", ValidationError::new("missing_required_credential"));
-                }
-            }
-        }
-        // Check multiple constraints and for no unrequested presentations
-        for (credential_id, presentations) in &self.presentations {
-            if let Some(credential_query) = credential_queries.get(credential_id) {
-                if !credential_query.multiple.unwrap_or(false) && presentations.len() > 1 {
-                    errors.add("presentations", ValidationError::new("multiple_not_allowed"));
-                }
-            } else {
-                errors.add("presentations", ValidationError::new("unrequested_credential"));
+    if let Some(credential_sets) = &dcql_query.credential_sets {
+        // Check if all required credential sets are satisfied.
+        for credential_set in credential_sets {
+            if credential_set.required.unwrap_or(true) && !is_credential_set_satisfied(presentations, credential_set) {
+                return Err(VpTokenBuilderError::RequiredCredentialSetNotSatisfied(
+                    credential_set.clone(),
+                ));
             }
         }
-
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(errors)
+    } else {
+        // If there are no credential sets, we assume all credentials are required.
+        for credential_query in &dcql_query.credentials {
+            if !presentations.contains_key(&credential_query.id) {
+                return Err(VpTokenBuilderError::MissingRequiredCredential(
+                    credential_query.id.clone(),
+                ));
+            }
         }
     }
 
-    /// Check if at least one option in the credential set is fully satisfied
-    fn is_credential_set_satisfied(&self, credential_set: &crate::dcql::dcql_query::CredentialSetQuery) -> bool {
-        credential_set.options.iter().any(|option| {
-            option.iter().all(|credential_id_str| {
-                crate::dcql::dcql_query::CredentialQueryId::try_new(credential_id_str.clone())
-                    .map(|id| self.presentations.contains_key(&id))
-                    .unwrap_or(false)
-            })
-        })
+    // Check multiple constraints and for no unrequested presentations
+    for (credential_id, credential_presentations) in presentations {
+        if let Some(credential_query) = credential_queries.get(credential_id) {
+            if !credential_query.multiple.unwrap_or(false) && credential_presentations.len() > 1 {
+                return Err(VpTokenBuilderError::MultipleNotAllowed(credential_id.clone()));
+            }
+        } else {
+            return Err(VpTokenBuilderError::UnrequestedCredential(credential_id.clone()));
+        }
     }
+
+    Ok(())
+}
+
+/// Check if at least one option in the credential set is fully satisfied
+fn is_credential_set_satisfied(
+    presentations: &HashMap<CredentialQueryId, Presentations>,
+    credential_set: &crate::dcql::dcql_query::CredentialSetQuery,
+) -> bool {
+    credential_set.options.iter().any(|option| {
+        option
+            .iter()
+            .all(|credential_query_id| presentations.contains_key(credential_query_id))
+    })
 }
 
 #[cfg(test)]
@@ -110,8 +117,8 @@ mod tests {
     use crate::dcql::dcql_query::CredentialQueryId;
     use serde_json::json;
 
-    fn dummy_presentation() -> PresentationFormat {
-        PresentationFormat::JwtVcJson("dummy.jwt.token".to_string())
+    fn dummy_presentation() -> String {
+        "dummy.jwt.token".to_string()
     }
 
     #[test]
@@ -133,15 +140,21 @@ mod tests {
 
         // Test: Add presentation for credential that wasn't requested
         let result = VpTokenBuilder::builder_dcql_query(dcql_query)
-            .add_presentation(
-                CredentialQueryId::try_new("unrequested-cred".to_string()).unwrap(),
-                dummy_presentation(),
+            .add_presentations(
+                CredentialQueryId::try_new("requested-cred").unwrap(),
+                Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
+            )
+            .add_presentations(
+                CredentialQueryId::try_new("unrequested-cred").unwrap(),
+                Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
             )
             .build();
 
         assert!(result.is_err());
-        let error_string = result.unwrap_err().to_string();
-        assert!(error_string.contains("unrequested_credential"));
+        assert!(matches!(
+            result.unwrap_err(),
+            VpTokenBuilderError::UnrequestedCredential(_)
+        ));
     }
 
     #[test]
@@ -182,9 +195,9 @@ mod tests {
 
         // Provide only required credential, skip optional (should pass)
         let result = VpTokenBuilder::builder_dcql_query(dcql_query)
-            .add_presentation(
-                CredentialQueryId::try_new("mdl-id".to_string()).unwrap(),
-                dummy_presentation(),
+            .add_presentations(
+                CredentialQueryId::try_new("mdl-id").unwrap(),
+                Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
             )
             .build();
 
@@ -228,14 +241,14 @@ mod tests {
         let dcql_query: DcqlQuery = serde_json::from_value(dcql_query_json).unwrap();
 
         let result = VpTokenBuilder::builder_dcql_query(dcql_query)
-            .add_presentation(
-                CredentialQueryId::try_new("mdl-id".to_string()).unwrap(),
-                dummy_presentation(),
+            .add_presentations(
+                CredentialQueryId::try_new("mdl-id").unwrap(),
+                Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
             )
-            .add_presentation(
+            .add_presentations(
                 // This credential is unrequested and should cause an error
-                CredentialQueryId::try_new("thats-not-right".to_string()).unwrap(),
-                dummy_presentation(),
+                CredentialQueryId::try_new("thats-not-right").unwrap(),
+                Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
             )
             .build();
 
@@ -281,13 +294,13 @@ mod tests {
         let dcql_query: DcqlQuery = serde_json::from_value(dcql_query_json).unwrap();
 
         let result = VpTokenBuilder::builder_dcql_query(dcql_query)
-            .add_presentation(
-                CredentialQueryId::try_new("mdl-id".to_string()).unwrap(),
-                dummy_presentation(),
+            .add_presentations(
+                CredentialQueryId::try_new("mdl-id").unwrap(),
+                Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
             )
-            .add_presentation(
-                CredentialQueryId::try_new("optional-cred".to_string()).unwrap(),
-                dummy_presentation(),
+            .add_presentations(
+                CredentialQueryId::try_new("optional-cred").unwrap(),
+                Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
             )
             .build();
 
@@ -380,13 +393,13 @@ mod tests {
         let dcql_query: DcqlQuery = serde_json::from_value(dcql_query_json).unwrap();
 
         let result = VpTokenBuilder::builder_dcql_query(dcql_query)
-            .add_presentation(
-                CredentialQueryId::try_new("unrequested-cred".to_string()).unwrap(),
-                dummy_presentation(),
+            .add_presentations(
+                CredentialQueryId::try_new("unrequested-cred").unwrap(),
+                Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
             )
-            .add_presentation(
-                CredentialQueryId::try_new("optional-cred".to_string()).unwrap(),
-                dummy_presentation(),
+            .add_presentations(
+                CredentialQueryId::try_new("optional-cred").unwrap(),
+                Presentations::try_new(vec![dummy_presentation().into()]).unwrap(),
             )
             .build();
 

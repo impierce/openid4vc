@@ -1,21 +1,30 @@
 use super::verifiable_presentation_jwt::VerifiablePresentationJwt;
 use anyhow::{anyhow, Result};
-use identity_credential::{credential::Jwt, presentation::Presentation};
+use identity_credential::presentation::Presentation;
 use oid4vc_core::{builder_fn, RFC7519Claims};
 
-#[derive(Default)]
-pub struct VerifiablePresentationJwtBuilder {
+pub struct VerifiablePresentationJwtBuilder<CRED> {
     rfc7519_claims: RFC7519Claims,
-    verifiable_presentation: Option<Presentation<Jwt>>,
+    verifiable_presentation: Option<Presentation<CRED>>,
     nonce: Option<String>,
 }
 
-impl VerifiablePresentationJwtBuilder {
+impl<CRED> Default for VerifiablePresentationJwtBuilder<CRED> {
+    fn default() -> Self {
+        Self {
+            rfc7519_claims: RFC7519Claims::default(),
+            verifiable_presentation: None,
+            nonce: None,
+        }
+    }
+}
+
+impl<CRED> VerifiablePresentationJwtBuilder<CRED> {
     pub fn new() -> Self {
-        VerifiablePresentationJwtBuilder::default()
+        VerifiablePresentationJwtBuilder::<CRED>::default()
     }
 
-    pub fn build(self) -> Result<VerifiablePresentationJwt> {
+    pub fn build(self) -> Result<VerifiablePresentationJwt<CRED>> {
         anyhow::ensure!(self.rfc7519_claims.iss.is_some(), "iss claim is required");
         anyhow::ensure!(self.rfc7519_claims.sub.is_some(), "sub claim is required");
         // TODO: According to https://openid.net/specs/openid-connect-core-1_0.html#IDToken, the sub claim MUST NOT
@@ -49,6 +58,6 @@ impl VerifiablePresentationJwtBuilder {
     builder_fn!(rfc7519_claims, nbf, i64);
     builder_fn!(rfc7519_claims, iat, i64);
     builder_fn!(rfc7519_claims, jti, String);
-    builder_fn!(verifiable_presentation, Presentation<Jwt>);
+    builder_fn!(verifiable_presentation, Presentation<CRED>);
     builder_fn!(nonce, String);
 }

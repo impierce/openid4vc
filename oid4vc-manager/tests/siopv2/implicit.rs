@@ -252,6 +252,7 @@ async fn test_implicit_flow(#[case] did_method: &str) {
     // The `RelyingParty` then validates the authorization_response by decoding the header of the id_token, by fetching the public
     // key corresponding to the key identifier and finally decoding the id_token using the public key and by
     // validating the signature.
+    #[allow(deprecated)]
     let id_token = relying_party_manager
         .validate_response(&authorization_response)
         .await
