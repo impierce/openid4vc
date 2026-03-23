@@ -529,6 +529,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenVali
             .map_err(|e| VpTokenValidationError::SdJwtValidation(e.to_string()))
     }
 
+    /// Internal helper to check the `status` claim of a JWT credential against the corresponding Status List.
     async fn check_jwt_status_claim(&self, status_claim: serde_json::Value) -> Result<(), VpTokenValidationError> {
         let idx = status_claim
             .get("idx")
@@ -540,7 +541,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenVali
             .map(ToString::to_string);
 
         if let (Some(idx), Some(uri)) = (idx, uri) {
-            let status_list_jwt = fetch_status_list(
+            let status_list_jwt = Self::fetch_status_list(
                 &uri,
                 StatusListTokenResponseType::Jwt, // TODO: the response type is hardcoded to be JWT, since we can't handle CWT yet. However when we implement CWT we then need some way to discover what encoding the Status List Provider is using.
             )
@@ -597,6 +598,47 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenVali
 
         Ok(())
     }
+
+    /// Internal helper to send a status list request to the provided URI and returns the response body as a String.
+    /// The `accept_header` parameter determines the expected response format (e.g., JWT, compressed JWT).
+    /// If the response is gzip encoded, it will be decompressed before being returned.
+    async fn fetch_status_list(
+        uri: &str,
+        accept_header: StatusListTokenResponseType,
+    ) -> Result<String, VpTokenValidationError> {
+        // 3xx redirects should be followed, but infinite loops are caught after 5 redirects.
+        // The timeout of 10 seconds is an estimated guess of how long a status list request should take at maximum.
+        let client = Client::builder()
+            .redirect(Policy::limited(5))
+            .timeout(Duration::from_secs(10))
+            .build()
+            .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
+
+        let res = client
+            .get(uri)
+            .header(header::ACCEPT, accept_header.to_string())
+            .send()
+            .await
+            .and_then(reqwest::Response::error_for_status)
+            .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
+
+        let is_gzipped = res
+            .headers()
+            .get(header::CONTENT_ENCODING)
+            .is_some_and(|encoding| encoding == "gzip");
+
+        let bytes = res
+            .bytes()
+            .await
+            .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
+
+        if is_gzipped {
+            decompress_gzip(&bytes).map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))
+        } else {
+            String::from_utf8(bytes.to_vec())
+                .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))
+        }
+    }
 }
 
 #[derive(Serialize, Clone, Deserialize, Debug, Getters, PartialEq)]
@@ -638,49 +680,6 @@ impl DecodedVpTokenBuilder {
         DecodedVpToken {
             decoded_presentations: self.decoded_presentations,
         }
-    }
-}
-
-// Helper
-
-/// Sends a status list request to the provided URI and returns the response body as a String.
-/// The `accept_header` parameter determines the expected response format (e.g., JWT, compressed JWT).
-/// If the response is gzip encoded, it will be decompressed before being returned.
-pub async fn fetch_status_list(
-    uri: &str,
-    accept_header: StatusListTokenResponseType,
-) -> Result<String, VpTokenValidationError> {
-    // 3xx redirects should be followed, but infinite loops are caught after 5 redirects.
-    // The timeout of 10 seconds is an estimated guess of how long a status list request should take at maximum.
-    let client = Client::builder()
-        .redirect(Policy::limited(5))
-        .timeout(Duration::from_secs(10))
-        .build()
-        .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
-
-    let res = client
-        .get(uri)
-        .header(header::ACCEPT, accept_header.to_string())
-        .send()
-        .await
-        .and_then(reqwest::Response::error_for_status)
-        .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
-
-    let is_gzipped = res
-        .headers()
-        .get(header::CONTENT_ENCODING)
-        .is_some_and(|encoding| encoding == "gzip");
-
-    let bytes = res
-        .bytes()
-        .await
-        .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
-
-    if is_gzipped {
-        decompress_gzip(&bytes).map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))
-    } else {
-        String::from_utf8(bytes.to_vec())
-            .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))
     }
 }
 
