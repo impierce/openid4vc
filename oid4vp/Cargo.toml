@@ -40,3 +40,4 @@ url.workspace = true
 
 [dev-dependencies]
 oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
+wiremock = "0.5"
