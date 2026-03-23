@@ -16,6 +16,7 @@ anyhow = "1.0"
 chrono.workspace = true
 futures = "0.3"
 getset.workspace = true
+identity_core = { git = "https://github.com/iotaledger/identity", tag = "v1.9.1-beta.1" }
 identity_credential.workspace = true
 identity_did.workspace = true
 identity_document.workspace = true
@@ -26,6 +27,7 @@ jsonwebtoken.workspace = true
 lazy_static = "1.4.0"
 monostate.workspace = true
 nutype.workspace = true
+oauth_tsl = { git = "https://github.com/impierce/oauth-token-status-list", rev = "df371b9" }
 reqwest.workspace = true
 reqwest-middleware.workspace = true
 reqwest-retry.workspace = true

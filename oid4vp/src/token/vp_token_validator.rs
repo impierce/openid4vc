@@ -17,13 +17,21 @@ use identity_credential::{
 use identity_did::DIDUrl;
 use identity_verification::jws::{Decoder, JwsVerifier};
 use nutype::nutype;
+use oauth_tsl::{
+    relying_party::{decompress_gzip, decrypt_status_list_token, StatusListTokenResponseType},
+    status_list::{StatusList, StatusType},
+};
 use oid4vc_core::utils::predicates::not_empty;
 use oid4vc_core::{
     types::string_or_object::StringOrObject, verification_material_resolver::VerificationMaterialResolver, JsonObject,
 };
+use reqwest::{header, redirect::Policy, Client};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 use thiserror::Error;
+
+use identity_core::convert::{FromJson as _, ToJson as _};
+use jsonwebtoken::{decode_header, jwk::Jwk as JsonWebTokenJwk, DecodingKey};
 
 #[derive(Debug, Error)]
 pub enum VpTokenValidationError {
@@ -75,6 +83,10 @@ pub enum VpTokenValidationError {
     DcqlEvaluationFailed,
     #[error("Presentation submission validation failed: {0}")]
     PresentationSubmissionValidation(#[from] VpTokenBuilderError),
+    #[error("Failed to get credential status: {0}")]
+    FailedToGetCredentialStatus(String),
+    #[error("Credential status is invalid")]
+    CredentialStatusInvalid,
 }
 
 /// A type validating [`VpToken`]s.
@@ -386,9 +398,20 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenVali
         let options = &JwtCredentialValidationOptions::new().status_check(StatusCheck::SkipUnsupported);
         let fail_fast = FailFast::FirstError;
 
-        self.jwt_credential_validator
+        let jwt_data = self
+            .jwt_credential_validator
             .validate(credential_jwt, &issuer, options, fail_fast)
-            .map_err(VpTokenValidationError::CredentialValidation)
+            .map_err(VpTokenValidationError::CredentialValidation)?;
+
+        if let Some(status_claim) = jwt_data.custom_claims.as_ref().and_then(|v| v.get("status").cloned()) {
+            match self.check_jwt_status_claim(status_claim).await {
+                Ok(_) => {}
+                Err(VpTokenValidationError::FailedToGetCredentialStatus(_)) => {} // If we fail to get the credential status we proceed the same as if there was no status claim
+                Err(e) => return Err(e),
+            };
+        }
+
+        Ok(jwt_data)
     }
 
     /// Internal helper to validate a generic SD-JWT VC (signature, key binding, disclosures).
@@ -451,6 +474,16 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenVali
             }
         }
 
+        if let Some(status_claim) = &sd_jwt_vc.claims().status {
+            let status_value = serde_json::to_value(status_claim)
+                .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
+            match self.check_jwt_status_claim(status_value).await {
+                Ok(_) => {}
+                Err(VpTokenValidationError::FailedToGetCredentialStatus(_)) => {} // If we fail to get the credential status we proceed the same as if there was no status claim
+                Err(e) => return Err(e),
+            };
+        }
+
         sd_jwt_vc
             .clone()
             .into_disclosed_object(&Sha256Hasher)
@@ -481,9 +514,88 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenVali
         // `SkipUnsupported` allows for custom credential types, such as the StatusList2021Entry (https://www.w3.org/TR/2023/WD-vc-status-list-20230427/#statuslist2021entry)
         let options = &JwtCredentialValidationOptions::new().status_check(StatusCheck::SkipUnsupported);
 
+        let claims_value = serde_json::to_value(vcdm2_sd_jwt.claims())
+            .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
+        if let Some(status_value) = claims_value.get("status").cloned() {
+            match self.check_jwt_status_claim(status_value).await {
+                Ok(_) => {}
+                Err(VpTokenValidationError::FailedToGetCredentialStatus(_)) => {} // If we fail to get the credential status we proceed the same as if there was no status claim
+                Err(e) => return Err(e),
+            };
+        }
+
         self.sd_jwt_credential_validator
             .validate_credential_v2(vcdm2_sd_jwt, &[issuer], options)
             .map_err(|e| VpTokenValidationError::SdJwtValidation(e.to_string()))
+    }
+
+    async fn check_jwt_status_claim(&self, status_claim: serde_json::Value) -> Result<(), VpTokenValidationError> {
+        let idx = status_claim
+            .get("idx")
+            .and_then(|v| v.as_str())
+            .map(ToString::to_string);
+        let uri = status_claim
+            .get("uri")
+            .and_then(|v| v.as_str())
+            .map(ToString::to_string);
+
+        if let (Some(idx), Some(uri)) = (idx, uri) {
+            let status_list_jwt = fetch_status_list(
+                &uri,
+                StatusListTokenResponseType::Jwt, // TODO: the response type is hardcoded to be JWT, since we can't handle CWT yet. However when we implement CWT we then need some way to discover what encoding the Status List Provider is using.
+            )
+            .await?;
+
+            let jwt_header = decode_header(&status_list_jwt)
+                .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
+            let kid = jwt_header
+                .kid
+                .ok_or(VpTokenValidationError::FailedToGetCredentialStatus(
+                    "No KID found".to_string(),
+                ))?;
+            let public_key_jwk = self
+                .verification_material_resolver
+                .resolve_public_key(&kid)
+                .await
+                .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
+            // Convert the `IotaIdentityJwk` first into a `JsonWebTokenJwk` and then into a `DecodingKey`.
+            let decoding_key = public_key_jwk
+                .to_json()
+                .ok()
+                .and_then(|public_key| JsonWebTokenJwk::from_json(&public_key).ok())
+                .and_then(|jwk| DecodingKey::from_jwk(&jwk).ok())
+                .ok_or(VpTokenValidationError::FailedToGetCredentialStatus(
+                    "Failed to create decoding key".to_string(),
+                ))?;
+
+            let decoded_jwt = decrypt_status_list_token(&status_list_jwt, decoding_key)
+                .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
+
+            let status_list: StatusList = decoded_jwt.claims.encoded_status_list.try_into().map_err(|_| {
+                VpTokenValidationError::FailedToGetCredentialStatus("Failed to decode status list".to_string())
+            })?;
+
+            let index = idx.parse::<usize>().map_err(|_| {
+                VpTokenValidationError::FailedToGetCredentialStatus(format!("Not a valid index: {}", idx))
+            })?;
+            let status = StatusType::try_from(status_list.get_status(index).map_err(|_| {
+                VpTokenValidationError::FailedToGetCredentialStatus(
+                    "Failed to get credential status from index".to_string(),
+                )
+            })?)
+            .map_err(|_| {
+                VpTokenValidationError::FailedToGetCredentialStatus(
+                    "Failed to get credential status from index".to_string(),
+                )
+            })?;
+
+            match status {
+                StatusType::VALID => {} // do nothing, credential is valid
+                _ => return Err(VpTokenValidationError::CredentialStatusInvalid),
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -526,6 +638,49 @@ impl DecodedVpTokenBuilder {
         DecodedVpToken {
             decoded_presentations: self.decoded_presentations,
         }
+    }
+}
+
+// Helper
+
+/// Sends a status list request to the provided URI and returns the response body as a String.
+/// The `accept_header` parameter determines the expected response format (e.g., JWT, compressed JWT).
+/// If the response is gzip encoded, it will be decompressed before being returned.
+pub async fn fetch_status_list(
+    uri: &str,
+    accept_header: StatusListTokenResponseType,
+) -> Result<String, VpTokenValidationError> {
+    // 3xx redirects should be followed, but infinite loops are caught after 5 redirects.
+    // The timeout of 10 seconds is an estimated guess of how long a status list request should take at maximum.
+    let client = Client::builder()
+        .redirect(Policy::limited(5))
+        .timeout(Duration::from_secs(10))
+        .build()
+        .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
+
+    let res = client
+        .get(uri)
+        .header(header::ACCEPT, accept_header.to_string())
+        .send()
+        .await
+        .and_then(reqwest::Response::error_for_status)
+        .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
+
+    let is_gzipped = res
+        .headers()
+        .get(header::CONTENT_ENCODING)
+        .is_some_and(|encoding| encoding == "gzip");
+
+    let bytes = res
+        .bytes()
+        .await
+        .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
+
+    if is_gzipped {
+        decompress_gzip(&bytes).map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))
+    } else {
+        String::from_utf8(bytes.to_vec())
+            .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))
     }
 }
 
