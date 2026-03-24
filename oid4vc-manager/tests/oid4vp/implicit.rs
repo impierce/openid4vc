@@ -4,6 +4,7 @@ use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
 use oid4vc_core::authentication::subject::Subject;
+use oid4vc_core::credential_status_verifier::test_utils::TestCredentialStatusVerifier;
 use oid4vc_core::verification_material_resolver::test_utils::TestVerificationMaterialResolver;
 use oid4vc_core::verifier::SignatureVerifier;
 use oid4vc_core::{
@@ -200,15 +201,17 @@ async fn test_implicit_flow() {
         .await
         .unwrap();
 
-    assert!(
-        VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
-            .validate_vp_token(
-                &DCQL_QUERY,
-                &authorization_response.extension.vp_token,
-                &relying_party_did_with_prefix.to_string(),
-                Some(nonce),
-            )
-            .await
-            .is_ok()
-    );
+    assert!(VpTokenValidator::new(
+        &SignatureVerifier,
+        &TestVerificationMaterialResolver,
+        &TestCredentialStatusVerifier
+    )
+    .validate_vp_token(
+        &DCQL_QUERY,
+        &authorization_response.extension.vp_token,
+        &relying_party_did_with_prefix.to_string(),
+        Some(nonce),
+    )
+    .await
+    .is_ok());
 }
