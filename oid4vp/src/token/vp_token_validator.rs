@@ -593,7 +593,6 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenVali
                 )
             })?;
 
-            println!("status: {status:?}");
             match status {
                 StatusType::VALID => Ok(()),
                 _ => Err(VpTokenValidationError::CredentialStatusInvalid),
