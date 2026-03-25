@@ -404,16 +404,11 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             .validate(credential_jwt, &issuer, options, fail_fast)
             .map_err(VpTokenValidationError::CredentialValidation)?;
 
-        if let Some(status_claim) = jwt_data.custom_claims.as_ref().and_then(|v| v.get("status").cloned()) {
-            match self
-                .credential_status_verifier
-                .check_status_claim_against_status_list_token(status_claim)
+        if let Some(status_value) = jwt_data.custom_claims.as_ref().and_then(|v| v.get("status").cloned()) {
+            self.credential_status_verifier
+                .check_credential_status(status_value)
                 .await
-            {
-                Ok(_) => {}
-                // TODO: Err(VpTokenValidationError::FailedToGetCredentialStatus(_)) => {} // If we fail to get the credential status we proceed the same as if there was no status claim
-                Err(_) => return Err(VpTokenValidationError::CredentialStatusInvalid),
-            };
+                .map_err(|_| VpTokenValidationError::CredentialStatusInvalid)?;
         }
 
         Ok(jwt_data)
@@ -482,15 +477,10 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
         if let Some(status_claim) = &sd_jwt_vc.claims().status {
             let status_value = serde_json::to_value(status_claim)
                 .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
-            match self
-                .credential_status_verifier
-                .check_status_claim_against_status_list_token(status_value)
+            self.credential_status_verifier
+                .check_credential_status(status_value)
                 .await
-            {
-                Ok(_) => {}
-                // TODO: Err(VpTokenValidationError::FailedToGetCredentialStatus(_)) => {} // If we fail to get the credential status we proceed the same as if there was no status claim
-                Err(_) => return Err(VpTokenValidationError::CredentialStatusInvalid),
-            };
+                .map_err(|_| VpTokenValidationError::CredentialStatusInvalid)?;
         }
 
         sd_jwt_vc
@@ -526,15 +516,10 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
         let claims_value = serde_json::to_value(vcdm2_sd_jwt.claims())
             .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
         if let Some(status_value) = claims_value.get("status").cloned() {
-            match self
-                .credential_status_verifier
-                .check_status_claim_against_status_list_token(status_value)
+            self.credential_status_verifier
+                .check_credential_status(status_value)
                 .await
-            {
-                Ok(_) => {}
-                // TODO: Err(VpTokenValidationError::FailedToGetCredentialStatus(_)) => {} // If we fail to get the credential status we proceed the same as if there was no status claim
-                Err(_) => return Err(VpTokenValidationError::CredentialStatusInvalid),
-            };
+                .map_err(|_| VpTokenValidationError::CredentialStatusInvalid)?;
         }
 
         self.sd_jwt_credential_validator
