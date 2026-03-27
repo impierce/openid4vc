@@ -17,7 +17,7 @@ use identity_credential::{
 use identity_did::DIDUrl;
 use identity_verification::jws::{Decoder, JwsVerifier};
 use nutype::nutype;
-use oid4vc_core::utils::predicates::not_empty;
+use oid4vc_core::{credential_status_verifier::CredentialStatusVerifier, utils::predicates::not_empty};
 use oid4vc_core::{
     types::string_or_object::StringOrObject, verification_material_resolver::VerificationMaterialResolver, JsonObject,
 };
@@ -75,27 +75,39 @@ pub enum VpTokenValidationError {
     DcqlEvaluationFailed,
     #[error("Presentation submission validation failed: {0}")]
     PresentationSubmissionValidation(#[from] VpTokenBuilderError),
+    #[error("Failed to get credential status: {0}")]
+    FailedToGetCredentialStatus(String),
+    #[error("Credential status is invalid")]
+    CredentialStatusInvalid,
 }
 
 /// A type validating [`VpToken`]s.
-pub struct VpTokenValidator<'a, V: JwsVerifier, VMR: VerificationMaterialResolver> {
+pub struct VpTokenValidator<'a, V: JwsVerifier, VMR: VerificationMaterialResolver, CSV: CredentialStatusVerifier> {
     jwt_presentation_validator: JwtPresentationValidator<V>,
     jwt_credential_validator: JwtCredentialValidator<V>,
     sd_jwt_credential_validator: SdJwtCredentialValidator<V>,
     signature_verifier: &'a V,
     verification_material_resolver: &'a VMR,
+    credential_status_verifier: &'a CSV,
 }
 
-impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenValidator<'a, SV, VMR> {
+impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: CredentialStatusVerifier>
+    VpTokenValidator<'a, SV, VMR, CSV>
+{
     /// Create a new [`VpTokenValidator`] that delegates cryptographic signature verification to
     /// `signature_verifier` and resolves DIDs using `verification_material_resolver`
-    pub fn new(signature_verifier: &'a SV, verification_material_resolver: &'a VMR) -> Self {
+    pub fn new(
+        signature_verifier: &'a SV,
+        verification_material_resolver: &'a VMR,
+        credential_status_verifier: &'a CSV,
+    ) -> Self {
         Self {
             jwt_presentation_validator: JwtPresentationValidator::with_signature_verifier(signature_verifier.clone()),
             jwt_credential_validator: JwtCredentialValidator::with_signature_verifier(signature_verifier.clone()),
             sd_jwt_credential_validator: SdJwtCredentialValidator::new(signature_verifier.clone(), Sha256Hasher),
             signature_verifier,
             verification_material_resolver,
+            credential_status_verifier,
         }
     }
 
@@ -107,7 +119,8 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenVali
     /// 3. Matching each presentation to a `CredentialQuery` in the `dcql_query`.
     /// 4. Validating the format-specific structure and signatures of each presentation.
     /// 5. Decoding the credentials into a common format (`JsonObject`).
-    /// 6. Evaluating the decoded credentials against the full logic of the `dcql_query` (including sets and claims).
+    /// 6. Validate the credential status.
+    /// 7. Evaluating the decoded credentials against the full logic of the `dcql_query` (including sets and claims).
     pub async fn validate_vp_token(
         &self,
         dcql_query: &DcqlQuery,
@@ -386,9 +399,19 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenVali
         let options = &JwtCredentialValidationOptions::new().status_check(StatusCheck::SkipUnsupported);
         let fail_fast = FailFast::FirstError;
 
-        self.jwt_credential_validator
+        let jwt_data = self
+            .jwt_credential_validator
             .validate(credential_jwt, &issuer, options, fail_fast)
-            .map_err(VpTokenValidationError::CredentialValidation)
+            .map_err(VpTokenValidationError::CredentialValidation)?;
+
+        if let Some(status_value) = jwt_data.custom_claims.as_ref().and_then(|v| v.get("status").cloned()) {
+            self.credential_status_verifier
+                .check_credential_status(status_value)
+                .await
+                .map_err(|_| VpTokenValidationError::CredentialStatusInvalid)?;
+        }
+
+        Ok(jwt_data)
     }
 
     /// Internal helper to validate a generic SD-JWT VC (signature, key binding, disclosures).
@@ -451,6 +474,15 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenVali
             }
         }
 
+        if let Some(status_claim) = &sd_jwt_vc.claims().status {
+            let status_value = serde_json::to_value(status_claim)
+                .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
+            self.credential_status_verifier
+                .check_credential_status(status_value)
+                .await
+                .map_err(|_| VpTokenValidationError::CredentialStatusInvalid)?;
+        }
+
         sd_jwt_vc
             .clone()
             .into_disclosed_object(&Sha256Hasher)
@@ -480,6 +512,15 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver> VpTokenVali
 
         // `SkipUnsupported` allows for custom credential types, such as the StatusList2021Entry (https://www.w3.org/TR/2023/WD-vc-status-list-20230427/#statuslist2021entry)
         let options = &JwtCredentialValidationOptions::new().status_check(StatusCheck::SkipUnsupported);
+
+        let claims_value = serde_json::to_value(vcdm2_sd_jwt.claims())
+            .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
+        if let Some(status_value) = claims_value.get("status").cloned() {
+            self.credential_status_verifier
+                .check_credential_status(status_value)
+                .await
+                .map_err(|_| VpTokenValidationError::CredentialStatusInvalid)?;
+        }
 
         self.sd_jwt_credential_validator
             .validate_credential_v2(vcdm2_sd_jwt, &[issuer], options)
@@ -539,6 +580,7 @@ mod tests {
     };
     use oid4vc_core::{
         claim_path_pointer::{ClaimPathElement, ClaimPathPointer},
+        credential_status_verifier::MockCredentialStatusVerifier,
         verification_material_resolver::test_utils::TestVerificationMaterialResolver,
         verifier::SignatureVerifier,
     };
@@ -546,6 +588,12 @@ mod tests {
     const VALID_JWT_VC_JSON_CREDENTIAL: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2g5eTRMU0Y4Mm9Wck03S3pxZjZ1OFVvMU51UFlyUm5kM293QkxFRUFETHBkI3o2TWtoOXk0TFNGODJvVnJNN0t6cWY2dThVbzFOdVBZclJuZDNvd0JMRUVBRExwZCJ9.eyJpc3MiOiJkaWQ6a2V5Ono2TWtoOXk0TFNGODJvVnJNN0t6cWY2dThVbzFOdVBZclJuZDNvd0JMRUVBRExwZCIsInN1YiI6ImRpZDprZXk6ejZNa2g5eTRMU0Y4Mm9Wck03S3pxZjZ1OFVvMU51UFlyUm5kM293QkxFRUFETHBkIiwiYXVkIjoiZGVjZW50cmFsaXplZF9pZGVudGlmaWVyOmRpZDprZXk6ejZNa2V1cGVQVktpa0x2NEtYRTk5b0F2UWJnQVI3cVhxM0FHVXRzU2VvcVpnRkJWIiwiZXhwIjo3ODIxMjQ3MjUxLCJpYXQiOjE3NzMyNDcyNTEsInZwIjp7IkBjb250ZXh0IjoiaHR0cHM6Ly93d3cudzMub3JnLzIwMTgvY3JlZGVudGlhbHMvdjEiLCJ0eXBlIjoiVmVyaWZpYWJsZVByZXNlbnRhdGlvbiIsInZlcmlmaWFibGVDcmVkZW50aWFsIjpbImV5SjBlWEFpT2lKS1YxUWlMQ0poYkdjaU9pSkZaRVJUUVNJc0ltdHBaQ0k2SW1ScFpEcHJaWGs2ZWpaTmEyVjFjR1ZRVmt0cGEweDJORXRZUlRrNWIwRjJVV0puUVZJM2NWaHhNMEZIVlhSelUyVnZjVnBuUmtKV0kzbzJUV3RsZFhCbFVGWkxhV3RNZGpSTFdFVTVPVzlCZGxGaVowRlNOM0ZZY1ROQlIxVjBjMU5sYjNGYVowWkNWaUo5LmV5SnBjM01pT2lKa2FXUTZhMlY1T25vMlRXdGxkWEJsVUZaTGFXdE1kalJMV0VVNU9XOUJkbEZpWjBGU04zRlljVE5CUjFWMGMxTmxiM0ZhWjBaQ1ZpSXNJbk4xWWlJNkltUnBaRHByWlhrNmVqWk5hMmc1ZVRSTVUwWTRNbTlXY2swM1MzcHhaaloxT0ZWdk1VNTFVRmx5VW01a00yOTNRa3hGUlVGRVRIQmtJaXdpYm1KbUlqb3hOemN6TWpRM01qSTRMQ0pwWVhRaU9qRTNOek15TkRjeU1qZ3NJblpqSWpwN0ltTnlaV1JsYm5ScFlXeFRkV0pxWldOMElqcDdJbVpwY25OMFgyNWhiV1VpT2lKR1pYSnlhWE1pTENKc1lYTjBYMjVoYldVaU9pSkRjbUZpYldGdUlpd2laRzlpSWpvaU1UazRNaTB3TVMwd01TSXNJbWxrSWpvaVpHbGtPbXRsZVRwNk5rMXJhRGw1TkV4VFJqZ3liMVp5VFRkTGVuRm1OblU0Vlc4eFRuVlFXWEpTYm1RemIzZENURVZGUVVSTWNHUWlmU3dpZEhsd1pTSTZXeUpXWlhKcFptbGhZbXhsUTNKbFpHVnVkR2xoYkNKZExDSnBjM04xWlhJaU9uc2libUZ0WlNJNklsVnVhVU52Y21VaUxDSnBaQ0k2SW1ScFpEcHJaWGs2ZWpaTmEyVjFjR1ZRVmt0cGEweDJORXRZUlRrNWIwRjJVV0puUVZJM2NWaHhNMEZIVlhSelUyVnZjVnBuUmtKV0luMHNJa0JqYjI1MFpYaDBJanBiSW1oMGRIQnpPaTh2ZDNkM0xuY3pMbTl5Wnk4eU1ERTRMMk55WldSbGJuUnBZV3h6TDNZeElsMHNJbWx6YzNWaGJtTmxSR0YwWlNJNklqSXdNall0TURNdE1URlVNVFk2TkRBNk1qaGFJaXdpZG1Gc2FXUkdjbTl0SWpvaU1qQXlOaTB3TXkweE1WUXhOam8wTURveU9Gb2lMQ0pqY21Wa1pXNTBhV0ZzVTNSaGRIVnpJanA3SW5SNWNHVWlPaUp6ZEdGMGRYTnNhWE4wSzJwM2RDSXNJbWxrSWpvaWFIUjBjRG92TDJ4dlkyRnNhRzl6ZERvek1ETXpMMmxsZEdZdGIyRjFkR2d0ZEc5clpXNHRjM1JoZEhWekxXeHBjM1F2TVNJc0luVnlhU0k2SW1oMGRIQTZMeTlzYjJOaGJHaHZjM1E2TXpBek15OXBaWFJtTFc5aGRYUm9MWFJ2YTJWdUxYTjBZWFIxY3kxc2FYTjBMekVpTENKcFpIZ2lPamd3TkRoOWZTd2ljM1JoZEhWeklqcDdJbk4wWVhSMWMxOXNhWE4wSWpwN0luVnlhU0k2SW1oMGRIQTZMeTlzYjJOaGJHaHZjM1E2TXpBek15OXBaWFJtTFc5aGRYUm9MWFJ2YTJWdUxYTjBZWFIxY3kxc2FYTjBMekVpTENKcFpIZ2lPamd3TkRoOWZYMC5fS2lDZUVtZmFfVFFXaVNOTk9hWHZfV3FKNkM5ZkNtLVZTUE53NzVNLVBQS1ZYSGtiNlJiM1lGS25DSVo3M1ZGUVBibWVrX0RwV2F5WWVWTm55NjNBZyJdLCJob2xkZXIiOiJkaWQ6a2V5Ono2TWtoOXk0TFNGODJvVnJNN0t6cWY2dThVbzFOdVBZclJuZDNvd0JMRUVBRExwZCJ9LCJub25jZSI6ImJlMWExYjIwMDg0ZjY1NjYwMzNkZTdiYzJmOTBiODM3NzIyZmVhYjRhYjZhZjcxY2VjYjg5ZmY0Mjc0NWFiY2QifQ.59V_DEJ2R75iymoUOC67fN2sWvC_W4KaqeDEvamYjbWe-gTHikTzoyH3zxhjj-YbCWhOibQNeSDf8ELn1lCSAg";
     const VALID_DC_SD_JWT_CREDENTIAL: &str = "eyJ0eXAiOiJkYytzZC1qd3QiLCJraWQiOiJkaWQ6a2V5Ono2TWtldXBlUFZLaWtMdjRLWEU5OW9BdlFiZ0FSN3FYcTNBR1V0c1Nlb3FaZ0ZCViN6Nk1rZXVwZVBWS2lrTHY0S1hFOTlvQXZRYmdBUjdxWHEzQUdVdHNTZW9xWmdGQlYiLCJhbGciOiJFZERTQSJ9.eyJ2Y3QiOiJodHRwOi8vbG9jYWxob3N0OjMwMzMvdmN0L1UwUXRTbGRVSUZaRC8wIiwiX3NkIjpbIjhWRjlEYkRnaDJrT0kwWW5Cc0dBQUJuTldIZ1puVWlQOENZVjBRMTFmc00iLCJZSUh1ZDNuUHRDV3c1NkY2OWNLYU1NWDNsOGd1UFgwbVNUcDVPSV9QNVo4IiwidWhpSHdOaUtrQUJDN2tBQUxzU0ZMM0JaeXJnb05McnRGTGNXOHg2SWdwMCJdLCJpc3MiOiJkaWQ6a2V5Ono2TWtldXBlUFZLaWtMdjRLWEU5OW9BdlFiZ0FSN3FYcTNBR1V0c1Nlb3FaZ0ZCViIsIm5iZiI6MTc3MzI0NzQxMywiaWF0IjoxNzczMjQ3NDEzLCJzdGF0dXMiOnsic3RhdHVzX2xpc3QiOnsidXJpIjoiaHR0cDovL2xvY2FsaG9zdDozMDMzL2lldGYtb2F1dGgtdG9rZW4tc3RhdHVzLWxpc3QvMCIsImlkeCI6Mzk3N319LCJfc2RfYWxnIjoic2hhLTI1NiIsImNuZiI6eyJraWQiOiJkaWQ6a2V5Ono2TWtoOXk0TFNGODJvVnJNN0t6cWY2dThVbzFOdVBZclJuZDNvd0JMRUVBRExwZCN6Nk1raDl5NExTRjgyb1ZyTTdLenFmNnU4VW8xTnVQWXJSbmQzb3dCTEVFQURMcGQifX0.-yfZPKWJbeRE45GPqzFIT-wB-f1jXstqR9puEpnobWhY3Ddxf7z1HtZMb4GJcvbOrtcako9ptSxc8keIR-XADw~WyJKbjhUbUh4QmZwLXItd3dCX2h6UEFiS214aEt2R3NMZXJfazBlS21OIiwiZmlyc3RfbmFtZSIsIkZlcnJpcyJd~WyJua0ZZSzV5enZvT0l4c245aF9xcjdHNzJqS2M2ZXo4OVRQZmExb3RYIiwibGFzdF9uYW1lIiwiQ3JhYm1hbiJd~WyJGOUZsRHZ6X0EtbzJuYWw1TzJfaDdoRkQ3MFZTMHlQNFhnczdDQ1U0IiwiZG9iIiwiMTk4Mi0wMS0wMSJd~eyJhbGciOiJSUzI1NiIsInR5cCI6ImtiK2p3dCJ9.eyJpYXQiOjE3NzMyNDc0OTEsImF1ZCI6ImRlY2VudHJhbGl6ZWRfaWRlbnRpZmllcjpkaWQ6a2V5Ono2TWtldXBlUFZLaWtMdjRLWEU5OW9BdlFiZ0FSN3FYcTNBR1V0c1Nlb3FaZ0ZCViIsIm5vbmNlIjoiMWMyYzY4NjRhM2Y0ZTMzNTcxMmJiNzg5MDI0OWQzYzQ2ZTE3N2RkNjJlM2U5M2JjM2E0ZDA4YWNkZTdkNGFiNCIsInNkX2hhc2giOiJidHdZSFU5Rjd5Q2liNDZDN0pWaElwa2pHTUxER2xZeGFvTmZab2NsSzZrIn0.AcganwldnIvrZd_4ube0es_NLo-A8mRo6XL-z0sRkE4Sp9XgeqyLV_0FK6Nx8TWk1zcd3xYZS7eAQWdU3JLcDg";
     const VALID_VC_SD_JWT_CREDENTIAL: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2g5eTRMU0Y4Mm9Wck03S3pxZjZ1OFVvMU51UFlyUm5kM293QkxFRUFETHBkI3o2TWtoOXk0TFNGODJvVnJNN0t6cWY2dThVbzFOdVBZclJuZDNvd0JMRUVBRExwZCJ9.eyJAY29udGV4dCI6Imh0dHBzOi8vd3d3LnczLm9yZy9ucy9jcmVkZW50aWFscy92MiIsInR5cGUiOiJWZXJpZmlhYmxlUHJlc2VudGF0aW9uIiwidmVyaWZpYWJsZUNyZWRlbnRpYWwiOlt7IkBjb250ZXh0IjoiaHR0cHM6Ly93d3cudzMub3JnL25zL2NyZWRlbnRpYWxzL3YyIiwiaWQiOiJkYXRhOmFwcGxpY2F0aW9uL3ZjK3NkLWp3dCxleUowZVhBaU9pSjJZeXR6WkMxcWQzUWlMQ0pyYVdRaU9pSmthV1E2YTJWNU9ubzJUV3RsZFhCbFVGWkxhV3RNZGpSTFdFVTVPVzlCZGxGaVowRlNOM0ZZY1ROQlIxVjBjMU5sYjNGYVowWkNWaU42TmsxclpYVndaVkJXUzJsclRIWTBTMWhGT1RsdlFYWlJZbWRCVWpkeFdIRXpRVWRWZEhOVFpXOXhXbWRHUWxZaUxDSmhiR2NpT2lKRlpFUlRRU0o5LmV5SmpjbVZrWlc1MGFXRnNVM1ZpYW1WamRDSTZleUpmYzJRaU9sc2lSa1JaYzNkemFTMTVlREJoUWtOb2VrVmZiVVJxU21GMmJIRnNUVkZMYmtOSk9HWlpabk5JUjFZMVNTSXNJa3RZYURWdWVXWmtNMUJrZEZWSWNXTXRaSFpvTFhSSWQybDNhMUF5Ym1SaFUzUTNla1ZETkVSSFlrMGlMQ0pQVTFWSVlVdzVhMVpLTUZGclVWUkpkRVZ3VG5aTlowRkJXbTB6UWxoR2NqbHJRMmRqTkVKUmVGZE5JaXdpVlZWM2FISTBURVZzYzNkeVh6QktSSEEzYkZCU2NVdHRRWFYzZWpOT1FWZ3phWGxoWWxKeWNqRm9ieUpkZlN3aWRIbHdaU0k2V3lKV1pYSnBabWxoWW14bFEzSmxaR1Z1ZEdsaGJDSmRMQ0p1WVcxbElqb2lWa05FVFNBeUxqQWdVMFF0U2xkVUlFTnlaV1JsYm5ScFlXd2lMQ0pwYzNOMVpYSWlPbnNpYm1GdFpTSTZJbFZ1YVVOdmNtVWlMQ0pwWkNJNkltUnBaRHByWlhrNmVqWk5hMlYxY0dWUVZrdHBhMHgyTkV0WVJUazViMEYyVVdKblFWSTNjVmh4TTBGSFZYUnpVMlZ2Y1ZwblJrSldJbjBzSWtCamIyNTBaWGgwSWpwYkltaDBkSEJ6T2k4dmQzZDNMbmN6TG05eVp5OXVjeTlqY21Wa1pXNTBhV0ZzY3k5Mk1pSmRMQ0pwYzNOMVlXNWpaVVJoZEdVaU9pSXlNREkyTFRBekxURXhWREUyT2pRNU9qVTJXaUlzSW5aaGJHbGtSbkp2YlNJNklqSXdNall0TURNdE1URlVNVFk2TkRrNk5UWmFJaXdpWTNKbFpHVnVkR2xoYkZOMFlYUjFjeUk2ZXlKMGVYQmxJam9pYzNSaGRIVnpiR2x6ZEN0cWQzUWlMQ0pwWkNJNkltaDBkSEE2THk5c2IyTmhiR2h2YzNRNk16QXpNeTlwWlhSbUxXOWhkWFJvTFhSdmEyVnVMWE4wWVhSMWN5MXNhWE4wTHpBaUxDSjFjbWtpT2lKb2RIUndPaTh2Ykc5allXeG9iM04wT2pNd016TXZhV1YwWmkxdllYVjBhQzEwYjJ0bGJpMXpkR0YwZFhNdGJHbHpkQzh3SWl3aWFXUjRJam94T0RaOUxDSnpkR0YwZFhNaU9uc2ljM1JoZEhWelgyeHBjM1FpT25zaWRYSnBJam9pYUhSMGNEb3ZMMnh2WTJGc2FHOXpkRG96TURNekwybGxkR1l0YjJGMWRHZ3RkRzlyWlc0dGMzUmhkSFZ6TFd4cGMzUXZNQ0lzSW1sa2VDSTZNVGcyZlgwc0ltbHpjeUk2SW1ScFpEcHJaWGs2ZWpaTmEyVjFjR1ZRVmt0cGEweDJORXRZUlRrNWIwRjJVV0puUVZJM2NWaHhNMEZIVlhSelUyVnZjVnBuUmtKV0lpd2lYM05rWDJGc1p5STZJbk5vWVMweU5UWWlMQ0pqYm1ZaU9uc2lhMmxrSWpvaVpHbGtPbXRsZVRwNk5rMXJhRGw1TkV4VFJqZ3liMVp5VFRkTGVuRm1OblU0Vlc4eFRuVlFXWEpTYm1RemIzZENURVZGUVVSTWNHUWplalpOYTJnNWVUUk1VMFk0TW05V2NrMDNTM3B4WmpaMU9GVnZNVTUxVUZseVVtNWtNMjkzUWt4RlJVRkVUSEJrSW4xOS5yLVFneXVTNGZlUk5ob3haWHctb2NEQ1NWSzR5S29uZUl1SV9nbks5X3JEVUVlR0lFRnZ3Y0pmQ09FYUtXMVF0OG5FZ0ZzSl80UjVJRFZCRmJKck5EZ35XeUpTU1VoeFJuSm5XR1Z5Y2t0bk4xTmhVMDVXZDNsM2FITmtlVFJrUlZaM1lWVlJTV0pTV1ROTklpd2labWx5YzNSZmJtRnRaU0lzSWtabGNuSnBjeUpkfld5SmhPVGx3VTBoQlIzbE5VbVZOYW5ablRFOUJTVXhXWmw5UFpHbFBUMUZGYldwcFQzcFRhREY0SWl3aWJHRnpkRjl1WVcxbElpd2lRM0poWW0xaGJpSmR-V3lKSFNqZFVabEZxZEdKU1VYSnlPR05WVEdKRlZITlBkMGRqWlhOd2NsRTBkM05xUWxOa01tcFlJaXdpWkc5aUlpd2lNVGs0TWkwd01TMHdNU0pkfld5Sk1kMVZvWDNBMWNqbHZUM2RtVVV4NVZFTm1TbXA0YzJWTU5ERnVORkZUT1VGa1gydGFlVjlWSWl3aWFXUWlMQ0prYVdRNmEyVjVPbm8yVFd0b09YazBURk5HT0RKdlZuSk5OMHQ2Y1dZMmRUaFZiekZPZFZCWmNsSnVaRE52ZDBKTVJVVkJSRXh3WkNKZH4iLCJ0eXBlIjoiRW52ZWxvcGVkVmVyaWZpYWJsZUNyZWRlbnRpYWwifV0sImhvbGRlciI6ImRpZDprZXk6ejZNa2g5eTRMU0Y4Mm9Wck03S3pxZjZ1OFVvMU51UFlyUm5kM293QkxFRUFETHBkIiwiYXVkIjoiZGVjZW50cmFsaXplZF9pZGVudGlmaWVyOmRpZDprZXk6ejZNa2V1cGVQVktpa0x2NEtYRTk5b0F2UWJnQVI3cVhxM0FHVXRzU2VvcVpnRkJWIiwiZXhwIjo3ODIxMjQ4MjA2LCJpYXQiOjE3NzMyNDgyMDYsImlzcyI6ImRpZDprZXk6ejZNa2g5eTRMU0Y4Mm9Wck03S3pxZjZ1OFVvMU51UFlyUm5kM293QkxFRUFETHBkIiwibm9uY2UiOiI4ZGY5MWE0YTE5Y2IxYmFiZGE4YmI1OTlhYmU1MmNhZWFlNWFhODgxOWYzOGQ3NjJkMTM0NDZhZGQ3YmQwOWY0In0.t8Q4bmZAD2hFcQxLQfKWM21yOnzr-syra6fGgh9IuDzXEbm_J4ZiJ6YoD8b7eQkB431TDuRGzx57oEAkD8YgCA";
+
+    fn mock_credential_status_verifier() -> MockCredentialStatusVerifier {
+        let mut mock = MockCredentialStatusVerifier::new();
+        mock.expect_check_credential_status().returning(|_| Ok(()));
+        mock
+    }
 
     #[tokio::test]
     async fn test_validate_vp_token_with_jwt_vc_json() {
@@ -581,17 +629,19 @@ mod tests {
             .build()
             .unwrap();
 
-        assert!(
-            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
-                .validate_vp_token(
-                    &dcql_query,
-                    &vp_token,
-                    "decentralized_identifier:did:key:z6MkeupePVKikLv4KXE99oAvQbgAR7qXq3AGUtsSeoqZgFBV",
-                    Some("be1a1b20084f6566033de7bc2f90b837722feab4ab6af71cecb89ff42745abcd"),
-                )
-                .await
-                .is_ok()
-        );
+        assert!(VpTokenValidator::new(
+            &SignatureVerifier,
+            &TestVerificationMaterialResolver,
+            &mock_credential_status_verifier()
+        )
+        .validate_vp_token(
+            &dcql_query,
+            &vp_token,
+            "decentralized_identifier:did:key:z6MkeupePVKikLv4KXE99oAvQbgAR7qXq3AGUtsSeoqZgFBV",
+            Some("be1a1b20084f6566033de7bc2f90b837722feab4ab6af71cecb89ff42745abcd"),
+        )
+        .await
+        .is_ok());
     }
 
     #[tokio::test]
@@ -624,17 +674,19 @@ mod tests {
             .build()
             .unwrap();
 
-        assert!(
-            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
-                .validate_vp_token(
-                    &dcql_query,
-                    &vp_token,
-                    "decentralized_identifier:did:key:z6MkeupePVKikLv4KXE99oAvQbgAR7qXq3AGUtsSeoqZgFBV",
-                    Some("1c2c6864a3f4e335712bb7890249d3c46e177dd62e3e93bc3a4d08acde7d4ab4"),
-                )
-                .await
-                .is_ok()
-        );
+        assert!(VpTokenValidator::new(
+            &SignatureVerifier,
+            &TestVerificationMaterialResolver,
+            &mock_credential_status_verifier()
+        )
+        .validate_vp_token(
+            &dcql_query,
+            &vp_token,
+            "decentralized_identifier:did:key:z6MkeupePVKikLv4KXE99oAvQbgAR7qXq3AGUtsSeoqZgFBV",
+            Some("1c2c6864a3f4e335712bb7890249d3c46e177dd62e3e93bc3a4d08acde7d4ab4"),
+        )
+        .await
+        .is_ok());
     }
 
     #[tokio::test]
@@ -671,17 +723,75 @@ mod tests {
             .build()
             .unwrap();
 
-        assert!(
-            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
+        assert!(VpTokenValidator::new(
+            &SignatureVerifier,
+            &TestVerificationMaterialResolver,
+            &mock_credential_status_verifier()
+        )
+        .validate_vp_token(
+            &dcql_query,
+            &vp_token,
+            "decentralized_identifier:did:key:z6MkeupePVKikLv4KXE99oAvQbgAR7qXq3AGUtsSeoqZgFBV",
+            Some("8df91a4a19cb1babda8bb599abe52caeae5aa8819f38d762d13446add7bd09f4"),
+        )
+        .await
+        .is_ok());
+    }
+
+    #[tokio::test]
+    async fn invalid_credential_status_results_in_credential_status_invalid_error() {
+        let dcql_query = DcqlQuery {
+            credentials: vec![CredentialQuery {
+                id: CredentialQueryId::try_new("CredentialQuery").unwrap(),
+                format: Format::JwtVcJson,
+                multiple: None,
+                meta: MetaTypes::W3CFormatMeta {
+                    type_values: vec![vec!["VerifiableCredential".to_string()]],
+                },
+                trusted_authorities: None,
+                require_cryptographic_holder_binding: Some(true),
+                claims: Some(vec![ClaimQuery {
+                    id: None,
+                    path: ClaimPathPointer::try_new(vec![
+                        ClaimPathElement::String("credentialSubject".to_string()),
+                        ClaimPathElement::String("first_name".to_string()),
+                    ])
+                    .unwrap(),
+                    values: None,
+                }]),
+                claim_sets: None,
+            }],
+            credential_sets: None,
+        };
+
+        let vp_token = VpToken::builder()
+            .add_presentations(
+                CredentialQueryId::try_new("CredentialQuery").unwrap(),
+                Presentations::try_new(vec![VALID_JWT_VC_JSON_CREDENTIAL.into()]).unwrap(),
+            )
+            .build()
+            .unwrap();
+
+        let mut mock = MockCredentialStatusVerifier::new();
+        mock.expect_check_credential_status().returning(|_| {
+            Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "credential status check failed",
+            )) as Box<dyn std::error::Error>)
+        });
+
+        assert!(matches!(
+            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver, &mock)
                 .validate_vp_token(
                     &dcql_query,
                     &vp_token,
                     "decentralized_identifier:did:key:z6MkeupePVKikLv4KXE99oAvQbgAR7qXq3AGUtsSeoqZgFBV",
-                    Some("8df91a4a19cb1babda8bb599abe52caeae5aa8819f38d762d13446add7bd09f4"),
+                    Some("be1a1b20084f6566033de7bc2f90b837722feab4ab6af71cecb89ff42745abcd"),
                 )
                 .await
-                .is_ok()
-        );
+                .unwrap_err(),
+            VpTokenValidationError::CredentialStatusInvalid
+        ));
     }
 
     #[tokio::test]
@@ -720,15 +830,19 @@ mod tests {
             .unwrap();
 
         assert!(matches!(
-            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
-                .validate_vp_token(
-                    &dcql_query,
-                    &vp_token,
-                    "decentralized_identifier:did:key:z6MkeupePVKikLv4KXE99oAvQbgAR7qXq3AGUtsSeoqZgFBV",
-                    Some("be1a1b20084f6566033de7bc2f90b837722feab4ab6af71cecb89ff42745abcd"),
-                )
-                .await
-                .unwrap_err(),
+            VpTokenValidator::new(
+                &SignatureVerifier,
+                &TestVerificationMaterialResolver,
+                &mock_credential_status_verifier()
+            )
+            .validate_vp_token(
+                &dcql_query,
+                &vp_token,
+                "decentralized_identifier:did:key:z6MkeupePVKikLv4KXE99oAvQbgAR7qXq3AGUtsSeoqZgFBV",
+                Some("be1a1b20084f6566033de7bc2f90b837722feab4ab6af71cecb89ff42745abcd"),
+            )
+            .await
+            .unwrap_err(),
             // The JWT VC JSON credential is valid, but the claim query is looking for a claim that does not exist in the credential, so the DCQL evaluation should fail
             VpTokenValidationError::DcqlEvaluationFailed
         ));
@@ -769,16 +883,20 @@ mod tests {
             .unwrap();
 
         assert!(matches!(
-            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
-                .validate_vp_token(
-                    &dcql_query,
-                    &vp_token,
-                    "decentralized_identifier:did:key:z6MkeupePVKikLv4KXE99oAvQbgAR7qXq3AGUtsSeoqZgFBV",
-                    // This nonce does not match the one in the VP token.
-                    Some("different nonce that does not match the one in the VP token"),
-                )
-                .await
-                .unwrap_err(),
+            VpTokenValidator::new(
+                &SignatureVerifier,
+                &TestVerificationMaterialResolver,
+                &mock_credential_status_verifier()
+            )
+            .validate_vp_token(
+                &dcql_query,
+                &vp_token,
+                "decentralized_identifier:did:key:z6MkeupePVKikLv4KXE99oAvQbgAR7qXq3AGUtsSeoqZgFBV",
+                // This nonce does not match the one in the VP token.
+                Some("different nonce that does not match the one in the VP token"),
+            )
+            .await
+            .unwrap_err(),
             // The JWT VC JSON credential is valid and the claim query is looking for a claim that exists in the
             // credential, but the nonce does not match the one in the VP token, so the validation should fail with an
             // InvalidNonce error.
@@ -825,15 +943,19 @@ mod tests {
             .unwrap();
 
         assert!(matches!(
-            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
-                .validate_vp_token(
-                    &dcql_query,
-                    &vp_token,
-                    "decentralized_identifier:did:key:z6MkeupePVKikLv4KXE99oAvQbgAR7qXq3AGUtsSeoqZgFBV",
-                    Some("be1a1b20084f6566033de7bc2f90b837722feab4ab6af71cecb89ff42745abcd"),
-                )
-                .await
-                .unwrap_err(),
+            VpTokenValidator::new(
+                &SignatureVerifier,
+                &TestVerificationMaterialResolver,
+                &mock_credential_status_verifier()
+            )
+            .validate_vp_token(
+                &dcql_query,
+                &vp_token,
+                "decentralized_identifier:did:key:z6MkeupePVKikLv4KXE99oAvQbgAR7qXq3AGUtsSeoqZgFBV",
+                Some("be1a1b20084f6566033de7bc2f90b837722feab4ab6af71cecb89ff42745abcd"),
+            )
+            .await
+            .unwrap_err(),
             // The JWT VC JSON credential is valid and the nonce matches, but the DCQL query is looking for a VC SD-JWT
             // credential, so the validation should fail with a PresentationValidation error indicating that the
             // credential format does not match the expected format.
@@ -876,18 +998,22 @@ mod tests {
             .unwrap();
 
         assert!(matches!(
-            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
-                .validate_vp_token(
-                    &dcql_query,
-                    &vp_token,
-                    // The VP token is valid and the claim query is looking for a claim that exists in the credential,
-                    // but the client ID (audience) does not match the one in the VP token, so the validation should
-                    // fail with an InvalidAudience error.
-                    "decentralized_identifier:did:key:z6MkiTcXZ1JxooACo99YcfkugH6Kifzj7ZupSDCmLEABpjpF",
-                    Some("be1a1b20084f6566033de7bc2f90b837722feab4ab6af71cecb89ff42745abcd"),
-                )
-                .await
-                .unwrap_err(),
+            VpTokenValidator::new(
+                &SignatureVerifier,
+                &TestVerificationMaterialResolver,
+                &mock_credential_status_verifier()
+            )
+            .validate_vp_token(
+                &dcql_query,
+                &vp_token,
+                // The VP token is valid and the claim query is looking for a claim that exists in the credential,
+                // but the client ID (audience) does not match the one in the VP token, so the validation should
+                // fail with an InvalidAudience error.
+                "decentralized_identifier:did:key:z6MkiTcXZ1JxooACo99YcfkugH6Kifzj7ZupSDCmLEABpjpF",
+                Some("be1a1b20084f6566033de7bc2f90b837722feab4ab6af71cecb89ff42745abcd"),
+            )
+            .await
+            .unwrap_err(),
             VpTokenValidationError::InvalidAudience { .. }
         ));
     }
@@ -929,15 +1055,19 @@ mod tests {
             .unwrap();
 
         assert!(matches!(
-            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver)
-                .validate_vp_token(
-                    &dcql_query,
-                    &vp_token,
-                    "decentralized_identifier:did:key:z6MkeupePVKikLv4KXE99oAvQbgAR7qXq3AGUtsSeoqZgFBV",
-                    Some("be1a1b20084f6566033de7bc2f90b837722feab4ab6af71cecb89ff42745abcd"),
-                )
-                .await
-                .unwrap_err(),
+            VpTokenValidator::new(
+                &SignatureVerifier,
+                &TestVerificationMaterialResolver,
+                &mock_credential_status_verifier()
+            )
+            .validate_vp_token(
+                &dcql_query,
+                &vp_token,
+                "decentralized_identifier:did:key:z6MkeupePVKikLv4KXE99oAvQbgAR7qXq3AGUtsSeoqZgFBV",
+                Some("be1a1b20084f6566033de7bc2f90b837722feab4ab6af71cecb89ff42745abcd"),
+            )
+            .await
+            .unwrap_err(),
             // The JWT VC JSON credential is valid, the nonce matches, and the client ID matches, but the VP token
             // contains a presentation for a Credential Query with a different ID than the one in the DCQL query, so
             // the validation should fail with a MissingRequiredCredential error indicating that there is no
