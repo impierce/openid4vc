@@ -589,6 +589,12 @@ mod tests {
     const VALID_DC_SD_JWT_CREDENTIAL: &str = "eyJ0eXAiOiJkYytzZC1qd3QiLCJraWQiOiJkaWQ6a2V5Ono2TWtldXBlUFZLaWtMdjRLWEU5OW9BdlFiZ0FSN3FYcTNBR1V0c1Nlb3FaZ0ZCViN6Nk1rZXVwZVBWS2lrTHY0S1hFOTlvQXZRYmdBUjdxWHEzQUdVdHNTZW9xWmdGQlYiLCJhbGciOiJFZERTQSJ9.eyJ2Y3QiOiJodHRwOi8vbG9jYWxob3N0OjMwMzMvdmN0L1UwUXRTbGRVSUZaRC8wIiwiX3NkIjpbIjhWRjlEYkRnaDJrT0kwWW5Cc0dBQUJuTldIZ1puVWlQOENZVjBRMTFmc00iLCJZSUh1ZDNuUHRDV3c1NkY2OWNLYU1NWDNsOGd1UFgwbVNUcDVPSV9QNVo4IiwidWhpSHdOaUtrQUJDN2tBQUxzU0ZMM0JaeXJnb05McnRGTGNXOHg2SWdwMCJdLCJpc3MiOiJkaWQ6a2V5Ono2TWtldXBlUFZLaWtMdjRLWEU5OW9BdlFiZ0FSN3FYcTNBR1V0c1Nlb3FaZ0ZCViIsIm5iZiI6MTc3MzI0NzQxMywiaWF0IjoxNzczMjQ3NDEzLCJzdGF0dXMiOnsic3RhdHVzX2xpc3QiOnsidXJpIjoiaHR0cDovL2xvY2FsaG9zdDozMDMzL2lldGYtb2F1dGgtdG9rZW4tc3RhdHVzLWxpc3QvMCIsImlkeCI6Mzk3N319LCJfc2RfYWxnIjoic2hhLTI1NiIsImNuZiI6eyJraWQiOiJkaWQ6a2V5Ono2TWtoOXk0TFNGODJvVnJNN0t6cWY2dThVbzFOdVBZclJuZDNvd0JMRUVBRExwZCN6Nk1raDl5NExTRjgyb1ZyTTdLenFmNnU4VW8xTnVQWXJSbmQzb3dCTEVFQURMcGQifX0.-yfZPKWJbeRE45GPqzFIT-wB-f1jXstqR9puEpnobWhY3Ddxf7z1HtZMb4GJcvbOrtcako9ptSxc8keIR-XADw~WyJKbjhUbUh4QmZwLXItd3dCX2h6UEFiS214aEt2R3NMZXJfazBlS21OIiwiZmlyc3RfbmFtZSIsIkZlcnJpcyJd~WyJua0ZZSzV5enZvT0l4c245aF9xcjdHNzJqS2M2ZXo4OVRQZmExb3RYIiwibGFzdF9uYW1lIiwiQ3JhYm1hbiJd~WyJGOUZsRHZ6X0EtbzJuYWw1TzJfaDdoRkQ3MFZTMHlQNFhnczdDQ1U0IiwiZG9iIiwiMTk4Mi0wMS0wMSJd~eyJhbGciOiJSUzI1NiIsInR5cCI6ImtiK2p3dCJ9.eyJpYXQiOjE3NzMyNDc0OTEsImF1ZCI6ImRlY2VudHJhbGl6ZWRfaWRlbnRpZmllcjpkaWQ6a2V5Ono2TWtldXBlUFZLaWtMdjRLWEU5OW9BdlFiZ0FSN3FYcTNBR1V0c1Nlb3FaZ0ZCViIsIm5vbmNlIjoiMWMyYzY4NjRhM2Y0ZTMzNTcxMmJiNzg5MDI0OWQzYzQ2ZTE3N2RkNjJlM2U5M2JjM2E0ZDA4YWNkZTdkNGFiNCIsInNkX2hhc2giOiJidHdZSFU5Rjd5Q2liNDZDN0pWaElwa2pHTUxER2xZeGFvTmZab2NsSzZrIn0.AcganwldnIvrZd_4ube0es_NLo-A8mRo6XL-z0sRkE4Sp9XgeqyLV_0FK6Nx8TWk1zcd3xYZS7eAQWdU3JLcDg";
     const VALID_VC_SD_JWT_CREDENTIAL: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2g5eTRMU0Y4Mm9Wck03S3pxZjZ1OFVvMU51UFlyUm5kM293QkxFRUFETHBkI3o2TWtoOXk0TFNGODJvVnJNN0t6cWY2dThVbzFOdVBZclJuZDNvd0JMRUVBRExwZCJ9.eyJAY29udGV4dCI6Imh0dHBzOi8vd3d3LnczLm9yZy9ucy9jcmVkZW50aWFscy92MiIsInR5cGUiOiJWZXJpZmlhYmxlUHJlc2VudGF0aW9uIiwidmVyaWZpYWJsZUNyZWRlbnRpYWwiOlt7IkBjb250ZXh0IjoiaHR0cHM6Ly93d3cudzMub3JnL25zL2NyZWRlbnRpYWxzL3YyIiwiaWQiOiJkYXRhOmFwcGxpY2F0aW9uL3ZjK3NkLWp3dCxleUowZVhBaU9pSjJZeXR6WkMxcWQzUWlMQ0pyYVdRaU9pSmthV1E2YTJWNU9ubzJUV3RsZFhCbFVGWkxhV3RNZGpSTFdFVTVPVzlCZGxGaVowRlNOM0ZZY1ROQlIxVjBjMU5sYjNGYVowWkNWaU42TmsxclpYVndaVkJXUzJsclRIWTBTMWhGT1RsdlFYWlJZbWRCVWpkeFdIRXpRVWRWZEhOVFpXOXhXbWRHUWxZaUxDSmhiR2NpT2lKRlpFUlRRU0o5LmV5SmpjbVZrWlc1MGFXRnNVM1ZpYW1WamRDSTZleUpmYzJRaU9sc2lSa1JaYzNkemFTMTVlREJoUWtOb2VrVmZiVVJxU21GMmJIRnNUVkZMYmtOSk9HWlpabk5JUjFZMVNTSXNJa3RZYURWdWVXWmtNMUJrZEZWSWNXTXRaSFpvTFhSSWQybDNhMUF5Ym1SaFUzUTNla1ZETkVSSFlrMGlMQ0pQVTFWSVlVdzVhMVpLTUZGclVWUkpkRVZ3VG5aTlowRkJXbTB6UWxoR2NqbHJRMmRqTkVKUmVGZE5JaXdpVlZWM2FISTBURVZzYzNkeVh6QktSSEEzYkZCU2NVdHRRWFYzZWpOT1FWZ3phWGxoWWxKeWNqRm9ieUpkZlN3aWRIbHdaU0k2V3lKV1pYSnBabWxoWW14bFEzSmxaR1Z1ZEdsaGJDSmRMQ0p1WVcxbElqb2lWa05FVFNBeUxqQWdVMFF0U2xkVUlFTnlaV1JsYm5ScFlXd2lMQ0pwYzNOMVpYSWlPbnNpYm1GdFpTSTZJbFZ1YVVOdmNtVWlMQ0pwWkNJNkltUnBaRHByWlhrNmVqWk5hMlYxY0dWUVZrdHBhMHgyTkV0WVJUazViMEYyVVdKblFWSTNjVmh4TTBGSFZYUnpVMlZ2Y1ZwblJrSldJbjBzSWtCamIyNTBaWGgwSWpwYkltaDBkSEJ6T2k4dmQzZDNMbmN6TG05eVp5OXVjeTlqY21Wa1pXNTBhV0ZzY3k5Mk1pSmRMQ0pwYzNOMVlXNWpaVVJoZEdVaU9pSXlNREkyTFRBekxURXhWREUyT2pRNU9qVTJXaUlzSW5aaGJHbGtSbkp2YlNJNklqSXdNall0TURNdE1URlVNVFk2TkRrNk5UWmFJaXdpWTNKbFpHVnVkR2xoYkZOMFlYUjFjeUk2ZXlKMGVYQmxJam9pYzNSaGRIVnpiR2x6ZEN0cWQzUWlMQ0pwWkNJNkltaDBkSEE2THk5c2IyTmhiR2h2YzNRNk16QXpNeTlwWlhSbUxXOWhkWFJvTFhSdmEyVnVMWE4wWVhSMWN5MXNhWE4wTHpBaUxDSjFjbWtpT2lKb2RIUndPaTh2Ykc5allXeG9iM04wT2pNd016TXZhV1YwWmkxdllYVjBhQzEwYjJ0bGJpMXpkR0YwZFhNdGJHbHpkQzh3SWl3aWFXUjRJam94T0RaOUxDSnpkR0YwZFhNaU9uc2ljM1JoZEhWelgyeHBjM1FpT25zaWRYSnBJam9pYUhSMGNEb3ZMMnh2WTJGc2FHOXpkRG96TURNekwybGxkR1l0YjJGMWRHZ3RkRzlyWlc0dGMzUmhkSFZ6TFd4cGMzUXZNQ0lzSW1sa2VDSTZNVGcyZlgwc0ltbHpjeUk2SW1ScFpEcHJaWGs2ZWpaTmEyVjFjR1ZRVmt0cGEweDJORXRZUlRrNWIwRjJVV0puUVZJM2NWaHhNMEZIVlhSelUyVnZjVnBuUmtKV0lpd2lYM05rWDJGc1p5STZJbk5vWVMweU5UWWlMQ0pqYm1ZaU9uc2lhMmxrSWpvaVpHbGtPbXRsZVRwNk5rMXJhRGw1TkV4VFJqZ3liMVp5VFRkTGVuRm1OblU0Vlc4eFRuVlFXWEpTYm1RemIzZENURVZGUVVSTWNHUWplalpOYTJnNWVUUk1VMFk0TW05V2NrMDNTM3B4WmpaMU9GVnZNVTUxVUZseVVtNWtNMjkzUWt4RlJVRkVUSEJrSW4xOS5yLVFneXVTNGZlUk5ob3haWHctb2NEQ1NWSzR5S29uZUl1SV9nbks5X3JEVUVlR0lFRnZ3Y0pmQ09FYUtXMVF0OG5FZ0ZzSl80UjVJRFZCRmJKck5EZ35XeUpTU1VoeFJuSm5XR1Z5Y2t0bk4xTmhVMDVXZDNsM2FITmtlVFJrUlZaM1lWVlJTV0pTV1ROTklpd2labWx5YzNSZmJtRnRaU0lzSWtabGNuSnBjeUpkfld5SmhPVGx3VTBoQlIzbE5VbVZOYW5ablRFOUJTVXhXWmw5UFpHbFBUMUZGYldwcFQzcFRhREY0SWl3aWJHRnpkRjl1WVcxbElpd2lRM0poWW0xaGJpSmR-V3lKSFNqZFVabEZxZEdKU1VYSnlPR05WVEdKRlZITlBkMGRqWlhOd2NsRTBkM05xUWxOa01tcFlJaXdpWkc5aUlpd2lNVGs0TWkwd01TMHdNU0pkfld5Sk1kMVZvWDNBMWNqbHZUM2RtVVV4NVZFTm1TbXA0YzJWTU5ERnVORkZUT1VGa1gydGFlVjlWSWl3aWFXUWlMQ0prYVdRNmEyVjVPbm8yVFd0b09YazBURk5HT0RKdlZuSk5OMHQ2Y1dZMmRUaFZiekZPZFZCWmNsSnVaRE52ZDBKTVJVVkJSRXh3WkNKZH4iLCJ0eXBlIjoiRW52ZWxvcGVkVmVyaWZpYWJsZUNyZWRlbnRpYWwifV0sImhvbGRlciI6ImRpZDprZXk6ejZNa2g5eTRMU0Y4Mm9Wck03S3pxZjZ1OFVvMU51UFlyUm5kM293QkxFRUFETHBkIiwiYXVkIjoiZGVjZW50cmFsaXplZF9pZGVudGlmaWVyOmRpZDprZXk6ejZNa2V1cGVQVktpa0x2NEtYRTk5b0F2UWJnQVI3cVhxM0FHVXRzU2VvcVpnRkJWIiwiZXhwIjo3ODIxMjQ4MjA2LCJpYXQiOjE3NzMyNDgyMDYsImlzcyI6ImRpZDprZXk6ejZNa2g5eTRMU0Y4Mm9Wck03S3pxZjZ1OFVvMU51UFlyUm5kM293QkxFRUFETHBkIiwibm9uY2UiOiI4ZGY5MWE0YTE5Y2IxYmFiZGE4YmI1OTlhYmU1MmNhZWFlNWFhODgxOWYzOGQ3NjJkMTM0NDZhZGQ3YmQwOWY0In0.t8Q4bmZAD2hFcQxLQfKWM21yOnzr-syra6fGgh9IuDzXEbm_J4ZiJ6YoD8b7eQkB431TDuRGzx57oEAkD8YgCA";
 
+    fn mock_credential_status_verifier() -> MockCredentialStatusVerifier {
+        let mut mock = MockCredentialStatusVerifier::new();
+        mock.expect_check_credential_status().returning(|_| Ok(()));
+        mock
+    }
+
     #[tokio::test]
     async fn test_validate_vp_token_with_jwt_vc_json() {
         let dcql_query = DcqlQuery {
@@ -626,7 +632,7 @@ mod tests {
         assert!(VpTokenValidator::new(
             &SignatureVerifier,
             &TestVerificationMaterialResolver,
-            &MockCredentialStatusVerifier::new()
+            &mock_credential_status_verifier()
         )
         .validate_vp_token(
             &dcql_query,
@@ -671,7 +677,7 @@ mod tests {
         assert!(VpTokenValidator::new(
             &SignatureVerifier,
             &TestVerificationMaterialResolver,
-            &MockCredentialStatusVerifier::new()
+            &mock_credential_status_verifier()
         )
         .validate_vp_token(
             &dcql_query,
@@ -720,7 +726,7 @@ mod tests {
         assert!(VpTokenValidator::new(
             &SignatureVerifier,
             &TestVerificationMaterialResolver,
-            &MockCredentialStatusVerifier::new()
+            &mock_credential_status_verifier()
         )
         .validate_vp_token(
             &dcql_query,
@@ -730,6 +736,62 @@ mod tests {
         )
         .await
         .is_ok());
+    }
+
+    #[tokio::test]
+    async fn invalid_credential_status_results_in_credential_status_invalid_error() {
+        let dcql_query = DcqlQuery {
+            credentials: vec![CredentialQuery {
+                id: CredentialQueryId::try_new("CredentialQuery").unwrap(),
+                format: Format::JwtVcJson,
+                multiple: None,
+                meta: MetaTypes::W3CFormatMeta {
+                    type_values: vec![vec!["VerifiableCredential".to_string()]],
+                },
+                trusted_authorities: None,
+                require_cryptographic_holder_binding: Some(true),
+                claims: Some(vec![ClaimQuery {
+                    id: None,
+                    path: ClaimPathPointer::try_new(vec![
+                        ClaimPathElement::String("credentialSubject".to_string()),
+                        ClaimPathElement::String("first_name".to_string()),
+                    ])
+                    .unwrap(),
+                    values: None,
+                }]),
+                claim_sets: None,
+            }],
+            credential_sets: None,
+        };
+
+        let vp_token = VpToken::builder()
+            .add_presentations(
+                CredentialQueryId::try_new("CredentialQuery").unwrap(),
+                Presentations::try_new(vec![VALID_JWT_VC_JSON_CREDENTIAL.into()]).unwrap(),
+            )
+            .build()
+            .unwrap();
+
+        let mut mock = MockCredentialStatusVerifier::new();
+        mock.expect_check_credential_status().returning(|_| {
+            Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "credential status check failed",
+            )) as Box<dyn std::error::Error>)
+        });
+
+        assert!(matches!(
+            VpTokenValidator::new(&SignatureVerifier, &TestVerificationMaterialResolver, &mock)
+                .validate_vp_token(
+                    &dcql_query,
+                    &vp_token,
+                    "decentralized_identifier:did:key:z6MkeupePVKikLv4KXE99oAvQbgAR7qXq3AGUtsSeoqZgFBV",
+                    Some("be1a1b20084f6566033de7bc2f90b837722feab4ab6af71cecb89ff42745abcd"),
+                )
+                .await
+                .unwrap_err(),
+            VpTokenValidationError::CredentialStatusInvalid
+        ));
     }
 
     #[tokio::test]
@@ -771,7 +833,7 @@ mod tests {
             VpTokenValidator::new(
                 &SignatureVerifier,
                 &TestVerificationMaterialResolver,
-                &MockCredentialStatusVerifier::new()
+                &mock_credential_status_verifier()
             )
             .validate_vp_token(
                 &dcql_query,
@@ -824,7 +886,7 @@ mod tests {
             VpTokenValidator::new(
                 &SignatureVerifier,
                 &TestVerificationMaterialResolver,
-                &MockCredentialStatusVerifier::new()
+                &mock_credential_status_verifier()
             )
             .validate_vp_token(
                 &dcql_query,
@@ -884,7 +946,7 @@ mod tests {
             VpTokenValidator::new(
                 &SignatureVerifier,
                 &TestVerificationMaterialResolver,
-                &MockCredentialStatusVerifier::new()
+                &mock_credential_status_verifier()
             )
             .validate_vp_token(
                 &dcql_query,
@@ -939,7 +1001,7 @@ mod tests {
             VpTokenValidator::new(
                 &SignatureVerifier,
                 &TestVerificationMaterialResolver,
-                &MockCredentialStatusVerifier::new()
+                &mock_credential_status_verifier()
             )
             .validate_vp_token(
                 &dcql_query,
@@ -996,7 +1058,7 @@ mod tests {
             VpTokenValidator::new(
                 &SignatureVerifier,
                 &TestVerificationMaterialResolver,
-                &MockCredentialStatusVerifier::new()
+                &mock_credential_status_verifier()
             )
             .validate_vp_token(
                 &dcql_query,
