@@ -580,7 +580,7 @@ mod tests {
     };
     use oid4vc_core::{
         claim_path_pointer::{ClaimPathElement, ClaimPathPointer},
-        credential_status_verifier::test_utils::TestCredentialStatusVerifier,
+        credential_status_verifier::MockCredentialStatusVerifier,
         verification_material_resolver::test_utils::TestVerificationMaterialResolver,
         verifier::SignatureVerifier,
     };
@@ -626,7 +626,7 @@ mod tests {
         assert!(VpTokenValidator::new(
             &SignatureVerifier,
             &TestVerificationMaterialResolver,
-            &TestCredentialStatusVerifier
+            &MockCredentialStatusVerifier::new()
         )
         .validate_vp_token(
             &dcql_query,
@@ -671,7 +671,7 @@ mod tests {
         assert!(VpTokenValidator::new(
             &SignatureVerifier,
             &TestVerificationMaterialResolver,
-            &TestCredentialStatusVerifier
+            &MockCredentialStatusVerifier::new()
         )
         .validate_vp_token(
             &dcql_query,
@@ -720,7 +720,7 @@ mod tests {
         assert!(VpTokenValidator::new(
             &SignatureVerifier,
             &TestVerificationMaterialResolver,
-            &TestCredentialStatusVerifier
+            &MockCredentialStatusVerifier::new()
         )
         .validate_vp_token(
             &dcql_query,
@@ -771,7 +771,7 @@ mod tests {
             VpTokenValidator::new(
                 &SignatureVerifier,
                 &TestVerificationMaterialResolver,
-                &TestCredentialStatusVerifier
+                &MockCredentialStatusVerifier::new()
             )
             .validate_vp_token(
                 &dcql_query,
@@ -824,7 +824,7 @@ mod tests {
             VpTokenValidator::new(
                 &SignatureVerifier,
                 &TestVerificationMaterialResolver,
-                &TestCredentialStatusVerifier
+                &MockCredentialStatusVerifier::new()
             )
             .validate_vp_token(
                 &dcql_query,
@@ -884,7 +884,7 @@ mod tests {
             VpTokenValidator::new(
                 &SignatureVerifier,
                 &TestVerificationMaterialResolver,
-                &TestCredentialStatusVerifier
+                &MockCredentialStatusVerifier::new()
             )
             .validate_vp_token(
                 &dcql_query,
@@ -939,7 +939,7 @@ mod tests {
             VpTokenValidator::new(
                 &SignatureVerifier,
                 &TestVerificationMaterialResolver,
-                &TestCredentialStatusVerifier
+                &MockCredentialStatusVerifier::new()
             )
             .validate_vp_token(
                 &dcql_query,
@@ -996,7 +996,7 @@ mod tests {
             VpTokenValidator::new(
                 &SignatureVerifier,
                 &TestVerificationMaterialResolver,
-                &TestCredentialStatusVerifier
+                &MockCredentialStatusVerifier::new()
             )
             .validate_vp_token(
                 &dcql_query,

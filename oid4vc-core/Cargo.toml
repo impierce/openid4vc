@@ -23,6 +23,7 @@ identity_verification.workspace = true
 is_empty = "0.2.0"
 jsonwebtoken.workspace = true
 lazy_static = "1.4.0"
+mockall = "0.14.0"
 nutype.workspace = true
 rand = "0.8"
 serde.workspace = true
