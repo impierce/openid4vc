@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+
 /// A trait for checking the credential status, agnostic of what Status List method is used.
 #[cfg_attr(feature = "test-utils", mockall::automock)]
 #[async_trait]
