@@ -92,15 +92,6 @@ where
     Ok(base64_url::encode(serde_json::to_vec(value)?.as_slice()))
 }
 
-/// Convert an `identity_jose` JWK into a `jsonwebtoken` [`DecodingKey`].
-pub fn convert_iota_jwk_to_decoding_key(public_key: &identity_jose::jwk::Jwk) -> Option<DecodingKey> {
-    public_key
-        .to_json()
-        .ok()
-        .and_then(|json| JsonWebTokenJwk::from_json(&json).ok())
-        .and_then(|jwk| DecodingKey::from_jwk(&jwk).ok())
-}
-
 /// Validate a credential JWT: resolve the issuer's public key, verify the
 /// signature, extract the `vc` claim, and optionally check credential status.
 pub async fn validate_credential_jwt(
@@ -148,6 +139,15 @@ pub async fn validate_credential_jwt(
     }
 
     Ok(credential)
+}
+
+/// Convert an `identity_jose` JWK into a `jsonwebtoken` [`DecodingKey`].
+fn convert_iota_jwk_to_decoding_key(public_key: &identity_jose::jwk::Jwk) -> Option<DecodingKey> {
+    public_key
+        .to_json()
+        .ok()
+        .and_then(|json| JsonWebTokenJwk::from_json(&json).ok())
+        .and_then(|jwk| DecodingKey::from_jwk(&jwk).ok())
 }
 
 #[cfg(feature = "test-utils")]
