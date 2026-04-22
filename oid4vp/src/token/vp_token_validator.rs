@@ -10,14 +10,16 @@ use identity_credential::{
     sd_jwt_payload::{SdJwt, Sha256Hasher},
     sd_jwt_vc::SdJwtVc,
     validator::{
-        DecodedJwtCredential, DecodedJwtPresentation, FailFast, JwtCredentialValidationOptions, JwtCredentialValidator,
-        JwtPresentationValidator, SdJwtCredentialValidator, StatusCheck,
+        DecodedJwtPresentation, JwtCredentialValidationOptions, JwtPresentationValidator, SdJwtCredentialValidator,
+        StatusCheck,
     },
 };
 use identity_did::DIDUrl;
 use identity_verification::jws::{Decoder, JwsVerifier};
 use nutype::nutype;
-use oid4vc_core::{credential_status_verifier::CredentialStatusVerifier, utils::predicates::not_empty};
+use oid4vc_core::{
+    credential_status_verifier::CredentialStatusVerifier, jwt::validate_credential_jwt, utils::predicates::not_empty,
+};
 use oid4vc_core::{
     types::string_or_object::StringOrObject, verification_material_resolver::VerificationMaterialResolver, JsonObject,
 };
@@ -38,13 +40,11 @@ pub enum VpTokenValidationError {
     #[error("Verification material resolution error: {0}")]
     VerificationMaterialResolutionError(String),
     #[error("JWT validation error: {0}")]
-    JwtValidation(#[from] identity_credential::validator::JwtValidationError),
-    #[error("Credential validation error: {0}")]
-    CredentialValidation(#[from] identity_credential::validator::CompoundCredentialValidationError),
+    JwtValidation(String),
     #[error("Presentation validation error: {0}")]
     PresentationValidation(#[from] identity_credential::validator::CompoundJwtPresentationValidationError),
     #[error("Serialization error: {0}")]
-    SerializationError(#[from] serde_json::Error),
+    SerializationError(String),
     #[error("SD-JWT parsing error: {0}")]
     SdJwtParsingError(String),
     #[error("SD-JWT validation error: {0}")]
@@ -84,7 +84,6 @@ pub enum VpTokenValidationError {
 /// A type validating [`VpToken`]s.
 pub struct VpTokenValidator<'a, V: JwsVerifier, VMR: VerificationMaterialResolver, CSV: CredentialStatusVerifier> {
     jwt_presentation_validator: JwtPresentationValidator<V>,
-    jwt_credential_validator: JwtCredentialValidator<V>,
     sd_jwt_credential_validator: SdJwtCredentialValidator<V>,
     signature_verifier: &'a V,
     verification_material_resolver: &'a VMR,
@@ -103,7 +102,6 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
     ) -> Self {
         Self {
             jwt_presentation_validator: JwtPresentationValidator::with_signature_verifier(signature_verifier.clone()),
-            jwt_credential_validator: JwtCredentialValidator::with_signature_verifier(signature_verifier.clone()),
             sd_jwt_credential_validator: SdJwtCredentialValidator::new(signature_verifier.clone(), Sha256Hasher),
             signature_verifier,
             verification_material_resolver,
@@ -215,9 +213,15 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             };
 
             for credential_jwt in credential_jwts {
-                let decoded_credential = self.validate_credential_jwt(&credential_jwt).await?;
+                let decoded_credential = validate_credential_jwt(
+                    self.verification_material_resolver,
+                    self.credential_status_verifier,
+                    &credential_jwt,
+                )
+                .await
+                .map_err(|e| VpTokenValidationError::JwtValidation(e.to_string()))?;
 
-                let obj = serde_json::to_value(decoded_credential.credential)?
+                let obj = decoded_credential
                     .as_object()
                     .cloned()
                     .ok_or(VpTokenValidationError::InvalidDecodedCredentialType)?;
@@ -248,7 +252,12 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
                 .validate_sd_jwt_vc(&sd_jwt_vc, client_id, nonce, require_holder_binding)
                 .await?;
 
-            let obj = serde_json::to_value(decoded_sd_jwt_vc)?
+            let obj = serde_json::to_value(decoded_sd_jwt_vc)
+                .map_err(|e| {
+                    VpTokenValidationError::SerializationError(format!(
+                        "Failed to serialize decoded SD-JWT VC (dc+sd-jwt): {e}"
+                    ))
+                })?
                 .as_object()
                 .cloned()
                 .ok_or(VpTokenValidationError::InvalidDecodedCredentialType)?;
@@ -299,7 +308,12 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             for sd_jwt in sd_jwts {
                 let decoded_vc_sd_jwt = self.validate_vcdm2_sd_jwt(&sd_jwt).await?;
 
-                let obj = serde_json::to_value(decoded_vc_sd_jwt)?
+                let obj = serde_json::to_value(decoded_vc_sd_jwt)
+                    .map_err(|e| {
+                        VpTokenValidationError::SerializationError(format!(
+                            "Failed to serialize decoded VC SD-JWT (vc+sd-jwt): {e}"
+                        ))
+                    })?
                     .as_object()
                     .cloned()
                     .ok_or(VpTokenValidationError::InvalidDecodedCredentialType)?;
@@ -371,47 +385,6 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
         }
 
         Ok(decoded_jwt_presentation)
-    }
-
-    /// Internal helper to validate a credential JWT.
-    async fn validate_credential_jwt(
-        &self,
-        credential_jwt: &Jwt,
-    ) -> Result<DecodedJwtCredential<JsonObject>, VpTokenValidationError> {
-        let validation_item = Decoder::new()
-            .decode_compact_serialization(credential_jwt.as_str().as_bytes(), None)
-            .map_err(VpTokenValidationError::JwsDecodingError)?;
-
-        let kid_str = validation_item.kid().ok_or(VpTokenValidationError::MissingKid)?;
-        let kid: DIDUrl = kid_str
-            .parse()
-            .map_err(|e: identity_did::Error| VpTokenValidationError::InvalidKid(e.to_string()))?;
-
-        let resolver = &self.verification_material_resolver;
-
-        // TODO: verify whether issuer is trusted (through `trusted_authorities`).
-        let issuer = resolver
-            .resolve_did_document(kid.did())
-            .await
-            .map_err(|e| VpTokenValidationError::VerificationMaterialResolutionError(e.to_string()))?;
-
-        // `SkipUnsupported` allows for custom credential types, such as the StatusList2021Entry (https://www.w3.org/TR/2023/WD-vc-status-list-20230427/#statuslist2021entry)
-        let options = &JwtCredentialValidationOptions::new().status_check(StatusCheck::SkipUnsupported);
-        let fail_fast = FailFast::FirstError;
-
-        let jwt_data = self
-            .jwt_credential_validator
-            .validate(credential_jwt, &issuer, options, fail_fast)
-            .map_err(VpTokenValidationError::CredentialValidation)?;
-
-        if let Some(status_value) = jwt_data.custom_claims.as_ref().and_then(|v| v.get("status").cloned()) {
-            self.credential_status_verifier
-                .check_credential_status(status_value)
-                .await
-                .map_err(|_| VpTokenValidationError::CredentialStatusInvalid)?;
-        }
-
-        Ok(jwt_data)
     }
 
     /// Internal helper to validate a generic SD-JWT VC (signature, key binding, disclosures).
