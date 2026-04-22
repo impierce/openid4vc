@@ -94,6 +94,7 @@ where
 
 /// Validate a credential JWT: resolve the issuer's public key, verify the
 /// signature, extract the `vc` claim, and optionally check credential status.
+/// This fn expects the JWT to have the credential in the `vc` claim as prescribed by the jwt_vc_json format as defined here: https://www.w3.org/TR/vc-data-model-1.1/#jwt-encoding
 pub async fn validate_credential_jwt(
     resolver: &impl VerificationMaterialResolver,
     credential_status_verifier: &impl CredentialStatusVerifier,
@@ -118,6 +119,7 @@ pub async fn validate_credential_jwt(
 
     let jwt_header = decode_header(credential_jwt.as_str()).map_err(|e| anyhow!("JWT header decoding error: {e}"))?;
 
+    // The below validation settings are disabled because since different specs require different claims and this fn needs to be agnostic of those specs.
     let mut validation = Validation::new(jwt_header.alg);
     validation.validate_aud = false;
     validation.required_spec_claims.clear();
