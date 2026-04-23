@@ -114,6 +114,7 @@ pub async fn validate_credential_jwt(
         .resolve_public_key(kid_str)
         .await
         .map_err(|e| anyhow!("Verification material resolution error: {e}"))?;
+
     let decoding_key = convert_iota_jwk_to_decoding_key(&public_key_jwk)
         .ok_or_else(|| anyhow!("Failed to convert JWK to DecodingKey"))?;
 
