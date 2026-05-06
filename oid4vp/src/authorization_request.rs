@@ -204,6 +204,8 @@ pub struct VpFormatsSupported {
     pub jwt_vp_json: Option<JwtVpJsonParameters>,
     #[serde(rename = "dc+sd-jwt")]
     pub dc_sd_jwt: Option<DcSdJwtParameters>,
+    #[serde(rename = "vc+sd-jwt")]
+    pub vc_sd_jwt: Option<VcSdJwtParameters>,
     pub ldp_vc: Option<LdpVcParameters>,
     pub di_vp: Option<DiVpParameters>,
     pub mso_mdoc: Option<MsoMdocParameters>,
@@ -229,6 +231,14 @@ pub struct JwtVpJsonParameters {
 
 #[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
 pub struct DcSdJwtParameters {
+    #[serde(rename = "sd-jwt_alg_values", skip_serializing_if = "Option::is_none")]
+    pub sd_jwt_alg_values: Option<AlgValues>,
+    #[serde(rename = "kb-jwt_alg_values", skip_serializing_if = "Option::is_none")]
+    pub kb_jwt_alg_values: Option<AlgValues>,
+}
+
+#[derive(Deserialize, Debug, Default, PartialEq, Clone, Serialize)]
+pub struct VcSdJwtParameters {
     #[serde(rename = "sd-jwt_alg_values", skip_serializing_if = "Option::is_none")]
     pub sd_jwt_alg_values: Option<AlgValues>,
     #[serde(rename = "kb-jwt_alg_values", skip_serializing_if = "Option::is_none")]

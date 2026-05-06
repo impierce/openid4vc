@@ -28,6 +28,7 @@ pub fn validate_meta(meta: &MetaTypes, ctx: &MetaContext) -> Result<(), MetaErro
     match (&ctx.format, meta) {
         (Format::LdpVc, MetaTypes::W3CFormatMeta { type_values }) => validate_w3c_type_values(type_values),
         (Format::JwtVcJson, MetaTypes::W3CFormatMeta { type_values }) => validate_w3c_type_values(type_values),
+        (Format::VcSdJwt, MetaTypes::W3CFormatMeta { type_values }) => validate_w3c_type_values(type_values),
         (Format::DcSdJwt, MetaTypes::SdJwtMeta { vct_values }) => validate_sd_jwt_vct_values(vct_values),
         (Format::MsoMdoc, MetaTypes::MsoMdocMeta { doctype_value }) => validate_mso_mdoc_doctype(doctype_value),
         (format, meta) => Err(MetaError::IncompatibleMetaFormat(meta.clone(), (*format).clone())),
