@@ -232,6 +232,47 @@ impl ErrorStatusCode for NotificationErrorResponse {
     }
 }
 
+/// Interactive Authorization Error Response as defined in OID4VCI 1.1, Section 6.2.3.
+///
+/// In addition to standard PAR error processing rules (RFC 9126, Section 2.3), this adds
+/// the `missing_interaction_type` error code.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum InteractiveAuthorizationErrorCode {
+    /// The `interaction_types_supported` parameter is missing a required interaction type.
+    MissingInteractionType,
+    /// Standard OAuth error codes may also appear.
+    InvalidRequest,
+    InvalidClient,
+    UnauthorizedClient,
+    AccessDenied,
+}
+
+impl ErrorStatusCode for InteractiveAuthorizationErrorCode {
+    fn status_code(&self) -> StatusCode {
+        match self {
+            Self::MissingInteractionType => StatusCode::BAD_REQUEST,
+            Self::InvalidRequest => StatusCode::BAD_REQUEST,
+            Self::InvalidClient => StatusCode::UNAUTHORIZED,
+            Self::UnauthorizedClient => StatusCode::UNAUTHORIZED,
+            Self::AccessDenied => StatusCode::FORBIDDEN,
+        }
+    }
+}
+
+impl std::error::Error for InteractiveAuthorizationErrorCode {}
+impl Display for InteractiveAuthorizationErrorCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MissingInteractionType => write!(f, "Missing Interaction Type"),
+            Self::InvalidRequest => write!(f, "Invalid Request"),
+            Self::InvalidClient => write!(f, "Invalid Client"),
+            Self::UnauthorizedClient => write!(f, "Unauthorized Client"),
+            Self::AccessDenied => write!(f, "Access Denied"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
