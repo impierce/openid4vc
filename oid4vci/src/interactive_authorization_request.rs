@@ -1,8 +1,6 @@
-use crate::authorization_details::AuthorizationDetailsObject;
-use crate::authorization_request::CodeChallengeMethod;
+use crate::authorization_request::AuthorizationRequest;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
-use url::Url;
 
 /// Interaction types supported by the Wallet as defined in Section 6.1.1.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -22,19 +20,10 @@ pub enum InteractionType {
 ///
 /// Formed and sent in the same way as a PAR request (RFC 9126 Section 2.1), with the addition
 /// of the `interaction_types_supported` parameter.
-#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct InteractiveAuthorizationRequest {
-    pub response_type: String,
-    pub client_id: String,
-    pub redirect_uri: Option<Url>,
-    pub scope: Option<String>,
-    pub state: Option<String>,
-    pub authorization_details: Vec<AuthorizationDetailsObject>,
-    pub issuer_state: Option<String>,
-    // PKCE parameters
-    pub code_challenge: Option<String>,
-    pub code_challenge_method: Option<CodeChallengeMethod>,
+    #[serde(flatten)]
+    pub authorization_request: AuthorizationRequest,
     /// Comma-separated list of interaction types the Wallet supports.
     pub interaction_types_supported: String,
 }

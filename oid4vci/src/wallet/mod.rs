@@ -416,15 +416,17 @@ impl Wallet {
         code_challenge_method: Option<CodeChallengeMethod>,
     ) -> Result<InteractiveAuthorizationResponse> {
         let request = InteractiveAuthorizationRequest {
-            response_type: "code".to_string(),
-            client_id: client_id.to_string(),
-            redirect_uri,
-            scope: None,
-            state,
-            authorization_details,
-            issuer_state,
-            code_challenge,
-            code_challenge_method,
+            authorization_request: AuthorizationRequest {
+                response_type: "code".to_string(),
+                client_id: client_id.to_string(),
+                redirect_uri,
+                scope: None,
+                state,
+                authorization_details,
+                issuer_state,
+                code_challenge,
+                code_challenge_method,
+            },
             interaction_types_supported: InteractiveAuthorizationRequest::interaction_types_to_string(
                 &interaction_types_supported,
             ),
