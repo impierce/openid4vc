@@ -7,7 +7,7 @@ license.workspace = true
 [dependencies]
 anyhow = "1.0.70"
 async-trait = "0.1.68"
-base64-url = "2.0.0"
+base64 = "0.22"
 derivative = "2.2.0"
 derive_more = "0.99.16"
 did-key.workspace = true
@@ -37,4 +37,3 @@ tokio.workspace = true
 
 [features]
 test-utils = ["dep:mockall"]
-

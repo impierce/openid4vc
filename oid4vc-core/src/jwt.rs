@@ -1,5 +1,6 @@
 use crate::Sign;
 use anyhow::{anyhow, Result};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use getset::Getters;
 use jsonwebtoken::{Algorithm, DecodingKey, Header, Validation};
 use serde::de::DeserializeOwned;
@@ -72,7 +73,7 @@ where
     let message = [base64_url_encode(&jwt.header)?, base64_url_encode(&jwt.payload)?].join(".");
 
     let proof_value = signer.sign(&message, subject_syntax_type, algorithm).await?;
-    let signature = base64_url::encode(proof_value.as_slice());
+    let signature = URL_SAFE_NO_PAD.encode(proof_value.as_slice());
     let message = [message, signature].join(".");
     Ok(message)
 }
@@ -81,7 +82,7 @@ pub fn base64_url_encode<T>(value: &T) -> Result<String>
 where
     T: ?Sized + Serialize,
 {
-    Ok(base64_url::encode(serde_json::to_vec(value)?.as_slice()))
+    Ok(URL_SAFE_NO_PAD.encode(serde_json::to_vec(value)?.as_slice()))
 }
 
 #[cfg(feature = "test-utils")]
