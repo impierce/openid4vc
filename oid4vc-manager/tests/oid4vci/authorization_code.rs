@@ -90,14 +90,14 @@ async fn test_authorization_code_flow() {
             "client_id",
             redirect_uri,
             wallet_state,
-            vec![AuthorizationDetailsObject {
+            Some(vec![AuthorizationDetailsObject {
                 r#type: OpenidCredential::Type,
                 locations: None,
                 credential_configuration_id: credential_configuration_id.clone(),
                 claims: None,
                 credential_identifiers: None,
             }
-            .into()],
+            .into()]),
             issuer_state,
             Some(code_challenge),
             Some(CodeChallengeMethod::S256),

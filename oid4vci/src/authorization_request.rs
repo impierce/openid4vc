@@ -12,7 +12,7 @@ pub struct AuthorizationRequest {
     pub redirect_uri: Option<Url>,
     pub scope: Option<String>,
     pub state: Option<String>,
-    pub authorization_details: Vec<AuthorizationDetailsObject>,
+    pub authorization_details: Option<Vec<AuthorizationDetailsObject>>,
     pub issuer_state: Option<String>,
     // PKCE parameters
     pub code_challenge: Option<String>,

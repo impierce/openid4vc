@@ -159,7 +159,7 @@ impl Wallet {
         client_id: &str,
         redirect_uri: Url,
         state: String,
-        authorization_details: Vec<AuthorizationDetailsObject>,
+        authorization_details: Option<Vec<AuthorizationDetailsObject>>,
         issuer_state: String,
         code_challenge: Option<String>,
         code_challenge_method: Option<CodeChallengeMethod>,
