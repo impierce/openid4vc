@@ -409,7 +409,7 @@ impl Wallet {
         client_id: &str,
         redirect_uri: Option<Url>,
         state: Option<String>,
-        authorization_details: Vec<AuthorizationDetailsObject>,
+        authorization_details: Option<Vec<AuthorizationDetailsObject>>,
         issuer_state: Option<String>,
         interaction_types_supported: Vec<InteractionType>,
         code_challenge: Option<String>,
