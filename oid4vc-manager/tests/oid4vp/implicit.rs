@@ -41,7 +41,7 @@ lazy_static! {
                 "id": "my_credential",
                 "format": "jwt_vc_json",
                 "meta": {
-                    "vct_values": [ "https://www.w3.org/2018/credentials/examples/v1#PersonalInformation" ]
+                    "type_values": [["VerifiableCredential", "PersonalInformation"]]
                 },
                 "claims": [
                     {"path": ["credentialSubject", "familyName"]},
