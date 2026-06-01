@@ -436,6 +436,7 @@ mod tests {
 
         // Simplified version of a credential that satisfies the first option (pid)
         let pid_credential = json!({
+            "vct": "https://credentials.example.com/identity_credential",
             "given_name": "John",
             "family_name": "Doe",
             "address": {
@@ -456,11 +457,13 @@ mod tests {
 
         // Alternative credentials (pid_reduced_cred_1 + pid_reduced_cred_2)
         let reduced_cred_1 = json!({
+            "vct":"https://credentials.example.com/reduced_identity_credential",
             "given_name": "John",
             "family_name": "Doe"
         });
 
         let reduced_cred_2 = json!({
+            "vct":"https://cred.example/residence_credential",
             "postal_code": "12345",
             "locality": "Somewhere",
             "region": "HERE"
