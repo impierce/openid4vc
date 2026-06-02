@@ -652,7 +652,7 @@ mod tests {
                 format: Format::DcSdJwt,
                 multiple: None,
                 meta: MetaTypes::SdJwtMeta {
-                    vct_values: vec!["http://localhost:3033/vct/U0QtSldU/0".to_string()],
+                    vct_values: vec!["http://localhost:3033/vct/U0QtSldUIFZD/0".to_string()],
                 },
                 trusted_authorities: None,
                 require_cryptographic_holder_binding: Some(true),
