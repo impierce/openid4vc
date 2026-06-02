@@ -19,7 +19,7 @@ use identity_verification::jws::{Decoder, JwsVerifier};
 use nutype::nutype;
 use oid4vc_core::{
     credential_status_verifier::CredentialStatusVerifier,
-    utils::{did::resolve_key_id, predicates::not_empty},
+    utils::{did::extract_normalized_did_kid_from_jwt, predicates::not_empty},
 };
 use oid4vc_core::{
     types::string_or_object::StringOrObject, verification_material_resolver::VerificationMaterialResolver, JsonObject,
@@ -427,8 +427,8 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
         nonce: Option<&str>,
         require_holder_binding: bool,
     ) -> Result<JsonObject, VpTokenValidationError> {
-        let kid_str =
-            resolve_key_id(&sd_jwt_vc.to_string()).map_err(|e| VpTokenValidationError::InvalidKid(e.to_string()))?;
+        let kid_str = extract_normalized_did_kid_from_jwt(&sd_jwt_vc.to_string())
+            .map_err(|e| VpTokenValidationError::InvalidKid(e.to_string()))?;
 
         let kid: DIDUrl = kid_str
             .parse()
@@ -492,8 +492,8 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
 
     /// Internal helper to validate VCDM 2.0 SD-JWT.
     async fn validate_vcdm2_sd_jwt(&self, vcdm2_sd_jwt: &SdJwt) -> Result<CredentialV2, VpTokenValidationError> {
-        let kid_str =
-            resolve_key_id(&vcdm2_sd_jwt.to_string()).map_err(|e| VpTokenValidationError::InvalidKid(e.to_string()))?;
+        let kid_str = extract_normalized_did_kid_from_jwt(&vcdm2_sd_jwt.to_string())
+            .map_err(|e| VpTokenValidationError::InvalidKid(e.to_string()))?;
 
         let kid: DIDUrl = kid_str
             .parse()

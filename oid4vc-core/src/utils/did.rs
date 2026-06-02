@@ -19,9 +19,15 @@ fn sd_jwt_to_jwt(sd_jwt: &str) -> &str {
     sd_jwt.split_once('~').map(|(jwt, _)| jwt).unwrap_or(sd_jwt)
 }
 
-/// This function resolves the key ID from the JWT header, and makes it absolute if it's a relative reference (starts
-/// with '#') by prepending the 'iss' claim from the JWT payload.
-pub fn resolve_key_id(jwt: &str) -> Result<String, anyhow::Error> {
+/// Extract the `kid` from a JWT header as a DID URL.
+///
+/// If the `kid` is a relative DID fragment such as `#key-1`, this function
+/// prefixes it with the unverified `iss` claim from the JWT payload to produce
+/// an absolute DID URL.
+///
+/// Returns an error if the JWT header cannot be decoded, if `kid` is missing,
+/// or if a relative `kid` cannot be expanded because `iss` is missing or not a string.
+pub fn extract_normalized_did_kid_from_jwt(jwt: &str) -> Result<String, anyhow::Error> {
     let jwt = sd_jwt_to_jwt(jwt);
 
     let jwt_header = decode_header(jwt).map_err(|e| anyhow::anyhow!("Failed to decode JWT header: {e}"))?;
@@ -87,7 +93,7 @@ mod tests {
         // JWT with relative key_id (starts with '#')
         let jwt =
             "eyJ0eXAiOiJKV1QiLCJhbGciOiJFZERTQSIsImtpZCI6IiNteWtleSJ9.eyJpc3MiOiJkaWQ6ZXhhbXBsZTppc3N1ZXIifQ.signature";
-        let result = resolve_key_id(jwt);
+        let result = extract_normalized_did_kid_from_jwt(jwt);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "did:example:issuer#mykey");
     }
@@ -96,7 +102,7 @@ mod tests {
     fn resolve_key_id_with_absolute_reference() {
         // JWT with absolute key_id (doesn't start with '#')
         let jwt = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFZERTQSIsImtpZCI6ImRpZDpleGFtcGxlOmlzc3VlciNteWtleSJ9.eyJpc3MiOiJkaWQ6ZXhhbXBsZTppc3N1ZXIifQ.signature";
-        let result = resolve_key_id(jwt);
+        let result = extract_normalized_did_kid_from_jwt(jwt);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "did:example:issuer#mykey");
     }
@@ -105,7 +111,7 @@ mod tests {
     fn resolve_key_id_missing_kid() {
         // JWT without kid in header
         let jwt = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFZERTQSJ9.eyJpc3MiOiJkaWQ6ZXhhbXBsZTppc3N1ZXIifQ.signature";
-        let result = resolve_key_id(jwt);
+        let result = extract_normalized_did_kid_from_jwt(jwt);
         assert!(result.is_err());
     }
 
@@ -113,7 +119,7 @@ mod tests {
     fn resolve_key_id_missing_iss_claim() {
         // JWT with relative key_id but missing 'iss' claim
         let jwt = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFZERTQSIsImtpZCI6IiNteWtleSJ9.e30.signature";
-        let result = resolve_key_id(jwt);
+        let result = extract_normalized_did_kid_from_jwt(jwt);
         assert!(result.is_err());
     }
 
@@ -121,7 +127,7 @@ mod tests {
     fn resolve_key_id_iss_not_string() {
         // JWT with relative key_id but 'iss' claim is not a string
         let jwt = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFZERTQSIsImtpZCI6IiNteWtleSJ9.eyJpc3MiOjEyMzQ1fQ.signature";
-        let result = resolve_key_id(jwt);
+        let result = extract_normalized_did_kid_from_jwt(jwt);
         assert!(result.is_err());
     }
 }
