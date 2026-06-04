@@ -172,7 +172,7 @@ impl Wallet {
             response_type: "code".to_string(),
             client_id: client_id.to_string(),
             redirect_uri: Some(redirect_uri),
-            // TODO: add support for `scope`
+            // TODO: add support for `scope`, see: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-3.3.4
             scope: None,
             state: Some(state),
             authorization_details,
@@ -420,6 +420,7 @@ impl Wallet {
                 response_type: "code".to_string(),
                 client_id: client_id.to_string(),
                 redirect_uri,
+                // TODO: add support for `scope`, see: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-3.3.4
                 scope: None,
                 state,
                 authorization_details,
