@@ -108,6 +108,7 @@ impl Body for ByValue {
 
 /// A [`AuthorizationRequest`] is a request that is sent by a client to a provider. It contains a set of claims in the
 /// form of a [`Body`] which can be [`ByValue`], [`ByReference`], or an [`Object`].
+/// NOTE: the final details between the Authorization Request as defined in OID4VCI and the one in OID4VP may differ.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationRequest<B: Body> {
     #[serde(skip)]

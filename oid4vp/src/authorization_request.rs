@@ -275,6 +275,8 @@ pub struct MsoMdocParameters {
     pub deviceauth_alg_values: Option<Vec<i32>>,
 }
 
+/// Builder for the Authorization Request as defined in the spec: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-authorization-request
+/// NOTE: this Authorization Request is not to be confused with the same-named request in OpenID for Verifiable Credential Issuance.
 #[derive(Debug, Default, IsEmpty)]
 pub struct AuthorizationRequestBuilder {
     rfc7519_claims: RFC7519Claims,
