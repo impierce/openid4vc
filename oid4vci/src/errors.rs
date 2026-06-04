@@ -238,7 +238,7 @@ impl ErrorStatusCode for NotificationErrorResponse {
 /// the `missing_interaction_type` error code.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum InteractiveAuthorizationErrorCode {
+pub enum InteractiveAuthorizationErrorResponse {
     /// The `interaction_types_supported` parameter is missing a required interaction type.
     MissingInteractionType,
     /// Standard OAuth error codes may also appear.
@@ -248,7 +248,7 @@ pub enum InteractiveAuthorizationErrorCode {
     AccessDenied,
 }
 
-impl ErrorStatusCode for InteractiveAuthorizationErrorCode {
+impl ErrorStatusCode for InteractiveAuthorizationErrorResponse {
     fn status_code(&self) -> StatusCode {
         match self {
             Self::MissingInteractionType => StatusCode::BAD_REQUEST,
@@ -260,8 +260,8 @@ impl ErrorStatusCode for InteractiveAuthorizationErrorCode {
     }
 }
 
-impl std::error::Error for InteractiveAuthorizationErrorCode {}
-impl Display for InteractiveAuthorizationErrorCode {
+impl std::error::Error for InteractiveAuthorizationErrorResponse {}
+impl Display for InteractiveAuthorizationErrorResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::MissingInteractionType => write!(f, "Missing Interaction Type"),
