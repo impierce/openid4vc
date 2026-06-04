@@ -51,15 +51,22 @@ where
 }
 
 /// Authorization Error Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-authorization-error-respons
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Error)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthorizationErrorResponse {
+    #[error("Access Denied")]
     AccessDenied,
+    #[error("Invalid Request")]
     InvalidRequest,
+    #[error("Unauthorized Client")]
     UnauthorizedClient,
+    #[error("Unsupported Response Type")]
     UnsupportedResponseType,
+    #[error("Invalid Scope")]
     InvalidScope,
+    #[error("Server Error")]
     ServerError,
+    #[error("Temporarily Unavailable")]
     TemporarilyUnavailable,
 }
 
@@ -77,29 +84,21 @@ impl ErrorStatusCode for AuthorizationErrorResponse {
     }
 }
 
-impl std::error::Error for AuthorizationErrorResponse {}
-impl Display for AuthorizationErrorResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::AccessDenied => write!(f, "Access Denied"),
-            Self::InvalidRequest => write!(f, "Invalid Request"),
-            Self::UnauthorizedClient => write!(f, "Unauthorized Client"),
-            Self::UnsupportedResponseType => write!(f, "Unsupported Response Type"),
-            Self::InvalidScope => write!(f, "Invalid Scope"),
-            Self::ServerError => write!(f, "Server Error"),
-            Self::TemporarilyUnavailable => write!(f, "Temporarily Unavailable"),
-        }
-    }
-}
 /// Token Error Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-token-error-response
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Error)]
 #[serde(rename_all = "snake_case")]
 pub enum TokenErrorResponse {
+    #[error("Invalid Request")]
     InvalidRequest,
+    #[error("Invalid Client")]
     InvalidClient,
+    #[error("Invalid Grant")]
     InvalidGrant,
+    #[error("Unauthorized Client")]
     UnauthorizedClient,
+    #[error("Unsupported Grant Type")]
     UnsupportedGrantType,
+    #[error("Invalid Scope")]
     InvalidScope,
 }
 
@@ -115,30 +114,24 @@ impl ErrorStatusCode for TokenErrorResponse {
         }
     }
 }
-impl std::error::Error for TokenErrorResponse {}
-impl Display for TokenErrorResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::InvalidRequest => write!(f, "Invalid Request"),
-            Self::InvalidClient => write!(f, "Invalid Client"),
-            Self::InvalidGrant => write!(f, "Invalid Grant"),
-            Self::UnauthorizedClient => write!(f, "Unauthorized Client"),
-            Self::UnsupportedGrantType => write!(f, "Unsupported Grant Type"),
-            Self::InvalidScope => write!(f, "Invalid Scope"),
-        }
-    }
-}
 
 /// Credential Error Response as defined in OpenID4VCI 1.0 - https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request-errors
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Error)]
 #[serde(rename_all = "snake_case")]
 pub enum CredentialErrorResponse {
+    #[error("Invalid Credential Request")]
     InvalidCredentialRequest,
+    #[error("Unknown Credential Configuration")]
     UnknownCredentialConfiguration,
+    #[error("Unknown Credential Identifier")]
     UnknownCredentialIdentifier,
+    #[error("Invalid Proof")]
     InvalidProof,
+    #[error("Invalid Nonce")]
     InvalidNonce,
+    #[error("Invalid Encryption Parameters")]
     InvalidEncryptionParameters,
+    #[error("Credential Request Denied")]
     CredentialRequestDenied,
 }
 
@@ -156,32 +149,25 @@ impl ErrorStatusCode for CredentialErrorResponse {
     }
 }
 
-impl std::error::Error for CredentialErrorResponse {}
-impl Display for CredentialErrorResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::InvalidCredentialRequest => write!(f, "Invalid Credential Request"),
-            Self::UnknownCredentialConfiguration => write!(f, "Unknown Credential Configuration"),
-            Self::UnknownCredentialIdentifier => write!(f, "Unknown Credential Identifier"),
-            Self::InvalidProof => write!(f, "Invalid Proof"),
-            Self::InvalidNonce => write!(f, "Invalid Nonce"),
-            Self::InvalidEncryptionParameters => write!(f, "Invalid Encryption Parameters"),
-            Self::CredentialRequestDenied => write!(f, "Credential Request Denied"),
-        }
-    }
-}
-
 /// Deferred Credential Error Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-deferred-credential-error-r
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Error)]
 #[serde(rename_all = "snake_case")]
 pub enum DeferredCredentialErrorResponse {
+    #[error("Invalid Credential Request")]
     InvalidCredentialRequest,
+    #[error("Unknown Credential Configuration")]
     UnknownCredentialConfiguration,
+    #[error("Unknown Credential Identifier")]
     UnknownCredentialIdentifier,
+    #[error("Invalid Proof")]
     InvalidProof,
+    #[error("Invalid Nonce")]
     InvalidNonce,
+    #[error("Invalid Encryption Parameters")]
     InvalidEncryptionParameters,
+    #[error("Credential Request Denied")]
     CredentialRequestDenied,
+    #[error("Invalid Transaction ID")]
     InvalidTransactionId,
 }
 
@@ -200,26 +186,13 @@ impl ErrorStatusCode for DeferredCredentialErrorResponse {
     }
 }
 
-impl std::error::Error for DeferredCredentialErrorResponse {}
-impl Display for DeferredCredentialErrorResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::InvalidCredentialRequest => write!(f, "Invalid Credential Request"),
-            Self::UnknownCredentialConfiguration => write!(f, "Unknown Credential Configuration"),
-            Self::UnknownCredentialIdentifier => write!(f, "Unknown Credential Identifier"),
-            Self::InvalidProof => write!(f, "Invalid Proof"),
-            Self::InvalidNonce => write!(f, "Invalid Nonce"),
-            Self::InvalidEncryptionParameters => write!(f, "Invalid Encryption Parameters"),
-            Self::CredentialRequestDenied => write!(f, "Credential Request Denied"),
-            Self::InvalidTransactionId => write!(f, "Invalid Transaction ID"),
-        }
-    }
-}
 /// Notification Error Response as defined in OpenID4VCI 1.0: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-notification-error-response
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Error)]
 #[serde(rename_all = "snake_case")]
 pub enum NotificationErrorResponse {
+    #[error("Invalid Notification Request")]
     InvalidNotificationRequest,
+    #[error("Invalid Notification ID")]
     InvalidNotificationId,
 }
 
@@ -236,15 +209,20 @@ impl ErrorStatusCode for NotificationErrorResponse {
 ///
 /// In addition to standard PAR error processing rules (RFC 9126, Section 2.3), this adds
 /// the `missing_interaction_type` error code.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Error)]
 #[serde(rename_all = "snake_case")]
 pub enum InteractiveAuthorizationErrorResponse {
     /// The `interaction_types_supported` parameter is missing a required interaction type.
+    #[error("Missing Interaction Type")]
     MissingInteractionType,
     /// Standard OAuth error codes may also appear.
+    #[error("Invalid Request")]
     InvalidRequest,
+    #[error("Invalid Client")]
     InvalidClient,
+    #[error("Unauthorized Client")]
     UnauthorizedClient,
+    #[error("Access Denied")]
     AccessDenied,
 }
 
@@ -256,19 +234,6 @@ impl ErrorStatusCode for InteractiveAuthorizationErrorResponse {
             Self::InvalidClient => StatusCode::UNAUTHORIZED,
             Self::UnauthorizedClient => StatusCode::UNAUTHORIZED,
             Self::AccessDenied => StatusCode::FORBIDDEN,
-        }
-    }
-}
-
-impl std::error::Error for InteractiveAuthorizationErrorResponse {}
-impl Display for InteractiveAuthorizationErrorResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::MissingInteractionType => write!(f, "Missing Interaction Type"),
-            Self::InvalidRequest => write!(f, "Invalid Request"),
-            Self::InvalidClient => write!(f, "Invalid Client"),
-            Self::UnauthorizedClient => write!(f, "Unauthorized Client"),
-            Self::AccessDenied => write!(f, "Access Denied"),
         }
     }
 }
