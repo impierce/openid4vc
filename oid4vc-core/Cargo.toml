@@ -7,6 +7,8 @@ license.workspace = true
 [dependencies]
 anyhow = "1.0.70"
 async-trait = "0.1.68"
+base64 = "0.22"
+# TODO: remove this dependency and use base64 instead, see: https://github.com/impierce/openid4vc/pull/127
 base64-url = "2.0.0"
 derivative = "2.2.0"
 derive_more = "0.99.16"
@@ -37,4 +39,3 @@ tokio.workspace = true
 
 [features]
 test-utils = ["dep:mockall"]
-
