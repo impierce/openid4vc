@@ -118,10 +118,16 @@ pub fn evaluate_credential_query(
                     return false;
                 }
             }
-            MetaTypes::SdJwtMeta {
-                vct_values: _vct_values,
-            } => {
-                // TODO: Implement SD-JWT `vct` checking
+            MetaTypes::SdJwtMeta { vct_values } => {
+                if let Some(vct_string) = decoded_presentation.get("vct").and_then(|v| v.as_str()) {
+                    let type_match = vct_values.iter().any(|required_vct| required_vct == vct_string);
+
+                    if !type_match {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
             }
             MetaTypes::MsoMdocMeta {
                 doctype_value: _doctype_value,
@@ -354,11 +360,83 @@ mod tests {
     }
 
     #[test]
+    fn test_dcql_credential_query_with_compatible_vct_values() {
+        let testing_credential = json!({
+            "vct": "https://credentials.example.com/identity_credential",
+            "given_name": "Ferris",
+            "family_name": "Crabman",
+            "email": "ferris.crabman@crabmail.com",
+            "birthdate": "1985-05-21"
+        });
+        let dcql_request: DcqlRequest = serde_json::from_value(serde_json::json!({
+            "credentials": [
+                {
+                    "id": "login",
+                    "format": "dc+sd-jwt",
+                    "meta": {
+                        "vct_values": ["https://credentials.example.com/identity_credential"]
+                    },
+                    "claims": [{ "path": ["email"] }]
+                }
+            ]
+        }))
+        .unwrap();
+        let dcql_query = &dcql_request.credentials[0];
+
+        let claims_context = ClaimsContext {
+            claim_sets: &dcql_query.claim_sets,
+        };
+        validate_claims(&dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
+
+        assert!(evaluate_credential_query(
+            dcql_query,
+            &DecodedPresentations::try_new(vec![testing_credential.as_object().unwrap().clone()]).unwrap()
+        ));
+    }
+
+    #[test]
+    fn test_dcql_credential_query_with_incompatible_vct_values() {
+        let testing_credential = json!({
+            "vct": "https://credentials.example.com/identity_credential",
+            "given_name": "Ferris",
+            "family_name": "Crabman",
+            "email": "ferris.crabman@crabmail.com",
+            "birthdate": "1985-05-21"
+        });
+        let dcql_request: DcqlRequest = serde_json::from_value(serde_json::json!({
+            "credentials": [
+                {
+                    "id": "login",
+                    "format": "dc+sd-jwt",
+                    "meta": {
+                        "vct_values": ["https://credentials.example.com/verified_email"]
+                    },
+                    "claims": [{ "path": ["email"] }]
+                }
+            ]
+        }))
+        .unwrap();
+        let dcql_query = &dcql_request.credentials[0];
+
+        let claims_context = ClaimsContext {
+            claim_sets: &dcql_query.claim_sets,
+        };
+        validate_claims(&dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
+
+        // Assert `false` because the credential vct does not match the required vct_values in the query.
+        assert!(!evaluate_credential_query(
+            dcql_query,
+            &DecodedPresentations::try_new(vec![testing_credential.as_object().unwrap().clone()]).unwrap()
+        ));
+    }
+
+    #[test]
     fn test_dcql_query_with_credential_sets() {
         let dcql_query: DcqlQuery = serde_json::from_str(TESTCREDENTIALQUERY_WITH_SETS).unwrap();
 
         // Simplified version of a credential that satisfies the first option (pid)
         let pid_credential = json!({
+            "vct": "https://credentials.example.com/identity_credential",
             "given_name": "John",
             "family_name": "Doe",
             "address": {
@@ -379,11 +457,13 @@ mod tests {
 
         // Alternative credentials (pid_reduced_cred_1 + pid_reduced_cred_2)
         let reduced_cred_1 = json!({
+            "vct":"https://credentials.example.com/reduced_identity_credential",
             "given_name": "John",
             "family_name": "Doe"
         });
 
         let reduced_cred_2 = json!({
+            "vct":"https://cred.example/residence_credential",
             "postal_code": "12345",
             "locality": "Somewhere",
             "region": "HERE"
