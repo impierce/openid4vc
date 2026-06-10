@@ -327,7 +327,8 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             .decode_compact_serialization(presentation_jwt.as_str().as_bytes(), None)
             .map_err(VpTokenValidationError::JwsDecodingError)?;
 
-        // TODO: check whether the KID is a relative reference (starts with '#') and resolve it against the 'iss' claim in the payload if so (see `fn resolve_key_id`)
+        // TODO: check whether the KID is a relative reference (starts with '#') and resolve it against the 'iss' claim
+        // in the payload if so (see `fn extract_normalized_did_kid_from_jwt`)
         let kid_str = validation_item.kid().ok_or(VpTokenValidationError::MissingKid)?;
         let kid: DIDUrl = kid_str
             .parse()
@@ -386,7 +387,8 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             .decode_compact_serialization(credential_jwt.as_str().as_bytes(), None)
             .map_err(VpTokenValidationError::JwsDecodingError)?;
 
-        // TODO: check whether the KID is a relative reference (starts with '#') and resolve it against the 'iss' claim in the payload if so (see `fn resolve_key_id`)
+        // TODO: check whether the KID is a relative reference (starts with '#') and resolve it against the 'iss' claim
+        //in the payload if so (see `fn extract_normalized_did_kid_from_jwt`)
         let kid_str = validation_item.kid().ok_or(VpTokenValidationError::MissingKid)?;
         let kid: DIDUrl = kid_str
             .parse()

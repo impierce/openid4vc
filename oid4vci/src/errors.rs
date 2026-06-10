@@ -205,6 +205,7 @@ impl ErrorStatusCode for NotificationErrorResponse {
     }
 }
 
+// TODO: Validate error response serialization against the OID4VCI spec.
 /// Interactive Authorization Error Response as defined in OID4VCI 1.1, Section 6.2.3.
 ///
 /// In addition to standard PAR error processing rules (RFC 9126, Section 2.3), this adds
