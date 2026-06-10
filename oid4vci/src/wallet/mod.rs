@@ -9,6 +9,10 @@ use crate::credential_issuer::{
 };
 use crate::credential_offer::CredentialOfferParameters;
 use crate::credential_request::{CredentialIdentifierOrCredentialConfigurationId, CredentialRequest};
+use crate::interactive_authorization_request::{
+    InteractionType, InteractiveAuthorizationFollowUpRequest, InteractiveAuthorizationRequest,
+};
+use crate::interactive_authorization_response::InteractiveAuthorizationResponse;
 use crate::nonce_response::NonceResponse;
 use crate::notification_request::{NotificationEvent, NotificationRequest};
 use crate::proof::ProofType;
@@ -168,7 +172,7 @@ impl Wallet {
             response_type: "code".to_string(),
             client_id: client_id.to_string(),
             redirect_uri: Some(redirect_uri),
-            // TODO: add support for `scope`
+            // TODO: add support for `scope`, see: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-3.3.4
             scope: None,
             state: Some(state),
             authorization_details,
@@ -392,6 +396,82 @@ impl Wallet {
             .json()
             .await
             .map_err(|e| e.into())
+    }
+
+    /// Send an initial Interactive Authorization Request to the IAE endpoint (Section 6.1.1).
+    ///
+    /// This is similar to a Pushed Authorization Request but adds `interaction_types_supported`
+    /// and returns an `InteractiveAuthorizationResponse` indicating the next step.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn send_interactive_authorization_request(
+        &self,
+        interactive_authorization_endpoint: Url,
+        client_id: &str,
+        redirect_uri: Option<Url>,
+        state: Option<String>,
+        authorization_details: Option<Vec<AuthorizationDetailsObject>>,
+        issuer_state: Option<String>,
+        interaction_types_supported: Vec<InteractionType>,
+        code_challenge: Option<String>,
+        code_challenge_method: Option<CodeChallengeMethod>,
+    ) -> Result<InteractiveAuthorizationResponse> {
+        let request = InteractiveAuthorizationRequest {
+            authorization_request: AuthorizationRequest {
+                response_type: "code".to_string(),
+                client_id: client_id.to_string(),
+                redirect_uri,
+                // TODO: add support for `scope`, see: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-3.3.4
+                scope: None,
+                state,
+                authorization_details,
+                issuer_state,
+                code_challenge,
+                code_challenge_method,
+            },
+            interaction_types_supported: InteractiveAuthorizationRequest::interaction_types_to_string(
+                &interaction_types_supported,
+            ),
+        };
+
+        let url_encoded = to_form_urlencoded_string(&request)?;
+
+        self.client
+            .post(interactive_authorization_endpoint)
+            .header(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/x-www-form-urlencoded"),
+            )
+            .body(url_encoded)
+            .send()
+            .await?
+            .json::<InteractiveAuthorizationResponse>()
+            .await
+            .map_err(|err| anyhow::anyhow!("Failed to send interactive authorization request: {err}"))
+    }
+
+    /// Send a follow-up Interactive Authorization Request (Section 6.1.2).
+    ///
+    /// This is used after receiving a `require_interaction` response to submit the
+    /// result of the interaction (e.g., an OpenID4VP presentation response).
+    pub async fn send_interactive_authorization_follow_up(
+        &self,
+        interactive_authorization_endpoint: Url,
+        follow_up: InteractiveAuthorizationFollowUpRequest,
+    ) -> Result<InteractiveAuthorizationResponse> {
+        let url_encoded = to_form_urlencoded_string(&follow_up)?;
+
+        self.client
+            .post(interactive_authorization_endpoint)
+            .header(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/x-www-form-urlencoded"),
+            )
+            .body(url_encoded)
+            .send()
+            .await?
+            .json::<InteractiveAuthorizationResponse>()
+            .await
+            .map_err(|err| anyhow::anyhow!("Failed to send interactive authorization follow-up: {err}"))
     }
 
     pub async fn send_notification_request(

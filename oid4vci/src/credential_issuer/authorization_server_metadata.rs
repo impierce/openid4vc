@@ -38,5 +38,9 @@ pub struct AuthorizationServerMetadata {
     pub pushed_authorization_request_endpoint: Option<Url>,
     #[serde(default)]
     pub require_pushed_authorization_requests: Option<bool>,
+    // Interactive Authorization Endpoint (Section 6, OID4VCI 1.1)
+    pub interactive_authorization_endpoint: Option<Url>,
+    #[serde(default)]
+    pub require_interactive_authorization_request: Option<bool>,
     // Additional authorization server metadata parameters MAY also be used.
 }

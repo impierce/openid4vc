@@ -17,7 +17,10 @@ use identity_credential::{
 use identity_did::DIDUrl;
 use identity_verification::jws::{Decoder, JwsVerifier};
 use nutype::nutype;
-use oid4vc_core::{credential_status_verifier::CredentialStatusVerifier, utils::predicates::not_empty};
+use oid4vc_core::{
+    credential_status_verifier::CredentialStatusVerifier,
+    utils::{did::extract_normalized_did_kid_from_jwt, predicates::not_empty},
+};
 use oid4vc_core::{
     types::string_or_object::StringOrObject, verification_material_resolver::VerificationMaterialResolver, JsonObject,
 };
@@ -324,6 +327,8 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             .decode_compact_serialization(presentation_jwt.as_str().as_bytes(), None)
             .map_err(VpTokenValidationError::JwsDecodingError)?;
 
+        // TODO: check whether the KID is a relative reference (starts with '#') and resolve it against the 'iss' claim
+        // in the payload if so (see `fn extract_normalized_did_kid_from_jwt`)
         let kid_str = validation_item.kid().ok_or(VpTokenValidationError::MissingKid)?;
         let kid: DIDUrl = kid_str
             .parse()
@@ -382,6 +387,8 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             .decode_compact_serialization(credential_jwt.as_str().as_bytes(), None)
             .map_err(VpTokenValidationError::JwsDecodingError)?;
 
+        // TODO: check whether the KID is a relative reference (starts with '#') and resolve it against the 'iss' claim
+        //in the payload if so (see `fn extract_normalized_did_kid_from_jwt`)
         let kid_str = validation_item.kid().ok_or(VpTokenValidationError::MissingKid)?;
         let kid: DIDUrl = kid_str
             .parse()
@@ -422,12 +429,8 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
         nonce: Option<&str>,
         require_holder_binding: bool,
     ) -> Result<JsonObject, VpTokenValidationError> {
-        let kid_str = sd_jwt_vc
-            .headers()
-            .get("kid")
-            .ok_or(VpTokenValidationError::MissingKid)?
-            .as_str()
-            .ok_or_else(|| VpTokenValidationError::InvalidKid("kid header is not a string".to_string()))?;
+        let kid_str = extract_normalized_did_kid_from_jwt(&sd_jwt_vc.to_string())
+            .map_err(|e| VpTokenValidationError::InvalidKid(e.to_string()))?;
 
         let kid: DIDUrl = kid_str
             .parse()
@@ -491,12 +494,8 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
 
     /// Internal helper to validate VCDM 2.0 SD-JWT.
     async fn validate_vcdm2_sd_jwt(&self, vcdm2_sd_jwt: &SdJwt) -> Result<CredentialV2, VpTokenValidationError> {
-        let kid_str = vcdm2_sd_jwt
-            .headers()
-            .get("kid")
-            .ok_or(VpTokenValidationError::MissingKid)?
-            .as_str()
-            .ok_or_else(|| VpTokenValidationError::InvalidKid("kid header is not a string".to_string()))?;
+        let kid_str = extract_normalized_did_kid_from_jwt(&vcdm2_sd_jwt.to_string())
+            .map_err(|e| VpTokenValidationError::InvalidKid(e.to_string()))?;
 
         let kid: DIDUrl = kid_str
             .parse()
