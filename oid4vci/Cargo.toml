@@ -8,6 +8,10 @@ keywords = ["oid4vc", "openid4vc", "oid4vci", "OpenID"]
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = []
+utoipa = ["dep:utoipa"]
+
 [dependencies]
 oid4vc-core = { path = "../oid4vc-core" }
 anyhow = "1.0"
@@ -30,6 +34,7 @@ serde_with.workspace = true
 tokio.workspace = true
 thiserror.workspace = true
 url.workspace = true
+utoipa = { workspace = true, optional = true }
 
 [dev-dependencies]
 oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }

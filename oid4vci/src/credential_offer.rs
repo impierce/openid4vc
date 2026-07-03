@@ -29,11 +29,22 @@ pub struct PreAuthorizedCode {
 
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct TxCodeConstraints {
+    #[cfg_attr(feature = "utoipa", schema(inline, default = "numeric"))]
     pub input_mode: Option<InputMode>,
-    // Allows a pin-length of 0-255.
+    /// The length of the PIN must be between 0 and 255 characters.
+    #[cfg_attr(feature = "utoipa", schema(examples(6), minimum = 0, maximum = 255))]
     pub length: Option<u8>,
-    // The length of the string must not exceed 300 characters.
+    /// The length of the description must not exceed 300 characters.
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(
+            examples("Please provide the one-time code you received via email."),
+            value_type = String,
+            max_length = 300
+        )
+    )]
     pub description: Option<Description>,
 }
 
@@ -45,6 +56,7 @@ pub struct Description(String);
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
 #[serde(rename_all = "lowercase")]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub enum InputMode {
     #[default]
     Numeric,
@@ -127,6 +139,8 @@ pub enum GrantType {
 mod tests {
     use super::*;
     use serde_json::{from_str, json};
+    #[cfg(feature = "utoipa")]
+    use utoipa::OpenApi;
 
     #[test]
     fn test_credential_offer_serde() {
@@ -256,5 +270,76 @@ mod tests {
             ))
             .unwrap()
         );
+    }
+
+    #[cfg(feature = "utoipa")]
+    #[test]
+    fn test_tx_code_constraints_schema_inlines_input_mode_and_examples() {
+        #[derive(utoipa::OpenApi)]
+        #[openapi(components(schemas(TxCodeConstraints)))]
+        struct ApiDoc;
+
+        let openapi = ApiDoc::openapi();
+        let value = serde_json::to_value(&openapi).unwrap();
+        let schemas = &value["components"]["schemas"];
+
+        // Verify TxCodeConstraints no longer references InputMode as a separate schema.
+        let tx_schema_json = serde_json::to_string(&schemas["TxCodeConstraints"]).unwrap();
+        assert!(!tx_schema_json.contains("#/components/schemas/InputMode"));
+
+        let input_mode_json = serde_json::to_string(&schemas["TxCodeConstraints"]["properties"]["input_mode"]).unwrap();
+        assert!(input_mode_json.contains("\"numeric\""));
+        assert!(input_mode_json.contains("\"text\""));
+
+        // Verify length constraints are reflected in the schema.
+        let length = &schemas["TxCodeConstraints"]["properties"]["length"];
+        assert_eq!(length["minimum"], json!(0));
+        assert_eq!(length["maximum"], json!(255));
+
+        // Verify description max length constraint is reflected in the schema.
+        let description = &schemas["TxCodeConstraints"]["properties"]["description"];
+        assert_eq!(description["maxLength"], json!(300));
+
+        // Verify field-level examples are reflected in the schema.
+        let length_example = if !length["example"].is_null() {
+            length["example"].clone()
+        } else {
+            length["examples"]
+                .as_array()
+                .and_then(|examples| examples.first())
+                .cloned()
+                .unwrap_or(serde_json::Value::Null)
+        };
+        assert_eq!(length_example, json!(6));
+
+        let description_example = if !description["example"].is_null() {
+            description["example"].clone()
+        } else {
+            description["examples"]
+                .as_array()
+                .and_then(|examples| examples.first())
+                .cloned()
+                .unwrap_or(serde_json::Value::Null)
+        };
+        assert_eq!(
+            description_example,
+            json!("Please provide the one-time code you received via email.")
+        );
+
+        // Verify InputMode is not emitted as a standalone component.
+        assert!(schemas["InputMode"].is_null());
+
+        // Struct-level examples are optional; validate if present.
+        if let Some(example) = schemas["TxCodeConstraints"]["examples"]
+            .as_array()
+            .and_then(|examples| examples.first())
+        {
+            assert_eq!(example["input_mode"], json!("numeric"));
+            assert_eq!(example["length"], json!(6));
+            assert_eq!(
+                example["description"],
+                json!("Please provide the one-time code you received via email.")
+            );
+        }
     }
 }
