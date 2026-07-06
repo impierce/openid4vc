@@ -280,66 +280,42 @@ mod tests {
         struct ApiDoc;
 
         let openapi = ApiDoc::openapi();
-        let value = serde_json::to_value(&openapi).unwrap();
-        let schemas = &value["components"]["schemas"];
+        let schemas = serde_json::to_value(&openapi).unwrap()["components"]["schemas"].clone();
 
-        // Verify TxCodeConstraints no longer references InputMode as a separate schema.
-        let tx_schema_json = serde_json::to_string(&schemas["TxCodeConstraints"]).unwrap();
-        assert!(!tx_schema_json.contains("#/components/schemas/InputMode"));
+        let actual = &schemas["TxCodeConstraints"];
 
-        let input_mode_json = serde_json::to_string(&schemas["TxCodeConstraints"]["properties"]["input_mode"]).unwrap();
-        assert!(input_mode_json.contains("\"numeric\""));
-        assert!(input_mode_json.contains("\"text\""));
+        let expected = serde_json::json!({
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string",
+              "description": "The length of the description must not exceed 300 characters.",
+              "examples": ["Please provide the one-time code you received via email."],
+              "maxLength": 300
+            },
+            "input_mode": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "string",
+                  "enum": ["numeric", "text"]
+                }
+              ],
+              "default": "numeric"
+            },
+            "length": {
+              "type": ["integer", "null"],
+              "format": "int32",
+              "description": "The length of the PIN must be between 0 and 255 characters.",
+              "examples": [6],
+              "minimum": 0,
+              "maximum": 255
+            }
+          }
+        });
 
-        // Verify length constraints are reflected in the schema.
-        let length = &schemas["TxCodeConstraints"]["properties"]["length"];
-        assert_eq!(length["minimum"], json!(0));
-        assert_eq!(length["maximum"], json!(255));
-
-        // Verify description max length constraint is reflected in the schema.
-        let description = &schemas["TxCodeConstraints"]["properties"]["description"];
-        assert_eq!(description["maxLength"], json!(300));
-
-        // Verify field-level examples are reflected in the schema.
-        let length_example = if !length["example"].is_null() {
-            length["example"].clone()
-        } else {
-            length["examples"]
-                .as_array()
-                .and_then(|examples| examples.first())
-                .cloned()
-                .unwrap_or(serde_json::Value::Null)
-        };
-        assert_eq!(length_example, json!(6));
-
-        let description_example = if !description["example"].is_null() {
-            description["example"].clone()
-        } else {
-            description["examples"]
-                .as_array()
-                .and_then(|examples| examples.first())
-                .cloned()
-                .unwrap_or(serde_json::Value::Null)
-        };
-        assert_eq!(
-            description_example,
-            json!("Please provide the one-time code you received via email.")
-        );
-
-        // Verify InputMode is not emitted as a standalone component.
-        assert!(schemas["InputMode"].is_null());
-
-        // Struct-level examples are optional; validate if present.
-        if let Some(example) = schemas["TxCodeConstraints"]["examples"]
-            .as_array()
-            .and_then(|examples| examples.first())
-        {
-            assert_eq!(example["input_mode"], json!("numeric"));
-            assert_eq!(example["length"], json!(6));
-            assert_eq!(
-                example["description"],
-                json!("Please provide the one-time code you received via email.")
-            );
-        }
+        assert_eq!(actual, &expected);
     }
 }
