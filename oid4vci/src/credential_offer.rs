@@ -29,11 +29,22 @@ pub struct PreAuthorizedCode {
 
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct TxCodeConstraints {
+    #[cfg_attr(feature = "utoipa", schema(inline, default = "numeric"))]
     pub input_mode: Option<InputMode>,
-    // Allows a pin-length of 0-255.
+    /// The length of the PIN must be between 0 and 255 characters.
+    #[cfg_attr(feature = "utoipa", schema(examples(6), minimum = 0, maximum = 255))]
     pub length: Option<u8>,
-    // The length of the string must not exceed 300 characters.
+    /// The length of the description must not exceed 300 characters.
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(
+            examples("Please provide the one-time code you received via email."),
+            value_type = String,
+            max_length = 300
+        )
+    )]
     pub description: Option<Description>,
 }
 
@@ -45,6 +56,7 @@ pub struct Description(String);
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
 #[serde(rename_all = "lowercase")]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub enum InputMode {
     #[default]
     Numeric,
@@ -127,6 +139,8 @@ pub enum GrantType {
 mod tests {
     use super::*;
     use serde_json::{from_str, json};
+    #[cfg(feature = "utoipa")]
+    use utoipa::OpenApi;
 
     #[test]
     fn test_credential_offer_serde() {
@@ -256,5 +270,52 @@ mod tests {
             ))
             .unwrap()
         );
+    }
+
+    #[cfg(feature = "utoipa")]
+    #[test]
+    fn test_tx_code_constraints_schema_inlines_input_mode_and_examples() {
+        #[derive(utoipa::OpenApi)]
+        #[openapi(components(schemas(TxCodeConstraints)))]
+        struct ApiDoc;
+
+        let openapi = ApiDoc::openapi();
+        let schemas = serde_json::to_value(&openapi).unwrap()["components"]["schemas"].clone();
+
+        let actual = &schemas["TxCodeConstraints"];
+
+        let expected = serde_json::json!({
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string",
+              "description": "The length of the description must not exceed 300 characters.",
+              "examples": ["Please provide the one-time code you received via email."],
+              "maxLength": 300
+            },
+            "input_mode": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "string",
+                  "enum": ["numeric", "text"]
+                }
+              ],
+              "default": "numeric"
+            },
+            "length": {
+              "type": ["integer", "null"],
+              "format": "int32",
+              "description": "The length of the PIN must be between 0 and 255 characters.",
+              "examples": [6],
+              "minimum": 0,
+              "maximum": 255
+            }
+          }
+        });
+
+        assert_eq!(actual, &expected);
     }
 }

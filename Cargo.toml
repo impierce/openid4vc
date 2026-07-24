@@ -51,6 +51,7 @@ serde_with = "3.0"
 tokio = { version = "1.46", features = ["rt", "macros", "rt-multi-thread"] }
 thiserror = "1.0"
 url = { version = "2", features = ["serde"] }
+utoipa = "5.5"
 
 [dependencies]
 oid4vc-core = { path = "oid4vc-core" }
