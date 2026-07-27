@@ -20,7 +20,6 @@ use nutype::nutype;
 use oid4vc_core::{
     credential_status_verifier::CredentialStatusVerifier,
     utils::{did::extract_normalized_did_kid_from_jwt, predicates::not_empty},
-    verifier::SignatureVerifier,
 };
 use oid4vc_core::{
     types::string_or_object::StringOrObject, verification_material_resolver::VerificationMaterialResolver, JsonObject,
@@ -380,7 +379,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
     }
 
     /// Internal helper to validate a credential JWT.
-    async fn validate_credential_jwt(
+    pub async fn validate_credential_jwt(
         &self,
         credential_jwt: &Jwt,
     ) -> Result<DecodedJwtCredential<JsonObject>, VpTokenValidationError> {
@@ -423,7 +422,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
     }
 
     /// Internal helper to validate a generic SD-JWT VC (signature, key binding, disclosures).
-    async fn validate_sd_jwt_vc(
+    pub async fn validate_sd_jwt_vc(
         &self,
         sd_jwt_vc: &SdJwtVc,
         client_id: &str,
@@ -494,7 +493,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
     }
 
     /// Internal helper to validate VCDM 2.0 SD-JWT.
-    async fn validate_vcdm2_sd_jwt(&self, vcdm2_sd_jwt: &SdJwt) -> Result<CredentialV2, VpTokenValidationError> {
+    pub async fn validate_vcdm2_sd_jwt(&self, vcdm2_sd_jwt: &SdJwt) -> Result<CredentialV2, VpTokenValidationError> {
         let kid_str = extract_normalized_did_kid_from_jwt(&vcdm2_sd_jwt.to_string())
             .map_err(|e| VpTokenValidationError::InvalidKid(e.to_string()))?;
 
@@ -526,116 +525,6 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             .validate_credential_v2(vcdm2_sd_jwt, &[issuer], options)
             .map_err(|e| VpTokenValidationError::SdJwtValidation(e.to_string()))
     }
-}
-
-/// Internal helper to validate a generic SD-JWT VC (signature, key binding, disclosures).
-pub async fn validate_sd_jwt_vc(
-    resolver: &dyn VerificationMaterialResolver,
-    credential_status_verifier: &dyn CredentialStatusVerifier,
-    sd_jwt_vc: &SdJwtVc,
-    client_id: Option<&str>,
-    nonce: Option<&str>,
-    require_holder_binding: bool,
-) -> Result<JsonObject, VpTokenValidationError> {
-    let kid_str = extract_normalized_did_kid_from_jwt(&sd_jwt_vc.to_string())
-        .map_err(|e| VpTokenValidationError::InvalidKid(e.to_string()))?;
-
-    let kid: DIDUrl = kid_str
-        .parse()
-        .map_err(|e: identity_did::Error| VpTokenValidationError::InvalidKid(e.to_string()))?;
-
-    // TODO: verify whether issuer is trusted (through `trusted_authorities`).
-    let _issuer = resolver
-        .resolve_did_document(kid.did())
-        .await
-        .map_err(|e| VpTokenValidationError::VerificationMaterialResolutionError(e.to_string()))?;
-
-    let public_key_jwk = resolver
-        .resolve_public_key(&kid.to_string())
-        .await
-        .map_err(|e| VpTokenValidationError::VerificationMaterialResolutionError(e.to_string()))?;
-
-    // 1. Verify Issuer Signature
-    sd_jwt_vc
-        .verify_signature(&SignatureVerifier, &public_key_jwk)
-        .map_err(|e| VpTokenValidationError::SdJwtValidation(e.to_string()))?;
-
-    // 2. Verify Key Binding (Holder Binding) if required
-    if require_holder_binding {
-        if let Some(key_binding_jwt) = sd_jwt_vc.key_binding_jwt() {
-            if let Some(client_id) = client_id {
-                if key_binding_jwt.claims().aud != client_id {
-                    return Err(VpTokenValidationError::InvalidAudience {
-                        expected: Some(client_id.to_string()),
-                        found: Some(key_binding_jwt.claims().aud.clone()),
-                    });
-                }
-            }
-
-            if let Some(nonce) = nonce {
-                if key_binding_jwt.claims().nonce != nonce {
-                    return Err(VpTokenValidationError::InvalidNonce {
-                        expected: Some(nonce.to_string()),
-                        found: Some(key_binding_jwt.claims().nonce.clone()),
-                    });
-                }
-            }
-        } else {
-            return Err(VpTokenValidationError::MissingHolderBinding);
-        }
-    }
-
-    if let Some(status_claim) = &sd_jwt_vc.claims().status {
-        let status_value = serde_json::to_value(status_claim)
-            .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
-        credential_status_verifier
-            .check_credential_status(status_value)
-            .await
-            .map_err(|_| VpTokenValidationError::CredentialStatusInvalid)?;
-    }
-
-    sd_jwt_vc
-        .clone()
-        .into_disclosed_object(&Sha256Hasher)
-        .map_err(|e| VpTokenValidationError::SdJwtValidation(e.to_string()))
-}
-
-/// Internal helper to validate VCDM 2.0 SD-JWT.
-pub async fn validate_vcdm2_sd_jwt(
-    resolver: &dyn VerificationMaterialResolver,
-    credential_status_verifier: &dyn CredentialStatusVerifier,
-    vcdm2_sd_jwt: &SdJwt,
-) -> Result<CredentialV2, VpTokenValidationError> {
-    let kid_str = extract_normalized_did_kid_from_jwt(&vcdm2_sd_jwt.to_string())
-        .map_err(|e| VpTokenValidationError::InvalidKid(e.to_string()))?;
-
-    let kid: DIDUrl = kid_str
-        .parse()
-        .map_err(|e: identity_did::Error| VpTokenValidationError::InvalidKid(e.to_string()))?;
-
-    // TODO: verify whether issuer is trusted (through `trusted_authorities`).
-    let issuer = resolver
-        .resolve_did_document(kid.did())
-        .await
-        .map_err(|e| VpTokenValidationError::VerificationMaterialResolutionError(e.to_string()))?;
-
-    // `SkipUnsupported` allows for custom credential types, such as the StatusList2021Entry (https://www.w3.org/TR/2023/WD-vc-status-list-20230427/#statuslist2021entry)
-    let options = &JwtCredentialValidationOptions::new().status_check(StatusCheck::SkipUnsupported);
-
-    let claims_value = serde_json::to_value(vcdm2_sd_jwt.claims())
-        .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
-    if let Some(status_value) = claims_value.get("status").cloned() {
-        credential_status_verifier
-            .check_credential_status(status_value)
-            .await
-            .map_err(|_| VpTokenValidationError::CredentialStatusInvalid)?;
-    }
-
-    let sd_jwt_credential_validator = SdJwtCredentialValidator::new(SignatureVerifier, Sha256Hasher);
-
-    sd_jwt_credential_validator
-        .validate_credential_v2(vcdm2_sd_jwt, &[issuer], options)
-        .map_err(|e| VpTokenValidationError::SdJwtValidation(e.to_string()))
 }
 
 #[derive(Serialize, Clone, Deserialize, Debug, Getters, PartialEq)]
