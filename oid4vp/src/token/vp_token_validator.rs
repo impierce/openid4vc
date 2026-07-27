@@ -378,7 +378,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
         Ok(decoded_jwt_presentation)
     }
 
-    /// Internal helper to validate a credential JWT.
+    /// Public helper to validate a credential JWT, since this validator can also be used separately from the VP token validation process.
     pub async fn validate_credential_jwt(
         &self,
         credential_jwt: &Jwt,
@@ -421,7 +421,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
         Ok(jwt_data)
     }
 
-    /// Internal helper to validate a generic SD-JWT VC (signature, key binding, disclosures).
+    /// Public helper to validate a generic SD-JWT VC (signature, key binding, disclosures), since this validator can also be used separately from the VP token validation process.
     pub async fn validate_sd_jwt_vc(
         &self,
         sd_jwt_vc: &SdJwtVc,
@@ -492,7 +492,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             .map_err(|e| VpTokenValidationError::SdJwtValidation(e.to_string()))
     }
 
-    /// Internal helper to validate VCDM 2.0 SD-JWT.
+    /// Public helper to validate VCDM 2.0 SD-JWT, since this validator can also be used separately from the VP token validation process.
     pub async fn validate_vcdm2_sd_jwt(&self, vcdm2_sd_jwt: &SdJwt) -> Result<CredentialV2, VpTokenValidationError> {
         let kid_str = extract_normalized_did_kid_from_jwt(&vcdm2_sd_jwt.to_string())
             .map_err(|e| VpTokenValidationError::InvalidKid(e.to_string()))?;
