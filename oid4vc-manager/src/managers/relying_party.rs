@@ -32,6 +32,7 @@ impl RelyingPartyManager {
         &self,
         authorization_request: &AuthorizationRequest<Object<E>>,
     ) -> Result<String> {
+        tracing::debug!("RelyingPartyManager: encoding authorization request");
         self.relying_party
             .encode(
                 authorization_request,
@@ -50,6 +51,7 @@ impl RelyingPartyManager {
         &self,
         authorization_response: &AuthorizationResponse<E>,
     ) -> Result<<E::ResponseHandle as ResponseHandle>::ResponseItem> {
+        tracing::debug!("RelyingPartyManager: validating authorization response");
         #[allow(deprecated)]
         self.relying_party.validate_response(authorization_response).await
     }

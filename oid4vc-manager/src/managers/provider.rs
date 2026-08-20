@@ -28,6 +28,7 @@ impl ProviderManager {
     }
 
     pub async fn validate_request(&self, authorization_request: String) -> Result<AuthorizationRequest<Object>> {
+        tracing::debug!("ProviderManager: validating request");
         self.provider.validate_request(authorization_request).await
     }
 
@@ -54,6 +55,7 @@ impl ProviderManager {
         authorization_request: &AuthorizationRequest<Object<E>>,
         input: <E::ResponseHandle as ResponseHandle>::Input,
     ) -> Result<AuthorizationResponse<E>> {
+        tracing::debug!("ProviderManager: generating response");
         self.provider.generate_response(authorization_request, input).await
     }
 
@@ -61,6 +63,7 @@ impl ProviderManager {
         &self,
         authorization_response: &AuthorizationResponse<E>,
     ) -> Result<StatusCode> {
+        tracing::debug!("ProviderManager: sending response");
         self.provider.send_response(authorization_response).await
     }
 

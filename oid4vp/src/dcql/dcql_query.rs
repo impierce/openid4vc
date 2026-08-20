@@ -84,7 +84,13 @@ pub enum Format {
 }
 
 impl DcqlQuery {
+    #[tracing::instrument(level = "debug", err, skip(self))]
     pub fn validate_all(&self) -> Result<(), DcqlQueryError> {
+        tracing::debug!(
+            credential_count = self.credentials.len(),
+            has_sets = self.credential_sets.is_some(),
+            "Validating DCQL query"
+        );
         // Check for duplicate credential IDs as the same id must not be present in the Authorization Request more than once.
         let mut seen_ids = HashSet::new();
         for (index, credential) in self.credentials.iter().enumerate() {
@@ -100,6 +106,7 @@ impl DcqlQuery {
             self.validate_credential_sets(credential_sets)?;
         }
 
+        tracing::debug!("DCQL query validation passed");
         Ok(())
     }
 
@@ -146,6 +153,13 @@ impl DcqlQuery {
 
 impl CredentialQuery {
     pub fn validate_all(&self) -> Result<(), DcqlQueryError> {
+        tracing::debug!(
+            credential_id = %self.id,
+            format = ?self.format,
+            has_claims = self.claims.is_some(),
+            has_claim_sets = self.claim_sets.is_some(),
+            "Validating credential query in DCQL"
+        );
         let meta_ctx = MetaContext { format: &self.format };
 
         validate_meta(&self.meta, &meta_ctx)?;

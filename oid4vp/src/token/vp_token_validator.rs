@@ -124,6 +124,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
     /// 5. Decoding the credentials into a common format (`JsonObject`).
     /// 6. Validate the credential status.
     /// 7. Evaluating the decoded credentials against the full logic of the `dcql_query` (including sets and claims).
+    #[tracing::instrument(level = "debug", err, skip(self, vp_token))]
     pub async fn validate_vp_token(
         &self,
         dcql_query: &DcqlQuery,
@@ -131,6 +132,8 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
         client_id: &str,
         nonce: Option<&str>,
     ) -> Result<DecodedVpToken, VpTokenValidationError> {
+        tracing::info!(%client_id, "Validating VP token against DCQL query");
+
         // Validate that the structural requirements (e.g. required groups) of the DCQL query are met
         validate_presentation_submission(&vp_token.presentations, dcql_query)
             .map_err(VpTokenValidationError::PresentationSubmissionValidation)?;
@@ -146,6 +149,13 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
                 .ok_or_else(|| VpTokenValidationError::CredentialQueryNotFound(credential_query_id.clone()))?;
 
             let require_holder_binding = credential_query.require_cryptographic_holder_binding.unwrap_or(true);
+
+            tracing::debug!(
+                %credential_query_id,
+                format = ?credential_query.format,
+                require_holder_binding,
+                "Validating presentation for credential query"
+            );
 
             // Decode and validate signatures based on format
             let current_query_decoded_credentials = match credential_query.format {
@@ -184,12 +194,14 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             return Err(VpTokenValidationError::DcqlEvaluationFailed);
         }
 
+        tracing::info!("VP token successfully validated against DCQL query");
         Ok(decoded_vp_token)
     }
 
     /// Validates a list of presentations in `jwt_vc_json` format.
     /// For each presentation, it verifies the signature and structural validity,
     /// then extracts the internal credential.
+    #[tracing::instrument(level = "debug", err, skip(self, presentations))]
     async fn validate_jwt_vc_json_presentations(
         &self,
         presentations: &[StringOrObject],
@@ -197,6 +209,11 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
         nonce: Option<&str>,
         require_holder_binding: bool,
     ) -> Result<Vec<JsonObject>, VpTokenValidationError> {
+        tracing::debug!(
+            count = presentations.len(),
+            require_holder_binding,
+            "Validating jwt_vc_json presentations"
+        );
         let mut decoded_credentials = vec![];
         // TODO: check `multiple`
         for presentation in presentations.iter() {
@@ -231,6 +248,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
     }
 
     /// Validates a list of presentations in `dc+sd-jwt` format.
+    #[tracing::instrument(level = "debug", err, skip(self, presentations))]
     async fn validate_dc_sd_jwt_presentations(
         &self,
         presentations: &[StringOrObject],
@@ -238,6 +256,11 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
         nonce: Option<&str>,
         require_holder_binding: bool,
     ) -> Result<Vec<JsonObject>, VpTokenValidationError> {
+        tracing::debug!(
+            count = presentations.len(),
+            require_holder_binding,
+            "Validating dc+sd-jwt presentations"
+        );
         let mut decoded_credentials = vec![];
         // TODO: check `multiple`
         for presentation in presentations.iter() {
@@ -261,6 +284,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
     }
 
     /// Validates a list of presentations in `vc+sd-jwt` format.
+    #[tracing::instrument(level = "debug", err, skip(self, presentations))]
     async fn validate_vc_sd_jwt_presentations(
         &self,
         presentations: &[StringOrObject],
@@ -268,6 +292,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
         client_id: &str,
         nonce: Option<&str>,
     ) -> Result<Vec<JsonObject>, VpTokenValidationError> {
+        tracing::debug!(count = presentations.len(), "Validating vc+sd-jwt presentations");
         let mut decoded_credentials = vec![];
         // TODO: check `multiple`
         for presentation in presentations.iter() {
@@ -313,6 +338,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
     }
 
     /// Internal helper to validate a generic JWT presentation (signature, audience, nonce).
+    #[tracing::instrument(level = "debug", err, skip(self, presentation_jwt))]
     async fn validate_presentation_jwt<CRED>(
         &self,
         presentation_jwt: &Jwt,
@@ -334,6 +360,8 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             .parse()
             .map_err(|e: identity_did::Error| VpTokenValidationError::InvalidKid(e.to_string()))?;
 
+        tracing::debug!(kid = %kid_str, "Validating presentation JWT wrapper");
+
         // 2. Resolve Holder's DID Document
         let resolver = &self.verification_material_resolver;
 
@@ -342,12 +370,16 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             .await
             .map_err(|e| VpTokenValidationError::VerificationMaterialResolutionError(e.to_string()))?;
 
+        tracing::debug!(holder_did = %kid.did(), "Resolved holder DID document for presentation JWT");
+
         // 3. Verify Signature
         let options = &Default::default();
 
         let decoded_jwt_presentation = self
             .jwt_presentation_validator
             .validate(presentation_jwt, &holder, options)?;
+
+        tracing::debug!("Verified cryptographic signature on presentation JWT");
 
         // 4. Check Audience
         let aud = decoded_jwt_presentation.aud.as_ref().map(|aud| aud.to_string());
@@ -375,10 +407,12 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             }
         }
 
+        tracing::debug!("Presentation JWT successfully validated");
         Ok(decoded_jwt_presentation)
     }
 
     /// Public helper to validate a credential JWT, since this validator can also be used separately from the VP token validation process.
+    #[tracing::instrument(level = "debug", err, skip(self, credential_jwt))]
     pub async fn validate_credential_jwt(
         &self,
         credential_jwt: &Jwt,
@@ -394,6 +428,8 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             .parse()
             .map_err(|e: identity_did::Error| VpTokenValidationError::InvalidKid(e.to_string()))?;
 
+        tracing::debug!(kid = %kid_str, "Extracted issuer KID from credential JWT");
+
         let resolver = &self.verification_material_resolver;
 
         // TODO: verify whether issuer is trusted (through `trusted_authorities`).
@@ -401,6 +437,8 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             .resolve_did_document(kid.did())
             .await
             .map_err(|e| VpTokenValidationError::VerificationMaterialResolutionError(e.to_string()))?;
+
+        tracing::debug!(issuer_did = %kid.did(), "Resolved issuer DID document for credential JWT");
 
         // `SkipUnsupported` allows for custom credential types, such as the StatusList2021Entry (https://www.w3.org/TR/2023/WD-vc-status-list-20230427/#statuslist2021entry)
         let options = &JwtCredentialValidationOptions::new().status_check(StatusCheck::SkipUnsupported);
@@ -411,7 +449,10 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             .validate(credential_jwt, &issuer, options, fail_fast)
             .map_err(VpTokenValidationError::CredentialValidation)?;
 
+        tracing::debug!("Verified cryptographic signature on credential JWT");
+
         if let Some(status_value) = jwt_data.custom_claims.as_ref().and_then(|v| v.get("status").cloned()) {
+            tracing::debug!("Checking credential revocation status from status list");
             self.credential_status_verifier
                 .check_credential_status(status_value)
                 .await
@@ -422,6 +463,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
     }
 
     /// Public helper to validate a generic SD-JWT VC (signature, key binding, disclosures), since this validator can also be used separately from the VP token validation process.
+    #[tracing::instrument(level = "debug", err, skip(self, sd_jwt_vc))]
     pub async fn validate_sd_jwt_vc(
         &self,
         sd_jwt_vc: &SdJwtVc,
@@ -436,6 +478,8 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             .parse()
             .map_err(|e: identity_did::Error| VpTokenValidationError::InvalidKid(e.to_string()))?;
 
+        tracing::debug!(kid = %kid_str, "Extracted issuer KID from SD-JWT VC");
+
         let resolver = &self.verification_material_resolver;
 
         // TODO: verify whether issuer is trusted (through `trusted_authorities`).
@@ -449,10 +493,14 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             .await
             .map_err(|e| VpTokenValidationError::VerificationMaterialResolutionError(e.to_string()))?;
 
+        tracing::debug!(issuer_did = %kid.did(), "Resolved issuer public key for SD-JWT VC");
+
         // 1. Verify Issuer Signature
         sd_jwt_vc
             .verify_signature(self.signature_verifier, &public_key_jwk)
             .map_err(|e| VpTokenValidationError::SdJwtValidation(e.to_string()))?;
+
+        tracing::debug!("Verified issuer signature on SD-JWT VC");
 
         // 2. Verify Key Binding (Holder Binding) if required
         if require_holder_binding {
@@ -472,12 +520,15 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
                         });
                     }
                 }
+
+                tracing::debug!("Verified holder key binding on SD-JWT VC");
             } else {
                 return Err(VpTokenValidationError::MissingHolderBinding);
             }
         }
 
         if let Some(status_claim) = &sd_jwt_vc.claims().status {
+            tracing::debug!("Checking SD-JWT VC credential revocation status");
             let status_value = serde_json::to_value(status_claim)
                 .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
             self.credential_status_verifier
@@ -493,6 +544,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
     }
 
     /// Public helper to validate VCDM 2.0 SD-JWT, since this validator can also be used separately from the VP token validation process.
+    #[tracing::instrument(level = "debug", err, skip(self, vcdm2_sd_jwt))]
     pub async fn validate_vcdm2_sd_jwt(&self, vcdm2_sd_jwt: &SdJwt) -> Result<CredentialV2, VpTokenValidationError> {
         let kid_str = extract_normalized_did_kid_from_jwt(&vcdm2_sd_jwt.to_string())
             .map_err(|e| VpTokenValidationError::InvalidKid(e.to_string()))?;
@@ -500,6 +552,8 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
         let kid: DIDUrl = kid_str
             .parse()
             .map_err(|e: identity_did::Error| VpTokenValidationError::InvalidKid(e.to_string()))?;
+
+        tracing::debug!(kid = %kid_str, "Validating VCDM 2.0 SD-JWT credential");
 
         let resolver = &self.verification_material_resolver;
 
@@ -509,21 +563,28 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             .await
             .map_err(|e| VpTokenValidationError::VerificationMaterialResolutionError(e.to_string()))?;
 
+        tracing::debug!(issuer_did = %kid.did(), "Resolved issuer DID document for VCDM 2.0 SD-JWT");
+
         // `SkipUnsupported` allows for custom credential types, such as the StatusList2021Entry (https://www.w3.org/TR/2023/WD-vc-status-list-20230427/#statuslist2021entry)
         let options = &JwtCredentialValidationOptions::new().status_check(StatusCheck::SkipUnsupported);
 
         let claims_value = serde_json::to_value(vcdm2_sd_jwt.claims())
             .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
         if let Some(status_value) = claims_value.get("status").cloned() {
+            tracing::debug!("Checking VCDM 2.0 SD-JWT credential revocation status");
             self.credential_status_verifier
                 .check_credential_status(status_value)
                 .await
                 .map_err(|_| VpTokenValidationError::CredentialStatusInvalid)?;
         }
 
-        self.sd_jwt_credential_validator
+        let validated = self
+            .sd_jwt_credential_validator
             .validate_credential_v2(vcdm2_sd_jwt, &[issuer], options)
-            .map_err(|e| VpTokenValidationError::SdJwtValidation(e.to_string()))
+            .map_err(|e| VpTokenValidationError::SdJwtValidation(e.to_string()))?;
+
+        tracing::debug!("Verified VCDM 2.0 SD-JWT credential structure and signatures");
+        Ok(validated)
     }
 }
 

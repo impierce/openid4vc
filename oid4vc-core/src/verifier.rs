@@ -10,8 +10,11 @@ use identity_verification::{
 pub struct SignatureVerifier;
 
 impl JwsVerifier for SignatureVerifier {
+    #[tracing::instrument(level = "debug", err, skip(self, input, public_key))]
     fn verify(&self, input: VerificationInput, public_key: &Jwk) -> Result<(), SignatureVerificationError> {
         use JwsAlgorithm::*;
+
+        tracing::debug!(algorithm = ?input.alg, "Verifying JWS signature");
 
         match input.alg {
             EdDSA => EdDSAJwsVerifier::default().verify(input, public_key),

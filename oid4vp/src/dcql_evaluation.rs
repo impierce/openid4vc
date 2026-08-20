@@ -12,6 +12,12 @@ fn set_is_required(credential_set: &CredentialSetQuery) -> bool {
 }
 
 pub fn evaluate_dcql_query(dcql_query: &DcqlQuery, decoded_vp_token: &DecodedVpToken) -> bool {
+    tracing::debug!(
+        credentials_count = dcql_query.credentials.len(),
+        has_sets = dcql_query.credential_sets.is_some(),
+        "Evaluating DCQL query against decoded VP token"
+    );
+
     // If there are credential sets, check if all required sets can be satisfied.
     if let Some(credential_sets) = &dcql_query.credential_sets {
         // All of the Credential Set Queries in the credential_sets array where
@@ -26,17 +32,21 @@ pub fn evaluate_dcql_query(dcql_query: &DcqlQuery, decoded_vp_token: &DecodedVpT
             evaluate_credential_set(credential_set, &dcql_query.credentials, decoded_vp_token)
         });
 
+        tracing::debug!(required_sets_satisfied, "DCQL credential sets evaluation result");
         return required_sets_satisfied;
     }
 
     // If credential_sets is not provided, the Verifier requests presentations for all Credentials in credentials to be returned.
-    dcql_query.credentials.iter().all(|credential_query| {
+    let result = dcql_query.credentials.iter().all(|credential_query| {
         if let Some(decoded_presentations) = decoded_vp_token.decoded_presentations().get(&credential_query.id) {
             evaluate_credential_query(credential_query, decoded_presentations)
         } else {
+            tracing::debug!(query_id = %credential_query.id, "Missing presentation for required credential query");
             false
         }
-    })
+    });
+    tracing::debug!(result, "DCQL query evaluation result");
+    result
 }
 
 // To satisfy a Credential Set Query, the Wallet MUST return presentations of a set of Credentials that

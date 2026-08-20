@@ -78,20 +78,35 @@ impl Wallet {
         })
     }
 
+    #[tracing::instrument(level = "debug", err, skip(self))]
     pub async fn get_credential_offer(&self, credential_offer_uri: Url) -> Result<CredentialOfferParameters> {
-        self.client
-            .get(credential_offer_uri)
-            .send()
-            .await?
-            .json::<CredentialOfferParameters>()
+        tracing::info!(%credential_offer_uri, "Fetching credential offer");
+        let response = self.client.get(credential_offer_uri).send().await?;
+        let status = response.status();
+        let text = response
+            .text()
             .await
-            .map_err(|_| anyhow::anyhow!("Failed to get credential offer"))
+            .map_err(|e| anyhow::anyhow!("Failed to read response body from credential offer endpoint: {e}"))?;
+
+        if !status.is_success() {
+            return Err(anyhow::anyhow!(
+                "Failed to get credential offer (HTTP {status}): {text}"
+            ));
+        }
+
+        let offer: CredentialOfferParameters = serde_json::from_str(&text).map_err(|e| {
+            anyhow::anyhow!("Failed to parse credential offer (HTTP {status}): {e}. Raw response: {text}")
+        })?;
+        tracing::debug!(?offer, "Received credential offer parameters");
+        Ok(offer)
     }
 
+    #[tracing::instrument(level = "debug", err, skip(self))]
     pub async fn get_authorization_server_metadata(
         &self,
         credential_issuer_url: Url,
     ) -> Result<AuthorizationServerMetadata> {
+        tracing::info!(%credential_issuer_url, "Fetching authorization server metadata");
         let mut oauth_authorization_server_endpoint = credential_issuer_url.clone();
 
         // According to RFC 8414, the path to the OAuth Authorization Server Metadata is formed by
@@ -108,15 +123,23 @@ impl Wallet {
             .map_err(|_| anyhow::anyhow!("unable to parse credential issuer url"))?
             .pop_if_empty();
 
+        tracing::debug!(%oauth_authorization_server_endpoint, "Trying RFC 8414 OAuth authorization server metadata endpoint");
         let response = self.client.get(oauth_authorization_server_endpoint).send().await;
 
         if let Ok(response) = response {
+            let status = response.status();
             // If the request to the `oauth-authorization-server` endpoint is successful, return the metadata.
-            if response.status().is_success() {
-                return response
-                    .json::<AuthorizationServerMetadata>()
-                    .await
-                    .map_err(|e| anyhow!("Failed to parse authorization server metadata: {}", e));
+            if status.is_success() {
+                let text = response.text().await.map_err(|e| {
+                    anyhow::anyhow!("Failed to read response body from OAuth authorization server endpoint: {e}")
+                })?;
+                let metadata = serde_json::from_str::<AuthorizationServerMetadata>(&text).map_err(|e| {
+                    anyhow::anyhow!(
+                        "Failed to parse authorization server metadata (HTTP {status}): {e}. Raw response: {text}"
+                    )
+                })?;
+                tracing::debug!(?metadata, "Successfully retrieved OAuth authorization server metadata");
+                return Ok(metadata);
             }
         }
 
@@ -131,32 +154,59 @@ impl Wallet {
             .push(".well-known")
             .push("openid-configuration");
 
-        self.client
-            .get(openid_configuration_endpoint)
-            .send()
-            .await?
-            .json::<AuthorizationServerMetadata>()
+        tracing::debug!(%openid_configuration_endpoint, "Trying fallback OpenID configuration endpoint");
+        let response = self.client.get(openid_configuration_endpoint).send().await?;
+        let status = response.status();
+        let text = response
+            .text()
             .await
-            .map_err(|e| anyhow!("Failed to get metadata from both primary and fallback endpoints: {}", e))
+            .map_err(|e| anyhow::anyhow!("Failed to read response body from OpenID configuration endpoint: {e}"))?;
+
+        if !status.is_success() {
+            return Err(anyhow::anyhow!(
+                "Failed to get metadata from both primary and fallback endpoints (HTTP {status}): {text}"
+            ));
+        }
+
+        let metadata = serde_json::from_str::<AuthorizationServerMetadata>(&text).map_err(|e| {
+            anyhow::anyhow!("Failed to parse OpenID configuration metadata (HTTP {status}): {e}. Raw response: {text}")
+        })?;
+        tracing::debug!(?metadata, "Successfully retrieved OpenID configuration metadata");
+        Ok(metadata)
     }
 
+    #[tracing::instrument(level = "debug", err, skip(self))]
     pub async fn get_credential_issuer_metadata(&self, credential_issuer_url: Url) -> Result<CredentialIssuerMetadata> {
+        tracing::info!(%credential_issuer_url, "Fetching credential issuer metadata");
         let mut openid_credential_issuer_endpoint = credential_issuer_url.clone();
         let path = credential_issuer_url.path().trim_end_matches('/');
         openid_credential_issuer_endpoint.set_path(&format!("/.well-known/openid-credential-issuer{path}"));
 
-        self.client
-            .get(openid_credential_issuer_endpoint)
-            .send()
-            .await?
-            .json()
+        tracing::debug!(%openid_credential_issuer_endpoint, "Requesting OpenID credential issuer metadata");
+        let response = self.client.get(openid_credential_issuer_endpoint).send().await?;
+        let status = response.status();
+        let text = response
+            .text()
             .await
-            .map_err(|_| anyhow::anyhow!("Failed to get credential issuer metadata"))
+            .map_err(|e| anyhow::anyhow!("Failed to read response body from credential issuer endpoint: {e}"))?;
+
+        if !status.is_success() {
+            return Err(anyhow::anyhow!(
+                "Failed to get credential issuer metadata (HTTP {status}): {text}"
+            ));
+        }
+
+        let metadata: CredentialIssuerMetadata = serde_json::from_str(&text).map_err(|e| {
+            anyhow::anyhow!("Failed to parse credential issuer metadata (HTTP {status}): {e}. Raw response: {text}")
+        })?;
+        tracing::debug!(?metadata, "Successfully retrieved credential issuer metadata");
+        Ok(metadata)
     }
 
     // TODO: Move everything related to pushed authorization response to a separate module?
     // TODO: refactor to reduce the number of arguments
     #[allow(clippy::too_many_arguments)]
+    #[tracing::instrument(level = "debug", err, skip(self, authorization_details))]
     pub async fn get_pushed_authorization_response(
         &self,
         pushed_authorization_request_endpoint: Url,
@@ -168,6 +218,7 @@ impl Wallet {
         code_challenge: Option<String>,
         code_challenge_method: Option<CodeChallengeMethod>,
     ) -> Result<PushedAuthorizationResponse> {
+        tracing::info!(%pushed_authorization_request_endpoint, %client_id, "Sending pushed authorization request (PAR)");
         let authorization_request = AuthorizationRequest {
             response_type: "code".to_string(),
             client_id: client_id.to_string(),
@@ -183,7 +234,8 @@ impl Wallet {
 
         let url_encoded = to_form_urlencoded_string(&authorization_request).unwrap();
 
-        self.client
+        let response = self
+            .client
             .post(pushed_authorization_request_endpoint)
             .header(
                 CONTENT_TYPE,
@@ -191,12 +243,29 @@ impl Wallet {
             )
             .body(url_encoded)
             .send()
-            .await?
-            .json::<PushedAuthorizationResponse>()
+            .await?;
+        let status = response.status();
+        let text = response
+            .text()
             .await
-            .map_err(|err| anyhow::anyhow!("Failed to send pushed authorization request: {err}"))
+            .map_err(|e| anyhow::anyhow!("Failed to read response body from PAR endpoint: {e}"))?;
+
+        if !status.is_success() {
+            return Err(anyhow::anyhow!(
+                "Pushed authorization request failed (HTTP {status}): {text}"
+            ));
+        }
+
+        let par_response: PushedAuthorizationResponse = serde_json::from_str(&text).map_err(|err| {
+            anyhow::anyhow!(
+                "Failed to parse pushed authorization response (HTTP {status}): {err}. Raw response: {text}"
+            )
+        })?;
+        tracing::debug!(?par_response, "Received pushed authorization response");
+        Ok(par_response)
     }
 
+    #[tracing::instrument(level = "debug", err, skip(self, _authorization_details))]
     pub async fn get_authorization_code(
         &self,
         authorization_endpoint: Url,
@@ -218,6 +287,7 @@ impl Wallet {
             .await?;
 
         if let Some(pushed_response) = pushed_authorization_response {
+            tracing::info!(%authorization_endpoint, %client_id, "Requesting authorization code using PAR request_uri");
             let authorization_request = AuthorizationRequestByReference {
                 client_id,
                 request_uri: pushed_response.request_uri,
@@ -239,15 +309,26 @@ impl Wallet {
         ))
     }
 
+    #[tracing::instrument(level = "debug", err, skip(self, token_request))]
     pub async fn get_access_token(&self, token_endpoint: Url, token_request: TokenRequest) -> Result<TokenResponse> {
-        self.client
-            .post(token_endpoint)
-            .form(&token_request)
-            .send()
-            .await?
-            .json()
+        tracing::info!(%token_endpoint, "Sending token request to token endpoint");
+        tracing::debug!(?token_request, "Token request parameters");
+        let response = self.client.post(token_endpoint).form(&token_request).send().await?;
+        let status = response.status();
+        let text = response
+            .text()
             .await
-            .map_err(|e| e.into())
+            .map_err(|e| anyhow::anyhow!("Failed to read response body from token endpoint: {e}"))?;
+
+        if !status.is_success() {
+            return Err(anyhow::anyhow!("Token request failed (HTTP {status}): {text}"));
+        }
+
+        let token_response: TokenResponse = serde_json::from_str(&text).map_err(|e| {
+            anyhow::anyhow!("Failed to parse token response (HTTP {status}): {e}. Raw response: {text}")
+        })?;
+        tracing::debug!("Successfully received token response");
+        Ok(token_response)
     }
 
     // Select supported signing algorithm that matches the Credential Issuer's supported Proof Types.
@@ -255,6 +336,7 @@ impl Wallet {
     // parameter is present in the Credential Configuration in the Credential Issuer's metadata. However, if the
     // `proof_types_supported` is not present, the Wallet will still provide the `proofs` signed with its own preferred
     // signing algorithm. For more information see: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request
+    #[tracing::instrument(level = "debug", err, skip(self, credential_configuration))]
     fn select_signing_algorithm(
         &self,
         credential_configuration: &CredentialConfigurationsSupportedObject,
@@ -263,11 +345,16 @@ impl Wallet {
 
         // If the Credential Issuer does not define any supported Proof Types, then the Wallet will use its own default signing algorithm.
         if proof_types_supported.is_empty() {
-            return self
+            let default_alg = self
                 .proof_signing_alg_values_supported
                 .first()
                 .ok_or(anyhow::anyhow!("Wallet does not support any signing algorithms"))
-                .cloned();
+                .cloned()?;
+            tracing::debug!(
+                ?default_alg,
+                "Issuer specified no proof types, using wallet default signing algorithm"
+            );
+            return Ok(default_alg);
         }
 
         // Extract the actual signing algorithms if the Credential Issuer supports JWT proof types.
@@ -275,12 +362,17 @@ impl Wallet {
         let credential_issuer_proof_signing_alg_values_supported = proof_types_supported
             .get(&ProofType::Jwt)
             .map(|proof_type| proof_type.proof_signing_alg_values_supported.clone())
-            .ok_or(anyhow::anyhow!(
-                "The Credential Issuer does not support JWT proof types"
-            ))?;
+            .ok_or_else(|| anyhow::anyhow!("The Credential Issuer does not support JWT proof types"))?;
+
+        tracing::debug!(
+            wallet_algorithms = ?self.proof_signing_alg_values_supported,
+            issuer_supported = ?credential_issuer_proof_signing_alg_values_supported,
+            "Negotiating proof signing algorithm"
+        );
 
         // Return the first signing algorithm that matches any of the Credential Issuer's supported signing algorithms.
-        self.proof_signing_alg_values_supported
+        let selected = self
+            .proof_signing_alg_values_supported
             .iter()
             .find(|supported_algorithm| {
                 // Since `Algorithm` does not implement `Display`, we need to use `Debug` in order to convert it to a `String`.
@@ -288,10 +380,18 @@ impl Wallet {
                 credential_issuer_proof_signing_alg_values_supported
                     .contains(&AlgIdentifier::String(supported_algorithm_str))
             })
-            .cloned()
-            .ok_or(anyhow::anyhow!("No matching supported signing algorithms found."))
+            .cloned();
+
+        match selected {
+            Some(algorithm) => {
+                tracing::debug!(?algorithm, "Selected proof signing algorithm");
+                Ok(algorithm)
+            }
+            None => Err(anyhow::anyhow!("No matching supported signing algorithms found.")),
+        }
     }
 
+    #[tracing::instrument(level = "debug", err, skip(self, credential_configuration))]
     fn select_subject_syntax_type(
         &self,
         credential_configuration: &CredentialConfigurationsSupportedObject,
@@ -311,29 +411,54 @@ impl Wallet {
                 .filter_map(|binding_method| SubjectSyntaxType::from_str(binding_method).ok())
                 .collect();
 
-        self.supported_subject_syntax_types
+        tracing::debug!(
+            wallet_syntax_types = ?self.supported_subject_syntax_types,
+            issuer_binding_methods = ?credential_issuer_cryptographic_binding_methods_supported,
+            "Negotiating subject syntax type"
+        );
+
+        let selected = self
+            .supported_subject_syntax_types
             .iter()
             .find(|supported_syntax_type| {
                 credential_issuer_cryptographic_binding_methods_supported.contains(supported_syntax_type)
             })
             // If no match is found, use the first supported syntax type as a fallback.
             .or_else(|| self.supported_subject_syntax_types.first())
-            .cloned()
-            .ok_or(anyhow::anyhow!("No supported subject syntax types found."))
+            .cloned();
+
+        match selected {
+            Some(syntax_type) => {
+                tracing::debug!(%syntax_type, "Selected subject syntax type");
+                Ok(syntax_type)
+            }
+            None => Err(anyhow::anyhow!("No supported subject syntax types found.")),
+        }
     }
 
+    #[tracing::instrument(level = "debug", err, skip(self))]
     pub async fn get_nonce(&self, nonce_endpoint: Url) -> Result<String> {
-        let NonceResponse { c_nonce } = self
-            .client
-            .post(nonce_endpoint)
-            .send()
-            .await?
-            .json::<NonceResponse>()
-            .await?;
+        tracing::debug!(%nonce_endpoint, "Requesting c_nonce from issuer");
+        let response = self.client.post(nonce_endpoint).send().await?;
+        let status = response.status();
+        let text = response
+            .text()
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to read response body from nonce endpoint: {e}"))?;
 
+        if !status.is_success() {
+            return Err(anyhow::anyhow!("Nonce request failed (HTTP {status}): {text}"));
+        }
+
+        let NonceResponse { c_nonce } = serde_json::from_str(&text).map_err(|e| {
+            anyhow::anyhow!("Failed to parse nonce response (HTTP {status}): {e}. Raw response: {text}")
+        })?;
+
+        tracing::debug!("Successfully received c_nonce");
         Ok(c_nonce)
     }
 
+    #[tracing::instrument(level = "debug", err, skip(self, token_response, credential_configuration))]
     pub async fn get_credential(
         &self,
         credential_issuer_metadata: CredentialIssuerMetadata,
@@ -343,8 +468,15 @@ impl Wallet {
         credential_configuration: &CredentialConfigurationsSupportedObject,
         with_anonymous_access: bool,
     ) -> Result<CredentialResponse> {
+        tracing::info!(
+            endpoint = %credential_issuer_metadata.credential_endpoint,
+            %credential_configuration_id,
+            "Requesting credential issuance from issuer"
+        );
         let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
         let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
+        tracing::debug!(?signing_algorithm, %subject_syntax_type, "Selected proof signing algorithm and syntax type");
+
         let mut proof_builder = Proof::builder()
             .proof_type(ProofType::Jwt)
             .algorithm(signing_algorithm)
@@ -379,7 +511,9 @@ impl Wallet {
             _ => return Err(anyhow::anyhow!("No JWT found in proof object")),
         };
 
-        let proofs = Some(Proofs { jwt: vec![jwt_string] });
+        let proofs = Some(Proofs {
+            jwt: vec![jwt_string.clone()],
+        });
 
         let credential_request = CredentialRequest {
             credential_identifier_or_credential_configuration_id:
@@ -387,15 +521,36 @@ impl Wallet {
             proofs,
         };
 
-        self.client
+        let request_body_json = serde_json::to_string(&credential_request).unwrap_or_default();
+        tracing::info!(%request_body_json, "Sending credential request body to issuer");
+
+        if let Ok((kid, alg)) = oid4vc_core::jwt::extract_header(&jwt_string) {
+            tracing::info!(%kid, ?alg, "Proof JWT header parameters");
+        }
+
+        let response = self
+            .client
             .post(credential_issuer_metadata.credential_endpoint)
             .bearer_auth(token_response.access_token.clone())
             .json(&credential_request)
             .send()
-            .await?
-            .json()
+            .await?;
+        let status = response.status();
+        let text = response
+            .text()
             .await
-            .map_err(|e| e.into())
+            .map_err(|e| anyhow::anyhow!("Failed to read response body from credential endpoint: {e}"))?;
+
+        if !status.is_success() {
+            return Err(anyhow::anyhow!("Credential issuance failed (HTTP {status}): {text}"));
+        }
+
+        tracing::debug!(%status, %text, "Received raw credential response from issuer");
+        let credential_response: CredentialResponse = serde_json::from_str(&text).map_err(|e| {
+            anyhow::anyhow!("Failed to parse credential response (HTTP {status}): {e}. Raw response: {text}")
+        })?;
+        tracing::info!("Successfully received credential response from issuer");
+        Ok(credential_response)
     }
 
     /// Send an initial Interactive Authorization Request to the IAE endpoint (Section 6.1.1).
@@ -403,6 +558,7 @@ impl Wallet {
     /// This is similar to a Pushed Authorization Request but adds `interaction_types_supported`
     /// and returns an `InteractiveAuthorizationResponse` indicating the next step.
     #[allow(clippy::too_many_arguments)]
+    #[tracing::instrument(level = "debug", err, skip(self, authorization_details))]
     pub async fn send_interactive_authorization_request(
         &self,
         interactive_authorization_endpoint: Url,
@@ -415,6 +571,7 @@ impl Wallet {
         code_challenge: Option<String>,
         code_challenge_method: Option<CodeChallengeMethod>,
     ) -> Result<InteractiveAuthorizationResponse> {
+        tracing::info!(%interactive_authorization_endpoint, %client_id, "Sending interactive authorization request");
         let request = InteractiveAuthorizationRequest {
             authorization_request: AuthorizationRequest {
                 response_type: "code".to_string(),
@@ -435,7 +592,8 @@ impl Wallet {
 
         let url_encoded = to_form_urlencoded_string(&request)?;
 
-        self.client
+        let response = self
+            .client
             .post(interactive_authorization_endpoint)
             .header(
                 CONTENT_TYPE,
@@ -443,24 +601,42 @@ impl Wallet {
             )
             .body(url_encoded)
             .send()
-            .await?
-            .json::<InteractiveAuthorizationResponse>()
-            .await
-            .map_err(|err| anyhow::anyhow!("Failed to send interactive authorization request: {err}"))
+            .await?;
+        let status = response.status();
+        let text = response.text().await.map_err(|e| {
+            anyhow::anyhow!("Failed to read response body from interactive authorization endpoint: {e}")
+        })?;
+
+        if !status.is_success() {
+            return Err(anyhow::anyhow!(
+                "Interactive authorization request failed (HTTP {status}): {text}"
+            ));
+        }
+
+        let ia_response: InteractiveAuthorizationResponse = serde_json::from_str(&text).map_err(|err| {
+            anyhow::anyhow!(
+                "Failed to parse interactive authorization response (HTTP {status}): {err}. Raw response: {text}"
+            )
+        })?;
+        tracing::debug!(?ia_response, "Received interactive authorization response");
+        Ok(ia_response)
     }
 
     /// Send a follow-up Interactive Authorization Request (Section 6.1.2).
     ///
     /// This is used after receiving a `require_interaction` response to submit the
     /// result of the interaction (e.g., an OpenID4VP presentation response).
+    #[tracing::instrument(level = "debug", err, skip(self, follow_up))]
     pub async fn send_interactive_authorization_follow_up(
         &self,
         interactive_authorization_endpoint: Url,
         follow_up: InteractiveAuthorizationFollowUpRequest,
     ) -> Result<InteractiveAuthorizationResponse> {
+        tracing::info!(%interactive_authorization_endpoint, "Sending interactive authorization follow-up");
         let url_encoded = to_form_urlencoded_string(&follow_up)?;
 
-        self.client
+        let response = self
+            .client
             .post(interactive_authorization_endpoint)
             .header(
                 CONTENT_TYPE,
@@ -468,12 +644,26 @@ impl Wallet {
             )
             .body(url_encoded)
             .send()
-            .await?
-            .json::<InteractiveAuthorizationResponse>()
-            .await
-            .map_err(|err| anyhow::anyhow!("Failed to send interactive authorization follow-up: {err}"))
+            .await?;
+        let status = response.status();
+        let text = response.text().await.map_err(|e| {
+            anyhow::anyhow!("Failed to read response body from interactive authorization endpoint: {e}")
+        })?;
+
+        if !status.is_success() {
+            return Err(anyhow::anyhow!(
+                "Interactive authorization follow-up failed (HTTP {status}): {text}"
+            ));
+        }
+
+        let ia_response: InteractiveAuthorizationResponse = serde_json::from_str(&text).map_err(|err| {
+            anyhow::anyhow!("Failed to parse interactive authorization follow-up response (HTTP {status}): {err}. Raw response: {text}")
+        })?;
+        tracing::debug!(?ia_response, "Received interactive authorization follow-up response");
+        Ok(ia_response)
     }
 
+    #[tracing::instrument(level = "debug", err, skip(self, access_token))]
     pub async fn send_notification_request(
         &self,
         notification_endpoint: Url,
@@ -482,6 +672,7 @@ impl Wallet {
         event: NotificationEvent,
         event_description: Option<String>,
     ) -> Result<()> {
+        tracing::info!(%notification_endpoint, %notification_id, ?event, "Sending notification request to issuer");
         let notification_request = NotificationRequest {
             notification_id,
             event,
@@ -494,11 +685,14 @@ impl Wallet {
             .json(&notification_request)
             .send()
             .await?;
+        let status = response.status();
 
-        if response.status() == 204 {
+        if status == 204 || status == 200 {
+            tracing::debug!(%status, "Notification request acknowledged");
             Ok(())
         } else {
-            Err(anyhow!("Failed to send notification: {}", response.status()))
+            let text = response.text().await.unwrap_or_default();
+            Err(anyhow!("Failed to send notification (HTTP {status}): {text}"))
         }
     }
 }

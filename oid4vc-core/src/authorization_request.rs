@@ -143,6 +143,7 @@ impl<B: Body + DeserializeOwned> std::str::FromStr for AuthorizationRequest<B> {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let url = url::Url::parse(s)?;
+        tracing::debug!(scheme = %url.scheme(), "Parsing AuthorizationRequest from URL string");
         let query = url.query().ok_or_else(|| anyhow::anyhow!("No query found."))?;
         let map = serde_urlencoded::from_str::<JsonObject>(query)?
             .into_iter()

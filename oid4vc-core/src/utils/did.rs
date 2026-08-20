@@ -9,6 +9,7 @@ use jsonwebtoken::decode_header;
 ///
 /// Returns an error if the JWT header cannot be decoded, if `kid` is missing,
 /// or if a relative `kid` cannot be expanded because `iss` is missing or not a string.
+#[tracing::instrument(level = "debug", err, skip(jwt))]
 pub fn extract_normalized_did_kid_from_jwt(jwt: &str) -> Result<String, anyhow::Error> {
     let jwt = sd_jwt_to_jwt(jwt);
 
@@ -25,7 +26,16 @@ pub fn extract_normalized_did_kid_from_jwt(jwt: &str) -> Result<String, anyhow::
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("'iss' claim is not a string"))?;
 
-        key_id = format!("{iss}{key_id}");
+        let full_key_id = format!("{iss}{key_id}");
+        tracing::debug!(
+            relative_kid = %key_id,
+            iss = %iss,
+            normalized_kid = %full_key_id,
+            "Normalized relative KID using 'iss' claim"
+        );
+        key_id = full_key_id;
+    } else {
+        tracing::debug!(kid = %key_id, "Extracted absolute DID KID from JWT header");
     }
 
     Ok(key_id)

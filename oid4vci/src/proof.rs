@@ -63,6 +63,14 @@ impl ProofBuilder {
             .subject_syntax_type
             .ok_or(anyhow::anyhow!("subject_syntax_type is required"))?;
 
+        tracing::debug!(
+            proof_type = ?self.proof_type,
+            algorithm = ?self.algorithm,
+            subject_syntax_type = %subject_syntax_type,
+            has_nonce = self.nonce.is_some(),
+            "Building key possession proof for credential request"
+        );
+
         match self.proof_type {
             Some(ProofType::Jwt) => Ok(Proof::Jwt {
                 jwt: jwt::encode(
