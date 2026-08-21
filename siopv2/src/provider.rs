@@ -55,7 +55,9 @@ impl Provider {
     /// Takes a String and tries to parse it into an [`AuthorizationRequest<Object>`]. If the parsing fails, it tries to
     /// parse the [`AuthorizationRequest<Object>`] from the `request` parameter of the [`AuthorizationRequest<ByValue>`]
     /// or from the `request_uri` parameter of the [`AuthorizationRequest<ByReference>`].
+    #[tracing::instrument(level = "debug", err, skip(self, authorization_request))]
     pub async fn validate_request(&self, authorization_request: String) -> Result<AuthorizationRequest<Object>> {
+        tracing::debug!("Validating SIOPv2 authorization request");
         let validator = Validator::Subject(self.subject.clone());
 
         let authorization_request = if let Ok(authorization_request) =
@@ -82,7 +84,7 @@ impl Provider {
 
                     (client_id, authorization_request)
                 } else {
-                    return Err(anyhow::anyhow!("Invalid authorization request."));
+                    return Err(anyhow::anyhow!("Invalid SIOPv2 authorization request format."));
                 };
             anyhow::ensure!(
                 authorization_request.body.client_id == *client_id,
@@ -91,9 +93,11 @@ impl Provider {
             authorization_request
         };
 
+        tracing::info!(client_id = %authorization_request.body.client_id, "Successfully validated SIOPv2 authorization request");
         Ok(authorization_request)
     }
 
+    #[tracing::instrument(level = "debug", err, skip(self, authorization_request))]
     pub async fn get_matching_signing_algorithm<E: Extension>(
         &self,
         authorization_request: &AuthorizationRequest<Object<E>>,
@@ -105,9 +109,10 @@ impl Provider {
             .iter()
             .find(|supported_algorithm| relying_party_supported_algorithms.contains(supported_algorithm))
             .cloned()
-            .ok_or(anyhow::anyhow!("No supported signing algorithms found."))
+            .ok_or_else(|| anyhow::anyhow!("No matching signing algorithm found between Provider and Relying Party."))
     }
 
+    #[tracing::instrument(level = "debug", err, skip(self, authorization_request))]
     pub async fn get_matching_subject_syntax_type<E: Extension>(
         &self,
         authorization_request: &AuthorizationRequest<Object<E>>,
@@ -121,11 +126,12 @@ impl Provider {
             // If no match is found, use the first supported syntax type as a fallback.
             .or_else(|| self.supported_subject_syntax_types.first())
             .cloned()
-            .ok_or(anyhow::anyhow!("No supported subject syntax types found."))
+            .ok_or_else(|| anyhow::anyhow!("No matching subject syntax type found between Provider and Relying Party."))
     }
 
     /// Generates an [`AuthorizationResponse`] in response to an [`AuthorizationRequest`] and the user's claims. The [`AuthorizationResponse`]
     /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
+    #[tracing::instrument(level = "debug", err, skip(self, authorization_request, input))]
     pub async fn generate_response<E: Extension>(
         &self,
         authorization_request: &AuthorizationRequest<Object<E>>,
@@ -134,8 +140,11 @@ impl Provider {
         let redirect_uri = authorization_request.body.uri.uri().to_string();
         let state = authorization_request.body.state.clone();
 
+        tracing::info!(%redirect_uri, "Generating SIOPv2 authorization response");
+
         let signing_algorithm = self.get_matching_signing_algorithm(authorization_request).await?;
         let subject_syntax_type = self.get_matching_subject_syntax_type(authorization_request).await?;
+        tracing::debug!(?signing_algorithm, %subject_syntax_type, "Selected algorithm and subject syntax type for SIOPv2 response");
 
         let jwts = E::generate_token(
             self.subject.clone(),
@@ -150,21 +159,26 @@ impl Provider {
         E::build_authorization_response(jwts, input, redirect_uri, state)
     }
 
+    #[tracing::instrument(level = "debug", err, skip(self, authorization_response))]
     pub async fn send_response<E: Extension>(
         &self,
         authorization_response: &AuthorizationResponse<E>,
     ) -> Result<StatusCode> {
+        tracing::info!(redirect_uri = %authorization_response.redirect_uri, "Sending SIOPv2 authorization response");
         let encoded = to_form_urlencoded_string(&authorization_response)
             .map_err(|err| anyhow::anyhow!("Failed to encode authorization response: {err}"))?;
 
-        Ok(self
+        let response = self
             .client
             .post(authorization_response.redirect_uri.clone())
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(encoded)
             .send()
-            .await?
-            .status())
+            .await?;
+
+        let status = response.status();
+        tracing::debug!(?status, "Received response from relying party callback");
+        Ok(status)
     }
 }
 

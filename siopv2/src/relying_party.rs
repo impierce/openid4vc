@@ -31,16 +31,21 @@ impl RelyingParty {
         })
     }
 
+    #[tracing::instrument(level = "debug", err, skip(self, authorization_request, signing_algorithm))]
     pub async fn encode<E: Extension>(
         &self,
         authorization_request: &AuthorizationRequest<Object<E>>,
         signing_algorithm: impl TryInto<Algorithm>,
     ) -> Result<String> {
-        let mut header = Header::new(
-            signing_algorithm
-                .try_into()
-                .map_err(|_| anyhow::anyhow!("Invalid signing algorithm."))?,
+        let alg: Algorithm = signing_algorithm
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("Invalid signing algorithm."))?;
+        tracing::debug!(
+            algorithm = ?alg,
+            default_syntax = %self.default_subject_syntax_type,
+            "Encoding signed authorization request JWT for Relying Party"
         );
+        let mut header = Header::new(alg);
         header.typ = Some("oauth-authz-req+jwt".to_string());
         jwt::encode(
             self.subject.clone(),
@@ -56,10 +61,12 @@ impl RelyingParty {
     )]
     /// Validates a [`AuthorizationResponse`] by decoding the header of the id_token, fetching the public key corresponding to
     /// the key identifier and finally decoding the id_token using the public key and by validating the signature.
+    #[tracing::instrument(level = "debug", err, skip(self, authorization_response))]
     pub async fn validate_response<E: Extension>(
         &self,
         authorization_response: &AuthorizationResponse<E>,
     ) -> Result<<E::ResponseHandle as ResponseHandle>::ResponseItem> {
+        tracing::debug!("Validating authorization response for Relying Party");
         E::decode_authorization_response(Validator::Subject(self.subject.clone()), authorization_response).await
     }
 }

@@ -41,6 +41,11 @@ impl VpTokenBuilder {
     }
 
     pub fn build(self) -> Result<VpToken, VpTokenBuilderError> {
+        tracing::debug!(
+            presentation_count = self.presentations.len(),
+            has_dcql = self.dcql_query.is_some(),
+            "Building VP Token"
+        );
         if let Some(ref dcql_query) = self.dcql_query {
             self.validate_against_dcql(dcql_query)?;
         }
@@ -58,10 +63,16 @@ impl VpTokenBuilder {
 
 /// Validates that the provided map of presentations satisfies the structural requirements
 /// of the DCQL query (required sets, multiple constraints, unrequested credentials).
+#[tracing::instrument(level = "debug", err, skip(presentations, dcql_query))]
 pub fn validate_presentation_submission(
     presentations: &HashMap<CredentialQueryId, Presentations>,
     dcql_query: &DcqlQuery,
 ) -> Result<(), VpTokenBuilderError> {
+    tracing::debug!(
+        presentation_count = presentations.len(),
+        query_count = dcql_query.credentials.len(),
+        "Validating presentation submission against DCQL query"
+    );
     let credential_queries: HashMap<CredentialQueryId, &CredentialQuery> =
         dcql_query.credentials.iter().map(|cq| (cq.id.clone(), cq)).collect();
 

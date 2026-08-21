@@ -31,15 +31,18 @@ where
     }
 }
 
+#[tracing::instrument(level = "trace", err, skip(jwt))]
 pub fn extract_header(jwt: &str) -> Result<(String, Algorithm)> {
     let header = jsonwebtoken::decode_header(jwt)?;
     if let Some(kid) = header.kid {
+        tracing::trace!(algorithm = ?header.alg, %kid, "Extracted JWT header");
         Ok((kid, header.alg))
     } else {
         Err(anyhow!("No key identifier found in the header."))
     }
 }
 
+#[tracing::instrument(level = "debug", err, skip(jwt, public_key))]
 pub fn decode<T>(jwt: &str, public_key: Vec<u8>, algorithm: Algorithm) -> Result<T>
 where
     T: DeserializeOwned,
@@ -47,7 +50,7 @@ where
     let decoding_key = match algorithm {
         Algorithm::EdDSA => DecodingKey::from_ed_der(public_key.as_slice()),
         Algorithm::ES256 => DecodingKey::from_ec_der(public_key.as_slice()),
-        _ => return Err(anyhow!("Unsupported algorithm.")),
+        _ => return Err(anyhow!("Unsupported algorithm {algorithm:?}")),
     };
 
     let mut validation = Validation::new(algorithm);
@@ -57,6 +60,7 @@ where
     Ok(jsonwebtoken::decode::<T>(jwt, &decoding_key, &validation)?.claims)
 }
 
+#[tracing::instrument(level = "debug", err, skip(signer, claims))]
 pub async fn encode<C, S>(signer: Arc<S>, header: Header, claims: C, subject_syntax_type: &str) -> Result<String>
 where
     C: Serialize,
@@ -66,7 +70,9 @@ where
     let kid = signer
         .key_id(subject_syntax_type, algorithm)
         .await
-        .ok_or(anyhow!("No key identifier found."))?;
+        .ok_or_else(|| anyhow!("No key identifier found for signer ({algorithm:?}, {subject_syntax_type})"))?;
+
+    tracing::debug!(?algorithm, %kid, %subject_syntax_type, "Encoding and signing JWT");
 
     let jwt = JsonWebToken::new(header, claims).kid(kid);
 

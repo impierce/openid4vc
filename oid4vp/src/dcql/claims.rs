@@ -23,6 +23,11 @@ pub struct ClaimsContext<'a> {
 }
 
 pub fn validate_claims(claims: &[ClaimQuery], ctx: &ClaimsContext) -> Result<(), DcqlClaimsError> {
+    tracing::debug!(
+        claim_count = claims.len(),
+        has_claim_sets = ctx.claim_sets.is_some(),
+        "Validating DCQL claims"
+    );
     if let Some(claim_sets) = ctx.claim_sets {
         validate_claims_with_sets(claims, claim_sets)?;
     } else {
@@ -32,6 +37,7 @@ pub fn validate_claims(claims: &[ClaimQuery], ctx: &ClaimsContext) -> Result<(),
     Ok(())
 }
 
+#[tracing::instrument(level = "debug", err, skip(claims, claim_sets))]
 pub fn validate_claims_with_sets(claims: &[ClaimQuery], claim_sets: &[Vec<String>]) -> Result<(), DcqlClaimsError> {
     if claims.is_empty() {
         return Err(DcqlClaimsError::EmptyClaims);
@@ -55,6 +61,7 @@ pub fn validate_claims_with_sets(claims: &[ClaimQuery], claim_sets: &[Vec<String
     Ok(())
 }
 
+#[tracing::instrument(level = "debug", err, skip(claims))]
 pub fn validate_claims_without_sets(claims: &[ClaimQuery]) -> Result<(), DcqlClaimsError> {
     // When claim_sets is not present, IDs are optional but must be unique if they exist
     validate_claim_ids(claims)?;
