@@ -2,14 +2,17 @@
 name = "oid4vc-manager"
 version = "0.1.0"
 edition = "2021"
+description = "Rust library combining the OpenID4VCI, OpenID4VP and SIOPv2 implementations into one easy-to-use interface"
+homepage.workspace = true
+keywords = ["oid4vc", "openid4vc", "openid", "did", "credentials"]
 license.workspace = true
+repository.workspace = true
 
 [dependencies]
-# Fix these dependencies once the crates arre automatically published to crates.io.
-oid4vc-core = { path = "../oid4vc-core" }
-siopv2 = { path = "../siopv2" }
-oid4vp = { path = "../oid4vp" }
-oid4vci = { path = "../oid4vci" }
+oid4vc-core = { path = "../oid4vc-core", version = "0.1.0" }
+siopv2 = { path = "../siopv2", version = "0.1.0" }
+oid4vp = { path = "../oid4vp", version = "0.1.0" }
+oid4vci = { path = "../oid4vci", version = "0.1.0" }
 
 anyhow = "1.0"
 async-trait = "0.1"
@@ -36,7 +39,7 @@ tracing.workspace = true
 url.workspace = true
 
 [dev-dependencies]
-oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
+oid4vc-core = { path = "../oid4vc-core", version = "0.1.0", features = ["test-utils"] }
 
 ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
 identity_did.workspace = true

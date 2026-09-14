@@ -1,0 +1,105 @@
+# Publishes crates to crates.io. Manual only, on purpose: you pick which crates go out
+# and whether this is a rehearsal. Run it after merging the release PR opened by the
+# "Prepare Release" workflow. See RELEASING.md.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: verify and package everything, but publish nothing"
+        type: boolean
+        default: true
+      oid4vc_core:
+        description: "Release oid4vc-core"
+        type: boolean
+        default: true
+      oid4vci:
+        description: "Release oid4vci"
+        type: boolean
+        default: true
+      oid4vp:
+        description: "Release oid4vp"
+        type: boolean
+        default: true
+      siopv2:
+        description: "Release siopv2"
+        type: boolean
+        default: true
+      oid4vc_manager:
+        description: "Release oid4vc-manager"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: ${{ inputs.dry_run && 'Dry run' || 'Publish to crates.io' }}
+    runs-on: ubuntu-latest
+    permissions:
+      # Push git tags and create GitHub releases.
+      contents: write
+      # Let release-plz see which PR a commit came from.
+      pull-requests: read
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Select crates
+        id: select
+        env:
+          # An unchecked crate is switched off for this run only.
+          SELECTED: >-
+            ${{ inputs.oid4vc_core && 'oid4vc-core ' || '' }}${{ inputs.oid4vci && 'oid4vci ' || '' }}${{ inputs.oid4vp && 'oid4vp ' || '' }}${{ inputs.siopv2 && 'siopv2 ' || '' }}${{ inputs.oid4vc_manager && 'oid4vc-manager ' || '' }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${SELECTED// /}" ]]; then
+            echo "::error::No crates selected — nothing to release."
+            exit 1
+          fi
+
+          # Written outside the checkout so the working tree stays clean; a dirty tree
+          # makes `cargo publish` refuse to package.
+          config="${RUNNER_TEMP}/release-plz.toml"
+          cp release-plz.toml "$config"
+
+          {
+            echo "### Crates selected for this run"
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          for crate in oid4vc-core oid4vci oid4vp siopv2 oid4vc-manager; do
+            if [[ " ${SELECTED} " == *" ${crate} "* ]]; then
+              echo "- \`${crate}\` — included" >> "$GITHUB_STEP_SUMMARY"
+            else
+              printf '\n[[package]]\nname = "%s"\nrelease = false\n' "$crate" >> "$config"
+              echo "- \`${crate}\` — skipped" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
+          echo "config=${config}" >> "$GITHUB_OUTPUT"
+
+      - uses: release-plz/action@v0.5.136
+        with:
+          command: release
+          config: ${{ steps.select.outputs.config }}
+          # The action only checks whether this input is non-empty, so "false" would
+          # still enable the dry run — it has to be the empty string instead.
+          dry_run: ${{ inputs.dry_run && 'true' || '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

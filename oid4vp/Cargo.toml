@@ -9,8 +9,8 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-oid4vc-core = { path = "../oid4vc-core" }
-oid4vci = { path = "../oid4vci" }
+oid4vc-core = { path = "../oid4vc-core", version = "0.1.0" }
+oid4vci = { path = "../oid4vci", version = "0.1.0" }
 
 anyhow = "1.0"
 chrono.workspace = true
@@ -38,4 +38,4 @@ tracing.workspace = true
 url.workspace = true
 
 [dev-dependencies]
-oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
+oid4vc-core = { path = "../oid4vc-core", version = "0.1.0", features = ["test-utils"] }

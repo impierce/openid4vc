@@ -1,0 +1,44 @@
+# Keeps a "release PR" up to date with the versions and changelogs the next release
+# would have, based on the Conventional Commits landed on `main`. It never publishes
+# anything — merging the PR is what marks a release as ready, and the separate
+# "Release" workflow is what actually pushes to crates.io. See RELEASING.md.
+name: Prepare Release
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+
+jobs:
+  release-pr:
+    name: Create or update the release PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # release-plz reads the whole history to work out the version bumps.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: release-plz/action@v0.5.136
+        with:
+          command: release-pr
+        env:
+          # A PAT or GitHub App token makes CI run on the release PR; the default
+          # GITHUB_TOKEN cannot trigger other workflows.
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
