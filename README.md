@@ -27,3 +27,9 @@ This workspace includes Rust implementations for the following DCP specification
 For an easy-to-use library that combines all the above specifications, please check out:
 
 - [OID4VC-Manager](oid4vc-manager)
+
+### Releasing
+
+Versions and changelogs are generated from [Conventional
+Commits](https://www.conventionalcommits.org/); publishing to crates.io is triggered
+manually from the GitHub Actions UI. See [RELEASING.md](RELEASING.md).

@@ -2,7 +2,11 @@
 name = "oid4vc-core"
 version = "0.1.0"
 edition = "2021"
+description = "Core types and traits shared by the Rust implementations of the OpenID4VC standards"
+homepage.workspace = true
+keywords = ["oid4vc", "openid4vc", "openid", "did", "credentials"]
 license.workspace = true
+repository.workspace = true
 
 [dependencies]
 anyhow = "1.0.70"

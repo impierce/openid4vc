@@ -1,0 +1,57 @@
+# Release configuration — https://release-plz.dev/docs/config
+#
+# Versions and changelogs are derived automatically from Conventional Commits, but
+# nothing ever reaches crates.io without someone pressing a button: the "Prepare
+# Release" workflow only opens a pull request, and the "Release" workflow is
+# `workflow_dispatch`-only. See RELEASING.md.
+
+[workspace]
+# Every crate carries its own version, changelog and tag, so one crate can be released
+# without dragging the others along.
+git_tag_name = "{{ package }}-v{{ version }}"
+
+# `feat:` bumps the minor version even below 1.0. This repository does not mark
+# breaking changes with `!` or `BREAKING CHANGE:`, and in practice its `feat:` commits
+# do change the public API — so 0.x.y -> 0.(x+1).0 is the honest signal, since Cargo
+# already treats 0.1 and 0.2 as incompatible. Set this to `false` once breaking changes
+# are marked explicitly, and plain features stop being breaking.
+features_always_increment_minor = true
+
+# The release workflow is triggered by hand, so the person pressing the button is the
+# gate. Don't additionally require the tip commit to come from a release PR.
+release_always = true
+
+# cargo-semver-checks compares against the last published version. The 0.1.0 crates on
+# crates.io date from 2023 and no longer build against current dependencies, so the
+# check cannot produce a baseline yet. Re-enable after the first release under this
+# pipeline has landed.
+semver_check = false
+
+# Not published to crates.io: `oid4vc` is a thin re-export facade that nothing depends
+# on. Flip it to `release = true` to bring it into the pipeline.
+[[package]]
+name = "oid4vc"
+release = false
+
+[changelog]
+header = """# Changelog
+
+All notable changes to this crate are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
+this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+"""
+
+commit_parsers = [
+  { message = "^feat", group = "Added" },
+  { message = "^fix", group = "Fixed" },
+  { message = "^perf", group = "Performance" },
+  { message = "^refactor", group = "Changed" },
+  { message = "^docs", group = "Documentation" },
+  { message = "^build", group = "Dependencies" },
+  { message = "^test", skip = true },
+  { message = "^ci", skip = true },
+  { message = "^chore", skip = true },
+  { message = "^Initial commit", skip = true },
+  { message = ".*", group = "Other" },
+]
