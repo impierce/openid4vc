@@ -11,6 +11,7 @@ use serde_with::skip_serializing_none;
 /// Grant Type `authorization_code` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-5.1.1
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct AuthorizationCode {
     pub issuer_state: Option<String>,
     pub authorization_server: Option<Url>,
@@ -19,6 +20,7 @@ pub struct AuthorizationCode {
 /// Grant Type `pre-authorized_code` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-5.2.1
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct PreAuthorizedCode {
     #[serde(rename = "pre-authorized_code")]
     pub pre_authorized_code: String,
@@ -66,15 +68,32 @@ pub enum InputMode {
 /// Credential Offer Parameters as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer-parameters
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct CredentialOfferParameters {
     pub credential_issuer: Url,
     pub credential_configuration_ids: CredentialConfigurationIds,
     pub grants: Option<Grants>,
 }
 
+/// A non-empty list of Credential Configuration identifiers offered by the Credential Issuer.
 #[nutype(validate(predicate = not_empty),
          derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Deref))]
 pub struct CredentialConfigurationIds(Vec<String>);
+
+#[cfg(feature = "utoipa")]
+impl utoipa::PartialSchema for CredentialConfigurationIds {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+        utoipa::openapi::schema::Array::builder()
+            .items(utoipa::openapi::Object::with_type(
+                utoipa::openapi::schema::Type::String,
+            ))
+            .min_items(Some(1))
+            .into()
+    }
+}
+
+#[cfg(feature = "utoipa")]
+impl utoipa::ToSchema for CredentialConfigurationIds {}
 
 /// Credential Offer as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
@@ -121,6 +140,7 @@ impl std::fmt::Display for CredentialOffer {
 /// Grants as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-2.3
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct Grants {
     pub authorization_code: Option<AuthorizationCode>,
     #[serde(rename = "urn:ietf:params:oauth:grant-type:pre-authorized_code")]

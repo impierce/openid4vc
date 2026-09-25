@@ -3,9 +3,12 @@ use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-// Authorization Server Metadata as described here: https://www.rfc-editor.org/rfc/rfc8414.html#section-2
+/// Authorization Server Metadata as defined by [RFC 8414, Section 2].
+///
+/// [RFC 8414, Section 2]: https://www.rfc-editor.org/rfc/rfc8414.html#section-2
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize, Derivative, PartialEq)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[derivative(Default)]
 pub struct AuthorizationServerMetadata {
     // TODO: Temporary solution

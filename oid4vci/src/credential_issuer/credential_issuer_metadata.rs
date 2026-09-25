@@ -6,26 +6,48 @@ use serde::{Deserialize, Deserializer, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::HashMap;
 
+/// Algorithms and content-encryption methods supported for encrypted Credential Responses.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct CredentialResponseEncryption {
     pub alg_values_supported: Vec<String>,
     pub enc_values_supported: Vec<String>,
     pub encryption_required: bool,
 }
 
+/// Maximum batch issuance capability advertised by a Credential Issuer.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct BatchCredentialIssuance {
     pub batch_size: BatchSize,
 }
 
+/// Maximum number of Credentials that can be issued in one batch, constrained to at least two.
 #[nutype(validate(predicate = |value: &u32| *value >= 2),
          derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize))]
 pub struct BatchSize(u32);
+
+#[cfg(feature = "utoipa")]
+impl utoipa::PartialSchema for BatchSize {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+        utoipa::openapi::Object::builder()
+            .schema_type(utoipa::openapi::schema::Type::Integer)
+            .format(Some(utoipa::openapi::SchemaFormat::KnownFormat(
+                utoipa::openapi::KnownFormat::Int32,
+            )))
+            .minimum(Some(2))
+            .into()
+    }
+}
+
+#[cfg(feature = "utoipa")]
+impl utoipa::ToSchema for BatchSize {}
 
 /// Credential Issuer Metadata as described here:
 /// https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Derivative)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[derivative(Default)]
 pub struct CredentialIssuerMetadata {
     // TODO: Temporary solution

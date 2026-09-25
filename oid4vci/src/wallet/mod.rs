@@ -40,14 +40,19 @@ pub struct Wallet {
 }
 
 // TODO: Move everything related to pushed authorization response to a separate module?
+/// Successful Pushed Authorization Request response as defined by RFC 9126.
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct PushedAuthorizationResponse {
     pub request_uri: String,
     pub expires_in: i64,
 }
 
 // TODO: Move everything related to pushed authorization response to a separate module?
+/// Query parameters used to submit an Authorization Request by reference.
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema, utoipa::IntoParams))]
+#[cfg_attr(feature = "utoipa", into_params(parameter_in = Query))]
 pub struct AuthorizationRequestByReference {
     pub client_id: String,
     pub request_uri: String,

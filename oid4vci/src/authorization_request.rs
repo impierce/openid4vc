@@ -8,6 +8,7 @@ use url::Url;
 /// NOTE: this Authorization Request is not to be confused with the same-named request in OpenID for Verifiable Presentations.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct AuthorizationRequest {
     pub response_type: String,
     pub client_id: String,
@@ -21,7 +22,9 @@ pub struct AuthorizationRequest {
     pub code_challenge_method: Option<CodeChallengeMethod>,
 }
 
+/// PKCE code challenge methods accepted by the Authorization Server.
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub enum CodeChallengeMethod {
     S256,
     #[default]

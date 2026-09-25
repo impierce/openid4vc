@@ -10,6 +10,10 @@ Working Group](https://openid.net/wg/digital-credentials-protocols/).
 
 An overview of all the OpenID Digital Credentials Protocols implementation in Rust can be found [here](../README.md).
 
+## Feature flags
+
+- `utoipa`: exposes OpenAPI schemas for the public OID4VCI wire types. This feature is disabled by default and also enables the matching `oid4vc-core` schemas.
+
 ## Description
 
 The OpenID for Verifiable Credential Issuance specification outlines an API that serves the purpose of issuing Verifiable Credentials. It is designed to support a range of formats, including W3C formats as well as other Credential formats like ISO.18013-5.

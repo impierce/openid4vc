@@ -6,6 +6,7 @@ use url::Url;
 /// Token Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-token-request
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(tag = "grant_type")]
 pub enum TokenRequest {
     #[serde(rename = "authorization_code")]

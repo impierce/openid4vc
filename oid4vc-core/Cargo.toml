@@ -32,9 +32,12 @@ serde_urlencoded.workspace = true
 serde_with = "2.3"
 tracing.workspace = true
 url.workspace = true
+utoipa = { workspace = true, optional = true }
 
 [dev-dependencies]
 tokio.workspace = true
 
 [features]
+default = []
 test-utils = ["dep:mockall"]
+utoipa = ["dep:utoipa"]

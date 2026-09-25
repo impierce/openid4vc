@@ -10,7 +10,7 @@ repository.workspace = true
 
 [features]
 default = []
-utoipa = ["dep:utoipa"]
+utoipa = ["dep:utoipa", "oid4vc-core/utoipa"]
 
 [dependencies]
 oid4vc-core = { path = "../oid4vc-core" }
@@ -35,8 +35,9 @@ tokio.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 url.workspace = true
-utoipa = { workspace = true, optional = true }
+utoipa = { workspace = true, features = ["url"], optional = true }
 
 [dev-dependencies]
 oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
+utoipa = { workspace = true, features = ["yaml"] }
 wiremock = "0.5"

@@ -3,12 +3,14 @@ use nutype::nutype;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+/// A non-empty path identifying claims in JSON-based credentials.
 #[nutype(validate(predicate = not_empty), derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, AsRef))]
 pub struct ClaimPathPointer(Vec<ClaimPathElement>);
 
 #[nutype(validate(predicate = not_empty), derive(Debug, Clone, Eq, PartialEq, Serialize, AsRef, Deserialize))]
 pub struct ClaimValues(Vec<ClaimValue>);
 
+/// A value selected by a Claim Path Pointer.
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum ClaimValue {
@@ -17,7 +19,9 @@ pub enum ClaimValue {
     Boolean(bool),
 }
 
+/// One segment of a Claim Path Pointer.
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(untagged)]
 pub enum ClaimPathElement {
     /// To address a particular claim within an object, append the key (claim name) to the array.
@@ -26,6 +30,27 @@ pub enum ClaimPathElement {
     Integer(u64),
     /// To address all elements within an array, append a null value to the array.
     Null,
+}
+
+#[cfg(feature = "utoipa")]
+impl utoipa::PartialSchema for ClaimPathPointer {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+        utoipa::openapi::schema::Array::builder()
+            .items(ClaimPathElement::schema())
+            .min_items(Some(1))
+            .into()
+    }
+}
+
+#[cfg(feature = "utoipa")]
+impl utoipa::ToSchema for ClaimPathPointer {
+    fn schemas(schemas: &mut Vec<(String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>) {
+        schemas.push((
+            <ClaimPathElement as utoipa::ToSchema>::name().into(),
+            <ClaimPathElement as utoipa::PartialSchema>::schema(),
+        ));
+        <ClaimPathElement as utoipa::ToSchema>::schemas(schemas);
+    }
 }
 
 impl ClaimPathPointer {

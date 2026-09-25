@@ -1,6 +1,8 @@
 use serde_with::skip_serializing_none;
 
+/// Events a Wallet can report for an issued Credential.
 #[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum NotificationEvent {
     CredentialAccepted,
@@ -10,6 +12,7 @@ pub enum NotificationEvent {
 /// Notification Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-notification-request
 #[skip_serializing_none]
 #[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct NotificationRequest {
     pub notification_id: String,
     pub event: NotificationEvent,
