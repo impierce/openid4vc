@@ -483,7 +483,6 @@ mod tests {
                                 "ecdsa-jcs-2019".to_string(),
                                 "bbs-2023".to_string(),
                             ]),
-                            ..Default::default()
                         }),
                         ..Default::default()
                     },
@@ -518,7 +517,6 @@ mod tests {
                         mso_mdoc: Some(MsoMdocParameters {
                             issuerauth_alg_values: Some(vec![-9, -50]),
                             deviceauth_alg_values: Some(vec![-9, -50]),
-                            ..Default::default()
                         }),
                         ..Default::default()
                     },

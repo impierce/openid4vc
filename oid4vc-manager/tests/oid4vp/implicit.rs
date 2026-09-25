@@ -61,16 +61,14 @@ async fn test_implicit_flow() {
 
     // Create a new issuer.
     let issuer = Arc::new(KeySubject::from_keypair(
-        generate::<Ed25519KeyPair>(Some(
-            "this-is-a-very-UNSAFE-issuer-secret-key".as_bytes().try_into().unwrap(),
-        )),
+        generate::<Ed25519KeyPair>(Some("this-is-a-very-UNSAFE-issuer-secret-key".as_bytes())),
         None,
     ));
     let issuer_did = issuer.identifier(TEST_DID_METHOD, Algorithm::EdDSA).await.unwrap();
 
     // Create a new subject.
     let subject = Arc::new(KeySubject::from_keypair(
-        generate::<Ed25519KeyPair>(Some("this-is-a-very-UNSAFE-secret-key".as_bytes().try_into().unwrap())),
+        generate::<Ed25519KeyPair>(Some("this-is-a-very-UNSAFE-secret-key".as_bytes())),
         None,
     ));
     let subject_did = subject.identifier(TEST_DID_METHOD, Algorithm::EdDSA).await.unwrap();

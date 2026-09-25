@@ -61,6 +61,7 @@ impl Subject for TestSubject {
     }
 }
 
+#[derive(Default)]
 pub struct MockVerifier;
 
 impl MockVerifier {

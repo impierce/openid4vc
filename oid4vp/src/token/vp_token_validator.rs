@@ -834,10 +834,7 @@ mod tests {
 
         let mut mock = MockCredentialStatusVerifier::new();
         mock.expect_check_credential_status().returning(|_| {
-            Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "credential status check failed",
-            )) as Box<dyn std::error::Error>)
+            Err(Box::new(std::io::Error::other("credential status check failed")) as Box<dyn std::error::Error>)
         });
 
         assert!(matches!(
