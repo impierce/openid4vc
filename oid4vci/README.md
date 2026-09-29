@@ -10,7 +10,7 @@ Working Group](https://openid.net/wg/digital-credentials-protocols/).
 
 An overview of all the OpenID Digital Credentials Protocols implementation in Rust can be found [here](../README.md).
 
-## Feature flags
+## Features
 
 - `utoipa`: exposes OpenAPI schemas for the public OID4VCI wire types. This feature is disabled by default and also enables the matching `oid4vc-core` schemas.
 
