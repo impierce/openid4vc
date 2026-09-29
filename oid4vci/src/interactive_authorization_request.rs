@@ -16,11 +16,45 @@ pub enum InteractionType {
     Custom(String),
 }
 
+#[cfg(feature = "utoipa")]
+impl utoipa::PartialSchema for InteractionType {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+        use utoipa::openapi::{schema::Type, Object, OneOf};
+
+        OneOf::builder()
+            .item(
+                Object::builder()
+                    .schema_type(Type::String)
+                    .enum_values(Some(["urn:openid:dcp:iae:openid4vp_presentation"]))
+                    .description(Some("The Wallet supports an OpenID4VP Presentation interaction.")),
+            )
+            .item(
+                Object::builder()
+                    .schema_type(Type::String)
+                    .enum_values(Some(["urn:openid:dcp:iae:redirect_to_web"]))
+                    .description(Some("The Wallet supports a redirect to a web-based interaction.")),
+            )
+            .item(
+                Object::builder()
+                    .schema_type(Type::String)
+                    .description(Some("Custom interaction type defined by an extension.")),
+            )
+            .description(Some(
+                "Interaction types supported by the Wallet as defined in Section 6.1.1.",
+            ))
+            .into()
+    }
+}
+
+#[cfg(feature = "utoipa")]
+impl utoipa::ToSchema for InteractionType {}
+
 /// The initial request to the Interactive Authorization Endpoint, as defined in Section 6.1.1.
 ///
 /// Formed and sent in the same way as a PAR request (RFC 9126 Section 2.1), with the addition
 /// of the `interaction_types_supported` parameter.
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct InteractiveAuthorizationRequest {
     #[serde(flatten)]
     pub authorization_request: AuthorizationRequest,
@@ -49,6 +83,7 @@ impl InteractiveAuthorizationRequest {
 /// Authorization Server. Additional parameters depend on the interaction type.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct InteractiveAuthorizationFollowUpRequest {
     /// The auth_session value from the most recent IAE response.
     pub auth_session: String,

@@ -12,9 +12,14 @@ use url::Url;
 /// Credentials Supported object as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-12.2.4-2.11.1
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct CredentialConfigurationsSupportedObject {
     /// This field is flattened into a `format` field and optionally extra format-specific fields.
     #[serde(flatten)]
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(value_type = crate::credential_format_profiles::CredentialFormatsWithParametersSchema)
+    )]
     pub credential_format: CredentialFormats<WithParameters>,
     // Use `Scope` from oid4vc-core/src/scope.rs.
     pub scope: Option<String>,
@@ -28,7 +33,9 @@ pub struct CredentialConfigurationsSupportedObject {
     pub credential_metadata: Option<CredentialMetadata>,
 }
 
+/// Claims and display information associated with a supported Credential Configuration.
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct CredentialMetadata {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub claims: Option<Vec<ClaimDescription>>,
@@ -36,14 +43,18 @@ pub struct CredentialMetadata {
     pub display: Option<Vec<CredentialConfigurationsSupportedDisplay>>,
 }
 
+/// A JSON Web Algorithm identifier represented by either its string or integer form.
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(untagged)]
 pub enum AlgIdentifier {
     String(String),
     Integer(i32),
 }
 
+/// Metadata describing a claim addressable through a Claim Path Pointer.
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct ClaimDescription {
     pub path: ClaimPathPointer,
     #[serde(default)]
@@ -52,28 +63,36 @@ pub struct ClaimDescription {
     pub display: Vec<ClaimDescriptionDisplay>,
 }
 
+/// Localized display metadata for a claim.
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct ClaimDescriptionDisplay {
     pub name: String,
     pub locale: Option<String>,
 }
 
+/// Logo metadata associated with a supported Credential Configuration.
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct Logo {
     pub uri: Url,
     pub alt_text: Option<String>,
 }
 
+/// Background image metadata associated with a supported Credential Configuration.
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct Image {
     pub uri: Url,
 }
 
 // TODO: implement builder pattern for this struct.
+/// Localized display metadata for a supported Credential Configuration.
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct CredentialConfigurationsSupportedDisplay {
     pub name: String,
     pub locale: Option<String>,

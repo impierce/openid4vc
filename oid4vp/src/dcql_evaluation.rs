@@ -305,7 +305,7 @@ mod tests {
         let claims_context = ClaimsContext {
             claim_sets: &dcql_query.claim_sets,
         };
-        validate_claims(&dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
+        validate_claims(dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
 
         assert!(evaluate_credential_query(
             dcql_query,
@@ -359,7 +359,7 @@ mod tests {
         let claims_context = ClaimsContext {
             claim_sets: &dcql_query.claim_sets,
         };
-        validate_claims(&dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
+        validate_claims(dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
 
         // Assert `false` because the credential type does not match the required type in the query.
         assert!(!evaluate_credential_query(
@@ -396,7 +396,7 @@ mod tests {
         let claims_context = ClaimsContext {
             claim_sets: &dcql_query.claim_sets,
         };
-        validate_claims(&dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
+        validate_claims(dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
 
         assert!(evaluate_credential_query(
             dcql_query,
@@ -431,7 +431,7 @@ mod tests {
         let claims_context = ClaimsContext {
             claim_sets: &dcql_query.claim_sets,
         };
-        validate_claims(&dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
+        validate_claims(dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
 
         // Assert `false` because the credential vct does not match the required vct_values in the query.
         assert!(!evaluate_credential_query(

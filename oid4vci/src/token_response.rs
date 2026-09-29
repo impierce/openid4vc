@@ -5,6 +5,7 @@ use serde_with::skip_serializing_none;
 /// Token Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-successful-token-response
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct TokenResponse {
     pub access_token: String,
     pub token_type: String,

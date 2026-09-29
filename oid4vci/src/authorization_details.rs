@@ -7,6 +7,7 @@ use serde_with::skip_serializing_none;
 // TODO: use `nutype`
 /// Represents the `openid_credential` field of the `AuthorizationDetailsObject`.
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize, Default, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub enum OpenidCredential {
     #[default]
     #[serde(rename = "openid_credential")]
@@ -17,6 +18,7 @@ pub enum OpenidCredential {
 /// and in the `TokenRequest` object. : https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#authorization-details
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct AuthorizationDetailsObject {
     pub r#type: OpenidCredential,
     pub locations: Option<Vec<Url>>,
@@ -29,6 +31,7 @@ pub struct AuthorizationDetailsObject {
 }
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct AuthorizationDetailsClaim {
     pub path: ClaimPathPointer,
     #[serde(default)]

@@ -4,6 +4,7 @@ use serde_with::skip_serializing_none;
 
 /// The response status from the Interactive Authorization Endpoint.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum InteractiveAuthorizationStatus {
     /// The authorization process requires further user interaction.
@@ -18,6 +19,7 @@ pub enum InteractiveAuthorizationStatus {
 /// was completed successfully (with an authorization code), or an error.
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct InteractiveAuthorizationResponse {
     /// Whether an additional interaction is required or the authorization has been completed.
     pub status: InteractiveAuthorizationStatus,

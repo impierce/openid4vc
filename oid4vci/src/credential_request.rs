@@ -5,6 +5,7 @@ use serde_with::skip_serializing_none;
 /// Credential Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct CredentialRequest {
     #[serde(flatten)]
     pub credential_identifier_or_credential_configuration_id: CredentialIdentifierOrCredentialConfigurationId,
@@ -12,7 +13,9 @@ pub struct CredentialRequest {
     // TODO: add `credential_response_encryption` field when support for JWE is added.
 }
 
+/// Selects a Credential using either an issued identifier or a configuration identifier.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum CredentialIdentifierOrCredentialConfigurationId {
     CredentialIdentifier(String),

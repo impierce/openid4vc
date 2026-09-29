@@ -28,9 +28,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
             None,
             MemoryStorage,
             Arc::new(KeySubject::from_keypair(
-                generate::<Ed25519KeyPair>(Some(
-                    "this-is-a-very-UNSAFE-issuer-secret-key".as_bytes().try_into().unwrap(),
-                )),
+                generate::<Ed25519KeyPair>(Some("this-is-a-very-UNSAFE-issuer-secret-key".as_bytes())),
                 None,
             )),
         )

@@ -8,8 +8,11 @@ pub trait ErrorStatusCode {
     fn status_code(&self) -> StatusCode;
 }
 
+/// OpenID4VC protocol error response with an optional human-readable description.
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Error)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "utoipa", schema(bound = "T: ErrorStatusCode + utoipa::ToSchema"))]
 pub struct OID4VCError<T>
 where
     T: ErrorStatusCode,
@@ -86,6 +89,7 @@ impl ErrorStatusCode for AuthorizationErrorResponse {
 
 /// Token Error Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-token-error-response
 #[derive(Debug, Serialize, Deserialize, Error)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum TokenErrorResponse {
     #[error("Invalid Request")]
@@ -117,6 +121,7 @@ impl ErrorStatusCode for TokenErrorResponse {
 
 /// Credential Error Response as defined in OpenID4VCI 1.0 - https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request-errors
 #[derive(Debug, Serialize, Deserialize, Error)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum CredentialErrorResponse {
     #[error("Invalid Credential Request")]
@@ -188,6 +193,7 @@ impl ErrorStatusCode for DeferredCredentialErrorResponse {
 
 /// Notification Error Response as defined in OpenID4VCI 1.0: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-notification-error-response
 #[derive(Debug, Serialize, Deserialize, Error)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum NotificationErrorResponse {
     #[error("Invalid Notification Request")]

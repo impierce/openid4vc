@@ -23,13 +23,17 @@ impl Proof {
     }
 }
 
+/// Algorithms supported by the Credential Issuer for a key proof type.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct KeyProofMetadata {
     pub proof_signing_alg_values_supported: Vec<AlgIdentifier>,
     // TODO: add `key_attestations_required`
 }
 
+/// Key proof types supported by the Credential Issuer.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum ProofType {
     Jwt,

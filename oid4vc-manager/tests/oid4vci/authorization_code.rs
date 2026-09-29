@@ -25,9 +25,7 @@ async fn test_authorization_code_flow() {
             None,
             MemoryStorage,
             Arc::new(KeySubject::from_keypair(
-                generate::<Ed25519KeyPair>(Some(
-                    "this-is-a-very-UNSAFE-issuer-secret-key".as_bytes().try_into().unwrap(),
-                )),
+                generate::<Ed25519KeyPair>(Some("this-is-a-very-UNSAFE-issuer-secret-key".as_bytes())),
                 None,
             )),
         )
@@ -96,8 +94,7 @@ async fn test_authorization_code_flow() {
                 credential_configuration_id: credential_configuration_id.clone(),
                 claims: None,
                 credential_identifiers: None,
-            }
-            .into()]),
+            }]),
             issuer_state,
             Some(code_challenge),
             Some(CodeChallengeMethod::S256),
