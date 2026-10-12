@@ -26,6 +26,7 @@ identity_did = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-b
 identity_document = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1" }
 identity_ecdsa_verifier = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1" }
 identity_eddsa_verifier = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1" }
+identity_core = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1", default-features = false }
 identity_credential = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1", default-features = false, features = [
     "validator",
     "credential",
