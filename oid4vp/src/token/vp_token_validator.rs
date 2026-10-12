@@ -457,6 +457,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
 
         tracing::debug!(issuer_did = %kid.did(), "Resolved issuer DID document for credential JWT");
 
+        // `SkipUnsupported` allows for custom credential types, such as the StatusList2021Entry (https://www.w3.org/TR/2023/WD-vc-status-list-20230427/#statuslist2021entry)
         let options = &credential_validation_options(Timestamp::now_utc(), self.clock_skew_leeway);
         let fail_fast = FailFast::FirstError;
 
@@ -581,6 +582,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
 
         tracing::debug!(issuer_did = %kid.did(), "Resolved issuer DID document for VCDM 2.0 SD-JWT");
 
+        // `SkipUnsupported` allows for custom credential types, such as the StatusList2021Entry (https://www.w3.org/TR/2023/WD-vc-status-list-20230427/#statuslist2021entry)
         let options = &credential_validation_options(Timestamp::now_utc(), self.clock_skew_leeway);
 
         let claims_value = serde_json::to_value(vcdm2_sd_jwt.claims())
@@ -614,7 +616,6 @@ fn presentation_validation_options(now: Timestamp, leeway: Duration) -> JwtPrese
 /// Credential validation options with the same leeway as [`presentation_validation_options`].
 fn credential_validation_options(now: Timestamp, leeway: Duration) -> JwtCredentialValidationOptions {
     JwtCredentialValidationOptions::new()
-        // `SkipUnsupported` allows for custom credential types, such as the StatusList2021Entry (https://www.w3.org/TR/2023/WD-vc-status-list-20230427/#statuslist2021entry)
         .status_check(StatusCheck::SkipUnsupported)
         .latest_issuance_date(now.checked_add(leeway).unwrap_or(now))
         .earliest_expiry_date(now.checked_sub(leeway).unwrap_or(now))
