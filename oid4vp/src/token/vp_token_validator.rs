@@ -5,13 +5,14 @@ use crate::{
     VpToken,
 };
 use getset::Getters;
+use identity_core::common::{Duration, Timestamp};
 use identity_credential::{
     credential::{CredentialV2, EnvelopedVc, Jwt},
     sd_jwt_payload::{SdJwt, Sha256Hasher},
     sd_jwt_vc::SdJwtVc,
     validator::{
         DecodedJwtCredential, DecodedJwtPresentation, FailFast, JwtCredentialValidationOptions, JwtCredentialValidator,
-        JwtPresentationValidator, SdJwtCredentialValidator, StatusCheck,
+        JwtPresentationValidationOptions, JwtPresentationValidator, SdJwtCredentialValidator, StatusCheck,
     },
 };
 use identity_did::DIDUrl;
@@ -84,6 +85,13 @@ pub enum VpTokenValidationError {
     CredentialStatusInvalid,
 }
 
+/// Default tolerance for clock differences between the verifier and the holders/issuers whose JWTs it validates.
+///
+/// Without it, a wallet whose clock runs even slightly ahead produces a presentation whose `iat` lies in the future
+/// from the verifier's point of view, which `identity_credential` rejects with `IssuanceDate`. 60 seconds matches the
+/// default leeway of the `jsonwebtoken` crate.
+pub const DEFAULT_CLOCK_SKEW_LEEWAY: Duration = Duration::seconds(60);
+
 /// A type validating [`VpToken`]s.
 pub struct VpTokenValidator<'a, V: JwsVerifier, VMR: VerificationMaterialResolver, CSV: CredentialStatusVerifier> {
     jwt_presentation_validator: JwtPresentationValidator<V>,
@@ -92,6 +100,7 @@ pub struct VpTokenValidator<'a, V: JwsVerifier, VMR: VerificationMaterialResolve
     signature_verifier: &'a V,
     verification_material_resolver: &'a VMR,
     credential_status_verifier: &'a CSV,
+    clock_skew_leeway: Duration,
 }
 
 impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: CredentialStatusVerifier>
@@ -111,7 +120,15 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
             signature_verifier,
             verification_material_resolver,
             credential_status_verifier,
+            clock_skew_leeway: DEFAULT_CLOCK_SKEW_LEEWAY,
         }
+    }
+
+    /// Override the tolerance for clock differences applied to the issuance and expiration dates of presentations
+    /// and credentials. Defaults to [`DEFAULT_CLOCK_SKEW_LEEWAY`].
+    pub fn with_clock_skew_leeway(mut self, clock_skew_leeway: Duration) -> Self {
+        self.clock_skew_leeway = clock_skew_leeway;
+        self
     }
 
     /// Validate the provided [`VpToken`] against the given [`DcqlQuery`].
@@ -373,7 +390,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
         tracing::debug!(holder_did = %kid.did(), "Resolved holder DID document for presentation JWT");
 
         // 3. Verify Signature
-        let options = &Default::default();
+        let options = &presentation_validation_options(Timestamp::now_utc(), self.clock_skew_leeway);
 
         let decoded_jwt_presentation = self
             .jwt_presentation_validator
@@ -441,7 +458,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
         tracing::debug!(issuer_did = %kid.did(), "Resolved issuer DID document for credential JWT");
 
         // `SkipUnsupported` allows for custom credential types, such as the StatusList2021Entry (https://www.w3.org/TR/2023/WD-vc-status-list-20230427/#statuslist2021entry)
-        let options = &JwtCredentialValidationOptions::new().status_check(StatusCheck::SkipUnsupported);
+        let options = &credential_validation_options(Timestamp::now_utc(), self.clock_skew_leeway);
         let fail_fast = FailFast::FirstError;
 
         let jwt_data = self
@@ -566,7 +583,7 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
         tracing::debug!(issuer_did = %kid.did(), "Resolved issuer DID document for VCDM 2.0 SD-JWT");
 
         // `SkipUnsupported` allows for custom credential types, such as the StatusList2021Entry (https://www.w3.org/TR/2023/WD-vc-status-list-20230427/#statuslist2021entry)
-        let options = &JwtCredentialValidationOptions::new().status_check(StatusCheck::SkipUnsupported);
+        let options = &credential_validation_options(Timestamp::now_utc(), self.clock_skew_leeway);
 
         let claims_value = serde_json::to_value(vcdm2_sd_jwt.claims())
             .map_err(|e| VpTokenValidationError::FailedToGetCredentialStatus(e.to_string()))?;
@@ -586,6 +603,22 @@ impl<'a, SV: JwsVerifier + Clone, VMR: VerificationMaterialResolver, CSV: Creden
         tracing::debug!("Verified VCDM 2.0 SD-JWT credential structure and signatures");
         Ok(validated)
     }
+}
+
+/// Presentation validation options that accept an `iat` up to `leeway` after `now` and an `exp` up to `leeway`
+/// before `now`. `identity_credential` compares against `now` exactly when these are left unset.
+fn presentation_validation_options(now: Timestamp, leeway: Duration) -> JwtPresentationValidationOptions {
+    JwtPresentationValidationOptions::new()
+        .latest_issuance_date(now.checked_add(leeway).unwrap_or(now))
+        .earliest_expiry_date(now.checked_sub(leeway).unwrap_or(now))
+}
+
+/// Credential validation options with the same leeway as [`presentation_validation_options`].
+fn credential_validation_options(now: Timestamp, leeway: Duration) -> JwtCredentialValidationOptions {
+    JwtCredentialValidationOptions::new()
+        .status_check(StatusCheck::SkipUnsupported)
+        .latest_issuance_date(now.checked_add(leeway).unwrap_or(now))
+        .earliest_expiry_date(now.checked_sub(leeway).unwrap_or(now))
 }
 
 #[derive(Serialize, Clone, Deserialize, Debug, Getters, PartialEq)]
@@ -1131,5 +1164,133 @@ mod tests {
             // presentation in the VP token for the Credential Query in the DCQL query.
             VpTokenValidationError::PresentationSubmissionValidation(VpTokenBuilderError::MissingRequiredCredential(_))
         ));
+    }
+
+    // `iat` and `exp` of the presentation in `VALID_JWT_VC_JSON_CREDENTIAL`, and `nbf` of the credential inside it.
+    const VALID_JWT_VC_JSON_PRESENTATION_IAT: i64 = 1773247251;
+    const VALID_JWT_VC_JSON_PRESENTATION_EXP: i64 = 7821247251;
+    const VALID_JWT_VC_JSON_CREDENTIAL_NBF: i64 = 1773247228;
+
+    /// Validates the presentation JWT of `VALID_JWT_VC_JSON_CREDENTIAL` as if the verifier's clock read `now`.
+    async fn validate_fixture_presentation_at(
+        now: i64,
+        leeway: Duration,
+    ) -> Result<DecodedJwtPresentation<Jwt>, identity_credential::validator::CompoundJwtPresentationValidationError>
+    {
+        let holder = TestVerificationMaterialResolver
+            .resolve_did_document(
+                &"did:key:z6Mkh9y4LSF82oVrM7Kzqf6u8Uo1NuPYrRnd3owBLEEADLpd"
+                    .parse()
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        JwtPresentationValidator::with_signature_verifier(SignatureVerifier).validate(
+            &Jwt::new(VALID_JWT_VC_JSON_CREDENTIAL.to_string()),
+            &holder,
+            &presentation_validation_options(Timestamp::from_unix(now).unwrap(), leeway),
+        )
+    }
+
+    fn is_issuance_date_error(errors: &[identity_credential::validator::JwtValidationError]) -> bool {
+        matches!(
+            errors,
+            [identity_credential::validator::JwtValidationError::IssuanceDate]
+        )
+    }
+
+    #[tokio::test]
+    async fn presentation_issued_slightly_in_the_future_is_accepted_within_leeway() {
+        // A wallet whose clock runs one second ahead of the verifier's.
+        let now = VALID_JWT_VC_JSON_PRESENTATION_IAT - 1;
+
+        assert!(validate_fixture_presentation_at(now, DEFAULT_CLOCK_SKEW_LEEWAY)
+            .await
+            .is_ok());
+
+        let error = validate_fixture_presentation_at(now, Duration::seconds(0))
+            .await
+            .unwrap_err();
+        assert!(is_issuance_date_error(&error.presentation_validation_errors));
+    }
+
+    #[tokio::test]
+    async fn presentation_issued_beyond_leeway_is_rejected() {
+        let now = VALID_JWT_VC_JSON_PRESENTATION_IAT - 61;
+
+        let error = validate_fixture_presentation_at(now, DEFAULT_CLOCK_SKEW_LEEWAY)
+            .await
+            .unwrap_err();
+        assert!(is_issuance_date_error(&error.presentation_validation_errors));
+    }
+
+    fn is_expiration_date_error(errors: &[identity_credential::validator::JwtValidationError]) -> bool {
+        matches!(
+            errors,
+            [identity_credential::validator::JwtValidationError::ExpirationDate]
+        )
+    }
+
+    #[tokio::test]
+    async fn presentation_expired_slightly_is_accepted_within_leeway() {
+        // A wallet whose clock runs 30 seconds behind the verifier's.
+        let now = VALID_JWT_VC_JSON_PRESENTATION_EXP + 30;
+
+        assert!(validate_fixture_presentation_at(now, DEFAULT_CLOCK_SKEW_LEEWAY)
+            .await
+            .is_ok());
+
+        let error = validate_fixture_presentation_at(now, Duration::seconds(0))
+            .await
+            .unwrap_err();
+        assert!(is_expiration_date_error(&error.presentation_validation_errors));
+    }
+
+    #[tokio::test]
+    async fn presentation_expired_beyond_leeway_is_rejected() {
+        let now = VALID_JWT_VC_JSON_PRESENTATION_EXP + 61;
+
+        let error = validate_fixture_presentation_at(now, DEFAULT_CLOCK_SKEW_LEEWAY)
+            .await
+            .unwrap_err();
+        assert!(is_expiration_date_error(&error.presentation_validation_errors));
+    }
+
+    #[tokio::test]
+    async fn credential_valid_slightly_in_the_future_is_accepted_within_leeway() {
+        let presentation = validate_fixture_presentation_at(VALID_JWT_VC_JSON_PRESENTATION_IAT, Duration::seconds(0))
+            .await
+            .unwrap();
+        let credential_jwt = &presentation.presentation.verifiable_credential[0];
+
+        let issuer = TestVerificationMaterialResolver
+            .resolve_did_document(
+                &"did:key:z6MkeupePVKikLv4KXE99oAvQbgAR7qXq3AGUtsSeoqZgFBV"
+                    .parse()
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        let validate = |now: i64, leeway| {
+            JwtCredentialValidator::with_signature_verifier(SignatureVerifier).validate::<_, JsonObject>(
+                credential_jwt,
+                &issuer,
+                &credential_validation_options(Timestamp::from_unix(now).unwrap(), leeway),
+                FailFast::FirstError,
+            )
+        };
+
+        // An issuer whose clock runs 30 seconds ahead of the verifier's.
+        let now = VALID_JWT_VC_JSON_CREDENTIAL_NBF - 30;
+        assert!(validate(now, DEFAULT_CLOCK_SKEW_LEEWAY).is_ok());
+
+        let error = validate(now, Duration::seconds(0)).unwrap_err();
+        assert!(is_issuance_date_error(&error.validation_errors));
+
+        // An issuer whose clock runs 61 seconds ahead of the verifier's.
+        let error = validate(VALID_JWT_VC_JSON_CREDENTIAL_NBF - 61, DEFAULT_CLOCK_SKEW_LEEWAY).unwrap_err();
+        assert!(is_issuance_date_error(&error.validation_errors));
     }
 }

@@ -16,6 +16,7 @@ anyhow = "1.0"
 chrono.workspace = true
 futures = "0.3"
 getset.workspace = true
+identity_core.workspace = true
 identity_credential.workspace = true
 identity_did.workspace = true
 identity_document.workspace = true
