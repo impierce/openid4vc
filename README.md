@@ -29,3 +29,14 @@ This workspace includes Rust implementations for the following DCP specification
 For an easy-to-use library that combines all the above specifications, please check out:
 
 - [OID4VC-Manager](oid4vc-manager)
+
+## Development
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set up, test and submit changes.
+The architecture is described in [`docs/DESIGN.md`](docs/DESIGN.md), the feature checklist per specification is [`docs/FEATURES.md`](docs/FEATURES.md), and design decisions are recorded in [`docs/adr/`](docs/adr/).
+Coding agents start from [`AGENTS.md`](AGENTS.md).
+To report a vulnerability, see [SECURITY.md](SECURITY.md).
+
+## Release
+
+Releases are not automated yet; [`docs/PLAN.md`](docs/PLAN.md) describes the planned process (release-plz, independent crate versions, trusted publishing) and what blocks publishing today.
