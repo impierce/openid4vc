@@ -89,7 +89,7 @@ fn evaluate_single_claim_query(claim_query: &ClaimQuery, credential_json: &Value
 }
 
 /// Processing with claims_sets as described in OID4VP Section 6.4.1 Selecting Claims:
-/// https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-selecting-claims
+/// <https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-selecting-claims>
 pub fn evaluate_credential_query(
     credential_query: &CredentialQuery,
     decoded_presentations: &DecodedPresentations,

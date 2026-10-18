@@ -1,8 +1,7 @@
 version: 2
 
 updates:
-  # Cargo updates become useful once Cargo.lock is committed (docs/PLAN.md, Phase B); until then
-  # Dependabot only proposes changes to the version requirements in the manifests.
+  # Cargo.lock is committed, so these PRs update the lockfile (and the manifests for major bumps).
   - package-ecosystem: cargo
     directory: /
     schedule:

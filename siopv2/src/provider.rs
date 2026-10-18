@@ -13,7 +13,7 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use std::str::FromStr;
 
-/// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
+/// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`crate::IdToken`]'s in response to
 /// [`AuthorizationRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
 /// the user who is trying to authenticate.
 #[derive(Debug)]
@@ -130,7 +130,7 @@ impl Provider {
     }
 
     /// Generates an [`AuthorizationResponse`] in response to an [`AuthorizationRequest`] and the user's claims. The [`AuthorizationResponse`]
-    /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
+    /// contains an [`crate::IdToken`], which is signed by the [`oid4vc_core::Subject`] of the [`Provider`].
     #[tracing::instrument(level = "debug", err, skip(self, authorization_request, input))]
     pub async fn generate_response<E: Extension>(
         &self,

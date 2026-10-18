@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_with::skip_serializing_none;
 
-/// Grant Type `authorization_code` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-5.1.1
+/// Grant Type `authorization_code` as described here: <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-5.1.1>
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
@@ -17,7 +17,7 @@ pub struct AuthorizationCode {
     pub authorization_server: Option<Url>,
 }
 
-/// Grant Type `pre-authorized_code` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-5.2.1
+/// Grant Type `pre-authorized_code` as described here: <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-5.2.1>
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
@@ -65,7 +65,7 @@ pub enum InputMode {
     Text,
 }
 
-/// Credential Offer Parameters as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer-parameters
+/// Credential Offer Parameters as described here: <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer-parameters>
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
@@ -95,7 +95,7 @@ impl utoipa::PartialSchema for CredentialConfigurationIds {
 #[cfg(feature = "utoipa")]
 impl utoipa::ToSchema for CredentialConfigurationIds {}
 
-/// Credential Offer as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer
+/// Credential Offer as described here: <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer>
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum CredentialOffer {
@@ -137,7 +137,7 @@ impl std::fmt::Display for CredentialOffer {
     }
 }
 
-/// Grants as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-2.3
+/// Grants as described here: <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-2.3>
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]

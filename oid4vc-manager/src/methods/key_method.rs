@@ -6,7 +6,7 @@ use jsonwebtoken::Algorithm;
 use oid4vc_core::{authentication::sign::ExternalSign, Sign, Subject, Verify};
 use std::sync::Arc;
 
-/// This [`KeySubject`] implements the [`Subject`] trait and can be used as a subject for a [`Provider`]. It uses the
+/// This [`KeySubject`] implements the [`Subject`] trait and can be used as a subject for a [`siopv2::Provider`]. It uses the
 /// 'key' DID method.
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -81,7 +81,7 @@ impl Subject for KeySubject {
     }
 }
 
-/// This [`KeyValidator`] implements the [`Verify`] trait and can be used as a validator for a [`RelyingParty`]. It uses
+/// This [`KeyValidator`] implements the [`Verify`] trait and can be used as a validator for a [`siopv2::RelyingParty`]. It uses
 /// the 'key' DID method.
 #[derive(Default)]
 pub struct KeyValidator;

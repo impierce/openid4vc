@@ -15,31 +15,28 @@ Run from the workspace root, in this order (cheapest first):
 
 ```sh
 cargo fmt --all --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace --all-features
-```
-
-When the change touches a `Cargo.toml` or the dependency graph, also run:
-
-```sh
-cargo audit                 # advisories, ignores in .cargo/audit.toml
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+cargo test --workspace --all-features --locked
 ```
 
 When the change touches public items or doc comments, also run:
 
 ```sh
-RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace --all-features
+RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace --all-features --locked
 ```
 
 Feature-gated code (`utoipa`, `test-utils`) must build with and without its feature:
 
 ```sh
-cargo check --workspace                       # default features
-cargo check --workspace --all-features
+cargo hack check --workspace --each-feature --locked
 ```
 
-If `cargo-hack` is installed, `cargo hack check --workspace --each-feature` covers every
-combination at once.
+When the change touches a `Cargo.toml`, `Cargo.lock` or `deny.toml`, also run:
+
+```sh
+cargo deny check            # advisories, licenses, bans, sources; policy in deny.toml
+cargo +1.95 check --workspace --all-features --locked   # the MSRV from [workspace.package] rust-version
+```
 
 ## When a check fails
 
@@ -50,11 +47,17 @@ combination at once.
 - **`cargo test`**: a failing specification example test (`*/tests/examples/*.json`) usually means
   the type drifted from the spec, not that the example is wrong. Compare with the cited spec section
   before editing the JSON.
-- **`cargo audit`**: a new advisory on a dependency the change did not touch is not this PR's
-  problem, but say so in the PR. A new ignore in `.cargo/audit.toml` needs a reason comment like the
-  existing ones, and an ADR in `docs/adr/` if it reflects a design choice.
-- **`cargo doc`**: broken intra-doc links are the usual cause; use `` [`Type`] `` paths that resolve
-  from the crate root.
+- **`--locked` fails**: the manifests changed without the lockfile. Run `cargo update -p <crate>`
+  (or plain `cargo check` to let Cargo add the entries) and commit `Cargo.lock` with the change.
+- **`cargo deny`**: a new advisory on a dependency the change did not touch is not this PR's
+  problem, but say so in the PR. A new ignore in `deny.toml` needs a `reason` like the existing
+  ones, and an ADR in `docs/adr/` if it reflects a design choice. A license outside the allow list
+  is a per-crate `exception`, a new git source is not accepted.
+- **MSRV**: the error names the feature or the dependency that needs a newer compiler. Avoid the
+  feature; for a dependency, pin the older version in `Cargo.lock` or raise `rust-version` in the
+  same PR and say so in the title.
+- **`cargo doc`**: bare URLs go in `<...>`; broken intra-doc links need `` [`Type`] `` paths that
+  resolve from the crate root (`[`crate::Type`]`, `[`oid4vc_core::Type`]`).
 
 ## Before pushing
 

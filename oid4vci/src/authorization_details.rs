@@ -15,7 +15,7 @@ pub enum OpenidCredential {
 }
 
 /// Represents an object of the `authorization_details` field of the `AuthorizationRequest` object in the Authorization Code Flow as
-/// and in the `TokenRequest` object. : https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#authorization-details
+/// and in the `TokenRequest` object. : <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#authorization-details>
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]

@@ -18,7 +18,7 @@ pub trait ResponseHandle: std::fmt::Debug + PartialEq + Clone {
     type ResponseItem: Serialize + std::fmt::Debug + PartialEq;
 }
 
-/// This [`Extension'] trait is used to declare what functionality an extension should have. Most notable, it declares
+/// This [`Extension`] trait is used to declare what functionality an extension should have. Most notable, it declares
 /// that an extension should be able to generate a token, build an authorization response, and decode an authorization response.
 pub trait Extension: Serialize + PartialEq + Sized + std::fmt::Debug + Clone + Send + Sync {
     type RequestHandle: RequestHandle;
