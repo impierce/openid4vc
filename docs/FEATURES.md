@@ -180,8 +180,8 @@ Specification versions tracked: [OID4VCI 1.0][oid4vci] (final, 16 September 2025
 | Feature                                                              | Status | Where                                         |
 | -------------------------------------------------------------------- | :----: | --------------------------------------------- |
 | Agent guidelines, design document, feature checklist, ADRs           |   ✅   | `AGENTS.md`, `docs/`                          |
-| Committed lockfile, `--locked` CI, MSRV, multi-OS tests, rustdoc check |   📋   | [`PLAN.md`](PLAN.md) Phase B                  |
-| `cargo deny` (advisories, licenses, bans, sources)                   |   📋   | [`PLAN.md`](PLAN.md) Phase B                  |
+| Committed lockfile, `--locked` CI, MSRV, multi-OS tests, rustdoc check |   ✅   | `.github/workflows/qa.yml`                    |
+| `cargo deny` (advisories, licenses, bans, sources)                   |   ✅   | `deny.toml`, `.github/workflows/{audit,license}.yml` |
 | Fuzz targets over the parsers, seeded from the spec examples         |   📋   | [`PLAN.md`](PLAN.md) Phase B                  |
 | Default branch `main`                                                |   ✅   | GitHub repository settings                    |
 | release-plz with per-crate versions, trusted publishing              |   📋   | [`PLAN.md`](PLAN.md) Phase C, [ADR 0001](adr/0001-independent-crate-versions.md), [#135](https://github.com/impierce/openid4vc/pull/135) |

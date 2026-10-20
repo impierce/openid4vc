@@ -23,7 +23,7 @@ pub struct ClientId {
 }
 
 /// The Client ID Scheme enables the use of different mechanisms to obtain and validate the Verifier's metadata. As
-/// described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-client-identifier-prefix-an
+/// described here: <https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-client-identifier-prefix-an>
 #[derive(Debug, PartialEq, Clone)]
 pub enum ClientIdPrefix {
     PreRegistered,
@@ -111,7 +111,7 @@ pub enum CredentialFormatIdentifier {
     DcSdJwt,
 }
 
-/// [`AuthorizationRequest`] claims specific to [`OID4VP`] and as defined in the spec: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-authorization-request.
+/// [`AuthorizationRequest`] claims specific to [`OID4VP`] and as defined in the spec: <https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-authorization-request>.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationRequestParameters {
@@ -175,7 +175,7 @@ pub struct EncryptedResponseEncValues(Vec<String>);
 pub struct ClientMetadataParameters {
     /// Object defining the formats and proof types of Verifiable Presentations and Verifiable Credentials that a
     /// Verifier supports.
-    /// As described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-additional-wallet-metadata-
+    /// As described here: <https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-additional-wallet-metadata->
     pub vp_formats_supported: VpFormatsSupported,
     /// TODO: Implement encryption response support.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -275,7 +275,7 @@ pub struct MsoMdocParameters {
     pub deviceauth_alg_values: Option<Vec<i32>>,
 }
 
-/// Builder for the Authorization Request as defined in the spec: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-authorization-request
+/// Builder for the Authorization Request as defined in the spec: <https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-authorization-request>
 /// NOTE: this Authorization Request is not to be confused with the same-named request in OpenID for Verifiable Credential Issuance.
 #[derive(Debug, Default, IsEmpty)]
 pub struct AuthorizationRequestBuilder {

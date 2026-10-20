@@ -53,7 +53,7 @@ where
     }
 }
 
-/// Authorization Error Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-authorization-error-respons
+/// Authorization Error Response as described here: <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-authorization-error-respons>
 #[derive(Debug, Serialize, Deserialize, Error)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthorizationErrorResponse {
@@ -87,7 +87,7 @@ impl ErrorStatusCode for AuthorizationErrorResponse {
     }
 }
 
-/// Token Error Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-token-error-response
+/// Token Error Response as described here: <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-token-error-response>
 #[derive(Debug, Serialize, Deserialize, Error)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "snake_case")]
@@ -119,7 +119,7 @@ impl ErrorStatusCode for TokenErrorResponse {
     }
 }
 
-/// Credential Error Response as defined in OpenID4VCI 1.0 - https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request-errors
+/// Credential Error Response as defined in OpenID4VCI 1.0 - <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-request-errors>
 #[derive(Debug, Serialize, Deserialize, Error)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "snake_case")]
@@ -154,7 +154,7 @@ impl ErrorStatusCode for CredentialErrorResponse {
     }
 }
 
-/// Deferred Credential Error Response as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-deferred-credential-error-r
+/// Deferred Credential Error Response as described here: <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-deferred-credential-error-r>
 #[derive(Debug, Serialize, Deserialize, Error)]
 #[serde(rename_all = "snake_case")]
 pub enum DeferredCredentialErrorResponse {
@@ -191,7 +191,7 @@ impl ErrorStatusCode for DeferredCredentialErrorResponse {
     }
 }
 
-/// Notification Error Response as defined in OpenID4VCI 1.0: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-notification-error-response
+/// Notification Error Response as defined in OpenID4VCI 1.0: <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-notification-error-response>
 #[derive(Debug, Serialize, Deserialize, Error)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(rename_all = "snake_case")]

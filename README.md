@@ -1,7 +1,8 @@
 # Rust library for OpenID for Verifiable Credentials
 
 [![codecov](https://codecov.io/github/impierce/openid4vc/graph/badge.svg?token=CDL92C53JL)](https://codecov.io/github/impierce/openid4vc)
-[![Audit dependencies](https://github.com/impierce/openid4vc/actions/workflows/audit.yaml/badge.svg)](https://github.com/impierce/openid4vc/actions/workflows/audit.yaml)
+[![QA](https://github.com/impierce/openid4vc/actions/workflows/qa.yml/badge.svg)](https://github.com/impierce/openid4vc/actions/workflows/qa.yml)
+[![Audit](https://github.com/impierce/openid4vc/actions/workflows/audit.yml/badge.svg)](https://github.com/impierce/openid4vc/actions/workflows/audit.yml)
 [![Rust: 100%](https://img.shields.io/badge/Rust-100%25-CE422B?logo=rust&logoColor=white)](https://www.rust-lang.org)
 
 This is a library for the OpenID for Verifiable Credentials (OpenID4VC) specifications family developed by the [OpenID

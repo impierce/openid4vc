@@ -321,8 +321,8 @@ Named so that work on them is deliberate, not accidental:
   `response_uri`, while OID4VP 1.0 names the prefix `redirect_uri`. To be checked against the
   final text and fixed as a `fix(oid4vp)` if confirmed.
 - **Signed metadata**: `signed_metadata` is carried but not verified.
-- **No fuzzing, no MSRV, no lockfile in git, workspace-level lints absent.** Tracked in
-  [`PLAN.md`](PLAN.md), Phases B and D.
+- **No fuzzing, workspace-level lints absent** (`unsafe_code`, `missing_docs`, clippy `dbg_macro`
+  and friends). Tracked in [`PLAN.md`](PLAN.md), Phases B and D.
 
 ### identity-kit migration map
 
@@ -342,13 +342,14 @@ subject and the tests. Each step removes a git dependency or an advisory ignore.
 
 What CI enforces, and what [`PLAN.md`](PLAN.md) adds:
 
-- Today: `cargo fmt --check`, `cargo clippy --workspace --all-targets --all-features -D warnings`,
-  `cargo test --workspace --all-features`, `cargo audit` (daily and on manifest changes), coverage
-  via `cargo-llvm-cov` and Codecov.
-- Phase B: committed `Cargo.lock` with `--locked` everywhere, tests on Linux/macOS/Windows,
-  rustdoc with `-D warnings`, MSRV check from `rust-version`, `cargo deny` (advisories, licenses,
-  bans, sources), PR title check, `cargo-fuzz` targets over every parser seeded from
-  `*/tests/examples`.
+- Today (`.github/workflows/`): `qa.yml` with `cargo fmt --all --check`, clippy `-D warnings`, tests
+  on Linux/macOS/Windows, the feature matrix (`cargo hack check --workspace --each-feature`),
+  rustdoc with `-D warnings` and an MSRV build from `rust-version`, all `--locked` against the committed `Cargo.lock`, behind
+  one aggregate `QA` check; `audit.yml` and `license.yml` with `cargo deny` (`deny.toml`: advisories
+  daily and on manifest changes; licenses, bans and sources on manifest changes); `coverage.yml`
+  via `cargo-llvm-cov` and Codecov (informational); `pr-title.yml` for the Conventional Commit
+  title.
+- Phase B, next: `fuzz.yml` running `cargo-fuzz` targets seeded from `*/tests/examples`.
 - Phase C: `cargo publish --dry-run` on every pull request, release-plz.
 
 ## References

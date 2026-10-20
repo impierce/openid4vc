@@ -260,24 +260,29 @@ have no ADR; the migration is tracked as Phase D work (§6) and in `docs/DESIGN.
 
 ## 4. Phase B: CI hardening (second PR set)
 
+Status: items 1 to 7 are done (PR 2 in §8) and item 8 is PR 3.
+
 1. **Commit `Cargo.lock`** (`.gitignore` line removed). Enables `--locked`, reproducible CI, and
    Dependabot cargo PRs. This is a library workspace, but committing the lockfile is the current
    Cargo recommendation and what identity-kit does.
 2. **`qa.yml`** modeled on identity-kit: fmt, clippy (`--workspace --all-targets --all-features
    --locked -D warnings`), test on ubuntu/macos/windows, rustdoc with `-D warnings`, MSRV from
-   `rust-version` (add `rust-version` to `[workspace.package]`; propose `1.85` to match identity-kit,
-   verify with `cargo msrv`), aggregate `qa` job. Optional job: `cargo hack --each-feature
-   --workspace` (cheap here: two features).
+   `rust-version` (`[workspace.package]`, `1.95` to match identity-kit; the committed lockfile
+   needs at least `1.90`), aggregate `qa` job, and a `cargo hack --each-feature --workspace` job
+   (cheap here: two features).
 3. **`audit.yml` + `license.yml`** with `cargo-deny`, replacing `cargo audit` and `.cargo/audit.toml`.
-   Port the six ignores with their existing reasons into `deny.toml`; expect new `unmaintained`
-   hits (`derivative`, `paste`) and decide per crate: replace (`derivative` → `derive_more` or
-   manual impls; `paste` → remove macro use) or ignore with reason.
+   The six ignores were ported with their reasons into `deny.toml`; `unmaintained = "all"` added
+   twelve more, all but two (`derivative`, `paste`, direct dependencies replaced in Phase D) from
+   the `did-key` and `identity_*` trees, each ignored with a reason. Licenses outside the allow
+   list (MPL-2.0, CC0-1.0, an LLVM exception, all in the iota-sdk tree) are per-crate exceptions;
+   the ten git sources of that tree are allow-listed. `wildcards` stays at `warn` until the path
+   dependencies carry versions (Phase C) and the git dependencies are gone.
 4. **`coverage.yml`**: OIDC upload, `codecov.yml` informational, fork handling, `--workspace`.
 5. **`pr-title.yml`**: `action-semantic-pull-request`, scopes optional, crate names suggested.
 6. **Hygiene across workflows**: SHA-pinned actions, `permissions: contents: read`,
    `persist-credentials: false`, concurrency groups, `CARGO_TERM_COLOR`.
-7. **Branch rename `dev` → `main`**: done, `main` is the default branch. `dev` is dropped from the
-   workflows' `branches` lists once the `dev` branch is deleted.
+7. **Branch rename `dev` → `main`**: done. `main` is the default branch, the workflows run on `main`
+   only, and `dev` is abandoned.
 8. **`fuzz/`** (own workspace, nightly): targets for the parsers that take attacker-controlled
    input: credential offer (by value and by reference URL), authorization request (query string
    and JAR JWT), DCQL query and its evaluation against a credential set, token/credential/nonce
@@ -329,8 +334,7 @@ and exercised with `dry_run`; it will fail at `cargo publish` until then, which 
 
 ## 7. Decisions taken (2026-10-18)
 
-1. **Default branch**: `main` (done: `main` is the default branch on GitHub; the workflows drop
-   `dev` once that branch is deleted).
+1. **Default branch**: `main` (done; `dev` is abandoned and no workflow runs on it).
 2. **Versioning**: independent per-crate versions, tags and changelogs; first release `0.2.0` for
    all five ([ADR 0001](adr/0001-independent-crate-versions.md)).
 3. **Root `oid4vc` facade crate**: kept, never released, `publish = false`
@@ -338,7 +342,8 @@ and exercised with `dry_run`; it will fail at `cargo publish` until then, which 
 4. **PR #135**: superseded by the Phase C PR, which keeps its structure.
 5. **External PRs in triage**: no (flag in `docs/agents/issue-tracker.md`).
 6. **CodeRabbit**: already installed on the repository, so `.coderabbit.yaml` is in.
-7. **MSRV**: `1.85`, set in Phase B.
+7. **MSRV**: `1.95`, the same as identity-kit (which is about to become a dependency); the
+   committed lockfile needs at least `1.90`. Set in `[workspace.package] rust-version`.
 8. **Labels**: identity-kit's five triage roles; the existing labels stay as categories. The five
    labels still have to be created on GitHub (`docs/agents/triage-labels.md` has the commands).
 
@@ -348,13 +353,11 @@ and exercised with `dry_run`; it will fail at `cargo publish` until then, which 
 
 | # | Title (Conventional Commit) | Phase | Depends on | Status |
 | --- | --- | --- | --- | --- |
-| 1 | `docs: add agent setup, design document, feature checklist, ADRs and contributing guide` | A1–A7 | – | this PR |
-| 2 | `build: commit Cargo.lock` | B1 | – | |
-| 3 | `ci: replace workflows with QA, coverage, audit, license and PR title checks` | B2–B6 | 2 | |
-| 4 | `ci: drop the dev branch from the workflows` | B7 | 3, manual rename (done) | |
-| 5 | `ci: add release-plz pipeline with per-crate tags and trusted publishing` (supersedes #135) | C1 | 3, 4 | |
-| 6 | `test: add cargo-fuzz targets seeded from specification examples` | B8 | 2 | |
-| 7+ | Phase D issues, one PR each, `ready-for-agent` | D | 1–3 | |
+| 1 | `docs: add agent setup, design document, feature checklist, ADRs and contributing guide` | A1–A7 | – | #139, merged |
+| 2 | `ci: commit Cargo.lock, replace the workflows with QA, coverage, deny and PR title checks` | B1–B7 | 1 | #140 |
+| 3 | `test: add cargo-fuzz targets seeded from specification examples` (with the `to_query_value` fix they found) | B8 | 2 | stacked on #140 |
+| 4 | `ci: add release-plz pipeline with per-crate tags and trusted publishing` (supersedes #135) | C1 | 2 | |
+| 5+ | Phase D issues, one PR each, `ready-for-agent` | D | 1–2 | |
 
 Manual steps alongside PR 1 (A8): create the five triage labels, install nothing else yet.
 

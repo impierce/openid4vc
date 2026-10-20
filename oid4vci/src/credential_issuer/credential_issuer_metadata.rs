@@ -44,7 +44,7 @@ impl utoipa::PartialSchema for BatchSize {
 impl utoipa::ToSchema for BatchSize {}
 
 /// Credential Issuer Metadata as described here:
-/// https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html
+/// <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html>
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Derivative)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]

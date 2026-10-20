@@ -7,6 +7,9 @@ homepage = "https://www.impierce.com/"
 keywords = ["openid4vc", "siopv2", "openid4vp", "openid4vci", "OpenID"]
 license = "Apache-2.0"
 repository = "https://github.com/impierce/openid4vc"
+rust-version.workspace = true
+# The facade is a convenience for this repository and is never released (docs/adr/0002-facade-crate.md).
+publish = false
 
 [workspace]
 members = ["oid4vc-core", "oid4vci", "oid4vp", "siopv2", "oid4vc-manager"]
@@ -15,6 +18,9 @@ members = ["oid4vc-core", "oid4vci", "oid4vp", "siopv2", "oid4vc-manager"]
 homepage = "https://www.impierce.com/"
 license = "Apache-2.0"
 repository = "https://github.com/impierce/openid4vc"
+# Minimum supported Rust version, checked in CI (QA / MSRV) against the committed Cargo.lock; the same as
+# identity-kit, which replaces the identity_* dependencies.
+rust-version = "1.95"
 
 [workspace.dependencies]
 chrono = "0.4"
