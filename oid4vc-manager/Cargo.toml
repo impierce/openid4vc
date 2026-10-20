@@ -45,6 +45,6 @@ identity_jose.workspace = true
 identity_verification.workspace = true
 lazy_static = "1.4"
 rand = "0.8"
-rstest = "0.18"
+rstest = "0.27"
 uuid = { version = "1.4", features = ["v4", "fast-rng"] }
 wiremock = "0.5"
