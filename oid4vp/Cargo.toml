@@ -1,17 +1,23 @@
 [package]
 name = "oid4vp"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 rust-version.workspace = true
+license.workspace = true
 description = "Rust implementation of the OpenID Connect OpenID for Verifiable Presentations standard"
 homepage.workspace = true
-keywords = ["oid4vc", "openid4vc", "oid4vp", "OpenID"]
-license.workspace = true
 repository.workspace = true
+keywords = ["oid4vc", "openid4vc", "oid4vp", "openid", "dcql"]
+categories = ["authentication", "cryptography", "web-programming"]
+readme = "README.md"
+include = ["/src", "/README.md", "/CHANGELOG.md"]
+
+[package.metadata.docs.rs]
+all-features = true
 
 [dependencies]
-oid4vc-core = { path = "../oid4vc-core" }
-oid4vci = { path = "../oid4vci" }
+oid4vc-core = { path = "../oid4vc-core", version = "0.2.0" }
+oid4vci = { path = "../oid4vci", version = "0.2.0" }
 
 anyhow = "1.0"
 chrono.workspace = true

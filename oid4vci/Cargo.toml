@@ -1,20 +1,26 @@
 [package]
 name = "oid4vci"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 rust-version.workspace = true
+license.workspace = true
 description = "Rust implementation of the OpenID Connect OpenID for Verifiable Credential Issuance standard"
 homepage.workspace = true
-keywords = ["oid4vc", "openid4vc", "oid4vci", "OpenID"]
-license.workspace = true
 repository.workspace = true
+keywords = ["oid4vc", "openid4vc", "oid4vci", "openid", "credentials"]
+categories = ["authentication", "cryptography", "web-programming"]
+readme = "README.md"
+include = ["/src", "/README.md", "/CHANGELOG.md"]
+
+[package.metadata.docs.rs]
+all-features = true
 
 [features]
 default = []
 utoipa = ["dep:utoipa", "oid4vc-core/utoipa"]
 
 [dependencies]
-oid4vc-core = { path = "../oid4vc-core" }
+oid4vc-core = { path = "../oid4vc-core", version = "0.2.0" }
 anyhow = "1.0"
 chrono.workspace = true
 derivative = "2.2.0"

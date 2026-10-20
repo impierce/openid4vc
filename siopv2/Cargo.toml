@@ -1,16 +1,22 @@
 [package]
 name = "siopv2"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 rust-version.workspace = true
+license.workspace = true
 description = "Rust implementation of the OpenID Connect Self-Issued OpenID Provider v2 standard"
 homepage.workspace = true
-keywords = ["oid4vc", "openid4vc", "siopv2", "OpenID"]
-license.workspace = true
 repository.workspace = true
+keywords = ["oid4vc", "openid4vc", "siopv2", "openid", "did"]
+categories = ["authentication", "cryptography", "web-programming"]
+readme = "README.md"
+include = ["/src", "/README.md", "/CHANGELOG.md"]
+
+[package.metadata.docs.rs]
+all-features = true
 
 [dependencies]
-oid4vc-core = { path = "../oid4vc-core" }
+oid4vc-core = { path = "../oid4vc-core", version = "0.2.0" }
 
 anyhow = "1.0.70"
 async-trait = "0.1.68"

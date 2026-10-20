@@ -350,7 +350,9 @@ What CI enforces, and what [`PLAN.md`](PLAN.md) adds:
   via `cargo-llvm-cov` and Codecov (informational); `pr-title.yml` for the Conventional Commit
   title; `fuzz.yml` running the `cargo-fuzz` targets of `fuzz/` (seeded from `*/tests/examples`)
   for a minute per pull request and ten minutes nightly.
-- Phase C: `cargo publish --dry-run` on every pull request, release-plz.
+- Release: `release-plz.yml` keeps a release pull request open and publishes on its merge
+  ([`RELEASE.md`](RELEASE.md)). A `cargo publish --dry-run` job joins QA once the crates are
+  publishable.
 
 ## References
 

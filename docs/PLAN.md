@@ -293,6 +293,11 @@ Status: items 1 to 8 are done (PRs 2 and 3 in §8).
 
 ## 5. Phase C: release process
 
+Status: item 1 is PR 4 in §8, which also sets the versions for item 3 and generates the changelogs
+for item 4 (release-plz writes the full history per crate, so no hand-written entry is needed).
+Item 5 lands with it. Item 2 waits for the publishing blockers; [`RELEASE.md`](RELEASE.md)
+describes it.
+
 Prerequisite: the publishing blockers in §1.2 are gone. The pipeline itself can be merged earlier
 and exercised with `dry_run`; it will fail at `cargo publish` until then, which is a useful signal
 (PR #135 already frames it this way).
@@ -355,8 +360,8 @@ and exercised with `dry_run`; it will fail at `cargo publish` until then, which 
 | --- | --- | --- | --- | --- |
 | 1 | `docs: add agent setup, design document, feature checklist, ADRs and contributing guide` | A1–A7 | – | #139, merged |
 | 2 | `ci: commit Cargo.lock, replace the workflows with QA, coverage, deny and PR title checks` | B1–B7 | 1 | #140, merged |
-| 3 | `test: add cargo-fuzz targets seeded from specification examples` | B8 | 2 | this PR |
-| 4 | `ci: add release-plz pipeline with per-crate tags and trusted publishing` (supersedes #135) | C1 | 2 | |
+| 3 | `test: add cargo-fuzz targets seeded from specification examples` | B8 | 2 | #155, merged |
+| 4 | `ci: add release-plz pipeline with per-crate tags and trusted publishing` (supersedes #135) | C1, C3–C5 | 2 | this PR |
 | 5+ | Phase D issues, one PR each, `ready-for-agent` | D | 1–2 | |
 
 Manual steps alongside PR 1 (A8): create the five triage labels, install nothing else yet.
