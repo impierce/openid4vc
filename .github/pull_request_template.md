@@ -1,19 +1,21 @@
-# Description of change
-Please write a summary of your changes and why you made them.
+<!--
+The title is the commit message on the default branch and the future changelog entry:
+Conventional Commits, scoped with the crate name, `!` for breaking changes.
+Example: feat(oid4vp): add `transaction_data` to the authorization request
+See CONTRIBUTING.md.
+-->
 
-## Links to any relevant issues
-Be sure to reference any related issues by adding `fixes issue #`.
+## What and why
 
-## How the change has been tested
-Describe the tests that you ran to verify your changes.
-Make sure to provide instructions for the maintainer as well as any relevant configurations.
+<!-- What changes, and why. Link the issue: "Closes #123". -->
 
-## Definition of Done checklist
-Add an `x` to the boxes that are relevant to your changes.
+## How it was tested
 
-- [ ] I have followed the contribution guidelines for this project
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
+<!-- The tests added or run. For a wire type, name the specification example it is checked against. -->
+
+## Checklist
+
+- [ ] The title follows Conventional Commits (`type(crate): ...`, `!` if breaking)
+- [ ] Tests cover the change; specification examples are used where they exist
+- [ ] `docs/FEATURES.md` is updated if a feature row is implemented
+- [ ] `docs/adr/` has a new ADR if the change deviates from `docs/DESIGN.md`

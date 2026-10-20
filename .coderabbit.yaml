@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit configuration: https://docs.coderabbit.ai/reference/configuration
+reviews:
+  path_filters:
+    # Lock files are generated.
+    - "!**/*.lock"
+    # Specification examples are verbatim copies of the specifications' examples (OpenID, IETF,
+    # W3C); they are not code to review and would push pull requests over the file limit.
+    - "!**/tests/examples/**"
+    - "!oid4vc-manager/tests/common/**/*.json"
+    - "!fuzz/seeds/**"
