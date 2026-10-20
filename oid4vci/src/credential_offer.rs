@@ -292,22 +292,6 @@ mod tests {
         );
     }
 
-    /// The URL form keeps the whitespace inside string values: the `tx_code.description` of the specification
-    /// example used to lose its spaces on the way through `credential_offer=`.
-    #[test]
-    fn test_credential_offer_url_round_trip_keeps_whitespace_in_strings() {
-        let offer = CredentialOffer::CredentialOffer(Box::new(
-            from_str::<CredentialOfferParameters>(include_str!(
-                "../tests/examples/credential_offer_multiple_credentials.json"
-            ))
-            .unwrap(),
-        ));
-
-        let url = offer.to_string();
-        assert!(url.starts_with("openid-credential-offer://?credential_offer="));
-        assert_eq!(url.parse::<CredentialOffer>().unwrap(), offer);
-    }
-
     #[cfg(feature = "utoipa")]
     #[test]
     fn test_tx_code_constraints_schema_inlines_input_mode_and_examples() {

@@ -354,8 +354,8 @@ and exercised with `dry_run`; it will fail at `cargo publish` until then, which 
 | # | Title (Conventional Commit) | Phase | Depends on | Status |
 | --- | --- | --- | --- | --- |
 | 1 | `docs: add agent setup, design document, feature checklist, ADRs and contributing guide` | A1–A7 | – | #139, merged |
-| 2 | `ci: commit Cargo.lock, replace the workflows with QA, coverage, deny and PR title checks` | B1–B7 | 1 | #140 |
-| 3 | `test: add cargo-fuzz targets seeded from specification examples` (with the `to_query_value` fix they found) | B8 | 2 | this PR (stacked on #140) |
+| 2 | `ci: commit Cargo.lock, replace the workflows with QA, coverage, deny and PR title checks` | B1–B7 | 1 | #140, merged |
+| 3 | `test: add cargo-fuzz targets seeded from specification examples` | B8 | 2 | this PR |
 | 4 | `ci: add release-plz pipeline with per-crate tags and trusted publishing` (supersedes #135) | C1 | 2 | |
 | 5+ | Phase D issues, one PR each, `ready-for-agent` | D | 1–2 | |
 
