@@ -36,7 +36,7 @@ identity_credential = { git = "https://github.com/iotaledger/identity", tag = "v
 identity_jose = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1" }
 identity_verification = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1" }
 is_empty = "0.2"
-jsonwebtoken = "9.3"
+jsonwebtoken = "11.1"
 monostate = "0.1"
 nutype = { version = "0.6", features = ["serde"] }
 reqwest = { version = "0.12", default-features = false, features = [
