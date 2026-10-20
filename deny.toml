@@ -30,6 +30,7 @@ ignore = [
     { id = "RUSTSEC-2024-0384", reason = "instant via iota-sdk: unmaintained, no known vulnerability" },
     { id = "RUSTSEC-2024-0370", reason = "proc-macro-error via iota-sdk: unmaintained proc-macro helper, compile time only" },
     { id = "RUSTSEC-2024-0320", reason = "yaml-rust via iota-sdk: unmaintained; this workspace parses no YAML" },
+    { id = "RUSTSEC-2026-0383", reason = "webpki-root-certs 0.26.11 via rustls-platform-verifier 0.5 in iota-sdk: a semver shim that re-exports webpki-root-certs 1.x, which is locked at the fixed 1.0.10; no fixed 0.26 release exists" },
     # Direct dependencies, replaced in Phase D of docs/PLAN.md (also pulled in by identity_*).
     { id = "RUSTSEC-2024-0388", reason = "derivative: unmaintained derive macro, compile time only" },
     { id = "RUSTSEC-2024-0436", reason = "paste: unmaintained macro, compile time only" },
