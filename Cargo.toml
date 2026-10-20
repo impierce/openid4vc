@@ -39,7 +39,7 @@ is_empty = "0.2"
 jsonwebtoken = "9.3"
 monostate = "0.1"
 nutype = { version = "0.6", features = ["serde"] }
-reqwest = { version = "0.12", default-features = false, features = [
+reqwest = { version = "0.13", default-features = false, features = [
     "json",
     "rustls-tls",
 ] }
