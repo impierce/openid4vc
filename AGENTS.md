@@ -47,8 +47,9 @@ specification family: five published crates and one unpublished facade.
   change. The MSRV is `rust-version` in `[workspace.package]`; don't use newer features.
 - `cargo fmt` (`rustfmt.toml`: `max_width = 120`), `cargo clippy --workspace --all-targets
   --all-features --locked -- -D warnings` and `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
-  --workspace --all-features` clean (bare URLs in doc comments go in `<...>`). New library code
-  returns errors instead of panicking; don't add `unwrap`/`expect` to parsers or validators.
+  --workspace --all-features --locked` clean (bare URLs in doc comments go in `<...>`). New
+  library code returns errors instead of panicking; don't add `unwrap`/`expect` to parsers or
+  validators.
 - Pull request titles are Conventional Commits with `!` for breaking changes, scoped with the
   crate name when the change is in one crate (`feat(oid4vp): ...`). Pull requests are
   squash-merged, so the title is the commit on the default branch and the changelog entry.

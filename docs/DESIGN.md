@@ -342,9 +342,9 @@ subject and the tests. Each step removes a git dependency or an advisory ignore.
 
 What CI enforces, and what [`PLAN.md`](PLAN.md) adds:
 
-- Today (`.github/workflows/`): `qa.yml` with `cargo fmt --check`, clippy `-D warnings`, tests on
-  Linux/macOS/Windows, the feature matrix (`cargo hack --each-feature`), rustdoc with `-D warnings`
-  and an MSRV build from `rust-version`, all `--locked` against the committed `Cargo.lock`, behind
+- Today (`.github/workflows/`): `qa.yml` with `cargo fmt --all --check`, clippy `-D warnings`, tests
+  on Linux/macOS/Windows, the feature matrix (`cargo hack check --workspace --each-feature`),
+  rustdoc with `-D warnings` and an MSRV build from `rust-version`, all `--locked` against the committed `Cargo.lock`, behind
   one aggregate `QA` check; `audit.yml` and `license.yml` with `cargo deny` (`deny.toml`: advisories
   daily and on manifest changes; licenses, bans and sources on manifest changes); `coverage.yml`
   via `cargo-llvm-cov` and Codecov (informational); `pr-title.yml` for the Conventional Commit

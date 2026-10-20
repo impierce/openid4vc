@@ -33,7 +33,9 @@ The architecture is described in [`docs/DESIGN.md`](docs/DESIGN.md); the feature
 
 ## Checks
 
-CI runs the following checks on every pull request. Run them locally before opening one:
+CI runs the following checks on every pull request, except `cargo deny`, which runs when a
+`Cargo.toml`, `Cargo.lock` or `deny.toml` changes (and the advisory check daily). Run them locally
+before opening one:
 
 ```sh
 cargo fmt --all --check
