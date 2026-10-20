@@ -52,6 +52,7 @@ specification family: five published crates and one unpublished facade.
 - Pull request titles are Conventional Commits with `!` for breaking changes, scoped with the
   crate name when the change is in one crate (`feat(oid4vp): ...`). Pull requests are
   squash-merged, so the title is the commit on the default branch and the changelog entry.
+  Titles and commit messages use terse commit style, without articles (`CONTRIBUTING.md`).
 - Never bump a crate version or edit a changelog by hand; the release process (`docs/PLAN.md`,
   Phase C) owns both.
 

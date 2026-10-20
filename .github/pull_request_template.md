@@ -1,7 +1,7 @@
 <!--
 The title is the commit message on the default branch and the future changelog entry:
 Conventional Commits, scoped with the crate name, `!` for breaking changes.
-Example: feat(oid4vp): add `transaction_data` to the authorization request
+Terse style, no articles. Example: feat(oid4vp): add `transaction_data` to authorization request
 See CONTRIBUTING.md.
 -->
 

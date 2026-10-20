@@ -64,15 +64,19 @@ for the pattern). Never commit another implementation's output as a fixture.
 Pull requests are squash-merged, so the **pull request title** becomes the commit message on the
 default branch. It must follow [Conventional Commits](https://www.conventionalcommits.org/):
 
-- `` feat(oid4vp): add `transaction_data` to the authorization request ``
+- `` feat(oid4vp): add `transaction_data` to authorization request ``
 - `` fix(oid4vci): make `authorization_details` optional in token response ``
 - `` feat(oid4vc-core)!: return typed errors from `Validator::decode` `` (breaking change)
 
 Scope the title with the crate name when the change is in one crate; leave the scope out when it
 spans several. Mark a breaking change with `!`: the title will determine the next version number
 and the changelog entry once releases are automated, and before 1.0 a `!` bumps the minor version.
-Write it in terse commit style: drop articles (_the_, _a_, _an_) and wrap code literals in
-backticks, as in `` feat(oid4vp): add `ClientId` prefixes ``.
+So describe the change from a user's point of view.
+
+Write the title, and every commit message, in terse commit style: imperative mood, lowercase after
+the colon, no trailing period, no articles (_the_, _a_, _an_), and code literals in backticks, as in
+`` feat(oid4vp): add `ClientId` prefixes ``. Write `feat: add description to file`, not
+`feat: add a description to the file`.
 
 The pull request body says what changed, why, and how it was tested. If the change implements a
 row of [`docs/FEATURES.md`](docs/FEATURES.md), flip its status in the same pull request. If it
