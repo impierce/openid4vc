@@ -40,4 +40,4 @@ utoipa = { workspace = true, features = ["url"], optional = true }
 [dev-dependencies]
 oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
 utoipa = { workspace = true, features = ["yaml"] }
-wiremock = "0.5"
+wiremock = "0.6"

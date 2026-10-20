@@ -47,4 +47,4 @@ lazy_static = "1.4"
 rand = "0.8"
 rstest = "0.18"
 uuid = { version = "1.4", features = ["v4", "fast-rng"] }
-wiremock = "0.5"
+wiremock = "0.6"
