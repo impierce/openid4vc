@@ -36,7 +36,7 @@ url = { version = "2.3.1", features = ["serde"] }
 oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
 
 derivative = "2.2.0"
-ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
+ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
 lazy_static = "1.4.0"
 rand = "0.8"
 wiremock = "0.5.18"

@@ -12,7 +12,7 @@ derivative = "2.2.0"
 derive_more = "0.99.16"
 did-key.workspace = true
 did_url = "0.1.0"
-ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
+ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
 getset = "0.1.2"
 identity_did.workspace = true
 identity_document.workspace = true

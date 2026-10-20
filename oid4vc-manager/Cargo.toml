@@ -38,7 +38,7 @@ url.workspace = true
 [dev-dependencies]
 oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
 
-ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
+ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
 identity_did.workspace = true
 identity_document.workspace = true
 identity_jose.workspace = true
