@@ -2,8 +2,7 @@ name: QA
 
 on:
   push:
-    # `main` is the default branch; `dev` stays listed until that branch is deleted.
-    branches: [dev, main]
+    branches: [main]
   pull_request:
 
 permissions:

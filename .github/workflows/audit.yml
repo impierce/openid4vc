@@ -2,7 +2,7 @@ name: Audit
 
 on:
   push:
-    branches: [dev, main]
+    branches: [main]
     paths:
       - "**/Cargo.toml"
       - "Cargo.lock"

@@ -260,8 +260,7 @@ have no ADR; the migration is tracked as Phase D work (§6) and in `docs/DESIGN.
 
 ## 4. Phase B: CI hardening (second PR set)
 
-Status: items 1 to 6 are done (PR 2 in §8) and item 8 is PR 3; the rename in item 7 is done,
-dropping `dev` from the workflows waits for the `dev` branch to be deleted.
+Status: items 1 to 7 are done (PR 2 in §8) and item 8 is PR 3.
 
 1. **Commit `Cargo.lock`** (`.gitignore` line removed). Enables `--locked`, reproducible CI, and
    Dependabot cargo PRs. This is a library workspace, but committing the lockfile is the current
@@ -282,8 +281,8 @@ dropping `dev` from the workflows waits for the `dev` branch to be deleted.
 5. **`pr-title.yml`**: `action-semantic-pull-request`, scopes optional, crate names suggested.
 6. **Hygiene across workflows**: SHA-pinned actions, `permissions: contents: read`,
    `persist-credentials: false`, concurrency groups, `CARGO_TERM_COLOR`.
-7. **Branch rename `dev` → `main`**: done, `main` is the default branch. `dev` is dropped from the
-   workflows' `branches` lists once the `dev` branch is deleted.
+7. **Branch rename `dev` → `main`**: done. `main` is the default branch, the workflows run on `main`
+   only, and `dev` is abandoned.
 8. **`fuzz/`** (own workspace, nightly): targets for the parsers that take attacker-controlled
    input: credential offer (by value and by reference URL), authorization request (query string
    and JAR JWT), DCQL query and its evaluation against a credential set, token/credential/nonce
@@ -335,8 +334,7 @@ and exercised with `dry_run`; it will fail at `cargo publish` until then, which 
 
 ## 7. Decisions taken (2026-10-18)
 
-1. **Default branch**: `main` (done: `main` is the default branch on GitHub; the workflows drop
-   `dev` once that branch is deleted).
+1. **Default branch**: `main` (done; `dev` is abandoned and no workflow runs on it).
 2. **Versioning**: independent per-crate versions, tags and changelogs; first release `0.2.0` for
    all five ([ADR 0001](adr/0001-independent-crate-versions.md)).
 3. **Root `oid4vc` facade crate**: kept, never released, `publish = false`
@@ -356,11 +354,10 @@ and exercised with `dry_run`; it will fail at `cargo publish` until then, which 
 | # | Title (Conventional Commit) | Phase | Depends on | Status |
 | --- | --- | --- | --- | --- |
 | 1 | `docs: add agent setup, design document, feature checklist, ADRs and contributing guide` | A1–A7 | – | #139, merged |
-| 2 | `ci: commit Cargo.lock, replace the workflows with QA, coverage, deny and PR title checks` | B1–B6 | 1 | #140 |
+| 2 | `ci: commit Cargo.lock, replace the workflows with QA, coverage, deny and PR title checks` | B1–B7 | 1 | #140 |
 | 3 | `test: add cargo-fuzz targets seeded from specification examples` (with the `to_query_value` fix they found) | B8 | 2 | stacked on #140 |
-| 4 | `ci: drop the dev branch from the workflows` | B7 | 2, manual rename (done) | |
-| 5 | `ci: add release-plz pipeline with per-crate tags and trusted publishing` (supersedes #135) | C1 | 2, 4 | |
-| 6+ | Phase D issues, one PR each, `ready-for-agent` | D | 1–2 | |
+| 4 | `ci: add release-plz pipeline with per-crate tags and trusted publishing` (supersedes #135) | C1 | 2 | |
+| 5+ | Phase D issues, one PR each, `ready-for-agent` | D | 1–2 | |
 
 Manual steps alongside PR 1 (A8): create the five triage labels, install nothing else yet.
 
