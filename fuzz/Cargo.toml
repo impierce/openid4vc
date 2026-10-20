@@ -1,0 +1,65 @@
+[package]
+name = "oid4vc-fuzz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "cargo-fuzz targets for the openid4vc workspace: `cargo +nightly fuzz run <target>` from this directory"
+license = "Apache-2.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+oid4vc-core = { path = "../oid4vc-core" }
+oid4vci = { path = "../oid4vci" }
+oid4vp = { path = "../oid4vp" }
+siopv2 = { path = "../siopv2" }
+serde = "1.0"
+serde_json = "1.0"
+serde_urlencoded = "0.7"
+url = "2"
+
+# Every binary is a fuzz target; the Fuzz workflow discovers them from this manifest.
+
+[[bin]]
+name = "credential_offer"
+path = "fuzz_targets/credential_offer.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "authorization_request"
+path = "fuzz_targets/authorization_request.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "dcql_query"
+path = "fuzz_targets/dcql_query.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "issuance_messages"
+path = "fuzz_targets/issuance_messages.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "presentation_messages"
+path = "fuzz_targets/presentation_messages.rs"
+test = false
+doc = false
+bench = false
+
+[lints.rust]
+unsafe_code = "forbid"
+
+# A workspace of its own: the fuzz targets build on nightly with sanitizers and never join the
+# library workspace, which `exclude`s this directory.
+[workspace]

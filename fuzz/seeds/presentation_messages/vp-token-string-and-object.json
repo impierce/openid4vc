@@ -1,0 +1,15 @@
+{
+  "my_credential": [
+    "eyJhbGciOiJFZERTQSJ9.eyJ2cCI6e319.c2ln"
+  ],
+  "other_credential": [
+    {
+      "@context": [
+        "https://www.w3.org/2018/credentials/v1"
+      ],
+      "type": [
+        "VerifiablePresentation"
+      ]
+    }
+  ]
+}

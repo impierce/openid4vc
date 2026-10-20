@@ -38,6 +38,9 @@ cargo deny check            # advisories, licenses, bans, sources; policy in den
 cargo +1.95 check --workspace --all-features --locked   # the MSRV from [workspace.package] rust-version
 ```
 
+When the change touches a parser or wire type, run its fuzz target for a minute (see the
+`fuzz-target` skill): `fuzz/run.sh <target> 60`.
+
 ## When a check fails
 
 - **`cargo fmt`**: run `cargo fmt --all` and commit. `rustfmt.toml` sets `max_width = 120`; don't
@@ -58,6 +61,10 @@ cargo +1.95 check --workspace --all-features --locked   # the MSRV from [workspa
   same PR and say so in the title.
 - **`cargo doc`**: bare URLs go in `<...>`; broken intra-doc links need `` [`Type`] `` paths that
   resolve from the crate root (`[`crate::Type`]`, `[`oid4vc_core::Type`]`).
+- **Fuzz target panics**: replay the input with `cargo +nightly fuzz run <target>
+  fuzz/artifacts/<target>/crash-...`; it is a bug in the parser or an assertion the target states
+  too strongly. Fix the bug and add the input as a regular test, or narrow the assertion with a
+  comment saying why.
 
 ## Before pushing
 

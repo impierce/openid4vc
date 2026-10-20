@@ -53,6 +53,22 @@ with the MSRV, and measures test coverage, reported on the pull request via
 [Codecov](https://codecov.io/github/impierce/openid4vc) without failing it. To see coverage locally,
 run `cargo llvm-cov --workspace --all-features --open`.
 
+### Fuzzing
+
+The parsers are fuzzed with [`cargo-fuzz`](https://github.com/rust-fuzz/cargo-fuzz) from the
+[`fuzz/`](fuzz/) crate, a workspace of its own that builds on nightly. Each target feeds arbitrary
+input to one surface (credential offers, authorization request URLs, DCQL queries, the OID4VCI and
+OID4VP messages) and asserts that nothing panics and that whatever parses survives a round trip. CI
+runs every target for a minute on pull requests that touch `*/src/` or `fuzz/`, and for ten minutes
+nightly. [`fuzz/README.md`](fuzz/README.md) describes the targets, the seeds and how to run, replay
+and extend them.
+
+```sh
+cargo install --locked cargo-fuzz
+rustup toolchain install nightly
+fuzz/run.sh dcql_query 600      # one target, ten minutes
+```
+
 ### Tests
 
 Unit tests live next to the code, specification examples as JSON under `*/tests/examples/`, and

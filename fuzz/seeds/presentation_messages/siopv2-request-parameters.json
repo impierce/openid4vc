@@ -1,0 +1,22 @@
+{
+  "response_type": "id_token",
+  "scope": "openid",
+  "response_mode": "direct_post",
+  "nonce": "n-0S6_WzA2Mj",
+  "claims": {
+    "id_token": {
+      "email": {
+        "essential": true
+      },
+      "name": null
+    }
+  },
+  "client_metadata": {
+    "client_name": "Example RP",
+    "subject_syntax_types_supported": [
+      "did:key",
+      "urn:ietf:params:oauth:jwk-thumbprint"
+    ],
+    "id_token_signed_response_alg": "EdDSA"
+  }
+}

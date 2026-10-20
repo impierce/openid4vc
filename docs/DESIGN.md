@@ -321,8 +321,8 @@ Named so that work on them is deliberate, not accidental:
   `response_uri`, while OID4VP 1.0 names the prefix `redirect_uri`. To be checked against the
   final text and fixed as a `fix(oid4vp)` if confirmed.
 - **Signed metadata**: `signed_metadata` is carried but not verified.
-- **No fuzzing, workspace-level lints absent** (`unsafe_code`, `missing_docs`, clippy `dbg_macro`
-  and friends). Tracked in [`PLAN.md`](PLAN.md), Phases B and D.
+- **Workspace-level lints absent** (`unsafe_code`, `missing_docs`, clippy `dbg_macro` and
+  friends). Tracked in [`PLAN.md`](PLAN.md), Phase D.
 
 ### identity-kit migration map
 
@@ -348,8 +348,8 @@ What CI enforces, and what [`PLAN.md`](PLAN.md) adds:
   one aggregate `QA` check; `audit.yml` and `license.yml` with `cargo deny` (`deny.toml`: advisories
   daily and on manifest changes; licenses, bans and sources on manifest changes); `coverage.yml`
   via `cargo-llvm-cov` and Codecov (informational); `pr-title.yml` for the Conventional Commit
-  title.
-- Phase B, next: `fuzz.yml` running `cargo-fuzz` targets seeded from `*/tests/examples`.
+  title; `fuzz.yml` running the `cargo-fuzz` targets of `fuzz/` (seeded from `*/tests/examples`)
+  for a minute per pull request and ten minutes nightly.
 - Phase C: `cargo publish --dry-run` on every pull request, release-plz.
 
 ## References

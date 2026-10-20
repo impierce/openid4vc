@@ -260,7 +260,7 @@ have no ADR; the migration is tracked as Phase D work (§6) and in `docs/DESIGN.
 
 ## 4. Phase B: CI hardening (second PR set)
 
-Status: items 1 to 7 are done (PR 2 in §8) and item 8 is PR 3.
+Status: items 1 to 8 are done (PRs 2 and 3 in §8).
 
 1. **Commit `Cargo.lock`** (`.gitignore` line removed). Enables `--locked`, reproducible CI, and
    Dependabot cargo PRs. This is a library workspace, but committing the lockfile is the current
@@ -355,7 +355,7 @@ and exercised with `dry_run`; it will fail at `cargo publish` until then, which 
 | --- | --- | --- | --- | --- |
 | 1 | `docs: add agent setup, design document, feature checklist, ADRs and contributing guide` | A1–A7 | – | #139, merged |
 | 2 | `ci: commit Cargo.lock, replace the workflows with QA, coverage, deny and PR title checks` | B1–B7 | 1 | #140 |
-| 3 | `test: add cargo-fuzz targets seeded from specification examples` (with the `to_query_value` fix they found) | B8 | 2 | stacked on #140 |
+| 3 | `test: add cargo-fuzz targets seeded from specification examples` (with the `to_query_value` fix they found) | B8 | 2 | this PR (stacked on #140) |
 | 4 | `ci: add release-plz pipeline with per-crate tags and trusted publishing` (supersedes #135) | C1 | 2 | |
 | 5+ | Phase D issues, one PR each, `ready-for-agent` | D | 1–2 | |
 
