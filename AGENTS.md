@@ -12,7 +12,7 @@ specification family: five published crates and one unpublished facade.
 | `oid4vp`         | OpenID for Verifiable Presentations 1.0 (DCQL, VP token builder/validator) | `oid4vc-core`, `oid4vci`                    |
 | `siopv2`         | Self-Issued OpenID Provider v2 draft 13 (ID token, provider, relying party) | `oid4vc-core`                               |
 | `oid4vc-manager` | managers and an `axum` issuer server combining the above; end-to-end tests | all of the above                            |
-| `oid4vc` (root)  | facade re-exporting the five crates; not released (ADR 0004)               | all of the above                            |
+| `oid4vc` (root)  | facade re-exporting the five crates; not released (ADR 0002)               | all of the above                            |
 
 - `docs/DESIGN.md` is the architecture. Follow it unless there is a concrete reason not to, and
   record any deviation as an ADR in `docs/adr/`.
@@ -39,7 +39,7 @@ specification family: five published crates and one unpublished facade.
   resolvers). Code must build with and without each.
 - No new git or path dependencies outside the workspace. The existing `identity_*` git
   dependencies, the `sd-jwt-payload` patch and `did-key` are being replaced by `identity-kit`
-  (ADR 0003); do not deepen their use.
+  (`docs/PLAN.md`, Phase D); do not deepen their use.
 - Every advisory ignore in `.cargo/audit.toml` carries a reason. A new one needs that reason and,
   if it reflects a design choice, an ADR.
 - `cargo fmt` (`rustfmt.toml`: `max_width = 120`) and `cargo clippy --workspace --all-targets

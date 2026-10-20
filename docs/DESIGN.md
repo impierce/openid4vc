@@ -39,13 +39,14 @@ papered over. Deviations from this document are recorded as ADRs in [`adr/`](adr
    2023), plus the OID4VCI Interactive Authorization draft.
 7. **Publishable.** No git or path dependencies outside the workspace, versions and changelogs
    derived from Conventional Commits, `cargo publish --dry-run` green on every pull request. The
-   workspace does not meet this principle today; ADR 0003 is the path to it.
+   workspace does not meet this principle today; the identity-kit migration map under *Known gaps*
+   is the path to it.
 
 ## Layout
 
 ```
 openid4vc/
-├── Cargo.toml                 # workspace + the `oid4vc` facade package (ADR 0004)
+├── Cargo.toml                 # workspace + the `oid4vc` facade package (ADR 0002)
 ├── oid4vc-core/               # shared traits, request/response machinery, utilities
 │   └── src/
 │       ├── authentication/    # Sign, Verify, Subject, ExternalSign, Validator
@@ -306,8 +307,8 @@ Named so that work on them is deliberate, not accidental:
 - **Identity dependencies**: `oid4vc-core::verifier`, `VerificationMaterialResolver`, and
   `oid4vp`'s token layer depend on eight `identity_*` crates as **git** dependencies, on a patched
   `sd-jwt-payload` and, for `did:key`, on the unmaintained `did-key` crate (issue #104). Cargo
-  cannot publish crates with git dependencies, so these block every release. ADR 0003 replaces
-  them with `identity-kit`; the mapping is below.
+  cannot publish crates with git dependencies, so these block every release. `identity-kit` replaces
+  them; the mapping is below.
 - **Validator coverage**: `VpTokenValidator` handles `jwt_vc_json`, `dc+sd-jwt` and `vc+sd-jwt`;
   `ldp_vc` and `mso_mdoc` return `UnsupportedFormat`. `multiple` and `trusted_authorities` are
   parsed but not enforced (TODOs in the validator); relative `kid` references are not resolved
@@ -323,7 +324,7 @@ Named so that work on them is deliberate, not accidental:
 - **No fuzzing, no MSRV, no lockfile in git, workspace-level lints absent.** Tracked in
   [`PLAN.md`](PLAN.md), Phases B and D.
 
-### identity-kit migration map (ADR 0003)
+### identity-kit migration map
 
 | Today                                                                                         | identity-kit replacement                                              |
 | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |

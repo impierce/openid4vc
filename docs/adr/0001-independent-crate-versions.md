@@ -1,4 +1,4 @@
-# ADR 0002: Crates are versioned, tagged and changelogged independently
+# ADR 0001: Crates are versioned, tagged and changelogged independently
 
 - Status: accepted
 - Date: 2026-10-18

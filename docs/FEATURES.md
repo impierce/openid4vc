@@ -171,7 +171,7 @@ Specification versions tracked: [OID4VCI 1.0][oid4vci] (final, 16 September 2025
 | `axum` issuer server: metadata, offer, PAR, authorize, token, credential, notification routes, extension router |   ✅   |               |               |       |
 | `Storage` trait                                                                            |   ✅   |               |               |       |
 | `KeySubject` (`did:key`, Ed25519) with optional `ExternalSign`                             |   ✅   |               |               |       |
-| Replace `did-key` (unmaintained) with `identity-kit`                                       |   📋   |               |               | [#104](https://github.com/impierce/openid4vc/issues/104), [ADR 0003](adr/0003-identity-kit-replaces-identity-crates.md) |
+| Replace `did-key` (unmaintained) with `identity-kit`                                       |   📋   |               |               | [#104](https://github.com/impierce/openid4vc/issues/104), [`PLAN.md`](PLAN.md) Phase D |
 | End-to-end tests: pre-authorized code (batch, by reference), authorization code, SIOPv2, OID4VP |   ✅   |               |               |       |
 | Nonce and deferred credential routes                                                      |   ⬜   |               |               |       |
 
@@ -183,9 +183,9 @@ Specification versions tracked: [OID4VCI 1.0][oid4vci] (final, 16 September 2025
 | Committed lockfile, `--locked` CI, MSRV, multi-OS tests, rustdoc check |   📋   | [`PLAN.md`](PLAN.md) Phase B                  |
 | `cargo deny` (advisories, licenses, bans, sources)                   |   📋   | [`PLAN.md`](PLAN.md) Phase B                  |
 | Fuzz targets over the parsers, seeded from the spec examples         |   📋   | [`PLAN.md`](PLAN.md) Phase B                  |
-| Default branch `main`                                                |   📋   | [ADR 0001](adr/0001-default-branch-main.md)   |
-| release-plz with per-crate versions, trusted publishing              |   📋   | [`PLAN.md`](PLAN.md) Phase C, [ADR 0002](adr/0002-independent-crate-versions.md), [#135](https://github.com/impierce/openid4vc/pull/135) |
-| Publishable: no git dependencies, no patches                         |   📋   | [ADR 0003](adr/0003-identity-kit-replaces-identity-crates.md) |
+| Default branch `main`                                                |   ✅   | GitHub repository settings                    |
+| release-plz with per-crate versions, trusted publishing              |   📋   | [`PLAN.md`](PLAN.md) Phase C, [ADR 0001](adr/0001-independent-crate-versions.md), [#135](https://github.com/impierce/openid4vc/pull/135) |
+| Publishable: no git dependencies, no patches                         |   📋   | [`PLAN.md`](PLAN.md) Phase D, [#104](https://github.com/impierce/openid4vc/issues/104) |
 
 [oid4vci]: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html
 [oid4vci-ia]: https://openid.net/wg/digital-credentials-protocols/specifications/

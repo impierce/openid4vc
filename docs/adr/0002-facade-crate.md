@@ -1,4 +1,4 @@
-# ADR 0004: The root `oid4vc` crate is a facade and is not released
+# ADR 0002: The root `oid4vc` crate is a facade and is not released
 
 - Status: accepted
 - Date: 2026-10-18
@@ -31,7 +31,7 @@ Options:
 
 ## Consequences
 
-- One fewer version to reason about; the changelogs stay per crate (ADR 0002).
+- One fewer version to reason about; the changelogs stay per crate (ADR 0001).
 - The facade can keep path-only dependencies, which would otherwise fail `cargo publish`.
 - Should an umbrella crate become useful (for example for `docs.rs` navigation), flipping
   `release = false` and adding version requirements to its dependencies is a small, separate

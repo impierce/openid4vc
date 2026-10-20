@@ -22,8 +22,8 @@ Single-context repo (this one):
 │   ├── DESIGN.md
 │   ├── FEATURES.md
 │   └── adr/
-│       ├── 0001-default-branch-main.md
-│       └── 0002-independent-crate-versions.md
+│       ├── 0001-independent-crate-versions.md
+│       └── 0002-facade-crate.md
 ├── oid4vc-core/  oid4vci/  oid4vp/  siopv2/  oid4vc-manager/
 ```
 
@@ -42,4 +42,4 @@ If the concept you need isn't in the glossary yet, that's a signal: either you'r
 
 If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
 
-> _Contradicts ADR-0003 (identity-kit replaces the identity_* crates), but worth reopening because…_
+> _Contradicts ADR-0001 (crates are versioned independently), but worth reopening because…_

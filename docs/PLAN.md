@@ -134,7 +134,7 @@ https://code.claude.com/docs/en/memory and https://code.claude.com/docs/en/cloud
 
 ## 3. Phase A: agentic setup (done: PR 1 in §8)
 
-Everything below is text and landed as one `docs:` PR on `dev` before any branch rename. The
+Everything below is text and landed as one `docs:` PR on the default branch. The
 sub-sections are kept as the record of what each file is for.
 
 ### A1. `AGENTS.md`
@@ -208,12 +208,12 @@ PR #93 rather than leaving that PR open; link the 2023 feature issues (#30, #31,
 
 Start the log with the decisions this plan takes, so agents stop re-asking:
 
-- `0001-default-branch-main.md`: rename `dev` to `main`, when, and the ssi-agent check.
-- `0002-independent-crate-versions.md`: per-crate versions, tags and changelogs (vs lockstep).
-- `0003-identity-kit-replaces-identity-crates.md`: the migration as prerequisite to publishing;
-  the advisory ignores that disappear with it.
-- `0004-facade-crate.md`: whether `oid4vc` (root) stays an unpublished facade, is published as an
+- `0001-independent-crate-versions.md`: per-crate versions, tags and changelogs (vs lockstep).
+- `0002-facade-crate.md`: whether `oid4vc` (root) stays an unpublished facade, is published as an
   umbrella, or is removed (see §7).
+
+The default branch (`main`) and the identity-kit migration were decided outside this plan and
+have no ADR; the migration is tracked as Phase D work (§6) and in `docs/DESIGN.md`.
 
 ### A6. `CONTRIBUTING.md`, `SECURITY.md`, `.github/`
 
@@ -276,8 +276,8 @@ Start the log with the decisions this plan takes, so agents stop re-asking:
 5. **`pr-title.yml`**: `action-semantic-pull-request`, scopes optional, crate names suggested.
 6. **Hygiene across workflows**: SHA-pinned actions, `permissions: contents: read`,
    `persist-credentials: false`, concurrency groups, `CARGO_TERM_COLOR`.
-7. **Branch rename `dev` → `main`** as its own step after the workflows reference `main`: GitHub
-   "rename branch" redirects PRs and clones; confirm ssi-agent's git reference first.
+7. **Branch rename `dev` → `main`**: done, `main` is the default branch. `dev` is dropped from the
+   workflows' `branches` lists once the `dev` branch is deleted.
 8. **`fuzz/`** (own workspace, nightly): targets for the parsers that take attacker-controlled
    input: credential offer (by value and by reference URL), authorization request (query string
    and JAR JWT), DCQL query and its evaluation against a credential set, token/credential/nonce
@@ -304,7 +304,7 @@ and exercised with `dry_run`; it will fail at `cargo publish` until then, which 
    over.
 3. **Versions**: `oid4vci`/`oid4vp`/`siopv2` go from the 2023 `0.1.0` to `0.2.0` (breaking by any
    measure); `oid4vc-core` and `oid4vc-manager` start at `0.1.0` or join at `0.2.0` for a uniform
-   first release (ADR 0002 decides). Afterwards release-plz bumps independently.
+   first release (ADR 0001 decides). Afterwards release-plz bumps independently.
 4. **Changelog** per crate, first entry summarising "everything since 0.1.0" by hand once (allowed
    before the pipeline owns the file), then generated.
 5. **`CONTRIBUTING.md`/`AGENTS.md`** gain the "never bump by hand" rule the moment the pipeline merges.
@@ -320,7 +320,7 @@ and exercised with `dry_run`; it will fail at `cargo publish` until then, which 
   and `paste`.
 - Reduce `unwrap`/`expect` in `*/src` (395 today): the protocol parsers should return errors; the
   OID4VC error responses issue (#78) is the natural umbrella.
-- identity-kit migration (ADR 0003), file by file in the order of `docs/DESIGN.md` §5; each step
+- identity-kit migration, file by file in the order of `docs/DESIGN.md` §5; each step
   removes one git dependency or advisory ignore.
 - Triage the 2023 issue backlog with `/triage` into `ready-for-agent` / `ready-for-human` /
   `wontfix`, and close or merge #93 and #124.
@@ -329,12 +329,12 @@ and exercised with `dry_run`; it will fail at `cargo publish` until then, which 
 
 ## 7. Decisions taken (2026-10-18)
 
-1. **Default branch**: rename `dev` → `main`, as a separate step in Phase B after checking
-   ssi-agent's git reference ([ADR 0001](adr/0001-default-branch-main.md)).
+1. **Default branch**: `main` (done: `main` is the default branch on GitHub; the workflows drop
+   `dev` once that branch is deleted).
 2. **Versioning**: independent per-crate versions, tags and changelogs; first release `0.2.0` for
-   all five ([ADR 0002](adr/0002-independent-crate-versions.md)).
+   all five ([ADR 0001](adr/0001-independent-crate-versions.md)).
 3. **Root `oid4vc` facade crate**: kept, never released, `publish = false`
-   ([ADR 0004](adr/0004-facade-crate.md)).
+   ([ADR 0002](adr/0002-facade-crate.md)).
 4. **PR #135**: superseded by the Phase C PR, which keeps its structure.
 5. **External PRs in triage**: no (flag in `docs/agents/issue-tracker.md`).
 6. **CodeRabbit**: already installed on the repository, so `.coderabbit.yaml` is in.
@@ -351,7 +351,7 @@ and exercised with `dry_run`; it will fail at `cargo publish` until then, which 
 | 1 | `docs: add agent setup, design document, feature checklist, ADRs and contributing guide` | A1–A7 | – | this PR |
 | 2 | `build: commit Cargo.lock` | B1 | – | |
 | 3 | `ci: replace workflows with QA, coverage, audit, license and PR title checks` | B2–B6 | 2 | |
-| 4 | `ci: switch default branch references to main` (+ manual rename) | B7 | 3, ssi-agent check | |
+| 4 | `ci: drop the dev branch from the workflows` | B7 | 3, manual rename (done) | |
 | 5 | `ci: add release-plz pipeline with per-crate tags and trusted publishing` (supersedes #135) | C1 | 3, 4 | |
 | 6 | `test: add cargo-fuzz targets seeded from specification examples` | B8 | 2 | |
 | 7+ | Phase D issues, one PR each, `ready-for-agent` | D | 1–3 | |
