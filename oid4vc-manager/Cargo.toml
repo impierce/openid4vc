@@ -14,7 +14,7 @@ oid4vci = { path = "../oid4vci" }
 anyhow = "1.0"
 async-trait = "0.1"
 axum = "0.6"
-axum-auth = "0.4"
+axum-auth = "0.8"
 chrono.workspace = true
 derivative = "2.2"
 did-key.workspace = true
