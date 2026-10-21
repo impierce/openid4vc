@@ -218,8 +218,8 @@ OID4VP 1.0 with DCQL. Presentation Exchange is gone, as in the specification.
   `client_metadata`, `transaction_data`, `verifier_info`, `request_uri_method`. The extension
   reads the verifier's supported algorithms and subject syntax types from the client metadata
   (fetching it when given by URI) and builds the response from a `VpToken`.
-- **Client identifier**: `ClientId` parses and prints the 1.0 prefixes (`pre-registered`,
-  `redirect_uri`, `openid_federation`, `decentralized_identifier`, `verifier_attestation`,
+- **Client identifier**: `ClientId` parses and prints the 1.0 prefixes (none for a pre-registered
+  client, `redirect_uri`, `openid_federation`, `decentralized_identifier`, `verifier_attestation`,
   `x509_san_dns`, `x509_hash`).
 - **Verifier metadata**: `ClientMetadataParameters` with `vp_formats_supported` per format
   (`jwt_vc_json`, `jwt_vp_json`, `dc+sd-jwt`, `vc+sd-jwt`, `ldp_vc`, `di_vp`, `mso_mdoc`),

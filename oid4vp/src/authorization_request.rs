@@ -65,9 +65,11 @@ impl std::str::FromStr for ClientId {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // A pre-registered Client Identifier carries no prefix, so `pre-registered:` is an unknown prefix like any other:
+        // accepting it would print the identifier without it, and an identifier containing `:` would then re-parse under
+        // another prefix.
         if let Some((prefix_str, identifier)) = s.split_once(':') {
             let prefix = match prefix_str {
-                "pre-registered" => ClientIdPrefix::PreRegistered,
                 "response_uri" => ClientIdPrefix::RedirectUri,
                 "openid_federation" => ClientIdPrefix::OpenidFederation,
                 "decentralized_identifier" => ClientIdPrefix::DecentralizedIdentifier,
@@ -378,6 +380,14 @@ mod tests {
         let test_client_id = "openid_federation:example_client".parse::<ClientId>().unwrap();
         assert_eq!(test_client_id.prefix(), &ClientIdPrefix::OpenidFederation);
         assert_eq!(test_client_id.identifier(), "example_client");
+    }
+
+    #[test]
+    fn test_pre_registered_client_id_has_no_prefix() {
+        assert!("pre-registered:x509_san_dns:example.com".parse::<ClientId>().is_err());
+
+        let client_id = "x509_san_dns:example.com:8443".parse::<ClientId>().unwrap();
+        assert_eq!(client_id.to_string().parse::<ClientId>().unwrap(), client_id);
     }
 
     #[test]
