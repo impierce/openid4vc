@@ -3,7 +3,7 @@ use std::time::Duration;
 use crate::{managers::credential_issuer::CredentialIssuerManager, storage::Storage};
 use anyhow::Result;
 use axum::{
-    extract::State,
+    extract::{RawForm, State},
     http::{header::CONTENT_TYPE, Method, StatusCode},
     response::{AppendHeaders, IntoResponse},
     routing::{get, post},
@@ -161,10 +161,14 @@ async fn authorize<S: Storage>(
 
 async fn token<S: Storage>(
     State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
-    body: String,
+    RawForm(body): RawForm,
 ) -> impl IntoResponse {
-    // Not `Form`: `serde_urlencoded` cannot decode `authorization_details`, which comes as JSON.
-    let Ok(token_request) = from_form_urlencoded_string::<TokenRequest>(&body) else {
+    // Not `Form`: `serde_urlencoded` cannot decode `authorization_details`, which comes as JSON. `RawForm` still
+    // rejects a body that is not `application/x-www-form-urlencoded`.
+    let Some(token_request) = std::str::from_utf8(&body)
+        .ok()
+        .and_then(|body| from_form_urlencoded_string::<TokenRequest>(body).ok())
+    else {
         return (
             StatusCode::BAD_REQUEST,
             AppendHeaders([("Cache-Control", "no-store")]),
