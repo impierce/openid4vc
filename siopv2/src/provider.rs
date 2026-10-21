@@ -68,10 +68,8 @@ impl Provider {
             let (client_id, authorization_request) =
                 if let Ok(authorization_request) = AuthorizationRequest::<ByValue>::from_str(&authorization_request) {
                     let client_id = authorization_request.body.client_id().clone();
-                    let authorization_request: AuthorizationRequest<Object> = validator
-                        .decode(authorization_request.body.request.to_owned())
-                        .await
-                        .unwrap();
+                    let authorization_request: AuthorizationRequest<Object> =
+                        validator.decode(authorization_request.body.request.to_owned()).await?;
 
                     (client_id, authorization_request)
                 } else if let Ok(authorization_request) =
@@ -222,5 +220,16 @@ mod tests {
             .generate_response(&authorization_request, Default::default())
             .await
             .is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_validate_request_rejects_invalid_request_object() {
+        let subject = TestSubject::new("did:test:123".to_string(), "key_id".to_string()).unwrap();
+        let provider = Provider::new(Arc::new(subject), vec!["did:test"], vec![Algorithm::EdDSA]).unwrap();
+
+        assert!(provider
+            .validate_request("siopv2://idtoken?client_id=did%3Aexample%3A123&request=not-a-jwt".to_string())
+            .await
+            .is_err());
     }
 }

@@ -102,7 +102,9 @@ impl Extension for SIOPv2 {
         };
 
         match client_metadata {
-            ClientMetadataResource::ClientMetadataUri(_) => unreachable!(),
+            ClientMetadataResource::ClientMetadataUri(_) => {
+                anyhow::bail!("The client metadata at `client_metadata_uri` is itself a `client_metadata_uri`")
+            }
             ClientMetadataResource::ClientMetadata { extension, .. } => {
                 match extension.id_token_signed_response_alg {
                     Some(alg) => Ok(vec![alg]),
@@ -131,7 +133,9 @@ impl Extension for SIOPv2 {
         };
 
         match client_metadata {
-            ClientMetadataResource::ClientMetadataUri(_) => unreachable!(),
+            ClientMetadataResource::ClientMetadataUri(_) => {
+                anyhow::bail!("The client metadata at `client_metadata_uri` is itself a `client_metadata_uri`")
+            }
             ClientMetadataResource::ClientMetadata {
                 extension:
                     ClientMetadataParameters {
