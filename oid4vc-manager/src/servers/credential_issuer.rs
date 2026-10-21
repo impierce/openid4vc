@@ -10,7 +10,7 @@ use axum::{
     Form, Json, Router,
 };
 use axum_auth::AuthBearer;
-use oid4vc_core::Validator;
+use oid4vc_core::{utils::form_urlencoded::from_form_urlencoded_string, Validator};
 use oid4vci::{
     credential_request::{CredentialIdentifierOrCredentialConfigurationId, CredentialRequest},
     notification_request::NotificationRequest,
@@ -161,8 +161,17 @@ async fn authorize<S: Storage>(
 
 async fn token<S: Storage>(
     State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
-    Form(token_request): Form<TokenRequest>,
+    body: String,
 ) -> impl IntoResponse {
+    // Not `Form`: `serde_urlencoded` cannot decode `authorization_details`, which comes as JSON.
+    let Ok(token_request) = from_form_urlencoded_string::<TokenRequest>(&body) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            AppendHeaders([("Cache-Control", "no-store")]),
+            Json("Invalid token request"),
+        )
+            .into_response();
+    };
     match credential_issuer_manager.storage.get_token_response(token_request) {
         Some(token_response) => (
             StatusCode::OK,
