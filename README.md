@@ -3,7 +3,6 @@
 [![codecov](https://codecov.io/github/impierce/openid4vc/graph/badge.svg?token=CDL92C53JL)](https://codecov.io/github/impierce/openid4vc)
 [![QA](https://github.com/impierce/openid4vc/actions/workflows/qa.yml/badge.svg)](https://github.com/impierce/openid4vc/actions/workflows/qa.yml)
 [![Audit](https://github.com/impierce/openid4vc/actions/workflows/audit.yml/badge.svg)](https://github.com/impierce/openid4vc/actions/workflows/audit.yml)
-[![Fuzz](https://github.com/impierce/openid4vc/actions/workflows/fuzz.yml/badge.svg)](https://github.com/impierce/openid4vc/actions/workflows/fuzz.yml)
 [![Rust: 100%](https://img.shields.io/badge/Rust-100%25-CE422B?logo=rust&logoColor=white)](https://www.rust-lang.org)
 
 This is a library for the OpenID for Verifiable Credentials (OpenID4VC) specifications family developed by the [OpenID
