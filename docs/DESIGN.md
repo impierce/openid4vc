@@ -317,9 +317,6 @@ Named so that work on them is deliberate, not accidental:
   Digital Credentials API transport.
 - **SIOPv2**: the JWK thumbprint subject syntax type is parsed but no `Subject` produces it
   (issue #8); `client_metadata_uri` is not resolved for syntax types (TODO); draft 13 is old.
-- **Client identifier prefix spelling**: `ClientIdPrefix::RedirectUri` parses and prints
-  `response_uri`, while OID4VP 1.0 names the prefix `redirect_uri`. To be checked against the
-  final text and fixed as a `fix(oid4vp)` if confirmed.
 - **Signed metadata**: `signed_metadata` is carried but not verified.
 - **Large integers through `serde_json::Value`**: the IOTA dependencies of the `identity_*` crates
   turn on serde_json's `arbitrary_precision`, under which an integer beyond `u64` in a `Value`

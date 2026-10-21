@@ -39,7 +39,7 @@ impl std::fmt::Display for ClientIdPrefix {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ClientIdPrefix::PreRegistered => write!(f, "pre-registered"),
-            ClientIdPrefix::RedirectUri => write!(f, "response_uri"),
+            ClientIdPrefix::RedirectUri => write!(f, "redirect_uri"),
             ClientIdPrefix::OpenidFederation => write!(f, "openid_federation"),
             ClientIdPrefix::DecentralizedIdentifier => write!(f, "decentralized_identifier"),
             ClientIdPrefix::VerifierAttestation => write!(f, "verifier_attestation"),
@@ -70,7 +70,7 @@ impl std::str::FromStr for ClientId {
         // another prefix.
         if let Some((prefix_str, identifier)) = s.split_once(':') {
             let prefix = match prefix_str {
-                "response_uri" => ClientIdPrefix::RedirectUri,
+                "redirect_uri" => ClientIdPrefix::RedirectUri,
                 "openid_federation" => ClientIdPrefix::OpenidFederation,
                 "decentralized_identifier" => ClientIdPrefix::DecentralizedIdentifier,
                 "verifier_attestation" => ClientIdPrefix::VerifierAttestation,
@@ -388,6 +388,15 @@ mod tests {
 
         let client_id = "x509_san_dns:example.com:8443".parse::<ClientId>().unwrap();
         assert_eq!(client_id.to_string().parse::<ClientId>().unwrap(), client_id);
+    }
+
+    #[test]
+    fn test_redirect_uri_client_id_prefix() {
+        let client_id = "redirect_uri:https://client.example.org/cb".parse::<ClientId>().unwrap();
+        assert_eq!(client_id.prefix(), &ClientIdPrefix::RedirectUri);
+        assert_eq!(client_id.identifier(), "https://client.example.org/cb");
+        assert_eq!(client_id.to_string(), "redirect_uri:https://client.example.org/cb");
+        assert!("response_uri:https://client.example.org/cb".parse::<ClientId>().is_err());
     }
 
     #[test]
