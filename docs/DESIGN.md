@@ -321,6 +321,10 @@ Named so that work on them is deliberate, not accidental:
   `response_uri`, while OID4VP 1.0 names the prefix `redirect_uri`. To be checked against the
   final text and fixed as a `fix(oid4vp)` if confirmed.
 - **Signed metadata**: `signed_metadata` is carried but not verified.
+- **Large integers through `serde_json::Value`**: the IOTA dependencies of the `identity_*` crates
+  turn on serde_json's `arbitrary_precision`, under which an integer beyond `u64` in a `Value`
+  cannot pass serde's buffer for `flatten` and untagged types. Such a message parses from JSON text
+  but not from a `Value` (`from_value`, `from_generic`). Goes away with the identity-kit migration.
 - **Workspace-level lints absent** (`unsafe_code`, `missing_docs`, clippy `dbg_macro` and
   friends). Tracked in [`PLAN.md`](PLAN.md), Phase D.
 
