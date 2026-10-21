@@ -20,8 +20,11 @@ use siopv2::{ClaimRequests, StandardClaimsRequests, StandardClaimsValues};
 
 fn round_trip<T: Serialize + DeserializeOwned + PartialEq + Debug>(data: &[u8]) -> Option<T> {
     let parsed: T = serde_json::from_slice(data).ok()?;
-    let json = serde_json::to_value(&parsed).expect("a parsed message serializes");
-    let again: T = serde_json::from_value(json).expect("a serialized message parses");
+    // Through JSON text, as on the wire. Not through `serde_json::Value`: the IOTA dependencies of
+    // `identity_*` turn on serde_json's `arbitrary_precision`, under which an integer beyond `u64`
+    // in a `Value` cannot pass serde's buffer for `flatten` and untagged types.
+    let json = serde_json::to_vec(&parsed).expect("a parsed message serializes");
+    let again: T = serde_json::from_slice(&json).expect("a serialized message parses");
     assert_eq!(again, parsed);
     Some(parsed)
 }

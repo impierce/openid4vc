@@ -17,9 +17,10 @@ fn round_trip(offer: &CredentialOffer) {
 
 fuzz_target!(|data: &[u8]| {
     if let Ok(parameters) = serde_json::from_slice::<CredentialOfferParameters>(data) {
-        let json = serde_json::to_value(&parameters).expect("credential offer parameters serialize");
+        // Through JSON text, as on the wire (see `presentation_messages` for why not `Value`).
+        let json = serde_json::to_vec(&parameters).expect("credential offer parameters serialize");
         let again: CredentialOfferParameters =
-            serde_json::from_value(json).expect("serialized credential offer parameters parse");
+            serde_json::from_slice(&json).expect("serialized credential offer parameters parse");
         assert_eq!(again, parameters);
         round_trip(&CredentialOffer::CredentialOffer(Box::new(parameters)));
     }

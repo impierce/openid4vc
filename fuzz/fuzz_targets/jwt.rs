@@ -39,8 +39,8 @@ fuzz_target!(|data: &[u8]| {
             SubjectSyntaxType::from_str(&printed).ok().as_ref(),
             Some(&subject_syntax_type)
         );
-        let json = serde_json::to_value(&subject_syntax_type).expect("a subject syntax type serializes");
-        let again: SubjectSyntaxType = serde_json::from_value(json).expect("a serialized subject syntax type parses");
+        let json = serde_json::to_vec(&subject_syntax_type).expect("a subject syntax type serializes");
+        let again: SubjectSyntaxType = serde_json::from_slice(&json).expect("a serialized subject syntax type parses");
         assert_eq!(again, subject_syntax_type);
     }
     for did_method in [
@@ -54,7 +54,9 @@ fuzz_target!(|data: &[u8]| {
         // DID Core: `method-name = 1*method-char`, `method-char = %x61-7A / DIGIT`.
         let method_name = input.split(':').nth(1).unwrap_or_default();
         assert!(
-            method_name.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit()),
+            method_name
+                .bytes()
+                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit()),
             "a DID method name is lowercase ASCII letters and digits: {input}"
         );
     }
