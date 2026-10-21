@@ -392,11 +392,15 @@ mod tests {
 
     #[test]
     fn test_redirect_uri_client_id_prefix() {
-        let client_id = "redirect_uri:https://client.example.org/cb".parse::<ClientId>().unwrap();
+        let client_id = "redirect_uri:https://client.example.org/cb"
+            .parse::<ClientId>()
+            .unwrap();
         assert_eq!(client_id.prefix(), &ClientIdPrefix::RedirectUri);
         assert_eq!(client_id.identifier(), "https://client.example.org/cb");
         assert_eq!(client_id.to_string(), "redirect_uri:https://client.example.org/cb");
-        assert!("response_uri:https://client.example.org/cb".parse::<ClientId>().is_err());
+        assert!("response_uri:https://client.example.org/cb"
+            .parse::<ClientId>()
+            .is_err());
     }
 
     #[test]
