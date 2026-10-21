@@ -1,0 +1,13 @@
+{
+  "name": "Max Mustermann",
+  "given_name": "Max",
+  "family_name": "Mustermann",
+  "email": "max@example.com",
+  "email_verified": true,
+  "address": {
+    "street_address": "Sandanger 25",
+    "locality": "Musterstadt",
+    "postal_code": "123456",
+    "country": "DE"
+  }
+}

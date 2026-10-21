@@ -35,6 +35,10 @@ rustup component add rustfmt clippy llvm-tools-preview
 install_tool cargo-deny cargo-deny
 install_tool cargo-llvm-cov cargo-llvm-cov
 install_tool cargo-hack cargo-hack
+install_tool cargo-fuzz cargo-fuzz
+
+# The fuzz targets (fuzz/) build on nightly.
+rustup toolchain install nightly --profile minimal
 
 # Fetch the dependency graph (including the git dependencies) so the first build is offline-fast.
 cargo fetch
