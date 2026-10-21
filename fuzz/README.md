@@ -71,7 +71,7 @@ A failing job uploads `artifacts/<target>/` for replay.
 A crash is a bug in a crate, or a property the target states too strongly; the input decides which.
 
 - A bug: fix it in the crate's `src/`, add the input's behaviour as a regular test against the specification it violates, keep the target's assertion.
-- A wrong assumption in the target (a lossy `Display`, an alias the parser accepts leniently): narrow the assertion and say why in a comment, as `authorization_request` does for the `pre-registered:` spelling.
+- A wrong assumption in the target (a lossy `Display`, an alias the parser accepts leniently): narrow the assertion and say why in a comment next to it.
 
 ## Adding a target or a seed
 

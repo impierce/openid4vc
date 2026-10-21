@@ -7,6 +7,7 @@
 use std::fmt::Debug;
 
 use libfuzzer_sys::fuzz_target;
+use oid4vc_core::utils::form_urlencoded::{from_form_urlencoded_string, to_form_urlencoded_string};
 use oid4vci::authorization_details::AuthorizationDetailsObject;
 use oid4vci::credential_format_profiles::CredentialFormats;
 use oid4vci::credential_issuer::authorization_server_metadata::AuthorizationServerMetadata;
@@ -54,15 +55,12 @@ fuzz_target!(|data: &[u8]| {
         assert_eq!(serde_json::to_value(&again).expect("a nonce response serializes"), json);
     }
 
-    // The Token Request is form-encoded on the wire.
+    // The Token Request is form-encoded on the wire, `authorization_details` as JSON.
     if let Ok(input) = std::str::from_utf8(data) {
-        if let Ok(request) = serde_urlencoded::from_str::<TokenRequest>(input) {
-            // `serde_urlencoded` cannot encode nested values such as `authorization_details`.
-            if let Ok(encoded) = serde_urlencoded::to_string(&request) {
-                let again: TokenRequest =
-                    serde_urlencoded::from_str(&encoded).expect("an encoded token request parses");
-                assert_eq!(again, request);
-            }
+        if let Ok(request) = from_form_urlencoded_string::<TokenRequest>(input) {
+            let encoded = to_form_urlencoded_string(&request).expect("a token request encodes");
+            let again: TokenRequest = from_form_urlencoded_string(&encoded).expect("an encoded token request parses");
+            assert_eq!(again, request);
         }
     }
 
