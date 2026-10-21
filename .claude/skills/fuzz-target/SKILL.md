@@ -19,6 +19,7 @@ input: nothing panics, and whatever parses survives a round trip through its ser
 | `DcqlQuery`, its evaluation against decoded presentations, `ClaimPathPointer` | `dcql_query`        |
 | OID4VCI JSON messages (metadata, token, credential, nonce, notification) | `issuance_messages`     |
 | OID4VP and SIOPv2 JSON messages (request parameters, client metadata, VP token, claims) | `presentation_messages` |
+| Compact JWTs and SD-JWTs before signature check, Subject Syntax Types, DID methods | `jwt` |
 
 A new JSON type joins `issuance_messages` or `presentation_messages` with one `round_trip::<T>(data)`
 line. A new input format (a new URL scheme, a compact serialization, a new query language) gets a
