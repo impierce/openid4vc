@@ -20,8 +20,7 @@ exclude = ["fuzz"]
 homepage = "https://www.impierce.com/"
 license = "Apache-2.0"
 repository = "https://github.com/impierce/openid4vc"
-# Minimum supported Rust version, checked in CI (QA / MSRV) against the committed Cargo.lock; the same as
-# identity-kit, which replaces the identity_* dependencies.
+# Minimum supported Rust version, checked in CI (QA / MSRV) against the committed Cargo.lock.
 rust-version = "1.95"
 
 [workspace.dependencies]
@@ -30,38 +29,42 @@ chrono = "0.4"
 did-key = "0.2"
 getset = "0.1"
 http = "1.3.1"
-identity_did = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1" }
-identity_document = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1" }
-identity_ecdsa_verifier = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1" }
-identity_eddsa_verifier = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1" }
-identity_core = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1", default-features = false }
-identity_credential = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1", default-features = false, features = [
+identity_did = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
+identity_document = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
+identity_ecdsa_verifier = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
+identity_eddsa_verifier = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
+identity_core = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1", default-features = false }
+identity_credential = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1", default-features = false, features = [
     "validator",
     "credential",
     "presentation",
     "sd-jwt-vc",
 ] }
-identity_jose = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1" }
-identity_verification = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1" }
-is_empty = "0.2"
-jsonwebtoken = "9.3"
-monostate = "0.1"
-nutype = { version = "0.6", features = ["serde"] }
-reqwest = { version = "0.12", default-features = false, features = [
+identity_jose = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
+identity_verification = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
+is_empty = "0.3"
+# The pure-Rust backend; `aws_lc_rs` would pull in a C library.
+jsonwebtoken = { version = "11.1", default-features = false, features = ["rust_crypto"] }
+monostate = "1.0"
+nutype = { version = "0.8", features = ["serde"] }
+# `rustls` with `ring`, installed by `oid4vc_core::http_client`; reqwest's own `rustls` feature would pull in
+# `aws-lc-rs`.
+reqwest = { version = "0.13", default-features = false, features = [
     "json",
-    "rustls-tls",
+    "rustls-no-provider",
 ] }
-reqwest-middleware = { version = "0.4", features = ["json"] }
-reqwest-retry = "0.7"
+reqwest-middleware = { version = "0.5", features = ["json", "form"] }
+reqwest-retry = "0.9"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
 serde_with = "3.0"
 tokio = { version = "1.46", features = ["rt", "macros", "rt-multi-thread"] }
-thiserror = "1.0"
+thiserror = "2.0"
 tracing = { version = "0.1", default-features = false, features = ["attributes", "std", "log"] }
 url = { version = "2", features = ["serde"] }
-utoipa = "5.5"
+utoipa = "6.0"
 
 [dependencies]
 oid4vc-core = { path = "oid4vc-core" }
@@ -73,3 +76,9 @@ oid4vc-manager = { path = "oid4vc-manager" }
 [patch.crates-io]
 # We need this patch because it makes the `Hasher` trait `Send` and `Sync`. See: https://github.com/iotaledger/sd-jwt-payload/compare/main...impierce:sd-jwt-payload:fix/hasher-send-sync
 sd-jwt = { git = "https://github.com/impierce/sd-jwt-payload", rev = "f28789a", package = "sd-jwt-payload" }
+
+# identity_* v1.9.13-beta.1 pulls in IOTA v1.29.0, which takes `fastcrypto` from both crates.io and git and unifies
+# them with this patch in its own workspace; patches don't reach dependents, so we repeat it. It goes away with the
+# identity_* dependencies.
+[patch."https://github.com/MystenLabs/fastcrypto"]
+fastcrypto = "=0.1.11"

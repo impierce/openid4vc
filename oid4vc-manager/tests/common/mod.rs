@@ -7,15 +7,14 @@ use anyhow::Result;
 use async_trait::async_trait;
 use derivative::{self, Derivative};
 use ed25519_dalek::{Signature, Signer, SigningKey};
-use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
+use jsonwebtoken::Algorithm;
 use lazy_static::lazy_static;
 use oid4vc_core::{authentication::sign::ExternalSign, Sign, Subject, Verify};
-use rand::rngs::OsRng;
 use siopv2::{StandardClaimsRequests, StandardClaimsValues};
 
 // SigningKey for mocking purposes.
 lazy_static! {
-    pub static ref TEST_KEYPAIR: SigningKey = SigningKey::generate(&mut OsRng);
+    pub static ref TEST_KEYPAIR: SigningKey = SigningKey::generate(&mut rand::rng());
 }
 
 #[derive(Derivative, Debug)]
@@ -134,8 +133,7 @@ impl Storage for MemoryStorage {
 
 // Get the claims from a JWT without performing validation.
 pub fn get_jwt_claims(jwt: &serde_json::Value) -> serde_json::Value {
-    let key = DecodingKey::from_secret(&[]);
-    let mut validation = Validation::new(Algorithm::EdDSA);
-    validation.insecure_disable_signature_validation();
-    decode(jwt.as_str().unwrap(), &key, &validation).unwrap().claims
+    jsonwebtoken::dangerous::insecure_decode(jwt.as_str().unwrap())
+        .unwrap()
+        .claims
 }

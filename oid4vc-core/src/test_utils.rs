@@ -7,11 +7,10 @@ use derivative::{self, Derivative};
 use ed25519_dalek::{Signature, Signer, SigningKey};
 use jsonwebtoken::Algorithm;
 use lazy_static::lazy_static;
-use rand::rngs::OsRng;
 
 // SigningKey for mocking purposes.
 lazy_static! {
-    pub static ref TEST_KEYPAIR: SigningKey = SigningKey::generate(&mut OsRng);
+    pub static ref TEST_KEYPAIR: SigningKey = SigningKey::generate(&mut rand::rng());
 }
 
 #[derive(Derivative, Debug)]

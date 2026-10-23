@@ -332,11 +332,11 @@ mod tests {
             "input_mode": {
               "oneOf": [
                 {
-                  "type": "null"
-                },
-                {
                   "type": "string",
                   "enum": ["numeric", "text"]
+                },
+                {
+                  "type": "null"
                 }
               ],
               "default": "numeric"
