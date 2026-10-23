@@ -65,7 +65,7 @@ impl Wallet {
         proof_signing_alg_values_supported: Vec<Algorithm>,
     ) -> anyhow::Result<Self> {
         let retry_policy = ExponentialBackoff::builder().build_with_max_retries(2);
-        let client = ClientBuilder::new(reqwest::Client::new())
+        let client = ClientBuilder::new(oid4vc_core::http_client())
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
             .build();
         Ok(Self {

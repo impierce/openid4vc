@@ -48,12 +48,12 @@ can be run as `ready-for-agent` issues.
   `oid4vc-core` and `oid4vc-manager` have never been published. The published 0.1.0 crates no longer
   build against current dependencies (PR #135 notes this), so `cargo-semver-checks` has no baseline.
 - **Publishing blockers (all must go before any crate can be published):**
-  1. Eight `identity_*` crates as **git dependencies** on `iotaledger/identity` tag `v1.9.6-beta.1`,
+  1. Eight `identity_*` crates as **git dependencies** on `iotaledger/identity` tag `v1.9.13-beta.1`,
      used in `oid4vc-core` (verifier, verification material resolver), `oid4vp` (DCQL, VP token
      builder/validator: 47 references), `oid4vci` (2), `oid4vc-manager` tests (1). Cargo refuses to
      package crates with git dependencies.
-  2. `[patch.crates-io]` for `sd-jwt-payload` (fork making `Hasher` `Send + Sync`); patches do not
-     propagate to consumers.
+  2. `[patch.crates-io]` for `sd-jwt-payload` (fork making `Hasher` `Send + Sync`), and a `fastcrypto`
+     patch that the IOTA crates behind `identity_*` need; patches do not propagate to consumers.
   3. `did-key = "0.2"` (issue #104), unmaintained, drags in `ed25519-dalek 1.x` and `curve25519-dalek 3.x`
      (two of the six ignored advisories).
   4. Internal path dependencies carry no `version` (PR #135 fixes this).
@@ -320,9 +320,9 @@ and exercised with `dry_run`; it will fail at `cargo publish` until then, which 
 
 - Workspace lints as in identity-kit (`unsafe_code = "forbid"`, `missing_docs = "warn"`,
   `unreachable_pub`, clippy `dbg_macro`/`todo`/`print_*`), then burn down the warnings per crate.
-- `edition = "2024"` via `cargo fix --edition`, `thiserror 2`, `jsonwebtoken 10`, unify `serde_with`,
-  `lazy_static` → `LazyLock`, `axum 0.8` and `wiremock 0.6` in `oid4vc-manager`, drop `derivative`
-  and `paste`.
+- `edition = "2024"` via `cargo fix --edition`, `lazy_static` → `LazyLock`, drop `derivative` and
+  `paste`. (`thiserror 2`, `jsonwebtoken 11`, one `serde_with`, `axum 0.8` and `wiremock 0.6` came with
+  the dependency update that replaced the open Dependabot PRs.)
 - Reduce `unwrap`/`expect` in `*/src` (395 today): the protocol parsers should return errors; the
   OID4VC error responses issue (#78) is the natural umbrella.
 - identity-kit migration, file by file in the order of `docs/DESIGN.md` §5; each step

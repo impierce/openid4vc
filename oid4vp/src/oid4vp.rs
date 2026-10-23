@@ -67,7 +67,7 @@ impl Extension for OID4VP {
             // Fetch the client metadata from the given URI.
             ClientMetadataResource::ClientMetadataUri(client_metadata_uri) => {
                 let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
-                let client = ClientBuilder::new(reqwest::Client::new())
+                let client = ClientBuilder::new(oid4vc_core::http_client())
                     .with(RetryTransientMiddleware::new_with_policy(retry_policy))
                     .build();
                 let client_metadata: ClientMetadataResource<ClientMetadataParameters> =
@@ -111,7 +111,7 @@ impl Extension for OID4VP {
         let client_metadata = match &authorization_request.client_metadata {
             ClientMetadataResource::ClientMetadataUri(client_metadata_uri) => {
                 let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
-                let client = ClientBuilder::new(reqwest::Client::new())
+                let client = ClientBuilder::new(oid4vc_core::http_client())
                     .with(RetryTransientMiddleware::new_with_policy(retry_policy))
                     .build();
                 let client_metadata: ClientMetadataResource<ClientMetadataParameters> =

@@ -56,39 +56,36 @@ impl<S: Storage + Clone + 'static> Server<S> {
         let listener = credential_issuer_manager.listener.try_clone()?;
         let extension = self.extension.take();
 
-        let server = axum::Server::from_tcp(listener)
-            .expect("Failed to start server.")
-            .serve(
-                Router::new()
-                    .route(
-                        "/.well-known/oauth-authorization-server",
-                        get(oauth_authorization_server),
-                    )
-                    .route("/.well-known/openid-credential-issuer", get(openid_credential_issuer))
-                    .route("/credential_offer", get(credential_offer))
-                    .route("/par", post(par))
-                    .route("/authorize", get(authorize))
-                    .route("/token", post(token))
-                    .route("/credential", post(credential))
-                    .route("/notification", post(notification))
-                    .merge(extension.unwrap_or_default())
-                    .layer(
-                        tower_http::cors::CorsLayer::new()
-                            .allow_methods([Method::GET, Method::POST])
-                            .allow_origin(AllowOrigin::any())
-                            .allow_headers([CONTENT_TYPE])
-                            .max_age(Duration::from_secs(3600)),
-                    )
-                    .with_state(credential_issuer_manager)
-                    .into_make_service(),
-            );
+        listener.set_nonblocking(true)?;
+        let listener = tokio::net::TcpListener::from_std(listener)?;
+
+        let app = Router::new()
+            .route(
+                "/.well-known/oauth-authorization-server",
+                get(oauth_authorization_server),
+            )
+            .route("/.well-known/openid-credential-issuer", get(openid_credential_issuer))
+            .route("/credential_offer", get(credential_offer))
+            .route("/par", post(par))
+            .route("/authorize", get(authorize))
+            .route("/token", post(token))
+            .route("/credential", post(credential))
+            .route("/notification", post(notification))
+            .merge(extension.unwrap_or_default())
+            .layer(
+                tower_http::cors::CorsLayer::new()
+                    .allow_methods([Method::GET, Method::POST])
+                    .allow_origin(AllowOrigin::any())
+                    .allow_headers([CONTENT_TYPE])
+                    .max_age(Duration::from_secs(3600)),
+            )
+            .with_state(credential_issuer_manager);
+        let server = async move { axum::serve(listener, app).await.expect("Failed to start server.") };
 
         if self.detached {
-            self.server.replace(tokio::spawn(
-                async move { server.await.expect("Failed to start server.") },
-            ));
+            self.server.replace(tokio::spawn(server));
         } else {
-            server.await.expect("Failed to start server.")
+            server.await
         }
         Ok(())
     }

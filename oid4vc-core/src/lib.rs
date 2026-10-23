@@ -15,7 +15,7 @@ pub mod verification_material_resolver;
 pub mod verifier;
 
 pub use authentication::{sign::Sign, subject::Subject, validator::Validator, verify::Verify};
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, RngExt};
 pub use rfc7519_claims::RFC7519Claims;
 use serde::Serialize;
 pub use subject_syntax_type::{DidMethod, SubjectSyntaxType};
@@ -51,8 +51,15 @@ pub fn to_query_value<T: Serialize>(value: &T) -> anyhow::Result<String> {
         .map_err(|e| e.into())
 }
 
+/// A `reqwest` client over `rustls` with the `ring` provider, which is made the process default when nothing chose
+/// a provider yet; a provider the application installed is kept.
+pub fn http_client() -> reqwest::Client {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    reqwest::Client::new()
+}
+
 pub fn generate_authorization_code(length: usize) -> String {
-    rand::thread_rng()
+    rand::rng()
         .sample_iter(&Alphanumeric)
         .take(length)
         .map(char::from)
@@ -60,7 +67,7 @@ pub fn generate_authorization_code(length: usize) -> String {
 }
 
 pub fn generate_nonce(length: usize) -> String {
-    rand::thread_rng()
+    rand::rng()
         .sample_iter(&Alphanumeric)
         .take(length)
         .map(char::from)
