@@ -3,14 +3,14 @@ use std::time::Duration;
 use crate::{managers::credential_issuer::CredentialIssuerManager, storage::Storage};
 use anyhow::Result;
 use axum::{
-    extract::State,
+    extract::{RawForm, State},
     http::{header::CONTENT_TYPE, Method, StatusCode},
     response::{AppendHeaders, IntoResponse},
     routing::{get, post},
     Form, Json, Router,
 };
 use axum_auth::AuthBearer;
-use oid4vc_core::Validator;
+use oid4vc_core::{utils::form_urlencoded::from_form_urlencoded_string, Validator};
 use oid4vci::{
     credential_request::{CredentialIdentifierOrCredentialConfigurationId, CredentialRequest},
     notification_request::NotificationRequest,
@@ -158,8 +158,21 @@ async fn authorize<S: Storage>(
 
 async fn token<S: Storage>(
     State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
-    Form(token_request): Form<TokenRequest>,
+    RawForm(body): RawForm,
 ) -> impl IntoResponse {
+    // Not `Form`: `serde_urlencoded` cannot decode `authorization_details`, which comes as JSON. `RawForm` still
+    // rejects a body that is not `application/x-www-form-urlencoded`.
+    let Some(token_request) = std::str::from_utf8(&body)
+        .ok()
+        .and_then(|body| from_form_urlencoded_string::<TokenRequest>(body).ok())
+    else {
+        return (
+            StatusCode::BAD_REQUEST,
+            AppendHeaders([("Cache-Control", "no-store")]),
+            Json("Invalid token request"),
+        )
+            .into_response();
+    };
     match credential_issuer_manager.storage.get_token_response(token_request) {
         Some(token_response) => (
             StatusCode::OK,

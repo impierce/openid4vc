@@ -101,7 +101,9 @@ impl Extension for OID4VP {
                 })
                 .map(|alg_values| alg_values.into_inner())
                 .ok_or_else(|| anyhow!("No supported algorithms found")),
-            _ => unreachable!("ClientMetadataUri should have been resolved above"),
+            ClientMetadataResource::ClientMetadataUri(_) => {
+                anyhow::bail!("The client metadata at `client_metadata_uri` is itself a `client_metadata_uri`")
+            }
         }
     }
 
@@ -122,26 +124,24 @@ impl Extension for OID4VP {
         };
 
         match client_metadata {
-            ClientMetadataResource::ClientMetadataUri(_) => unreachable!(),
+            ClientMetadataResource::ClientMetadataUri(_) => {
+                anyhow::bail!("The client metadata at `client_metadata_uri` is itself a `client_metadata_uri`")
+            }
             ClientMetadataResource::ClientMetadata { other, .. } => {
                 let subject_syntax_types_supported: Vec<SubjectSyntaxType> = other
                     // TODO(ngdil): this is a custom implementation at the moment as `subject_syntax_types_supported` is
                     // strictly a `SIOPv2` Client Metadata parameter and is not mentioned in the `OID4VP` documentation. It
                     // is expected that that a similar parameter will be added to the `OID4VP` Client Metadata.
                     .get("subject_syntax_types_supported")
-                    .and_then(|subject_syntax_types_supported| {
+                    .and_then(|subject_syntax_types_supported| subject_syntax_types_supported.as_array())
+                    .map(|subject_syntax_types_supported| {
                         subject_syntax_types_supported
-                            .as_array()
-                            .and_then(|subject_syntax_types_supported| {
-                                subject_syntax_types_supported
-                                    .iter()
-                                    .map(|subject_syntax_type| {
-                                        subject_syntax_type.as_str().map(|subject_syntax_type| {
-                                            SubjectSyntaxType::from_str(subject_syntax_type).unwrap()
-                                        })
-                                    })
-                                    .collect()
+                            .iter()
+                            // A value this library cannot parse is one it cannot match either: skip it.
+                            .filter_map(|subject_syntax_type| {
+                                SubjectSyntaxType::from_str(subject_syntax_type.as_str()?).ok()
                             })
+                            .collect()
                     })
                     .unwrap_or_default();
 
@@ -162,5 +162,37 @@ impl Extension for OID4VP {
             state,
             extension: AuthorizationResponseParameters { vp_token: user_input },
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::authorization_request::AuthorizationRequestParameters;
+    use oid4vc_core::DidMethod;
+    use serde_json::json;
+
+    #[tokio::test]
+    async fn test_relying_party_supported_syntax_types_skip_invalid_values() {
+        let parameters: AuthorizationRequestParameters = serde_json::from_value(json!({
+            "response_type": "vp_token",
+            "dcql_query": {
+                "credentials": [{"id": "pid", "format": "dc+sd-jwt", "meta": {"vct_values": ["urn:eudi:pid:1"]}}]
+            },
+            "response_mode": "direct_post",
+            "nonce": "n-0S6_WzA2Mj",
+            "client_metadata": {
+                "vp_formats_supported": {"dc+sd-jwt": {"sd-jwt_alg_values": ["ES256"]}},
+                "subject_syntax_types_supported": ["did:KEY", 42, "did:key"]
+            }
+        }))
+        .unwrap();
+
+        assert_eq!(
+            OID4VP::get_relying_party_supported_syntax_types(&parameters)
+                .await
+                .unwrap(),
+            vec![SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap())]
+        );
     }
 }

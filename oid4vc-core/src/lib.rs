@@ -44,11 +44,10 @@ macro_rules! builder_fn {
     };
 }
 
-// Helper function that allows to serialize custom structs into a query string.
+/// Serializes a value to the compact JSON used as a query parameter value (for example `credential_offer`).
+/// String values keep their whitespace; only the JSON between tokens is compact.
 pub fn to_query_value<T: Serialize>(value: &T) -> anyhow::Result<String> {
-    serde_json::to_string(value)
-        .map(|s| s.chars().filter(|c| !c.is_whitespace()).collect::<String>())
-        .map_err(|e| e.into())
+    serde_json::to_string(value).map_err(Into::into)
 }
 
 /// A `reqwest` client over `rustls` with the `ring` provider, which is made the process default when nothing chose

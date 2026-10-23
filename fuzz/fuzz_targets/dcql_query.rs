@@ -15,8 +15,9 @@ use serde_json::{Map, Value};
 
 fn exercise(query: &DcqlQuery) {
     let _ = query.validate_all();
-    let json = serde_json::to_value(query).expect("a DCQL query serializes");
-    let again: DcqlQuery = serde_json::from_value(json).expect("a serialized DCQL query parses");
+    // Through JSON text, as on the wire (see `presentation_messages` for why not `Value`).
+    let json = serde_json::to_vec(query).expect("a DCQL query serializes");
+    let again: DcqlQuery = serde_json::from_slice(&json).expect("a serialized DCQL query parses");
     assert_eq!(&again, query);
 }
 
@@ -77,8 +78,9 @@ fuzz_target!(|data: &[u8]| {
 
     if let (Some(path), Some(root)) = (object.get("path"), object.get("value")) {
         if let Ok(path) = serde_json::from_value::<ClaimPathPointer>(path.clone()) {
-            let json = serde_json::to_value(&path).expect("a claim path pointer serializes");
-            let again: ClaimPathPointer = serde_json::from_value(json).expect("a serialized claim path pointer parses");
+            let json = serde_json::to_vec(&path).expect("a claim path pointer serializes");
+            let again: ClaimPathPointer =
+                serde_json::from_slice(&json).expect("a serialized claim path pointer parses");
             assert_eq!(again, path);
             let _ = path.get_values_from_json(root);
         }

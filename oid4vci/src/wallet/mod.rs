@@ -237,7 +237,7 @@ impl Wallet {
             code_challenge_method,
         };
 
-        let url_encoded = to_form_urlencoded_string(&authorization_request).unwrap();
+        let url_encoded = to_form_urlencoded_string(&authorization_request)?;
 
         let response = self
             .client
@@ -318,7 +318,18 @@ impl Wallet {
     pub async fn get_access_token(&self, token_endpoint: Url, token_request: TokenRequest) -> Result<TokenResponse> {
         tracing::info!(%token_endpoint, "Sending token request to token endpoint");
         tracing::debug!(?token_request, "Token request parameters");
-        let response = self.client.post(token_endpoint).form(&token_request).send().await?;
+        // Not `RequestBuilder::form`: `serde_urlencoded` cannot encode `authorization_details`, which goes as JSON.
+        let url_encoded = to_form_urlencoded_string(&token_request)?;
+        let response = self
+            .client
+            .post(token_endpoint)
+            .header(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/x-www-form-urlencoded"),
+            )
+            .body(url_encoded)
+            .send()
+            .await?;
         let status = response.status();
         let text = response
             .text()
