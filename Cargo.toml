@@ -20,8 +20,7 @@ exclude = ["fuzz"]
 homepage = "https://www.impierce.com/"
 license = "Apache-2.0"
 repository = "https://github.com/impierce/openid4vc"
-# Minimum supported Rust version, checked in CI (QA / MSRV) against the committed Cargo.lock; the same as
-# identity-kit, which replaces the identity_* dependencies.
+# Minimum supported Rust version, checked in CI (QA / MSRV) against the committed Cargo.lock.
 rust-version = "1.95"
 
 [workspace.dependencies]
@@ -44,12 +43,12 @@ identity_credential = { git = "https://github.com/iotaledger/identity", tag = "v
 identity_jose = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
 identity_verification = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
 is_empty = "0.3"
-# The pure-Rust backend, as in identity-kit; `aws_lc_rs` would pull in a C library.
+# The pure-Rust backend; `aws_lc_rs` would pull in a C library.
 jsonwebtoken = { version = "11.1", default-features = false, features = ["rust_crypto"] }
 monostate = "1.0"
 nutype = { version = "0.8", features = ["serde"] }
-# `rustls` with `ring`, installed by `oid4vc_core::http_client`, as in identity-kit; reqwest's own `rustls` feature
-# would pull in `aws-lc-rs`.
+# `rustls` with `ring`, installed by `oid4vc_core::http_client`; reqwest's own `rustls` feature would pull in
+# `aws-lc-rs`.
 reqwest = { version = "0.13", default-features = false, features = [
     "json",
     "rustls-no-provider",
