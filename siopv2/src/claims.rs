@@ -288,7 +288,7 @@ impl From<&Scope> for StandardClaimsRequests {
                 a.merge(b);
                 a
             })
-            .unwrap()
+            .unwrap_or_default()
     }
 }
 

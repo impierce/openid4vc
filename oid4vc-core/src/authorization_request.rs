@@ -1,5 +1,6 @@
 use crate::{
     openid4vc_extension::{Extension, Generic, OpenID4VC, RequestHandle},
+    utils::form_urlencoded::form_urlencoded_to_json_object,
     JsonObject, RFC7519Claims,
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -60,18 +61,7 @@ impl<E: Extension> std::str::FromStr for Object<E> {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let url = url::Url::parse(s)?;
-        let query = url.query().ok_or_else(|| anyhow::anyhow!("No query found."))?;
-        let map = serde_urlencoded::from_str::<JsonObject>(query)?
-            .into_iter()
-            .filter_map(|(k, v)| match v {
-                serde_json::Value::String(s) => Some(Ok((
-                    k,
-                    serde_json::from_str(&s).unwrap_or(serde_json::Value::String(s)),
-                ))),
-                _ => None,
-            })
-            .collect::<Result<_, anyhow::Error>>()?;
+        let (_, map) = query_parameters(s)?;
         let authorization_request: Object<E> = serde_json::from_value(serde_json::Value::Object(map))?;
         Ok(authorization_request)
     }
@@ -136,34 +126,30 @@ impl<E: Extension> AuthorizationRequest<Object<E>> {
     }
 }
 
-/// In order to convert a string to a [`AuthorizationRequest`], we need to try to parse each value as a JSON object. This way we
-/// can catch any non-primitive types. If the value is not a JSON object or an Array, we just leave it as a string.
+/// Parses the query of an Authorization Request URL into its scheme and a JSON object of its parameters. Every
+/// parameter is a string, except those whose value is a JSON object or array: the JSON-encoded parameters such as
+/// `claims`, `client_metadata` or `dcql_query`. A value such as `state=42` stays the string `"42"`.
+fn query_parameters(s: &str) -> anyhow::Result<(String, JsonObject)> {
+    let url = url::Url::parse(s)?;
+    let query = url.query().ok_or_else(|| anyhow::anyhow!("No query found."))?;
+    Ok((url.scheme().to_string(), form_urlencoded_to_json_object(query)?))
+}
+
 impl<B: Body + DeserializeOwned> std::str::FromStr for AuthorizationRequest<B> {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let url = url::Url::parse(s)?;
-        tracing::debug!(scheme = %url.scheme(), "Parsing AuthorizationRequest from URL string");
-        let query = url.query().ok_or_else(|| anyhow::anyhow!("No query found."))?;
-        let map = serde_urlencoded::from_str::<JsonObject>(query)?
-            .into_iter()
-            .filter_map(|(k, v)| match v {
-                serde_json::Value::String(s) => Some(Ok((
-                    k,
-                    serde_json::from_str(&s).unwrap_or(serde_json::Value::String(s)),
-                ))),
-                _ => None,
-            })
-            .collect::<Result<_, anyhow::Error>>()?;
+        let (scheme, map) = query_parameters(s)?;
+        tracing::debug!(%scheme, "Parsing AuthorizationRequest from URL string");
         let mut authorization_request: AuthorizationRequest<B> =
             serde_json::from_value(serde_json::Value::Object(map))?;
-        authorization_request.custom_url_scheme = url.scheme().to_string();
+        authorization_request.custom_url_scheme = scheme;
         Ok(authorization_request)
     }
 }
 
-/// In order to convert a [`AuthorizationRequest`] to a string, we need to convert all the values to strings. This is because
-/// `serde_urlencoded` does not support serializing non-primitive types.
+/// Prints the [`AuthorizationRequest`] as `<scheme>://?<query>`. Every value becomes a string: objects and arrays as
+/// JSON, numbers and booleans as their JSON text (`exp=1700000000`); `null` values are left out.
 impl<B: Body> std::fmt::Display for AuthorizationRequest<B> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let map: JsonObject = json!(self)
@@ -171,11 +157,9 @@ impl<B: Body> std::fmt::Display for AuthorizationRequest<B> {
             .ok_or(std::fmt::Error)?
             .iter()
             .filter_map(|(k, v)| match v {
-                serde_json::Value::Object(_) | serde_json::Value::Array(_) => {
-                    Some((k.to_owned(), serde_json::Value::String(serde_json::to_string(v).ok()?)))
-                }
+                serde_json::Value::Null => None,
                 serde_json::Value::String(_) => Some((k.to_owned(), v.to_owned())),
-                _ => None,
+                _ => Some((k.to_owned(), serde_json::Value::String(serde_json::to_string(v).ok()?))),
             })
             .collect();
 
@@ -220,5 +204,42 @@ mod tests {
             AuthorizationRequest::<Object>::from_str(&form_urlencoded).unwrap(),
             authorization_request
         );
+    }
+
+    #[test]
+    fn test_url_round_trip_keeps_numeric_claims() {
+        let authorization_request = AuthorizationRequest::<Object> {
+            custom_url_scheme: "openid".to_string(),
+            body: Object {
+                rfc7519_claims: RFC7519Claims {
+                    exp: Some(1700000000),
+                    iat: Some(1600000000),
+                    ..Default::default()
+                },
+                client_id: "did:example:123".to_string(),
+                uri: RedirectOrResponseUri::RedirectUri("https://www.example.com".parse().unwrap()),
+                state: None,
+                extension: json!({"nonce": "nonce"}),
+            },
+        };
+
+        let url = authorization_request.to_string();
+        assert!(url.contains("exp=1700000000"), "{url}");
+        assert_eq!(
+            AuthorizationRequest::<Object>::from_str(&url).unwrap(),
+            authorization_request
+        );
+    }
+
+    #[test]
+    fn test_from_str_keeps_numeric_looking_strings() {
+        let authorization_request = AuthorizationRequest::<Object>::from_str(
+            "openid://?client_id=123&redirect_uri=https%3A%2F%2Fexample.com&state=42&nonce=true",
+        )
+        .unwrap();
+
+        assert_eq!(authorization_request.body.client_id, "123");
+        assert_eq!(authorization_request.body.state.as_deref(), Some("42"));
+        assert_eq!(authorization_request.body.extension, json!({"nonce": "true"}));
     }
 }

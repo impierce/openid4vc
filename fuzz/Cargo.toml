@@ -17,7 +17,6 @@ oid4vp = { path = "../oid4vp" }
 siopv2 = { path = "../siopv2" }
 serde = "1.0"
 serde_json = "1.0"
-serde_urlencoded = "0.7"
 url = "2"
 
 # Every binary is a fuzz target; the Fuzz workflow discovers them from this manifest.
@@ -53,6 +52,13 @@ bench = false
 [[bin]]
 name = "presentation_messages"
 path = "fuzz_targets/presentation_messages.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "jwt"
+path = "fuzz_targets/jwt.rs"
 test = false
 doc = false
 bench = false

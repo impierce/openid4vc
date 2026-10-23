@@ -218,8 +218,8 @@ OID4VP 1.0 with DCQL. Presentation Exchange is gone, as in the specification.
   `client_metadata`, `transaction_data`, `verifier_info`, `request_uri_method`. The extension
   reads the verifier's supported algorithms and subject syntax types from the client metadata
   (fetching it when given by URI) and builds the response from a `VpToken`.
-- **Client identifier**: `ClientId` parses and prints the 1.0 prefixes (`pre-registered`,
-  `redirect_uri`, `openid_federation`, `decentralized_identifier`, `verifier_attestation`,
+- **Client identifier**: `ClientId` parses and prints the 1.0 prefixes (none for a pre-registered
+  client, `redirect_uri`, `openid_federation`, `decentralized_identifier`, `verifier_attestation`,
   `x509_san_dns`, `x509_hash`).
 - **Verifier metadata**: `ClientMetadataParameters` with `vp_formats_supported` per format
   (`jwt_vc_json`, `jwt_vp_json`, `dc+sd-jwt`, `vc+sd-jwt`, `ldp_vc`, `di_vp`, `mso_mdoc`),
@@ -317,10 +317,11 @@ Named so that work on them is deliberate, not accidental:
   Digital Credentials API transport.
 - **SIOPv2**: the JWK thumbprint subject syntax type is parsed but no `Subject` produces it
   (issue #8); `client_metadata_uri` is not resolved for syntax types (TODO); draft 13 is old.
-- **Client identifier prefix spelling**: `ClientIdPrefix::RedirectUri` parses and prints
-  `response_uri`, while OID4VP 1.0 names the prefix `redirect_uri`. To be checked against the
-  final text and fixed as a `fix(oid4vp)` if confirmed.
 - **Signed metadata**: `signed_metadata` is carried but not verified.
+- **Large integers through `serde_json::Value`**: the IOTA dependencies of the `identity_*` crates
+  turn on serde_json's `arbitrary_precision`, under which an integer beyond `u64` in a `Value`
+  cannot pass serde's buffer for `flatten` and untagged types. Such a message parses from JSON text
+  but not from a `Value` (`from_value`, `from_generic`). Goes away with the identity-kit migration.
 - **Workspace-level lints absent** (`unsafe_code`, `missing_docs`, clippy `dbg_macro` and
   friends). Tracked in [`PLAN.md`](PLAN.md), Phase D.
 

@@ -7,6 +7,7 @@
 use std::fmt::Debug;
 
 use libfuzzer_sys::fuzz_target;
+use oid4vc_core::utils::form_urlencoded::{from_form_urlencoded_string, to_form_urlencoded_string};
 use oid4vci::authorization_details::AuthorizationDetailsObject;
 use oid4vci::credential_format_profiles::CredentialFormats;
 use oid4vci::credential_issuer::authorization_server_metadata::AuthorizationServerMetadata;
@@ -24,8 +25,11 @@ use serde_json::Value;
 
 fn round_trip<T: Serialize + DeserializeOwned + PartialEq + Debug>(data: &[u8]) -> Option<T> {
     let parsed: T = serde_json::from_slice(data).ok()?;
-    let json = serde_json::to_value(&parsed).expect("a parsed message serializes");
-    let again: T = serde_json::from_value(json).expect("a serialized message parses");
+    // Through JSON text, as on the wire. Not through `serde_json::Value`: the IOTA dependencies of
+    // `identity_*` turn on serde_json's `arbitrary_precision`, under which an integer beyond `u64`
+    // in a `Value` cannot pass serde's buffer for `flatten` and untagged types.
+    let json = serde_json::to_vec(&parsed).expect("a parsed message serializes");
+    let again: T = serde_json::from_slice(&json).expect("a serialized message parses");
     assert_eq!(again, parsed);
     Some(parsed)
 }
@@ -49,20 +53,17 @@ fuzz_target!(|data: &[u8]| {
 
     // `NonceResponse` has no `PartialEq`; compare the JSON.
     if let Ok(nonce) = serde_json::from_slice::<NonceResponse>(data) {
-        let json = serde_json::to_value(&nonce).expect("a nonce response serializes");
-        let again: NonceResponse = serde_json::from_value(json.clone()).expect("a serialized nonce response parses");
-        assert_eq!(serde_json::to_value(&again).expect("a nonce response serializes"), json);
+        let json = serde_json::to_vec(&nonce).expect("a nonce response serializes");
+        let again: NonceResponse = serde_json::from_slice(&json).expect("a serialized nonce response parses");
+        assert_eq!(serde_json::to_vec(&again).expect("a nonce response serializes"), json);
     }
 
-    // The Token Request is form-encoded on the wire.
+    // The Token Request is form-encoded on the wire, `authorization_details` as JSON.
     if let Ok(input) = std::str::from_utf8(data) {
-        if let Ok(request) = serde_urlencoded::from_str::<TokenRequest>(input) {
-            // `serde_urlencoded` cannot encode nested values such as `authorization_details`.
-            if let Ok(encoded) = serde_urlencoded::to_string(&request) {
-                let again: TokenRequest =
-                    serde_urlencoded::from_str(&encoded).expect("an encoded token request parses");
-                assert_eq!(again, request);
-            }
+        if let Ok(request) = from_form_urlencoded_string::<TokenRequest>(input) {
+            let encoded = to_form_urlencoded_string(&request).expect("a token request encodes");
+            let again: TokenRequest = from_form_urlencoded_string(&encoded).expect("an encoded token request parses");
+            assert_eq!(again, request);
         }
     }
 
