@@ -1,5 +1,5 @@
 use crate::common::{MemoryStorage, Storage, TestSubject};
-use axum::async_trait;
+use async_trait::async_trait;
 use did_key::{generate, Ed25519KeyPair};
 use jsonwebtoken::Algorithm;
 use lazy_static::lazy_static;
@@ -226,7 +226,7 @@ async fn test_implicit_flow(#[case] did_method: &str) {
 
     // Assert that the authorization_request was successfully received by the mock server at the `request_uri` endpoint.
     let get_request = mock_server.received_requests().await.unwrap()[0].clone();
-    assert_eq!(get_request.method, Method::Get);
+    assert_eq!(get_request.method, Method::GET);
     assert_eq!(get_request.url.path(), "/request_uri");
 
     // The user can now provide the claims requested by the relying party.
@@ -244,7 +244,7 @@ async fn test_implicit_flow(#[case] did_method: &str) {
 
     // Assert that the AuthorizationResponse was successfully received by the mock server at the expected endpoint.
     let post_request = mock_server.received_requests().await.unwrap()[1].clone();
-    assert_eq!(post_request.method, Method::Post);
+    assert_eq!(post_request.method, Method::POST);
     assert_eq!(post_request.url.path(), "/redirect_uri");
     let authorization_response: AuthorizationResponse<SIOPv2> =
         serde_urlencoded::from_bytes(post_request.body.as_slice()).unwrap();

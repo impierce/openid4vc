@@ -14,8 +14,8 @@ oid4vci = { path = "../oid4vci" }
 
 anyhow = "1.0"
 async-trait = "0.1"
-axum = "0.6"
-axum-auth = "0.4"
+axum = "0.8"
+axum-auth = "0.8"
 chrono.workspace = true
 derivative = "2.2"
 did-key.workspace = true
@@ -32,20 +32,20 @@ serde_json.workspace = true
 serde_urlencoded.workspace = true
 serde_with.workspace = true
 tokio.workspace = true
-tower-http = { version = "0.4", features = ["cors"] }
+tower-http = { version = "0.7", features = ["cors"] }
 tracing.workspace = true
 url.workspace = true
 
 [dev-dependencies]
 oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
 
-ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
+ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
 identity_did.workspace = true
 identity_document.workspace = true
 identity_jose.workspace = true
 identity_verification.workspace = true
 lazy_static = "1.4"
-rand = "0.8"
-rstest = "0.18"
+rand = "0.10"
+rstest = "0.28"
 uuid = { version = "1.4", features = ["v4", "fast-rng"] }
-wiremock = "0.5"
+wiremock = "0.6"

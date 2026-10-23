@@ -287,8 +287,8 @@ Thin, opinionated wrappers plus the only server in the workspace:
   extension (`other: JsonObject`) and otherwise ignored, serde's default; only `siopv2`'s standard
   claims use `deny_unknown_fields`.
 - **Async**: `tokio`, `async-trait` on the object-safe traits, `impl Future` on `Extension`.
-- **HTTP**: `reqwest` with `rustls`, `reqwest-middleware` + `reqwest-retry` (exponential backoff,
-  five retries) on every client.
+- **HTTP**: `reqwest` with `rustls` and the `ring` provider (`oid4vc_core::http_client`, as in
+  identity-kit), `reqwest-middleware` + `reqwest-retry` (exponential backoff, five retries) on every client.
 - **Errors**: `thiserror` enums where the type is new (`VpTokenValidationError`,
   `DcqlQueryError`, `OID4VCError<T>`); `anyhow::Result` on most older APIs (see Known gaps).
 - **Tracing**: `tracing` spans and events on the public entry points (`#[tracing::instrument]`).
@@ -306,7 +306,7 @@ Named so that work on them is deliberate, not accidental:
   responses.
 - **Identity dependencies**: `oid4vc-core::verifier`, `VerificationMaterialResolver`, and
   `oid4vp`'s token layer depend on eight `identity_*` crates as **git** dependencies, on a patched
-  `sd-jwt-payload` and, for `did:key`, on the unmaintained `did-key` crate (issue #104). Cargo
+  `sd-jwt-payload`, on a `fastcrypto` patch their IOTA dependencies need and, for `did:key`, on the unmaintained `did-key` crate (issue #104). Cargo
   cannot publish crates with git dependencies, so these block every release. `identity-kit` replaces
   them; the mapping is below.
 - **Validator coverage**: `VpTokenValidator` handles `jwt_vc_json`, `dc+sd-jwt` and `vc+sd-jwt`;
