@@ -2,13 +2,12 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::json;
 use serde_urlencoded;
-use std::collections::HashMap;
 
 /// Serializes a value to a `x-www-form-urlencoded` string.
 ///
 /// This function first converts the value to a JSON object. It then iterates over the key-value pairs.
-/// If a value is a JSON object or array, it is serialized into a JSON string. All other JSON primitive
-/// values (strings, numbers, booleans, null) are kept as-is. The resulting map is then URL-encoded.
+/// If a value is a JSON object or array, it is serialized into a JSON string. Strings, numbers and booleans
+/// are kept as-is, and `null` values are left out. The resulting map is then URL-encoded.
 ///
 /// # Arguments
 ///
@@ -68,6 +67,8 @@ pub fn to_form_urlencoded_string<T: Serialize>(value: &T) -> anyhow::Result<Stri
                 // If nested object or array, stringify it.
                 Some((k.to_owned(), serde_json::Value::String(serde_json::to_string(v).ok()?)))
             }
+            // A form has no `null`: leave the parameter out.
+            serde_json::Value::Null => None,
             // For all other primitive types clone them directly.
             _ => Some((k.to_owned(), v.to_owned())),
         })
@@ -77,14 +78,14 @@ pub fn to_form_urlencoded_string<T: Serialize>(value: &T) -> anyhow::Result<Stri
     Ok(encoded)
 }
 
-/// Deserializes a `x-www-form-urlencoded` string into a value.  
-///  
-/// This function is the inverse of `to_form_urlencoded_string`. It first decodes the  
-/// URL-encoded string into a map of string keys and string values. It then attempts to  
-/// parse each value as a JSON string. If parsing succeeds, the JSON value is used.  
-/// If it fails (e.g., the value is a simple string like "test"), it's treated as a  
-/// plain JSON string. The resulting JSON object is then deserialized into the target type.  
-///  
+/// Deserializes a `x-www-form-urlencoded` string into a value.
+///
+/// This function is the inverse of `to_form_urlencoded_string`. It first decodes the
+/// URL-encoded string into its parameters, whose values are all strings. A value that is a
+/// JSON object or array (such as `authorization_details`) is parsed as JSON; every other value
+/// stays a string, so `tx_code=493536` deserializes into a `String`. The resulting JSON object
+/// is then deserialized into the target type.
+///
 /// # Arguments  
 ///  
 /// * `encoded` - A `x-www-form-urlencoded` string.  
@@ -130,19 +131,26 @@ pub fn to_form_urlencoded_string<T: Serialize>(value: &T) -> anyhow::Result<Stri
 /// assert_eq!(decoded, expected);  
 /// ```
 pub fn from_form_urlencoded_string<T: DeserializeOwned>(encoded: &str) -> anyhow::Result<T> {
-    let string_map: HashMap<String, String> =
-        serde_urlencoded::from_str(encoded).map_err(|e| anyhow::anyhow!("Failed to decodde: {}", e))?;
-
-    // Converts the string map to a JSON map, parsing the stringified JSON values.
-    let json_map: serde_json::Map<String, serde_json::Value> = string_map
-        .into_iter()
-        .map(|(k, v)| {
-            let json_value = serde_json::from_str(&v).unwrap_or_else(|_| serde_json::Value::String(v.to_string()));
-            (k, json_value)
-        })
-        .collect();
+    let json_map = form_urlencoded_to_json_object(encoded)?;
 
     // Converts the JSON map to the wanted type.
     let value = serde_json::Value::Object(json_map);
     serde_json::from_value(value).map_err(|e| anyhow::anyhow!("Failed to deserialize into target type: {}", e))
+}
+
+/// Decodes a `x-www-form-urlencoded` string into a JSON object: a value that is a JSON object or
+/// array is parsed as JSON, every other value stays a string.
+pub(crate) fn form_urlencoded_to_json_object(
+    encoded: &str,
+) -> anyhow::Result<serde_json::Map<String, serde_json::Value>> {
+    let pairs: Vec<(String, String)> =
+        serde_urlencoded::from_str(encoded).map_err(|e| anyhow::anyhow!("Failed to decode: {}", e))?;
+
+    Ok(pairs
+        .into_iter()
+        .map(|(k, v)| match serde_json::from_str(&v) {
+            Ok(value @ (serde_json::Value::Object(_) | serde_json::Value::Array(_))) => (k, value),
+            _ => (k, serde_json::Value::String(v)),
+        })
+        .collect())
 }
