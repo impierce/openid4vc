@@ -25,7 +25,6 @@ identity_jose.workspace = true
 identity_verification.workspace = true
 is_empty.workspace = true
 jsonwebtoken.workspace = true
-lazy_static = "1.4.0"
 monostate.workspace = true
 nutype.workspace = true
 reqwest.workspace = true

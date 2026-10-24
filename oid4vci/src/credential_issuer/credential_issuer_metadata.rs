@@ -1,5 +1,4 @@
 use super::credential_configurations_supported::CredentialConfigurationsSupportedObject;
-use derivative::Derivative;
 use nutype::nutype;
 use reqwest::Url;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -46,17 +45,12 @@ impl utoipa::ToSchema for BatchSize {}
 /// Credential Issuer Metadata as described here:
 /// <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html>
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Derivative)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-#[derivative(Default)]
 pub struct CredentialIssuerMetadata {
-    // TODO: Temporary solution
-    #[derivative(Default(value = "Url::parse(\"https://example.com\").unwrap()"))]
     pub credential_issuer: Url,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub authorization_servers: Vec<Url>,
-    // TODO: Temporary solution
-    #[derivative(Default(value = "Url::parse(\"https://example.com\").unwrap()"))]
     pub credential_endpoint: Url,
     pub nonce_endpoint: Option<Url>,
     pub deferred_credential_endpoint: Option<Url>,
@@ -68,6 +62,26 @@ pub struct CredentialIssuerMetadata {
     pub display: Option<Vec<serde_json::Value>>,
     #[serde(default, deserialize_with = "deserialize_credential_configurations_supported")]
     pub credential_configurations_supported: HashMap<String, CredentialConfigurationsSupportedObject>,
+}
+
+// TODO: Temporary solution: `credential_issuer` and `credential_endpoint` have no meaningful default.
+impl Default for CredentialIssuerMetadata {
+    fn default() -> Self {
+        Self {
+            credential_issuer: Url::parse("https://example.com").unwrap(),
+            authorization_servers: Default::default(),
+            credential_endpoint: Url::parse("https://example.com").unwrap(),
+            nonce_endpoint: Default::default(),
+            deferred_credential_endpoint: Default::default(),
+            notification_endpoint: Default::default(),
+            credential_response_encryption: Default::default(),
+            credential_identifiers_supported: Default::default(),
+            batch_credential_issuance: Default::default(),
+            signed_metadata: Default::default(),
+            display: Default::default(),
+            credential_configurations_supported: Default::default(),
+        }
+    }
 }
 
 // A custom deserialization function to filter out invalid map entries.

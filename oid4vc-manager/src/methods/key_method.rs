@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use derivative::Derivative;
 use did_key::{generate, resolve, Config, CoreSign, DIDCore, Document, Ed25519KeyPair, KeyMaterial, PatchedKeyPair};
 use jsonwebtoken::Algorithm;
 use oid4vc_core::{authentication::sign::ExternalSign, Sign, Subject, Verify};
@@ -8,13 +7,20 @@ use std::sync::Arc;
 
 /// This [`KeySubject`] implements the [`Subject`] trait and can be used as a subject for a [`siopv2::Provider`]. It uses the
 /// 'key' DID method.
-#[derive(Derivative)]
-#[derivative(Debug)]
 pub struct KeySubject {
-    #[derivative(Debug = "ignore")]
     keypair: PatchedKeyPair,
     document: Document,
     external_signer: Option<Arc<dyn ExternalSign>>,
+}
+
+/// Leaves out the key pair.
+impl std::fmt::Debug for KeySubject {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KeySubject")
+            .field("document", &self.document)
+            .field("external_signer", &self.external_signer)
+            .finish_non_exhaustive()
+    }
 }
 
 impl KeySubject {

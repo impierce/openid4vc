@@ -15,36 +15,37 @@ use ietf_sd_jwt_vc::dc_sd_jwt::DcSdJwt;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
+/// Defines a credential format: the unit type `$name` implementing
+/// [`Format`](crate::credential_format_profiles::Format), its parameters
+/// `$parameters` (with `From` the tuple of its field types) and the credential type `$credential`.
 #[macro_export]
 macro_rules! credential_format {
-    ($format:literal, $name:ty, {$($field_name:ident: $field_type:ty),*}) => {
-        paste::paste! {
-            #[derive(Debug, Clone, Eq, PartialEq, Default)]
-            pub struct $name;
-            impl $crate::credential_format_profiles::Format for $name {
-                type Parameters = [< $name Parameters >];
-            }
+    ($format:literal, $name:ident, $parameters:ident, $credential:ident, {$($field_name:ident: $field_type:ty),*}) => {
+        #[derive(Debug, Clone, Eq, PartialEq, Default)]
+        pub struct $name;
+        impl $crate::credential_format_profiles::Format for $name {
+            type Parameters = $parameters;
+        }
 
-            #[serde_with::skip_serializing_none]
-            #[doc = concat!("Parameters for the `", $format, "` credential format.")]
-            #[derive(Debug, serde::Serialize, serde::Deserialize, Eq, PartialEq, Clone)]
-            #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-            pub struct [< $name Parameters >] {
-                $(pub $field_name: $field_type),*
-            }
+        #[serde_with::skip_serializing_none]
+        #[doc = concat!("Parameters for the `", $format, "` credential format.")]
+        #[derive(Debug, serde::Serialize, serde::Deserialize, Eq, PartialEq, Clone)]
+        #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+        pub struct $parameters {
+            $(pub $field_name: $field_type),*
+        }
 
-            #[serde_with::skip_serializing_none]
-            #[derive(Debug, serde::Serialize, serde::Deserialize, Eq, PartialEq, Clone)]
-            pub struct [< $name Credential >] {
-                $(pub $field_name: $field_type),*
-            }
+        #[serde_with::skip_serializing_none]
+        #[derive(Debug, serde::Serialize, serde::Deserialize, Eq, PartialEq, Clone)]
+        pub struct $credential {
+            $(pub $field_name: $field_type),*
+        }
 
-            #[allow(unused_parens)]
-            impl From<($($field_type),*)> for [< $name Parameters >] {
-                fn from(($($field_name),*): ($($field_type),*)) -> Self {
-                    Self {
-                        $($field_name),*
-                    }
+        #[allow(unused_parens)]
+        impl From<($($field_type),*)> for $parameters {
+            fn from(($($field_name),*): ($($field_type),*)) -> Self {
+                Self {
+                    $($field_name),*
                 }
             }
         }

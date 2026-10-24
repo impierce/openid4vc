@@ -2,7 +2,6 @@ use crate::common::{MemoryStorage, Storage, TestSubject};
 use async_trait::async_trait;
 use did_key::{generate, Ed25519KeyPair};
 use jsonwebtoken::Algorithm;
-use lazy_static::lazy_static;
 use oid4vc_core::{
     authentication::sign::ExternalSign,
     authorization_request::{AuthorizationRequest, ByReference, Object},
@@ -18,6 +17,7 @@ use siopv2::{
     siopv2::SIOPv2,
     StandardClaimsRequests, StandardClaimsValues,
 };
+use std::sync::LazyLock;
 use std::{str::FromStr, sync::Arc};
 use wiremock::{
     http::Method,
@@ -77,8 +77,8 @@ impl Subject for MultiDidMethodSubject {
     }
 }
 
-lazy_static! {
-    pub static ref USER_CLAIMS: serde_json::Value = serde_json::json!(
+pub static USER_CLAIMS: LazyLock<serde_json::Value> = LazyLock::new(|| {
+    serde_json::json!(
         {
             "name": "Jane Doe",
             "given_name": "Jane",
@@ -101,8 +101,8 @@ lazy_static! {
                 "country": "US"
             }
         }
-    );
-}
+    )
+});
 
 #[rstest::rstest]
 #[case("did:key")]
