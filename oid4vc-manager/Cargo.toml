@@ -4,13 +4,15 @@ version = "0.1.0"
 edition = "2021"
 rust-version.workspace = true
 license.workspace = true
+description = "Managers and an issuer server combining the OpenID4VCI, OpenID4VP and SIOPv2 implementations"
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
-# Fix these dependencies once the crates arre automatically published to crates.io.
-oid4vc-core = { path = "../oid4vc-core" }
-siopv2 = { path = "../siopv2" }
-oid4vp = { path = "../oid4vp" }
-oid4vci = { path = "../oid4vci" }
+oid4vc-core = { path = "../oid4vc-core", version = "0.1.0" }
+siopv2 = { path = "../siopv2", version = "0.1.0" }
+oid4vp = { path = "../oid4vp", version = "0.1.0" }
+oid4vci = { path = "../oid4vci", version = "0.1.0" }
 
 anyhow = "1.0"
 async-trait = "0.1"

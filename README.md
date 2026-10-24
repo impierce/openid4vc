@@ -40,4 +40,4 @@ To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## Release
 
-Releases are not automated yet; [`docs/PLAN.md`](docs/PLAN.md) describes the planned process (release-plz, independent crate versions, trusted publishing) and what blocks publishing today.
+Releases are not automated yet; [`docs/PLAN.md`](docs/PLAN.md) describes the planned process (release-plz, independent crate versions, trusted publishing).

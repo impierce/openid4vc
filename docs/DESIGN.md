@@ -38,9 +38,9 @@ papered over. Deviations from this document are recorded as ADRs in [`adr/`](adr
    September 2025), OID4VP 1.0 (final, 9 July 2025), SIOPv2 working group draft 13 (28 November
    2023), plus the OID4VCI Interactive Authorization draft.
 7. **Publishable.** No git or path dependencies outside the workspace, versions and changelogs
-   derived from Conventional Commits, `cargo publish --dry-run` green on every pull request. The
-   workspace does not meet this principle today; the identity-kit migration map under *Known gaps*
-   is the path to it.
+   derived from Conventional Commits, `cargo publish --dry-run` green on every pull request. All
+   but the versions and changelogs hold; those come with the release pipeline
+   ([`PLAN.md`](PLAN.md), Phase C).
 
 ## Layout
 
@@ -311,9 +311,6 @@ Named so that work on them is deliberate, not accidental:
   several hundred `unwrap`/`expect` calls, some in parsing paths. Issue #78 (OID4VC error
   responses) is the umbrella for moving to typed errors that map to the specifications' error
   responses.
-- **Publishing**: the workspace has no git dependencies and no patches left, but `deny.toml` still
-  carries the advisory ignores and `allow-git` entries of the IOTA tree, and QA has no
-  `cargo publish --dry-run` job yet (#168).
 - **Validator coverage**: `VpTokenValidator` handles `jwt_vc_json`, `dc+sd-jwt` and `vc+sd-jwt`;
   `ldp_vc` and `mso_mdoc` return `UnsupportedFormat`. `multiple` and `trusted_authorities` are
   parsed but not enforced (TODOs in the validator).
@@ -347,8 +344,9 @@ What CI enforces, and what [`PLAN.md`](PLAN.md) adds:
   daily and on manifest changes; licenses, bans and sources on manifest changes); `coverage.yml`
   via `cargo-llvm-cov` and Codecov (informational); `pr-title.yml` for the Conventional Commit
   title; `fuzz.yml` running the `cargo-fuzz` targets of `fuzz/` (seeded from `*/tests/examples`)
-  for a minute per pull request and ten minutes nightly.
-- Phase C: `cargo publish --dry-run` on every pull request, release-plz.
+  for a minute per pull request and ten minutes nightly; and `cargo publish --dry-run --workspace`
+  in QA, which packages and builds the five crates as crates.io would receive them.
+- Phase C: release-plz.
 
 ## References
 

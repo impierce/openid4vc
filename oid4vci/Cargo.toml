@@ -14,7 +14,7 @@ default = []
 utoipa = ["dep:utoipa", "oid4vc-core/utoipa"]
 
 [dependencies]
-oid4vc-core = { path = "../oid4vc-core" }
+oid4vc-core = { path = "../oid4vc-core", version = "0.1.0" }
 anyhow = "1.0"
 chrono.workspace = true
 getset.workspace = true

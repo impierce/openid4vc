@@ -47,17 +47,20 @@ can be run as `ready-for-agent` issues.
 - **crates.io:** `oid4vci`, `oid4vp`, `siopv2` and the umbrella `oid4vc` exist at `0.1.0` (2023-06-12).
   `oid4vc-core` and `oid4vc-manager` have never been published. The published 0.1.0 crates no longer
   build against current dependencies (PR #135 notes this), so `cargo-semver-checks` has no baseline.
-- **Publishing blockers (all must go before any crate can be published):**
+- **Publishing blockers** (all gone; `cargo publish --dry-run` runs in QA since #168):
   1. Eight `identity_*` crates as **git dependencies** on `iotaledger/identity` tag `v1.9.13-beta.1`,
      used in `oid4vc-core` (verifier, verification material resolver), `oid4vp` (DCQL, VP token
      builder/validator: 47 references), `oid4vci` (2), `oid4vc-manager` tests (1). Cargo refuses to
-     package crates with git dependencies.
+     package crates with git dependencies. Gone with #173 and #174.
   2. `[patch.crates-io]` for `sd-jwt-payload` (fork making `Hasher` `Send + Sync`), and a `fastcrypto`
      patch that the IOTA crates behind `identity_*` need; patches do not propagate to consumers.
+     Gone with #173 and #174.
   3. `did-key = "0.2"` (issue #104), unmaintained, drags in `ed25519-dalek 1.x` and `curve25519-dalek 3.x`
-     (two of the six ignored advisories). Replaced by identity-kit's `did:key` with #104.
-  4. Internal path dependencies carry no `version` (PR #135 fixes this).
-  5. Root `oid4vc` facade package with path-only deps (PR #135 sets `release = false`).
+     (two of the six ignored advisories). Replaced by identity-kit's `did:key` with #104 (#172).
+  4. Internal path dependencies carry no `version`. Since #168 they carry the current one; the
+     release pipeline bumps it.
+  5. Root `oid4vc` facade package with path-only deps: `publish = false`
+     ([ADR 0002](adr/0002-facade-crate.md)).
 
   identity-kit's `docs/DESIGN.md` states its purpose is to replace exactly these (`identity_*`,
   `did-key`, `sd-jwt-payload`) in openid4vc and ssi-agent. **The identity-kit migration is therefore
@@ -276,7 +279,8 @@ Status: items 1 to 8 are done (PRs 2 and 3 in §8).
    the `did-key` and `identity_*` trees, each ignored with a reason. Licenses outside the allow
    list (MPL-2.0, CC0-1.0, an LLVM exception, all in the iota-sdk tree) are per-crate exceptions;
    the ten git sources of that tree are allow-listed. `wildcards` stays at `warn` until the path
-   dependencies carry versions (Phase C) and the git dependencies are gone.
+   dependencies carry versions (Phase C) and the git dependencies are gone. (All of these left with
+   the identity-kit migration; #168 removed the entries and set `wildcards` to `deny`.)
 4. **`coverage.yml`**: OIDC upload, `codecov.yml` informational, fork handling, `--workspace`.
 5. **`pr-title.yml`**: `action-semantic-pull-request`, scopes optional, crate names suggested.
 6. **Hygiene across workflows**: SHA-pinned actions, `permissions: contents: read`,
@@ -293,9 +297,8 @@ Status: items 1 to 8 are done (PRs 2 and 3 in §8).
 
 ## 5. Phase C: release process
 
-Prerequisite: the publishing blockers in §1.2 are gone. The pipeline itself can be merged earlier
-and exercised with `dry_run`; it will fail at `cargo publish` until then, which is a useful signal
-(PR #135 already frames it this way).
+The publishing blockers in §1.2 are gone and QA runs `cargo publish --dry-run --workspace` on every
+pull request (#168).
 
 1. **Supersede PR #135** with a PR rebased on this plan: keep its `release-plz.toml` structure,
    per-crate tags, `release = false` for the facade, versioned internal path deps, crate metadata
@@ -325,8 +328,7 @@ and exercised with `dry_run`; it will fail at `cargo publish` until then, which 
   `wiremock 0.6` with the dependency update that replaced the open Dependabot PRs.)
 - Reduce `unwrap`/`expect` in `*/src` (395 today): the protocol parsers should return errors; the
   OID4VC error responses issue (#78) is the natural umbrella.
-- identity-kit migration, file by file in the order of `docs/DESIGN.md` §5; each step
-  removes one git dependency or advisory ignore.
+- identity-kit migration: done (#170, #172, #173, #174; the `deny.toml` leftovers went with #168).
 - Triage the 2023 issue backlog with `/triage` into `ready-for-agent` / `ready-for-human` /
   `wontfix`, and close or merge #93 and #124.
 
