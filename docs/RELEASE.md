@@ -12,11 +12,12 @@ has its own version, its own `CHANGELOG.md` next to its `Cargo.toml`, its own ta
 
 ## Flow
 
-1. On every push to `main`, release-plz opens or updates one release pull request
-   (`chore: release`, labelled `release`). For every crate whose files changed since its last
-   release, it contains the next version in that crate's `Cargo.toml`, the matching version
-   requirements in the crates that depend on it, `Cargo.lock`, and a new entry in that crate's
-   `CHANGELOG.md`. Both are derived from the
+1. On every push to `main`, release-plz checks which crates' files changed since their last
+   release. If any did, it opens or updates one release pull request (`chore: release`, labelled
+   `release`); otherwise it does nothing. For every changed crate, the pull request contains the
+   next version in that crate's `Cargo.toml`, the matching version requirement in the root
+   `[workspace.dependencies]` (which the crates depending on it inherit), `Cargo.lock`, and a new
+   entry in that crate's `CHANGELOG.md`. Both are derived from the
    [Conventional Commits](https://www.conventionalcommits.org/) on `main` that touched the crate.
 2. A maintainer reviews the versions and changelogs. To adjust them, commit to the release branch
    shortly before merging, since release-plz regenerates the pull request whenever `main` changes.
@@ -57,16 +58,10 @@ version and only writes the changelogs, which cover everything since the start o
 The 2023 releases were never tagged, so the compare links in those first entries point at tags that
 do not exist; fix them in the release pull request if they bother you.
 
-**Publishing is blocked today.** `oid4vc-core` and `oid4vp` depend on the `identity_*` crates as git
-dependencies, which `cargo publish` refuses, and every other crate depends on `oid4vc-core`. The
-workspace also patches `sd-jwt-payload`: that does not stop `cargo publish`, but the patch does not
-reach consumers, who would build against the unpatched crate, so it has to go before a release too.
-The identity-kit migration ([`PLAN.md`](PLAN.md), Phase D; the migration map in
-[`DESIGN.md`](DESIGN.md)) removes both. Until
-then, release-plz keeps the release pull request up to date, but **do not merge it**: the release
-job would fail at the first `cargo publish`.
-
-Once the blockers are gone:
+Nothing blocks publishing any more: the identity-kit migration removed the `identity_*` git
+dependencies and the `[patch]` sections, and QA runs `cargo publish --dry-run --workspace` on every
+pull request, so a crate that could not be published fails CI before it reaches the release pull
+request. Before the first release pull request is merged:
 
 1. `oid4vc-core` and `oid4vc-manager` have never been published, and crates.io only lets you
    configure trusted publishing for a crate that exists. Reserve both names once by hand, for
