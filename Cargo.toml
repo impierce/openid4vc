@@ -42,6 +42,7 @@ identity_credential = { git = "https://github.com/iotaledger/identity", tag = "v
 ] }
 identity_jose = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
 identity_verification = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
+identity-kit = { version = "0.2", default-features = false }
 is_empty = "0.3"
 # The pure-Rust backend; `aws_lc_rs` would pull in a C library.
 jsonwebtoken = { version = "11.1", default-features = false, features = ["rust_crypto"] }

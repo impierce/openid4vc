@@ -12,9 +12,9 @@ base64 = "0.23"
 derivative = "2.2.0"
 derive_more = { version = "2.1.1", features = ["display"] }
 did-key.workspace = true
-did_url = "0.1.0"
 ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
 getset = "0.1.2"
+identity-kit.workspace = true
 identity_did.workspace = true
 identity_document.workspace = true
 identity_ecdsa_verifier.workspace = true
