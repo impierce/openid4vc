@@ -37,9 +37,8 @@ specification family: five published crates and one unpublished facade.
   `Provider`) and in `oid4vc-manager`'s server; everything else is pure data and functions.
 - Cargo features are additive: `utoipa` (OpenAPI schemas) and `test-utils` (test
   subjects). Code must build with and without each.
-- No new git or path dependencies outside the workspace. The existing `identity_*` git
-  dependencies are being replaced by `identity-kit`
-  (`docs/PLAN.md`, Phase D); do not deepen their use.
+- No git or path dependencies outside the workspace, and no `[patch]` sections: crates with them
+  cannot be published.
 - `deny.toml` is the dependency policy: every advisory ignore carries a `reason`, licenses outside
   the allow list are per-crate `exceptions`, no new git sources. An ignore that reflects a design
   choice also gets an ADR.

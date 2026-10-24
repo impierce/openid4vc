@@ -1,9 +1,12 @@
 use chrono::{DateTime, Duration, Utc};
-use identity_credential::{credential::Jwt, presentation::Presentation};
 use identity_kit::{
+    did::Did,
     methods::DidKey,
     resolver::Resolver,
-    vc::validation::{CredentialStatus, StatusCheck, StatusError},
+    vc::{
+        validation::{CredentialStatus, StatusCheck, StatusError},
+        Jwt, Presentation,
+    },
 };
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::authentication::subject::Subject;
@@ -154,10 +157,9 @@ async fn test_implicit_flow() {
     .unwrap();
 
     // Create a verifiable presentation using the JWT.
-    let verifiable_presentation_jwt = Presentation::builder(subject_did.parse().unwrap(), Default::default())
-        .credential(Jwt::from(jwt))
-        .build()
-        .unwrap();
+    let verifiable_presentation_jwt = Presentation::new()
+        .with_holder(Did::parse(&subject_did).unwrap())
+        .with_credential(Jwt::new(jwt).unwrap());
 
     let verifiable_presentation_jwt = VerifiablePresentationJwt::builder()
         .iss(subject_did.clone())

@@ -234,15 +234,17 @@ OID4VP 1.0 with DCQL. Presentation Exchange is gone, as in the specification.
 - **VP token** (`token/`): `VpToken` is the map from credential query id to presentations
   (`StringOrObject`). `VpTokenBuilder` checks a submission against the query before building
   (required sets, unrequested ids). `VerifiablePresentationJwt` and its builder wrap a W3C
-  presentation in a JWT. `VpTokenValidator<R, V>` takes identity-kit's `KeyResolver`, a
+  presentation in the claims of a JWT: a VCDM 1.1 `identity_kit::vc::Presentation` of credential
+  JWTs (`jwt_vc_json`) in the `vp` claim, or a VCDM 2.0 `PresentationV2` of enveloped credentials
+  (`vc+sd-jwt`) as the payload itself, with `iss` the holder, `aud` and `nonce`. `VpTokenValidator<R, V>` takes identity-kit's `KeyResolver`, a
   `JwsVerifier` (`DefaultVerifier` unless given) and a `StatusCheck`, and validates `jwt_vc_json`,
   `dc+sd-jwt` and `vc+sd-jwt` presentations with identity-kit's `JwtPresentationValidator` and
   `SdJwtCredentialValidator`: presentation signature, `aud`/`nonce` (the SD-JWT key binding JWT's
   signature, `aud`, `nonce` and `sd_hash`), credential signatures, that every credential subject is
   the holder, validity dates with a configurable clock skew leeway (default 60 s), credential status
   (per a `StatusPolicy`, `SkipUnsupported` by default), and DCQL evaluation of the decoded result.
-  A `vc+sd-jwt` presentation JWT may carry `typ: JWT` instead of `vp+jwt`, as presentations built
-  with `identity_credential` do.
+  A `vc+sd-jwt` presentation JWT may carry `typ: JWT` instead of `vp+jwt`, as `jwt::encode` signs
+  it and as presentations built with `identity_credential` did.
 
 ## `siopv2`
 
@@ -309,11 +311,9 @@ Named so that work on them is deliberate, not accidental:
   several hundred `unwrap`/`expect` calls, some in parsing paths. Issue #78 (OID4VC error
   responses) is the umbrella for moving to typed errors that map to the specifications' error
   responses.
-- **Identity dependencies**: `oid4vp`'s `VerifiablePresentationJwt` (and through it the
-  workspace) depends on `identity_credential` as a **git** dependency and on a `fastcrypto` patch
-  its IOTA dependencies need. Cargo
-  cannot publish crates with git dependencies, so these block every release. `identity-kit` replaces
-  them; the mapping is below.
+- **Publishing**: the workspace has no git dependencies and no patches left, but `deny.toml` still
+  carries the advisory ignores and `allow-git` entries of the IOTA tree, and QA has no
+  `cargo publish --dry-run` job yet (#168).
 - **Validator coverage**: `VpTokenValidator` handles `jwt_vc_json`, `dc+sd-jwt` and `vc+sd-jwt`;
   `ldp_vc` and `mso_mdoc` return `UnsupportedFormat`. `multiple` and `trusted_authorities` are
   parsed but not enforced (TODOs in the validator).
@@ -322,27 +322,19 @@ Named so that work on them is deliberate, not accidental:
 - **SIOPv2**: the JWK thumbprint subject syntax type is parsed but no `Subject` produces it
   (issue #8); `client_metadata_uri` is not resolved for syntax types (TODO); draft 13 is old.
 - **Signed metadata**: `signed_metadata` is carried but not verified.
-- **Large integers through `serde_json::Value`**: the IOTA dependencies of the `identity_*` crates
-  turn on serde_json's `arbitrary_precision`, under which an integer beyond `u64` in a `Value`
-  cannot pass serde's buffer for `flatten` and untagged types. Such a message parses from JSON text
-  but not from a `Value` (`from_value`, `from_generic`). Goes away with the identity-kit migration.
 - **Workspace-level lints absent** (`unsafe_code`, `missing_docs`, clippy `dbg_macro` and
   friends). Tracked in [`PLAN.md`](PLAN.md), Phase D.
 
 ### identity-kit migration map
 
-| Today                                                                                         | identity-kit replacement                                              |
-| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `oid4vp::token::verifiable_presentation_jwt*` over `identity_credential::presentation`        | `identity_kit::vc::{Presentation, Jwt}`                                |
-
-Order: `oid4vc-core` (verifier, resolver) first, then `oid4vp`'s token layer, then the manager's
-subject and the tests. Each step removes a git dependency or an advisory ignore. Done: DID syntax
+Done; no `identity_*`, `did_url`, `did-key` or `sd-jwt-payload` code remains. DID syntax
 (`DidMethod`'s conversion and the test subjects) uses `identity_kit::did::Did` instead of `did_url`, and
 `KeySubject` uses `identity_kit::methods::key` and `keys::{InMemoryKeyStore, KeySigner}` instead of
 `did-key`. `VpTokenValidator` validates with `identity_kit::vc::validation` and
 `identity_kit::sd_jwt_vc`, over `resolver::KeyResolver`, `jose::JwsVerifier` and
 `vc::validation::StatusCheck`, which replace `SignatureVerifier`, `VerificationMaterialResolver` and
-`CredentialStatusVerifier`.
+`CredentialStatusVerifier`. `VerifiablePresentationJwt` carries `identity_kit::vc::{Presentation,
+PresentationV2}` instead of `identity_credential`'s `Presentation<CRED>`.
 
 ## Conformance and CI
 

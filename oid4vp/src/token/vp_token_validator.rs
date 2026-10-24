@@ -66,7 +66,8 @@ pub enum VpTokenValidationError {
 pub const DEFAULT_CLOCK_SKEW_LEEWAY: Duration = Duration::from_secs(60);
 
 /// The `typ` of a presentation JWT that carries a VCDM 2.0 presentation (`vc+sd-jwt` credentials) but predates the
-/// `vp+jwt` media type of VC-JOSE-COSE. Wallets building presentations with `identity_credential` produce it.
+/// `vp+jwt` media type of VC-JOSE-COSE. `oid4vc_core::jwt::encode` signs a `VerifiablePresentationJwt` under it, and
+/// wallets that built presentations with `identity_credential` did too.
 const LEGACY_PRESENTATION_TYP: &str = "JWT";
 
 /// A type validating [`VpToken`]s.
@@ -466,7 +467,10 @@ mod tests {
     use super::*;
     use crate::{
         dcql::dcql_query::{ClaimQuery, CredentialQuery, MetaTypes},
-        token::vp_token::Presentations,
+        token::{
+            verifiable_presentation_jwt::{VerifiablePresentation, VerifiablePresentationJwt},
+            vp_token::Presentations,
+        },
     };
     use chrono::{DateTime, Utc};
     use identity_kit::{
@@ -475,10 +479,10 @@ mod tests {
         keys::{InMemoryKeyStore, KeySigner, KeySpec, KeyStore as _},
         methods::DidKey,
         resolver::Resolver,
-        sd_jwt_vc::{Confirmation, KeyBinding, SdJwtVcBuilder, Status},
+        sd_jwt_vc::{Confirmation, KeyBinding, SdJwtCredentialV2Builder, SdJwtVcBuilder, Status},
         vc::{
             validation::{CredentialStatus, StatusError},
-            Credential, Presentation, Subject,
+            Credential, CredentialV2, EnvelopedVc, JwtClaims, Presentation, PresentationV2, Subject,
         },
     };
     use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer};
@@ -588,21 +592,62 @@ mod tests {
             .await
             .unwrap();
 
-        let mut presentation = Presentation::new().with_holder(holder_kid.did());
-        presentation.verifiable_credential = vec![credential];
-        let claims = presentation
-            .to_jwt_claims()
-            .unwrap()
-            .with_aud(VERIFIER)
-            .with_claim("nonce", JWT_VC_JSON_NONCE);
-        let presentation_header = JwsHeader::new(JwsAlgorithm::EdDSA)
+        let presentation = Presentation::new()
+            .with_holder(holder_kid.did())
+            .with_credential(credential);
+        sign_presentation(presentation.into(), JWT_VC_JSON_NONCE, &holder, &holder_kid).await
+    }
+
+    /// A `vc+sd-jwt` presentation for `VERIFIER` with `VC_SD_JWT_NONCE`, signed by a new holder `did:key`, of a VCDM
+    /// 2.0 credential about the holder, issued with a new `did:key` and secured with SD-JWT, its `first_name`
+    /// disclosed.
+    async fn vc_sd_jwt_presentation() -> String {
+        let (issuer, issuer_kid) = did_key_signer().await;
+        let (holder, holder_kid) = did_key_signer().await;
+
+        let credential = CredentialV2::new(
+            issuer_kid.did(),
+            Subject::new(holder_kid.did()).with_property("first_name", "Ferris"),
+        )
+        // Two types, so that `type` is an array, which is what DCQL evaluation reads.
+        .with_type("PersonalInformation");
+        let credential = SdJwtCredentialV2Builder::new(credential)
+            .with_kid(issuer_kid.as_str())
+            .with_issued_at(Utc::now())
+            .conceal(["credentialSubject", "first_name"])
+            .sign(&issuer)
+            .await
+            .unwrap();
+        let presentation = PresentationV2::new()
+            .with_holder(holder_kid.did())
+            .with_credential(EnvelopedVc::from_sd_jwt(credential.sd_jwt()));
+        sign_presentation(presentation.into(), VC_SD_JWT_NONCE, &holder, &holder_kid).await
+    }
+
+    /// `presentation`, built into a [`VerifiablePresentationJwt`] for `VERIFIER` with `nonce` and signed by `holder`,
+    /// under `typ: JWT` as `oid4vc_core::jwt::encode` signs it.
+    async fn sign_presentation(
+        presentation: VerifiablePresentation,
+        nonce: &str,
+        holder: &KeySigner<InMemoryKeyStore>,
+        holder_kid: &DidUrl,
+    ) -> String {
+        let now = Utc::now().timestamp();
+        let presentation = VerifiablePresentationJwt::builder()
+            .iss(holder_kid.did().to_string())
+            .sub(holder_kid.did().to_string())
+            .aud(VERIFIER.to_string())
+            .iat(now)
+            .exp(now + 600)
+            .nonce(nonce.to_string())
+            .verifiable_presentation(presentation)
+            .build()
+            .unwrap();
+        let claims: JwtClaims = serde_json::from_value(serde_json::to_value(&presentation).unwrap()).unwrap();
+        let header = JwsHeader::new(JwsAlgorithm::EdDSA)
             .with_typ("JWT")
             .with_kid(holder_kid.as_str());
-        Jwt::sign(&presentation_header, &claims, &holder)
-            .await
-            .unwrap()
-            .as_str()
-            .to_owned()
+        Jwt::sign(&header, &claims, holder).await.unwrap().as_str().to_owned()
     }
 
     fn resolver() -> Resolver {
@@ -705,6 +750,8 @@ mod tests {
         assert_eq!(credential["credentialSubject"]["first_name"], "Ferris");
     }
 
+    /// A `jwt_vc_json` presentation built with `VerifiablePresentationJwt` validates, with a credential whose `kid`
+    /// is relative to its `iss`.
     #[tokio::test]
     async fn kid_relative_to_did_issuer_is_resolved() {
         validator()
@@ -716,6 +763,23 @@ mod tests {
             )
             .await
             .unwrap();
+    }
+
+    /// A `vc+sd-jwt` presentation built with `VerifiablePresentationJwt` validates.
+    #[tokio::test]
+    async fn vc_sd_jwt_presentation_built_with_verifiable_presentation_jwt_validates() {
+        let decoded = validator()
+            .validate_vp_token(
+                &dcql_query(Format::VcSdJwt, &["credentialSubject", "first_name"]),
+                &vp_token("CredentialQuery", &vc_sd_jwt_presentation().await),
+                VERIFIER,
+                VC_SD_JWT_NONCE,
+            )
+            .await
+            .unwrap();
+
+        let credential = &decoded.decoded_presentations()[&CredentialQueryId::try_new("CredentialQuery").unwrap()][0];
+        assert_eq!(credential["credentialSubject"]["first_name"], "Ferris");
     }
 
     #[tokio::test]
