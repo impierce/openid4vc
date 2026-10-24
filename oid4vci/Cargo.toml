@@ -17,13 +17,10 @@ utoipa = ["dep:utoipa", "oid4vc-core/utoipa"]
 oid4vc-core = { path = "../oid4vc-core" }
 anyhow = "1.0"
 chrono.workspace = true
-derivative = "2.2.0"
 getset.workspace = true
 http.workspace = true
 jsonwebtoken.workspace = true
-lazy_static = "1.4"
 nutype.workspace = true
-paste = "1.0"
 pkce = "0.2"
 reqwest.workspace = true
 reqwest-middleware.workspace = true

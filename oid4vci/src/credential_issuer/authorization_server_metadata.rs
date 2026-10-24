@@ -1,4 +1,3 @@
-use derivative::{self, Derivative};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -7,12 +6,9 @@ use serde_with::skip_serializing_none;
 ///
 /// [RFC 8414, Section 2]: https://www.rfc-editor.org/rfc/rfc8414.html#section-2
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize, Derivative, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-#[derivative(Default)]
 pub struct AuthorizationServerMetadata {
-    // TODO: Temporary solution
-    #[derivative(Default(value = "Url::parse(\"https://example.com\").unwrap()"))]
     pub issuer: Url,
     pub authorization_endpoint: Option<Url>,
     pub token_endpoint: Option<Url>,
@@ -46,4 +42,39 @@ pub struct AuthorizationServerMetadata {
     #[serde(default)]
     pub require_interactive_authorization_request: Option<bool>,
     // Additional authorization server metadata parameters MAY also be used.
+}
+
+// TODO: Temporary solution: `issuer` has no meaningful default.
+impl Default for AuthorizationServerMetadata {
+    fn default() -> Self {
+        Self {
+            issuer: Url::parse("https://example.com").unwrap(),
+            authorization_endpoint: Default::default(),
+            token_endpoint: Default::default(),
+            jwks_uri: Default::default(),
+            registration_endpoint: Default::default(),
+            scopes_supported: Default::default(),
+            response_types_supported: Default::default(),
+            response_modes_supported: Default::default(),
+            grant_types_supported: Default::default(),
+            token_endpoint_auth_methods_supported: Default::default(),
+            token_endpoint_auth_signing_alg_values_supported: Default::default(),
+            service_documentation: Default::default(),
+            ui_locales_supported: Default::default(),
+            op_policy_uri: Default::default(),
+            op_tos_uri: Default::default(),
+            revocation_endpoint: Default::default(),
+            revocation_endpoint_auth_methods_supported: Default::default(),
+            revocation_endpoint_auth_signing_alg_values_supported: Default::default(),
+            introspection_endpoint: Default::default(),
+            introspection_endpoint_auth_methods_supported: Default::default(),
+            introspection_endpoint_auth_signing_alg_values_supported: Default::default(),
+            code_challenge_methods_supported: Default::default(),
+            pre_authorized_grant_anonymous_access_supported: Default::default(),
+            pushed_authorization_request_endpoint: Default::default(),
+            require_pushed_authorization_requests: Default::default(),
+            interactive_authorization_endpoint: Default::default(),
+            require_interactive_authorization_request: Default::default(),
+        }
+    }
 }

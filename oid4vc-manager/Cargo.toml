@@ -17,14 +17,11 @@ async-trait = "0.1"
 axum = "0.8"
 axum-auth = "0.8"
 chrono.workspace = true
-derivative = "2.2"
 futures = "0.3"
 getset.workspace = true
 identity-kit = { workspace = true, features = ["did-key", "in-memory"] }
 identity_credential.workspace = true
 jsonwebtoken.workspace = true
-lazy_static = "1.4.0"
-paste = "1.0"
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -44,7 +41,6 @@ identity_did.workspace = true
 identity_document.workspace = true
 identity_jose.workspace = true
 identity_verification.workspace = true
-lazy_static = "1.4"
 rand = "0.10"
 rstest = "0.28"
 uuid = { version = "1.4", features = ["v4", "fast-rng"] }

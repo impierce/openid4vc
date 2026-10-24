@@ -2,7 +2,7 @@ use crate::credential_format;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-credential_format!("ldp_vc", LdpVc, {
+credential_format!("ldp_vc", LdpVc, LdpVcParameters, LdpVcCredential, {
     credential_definition: CredentialDefinition
 });
 

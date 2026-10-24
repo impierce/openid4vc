@@ -320,9 +320,9 @@ and exercised with `dry_run`; it will fail at `cargo publish` until then, which 
 
 - Workspace lints as in identity-kit (`unsafe_code = "forbid"`, `missing_docs = "warn"`,
   `unreachable_pub`, clippy `dbg_macro`/`todo`/`print_*`), then burn down the warnings per crate.
-- `edition = "2024"` via `cargo fix --edition`, `lazy_static` → `LazyLock`, drop `derivative` and
-  `paste`. (`thiserror 2`, `jsonwebtoken 11`, one `serde_with`, `axum 0.8` and `wiremock 0.6` came with
-  the dependency update that replaced the open Dependabot PRs.)
+- `edition = "2024"` via `cargo fix --edition`. (`lazy_static` → `LazyLock` and dropping `derivative`
+  and `paste` came with #169; `thiserror 2`, `jsonwebtoken 11`, one `serde_with`, `axum 0.8` and
+  `wiremock 0.6` with the dependency update that replaced the open Dependabot PRs.)
 - Reduce `unwrap`/`expect` in `*/src` (395 today): the protocol parsers should return errors; the
   OID4VC error responses issue (#78) is the natural umbrella.
 - identity-kit migration, file by file in the order of `docs/DESIGN.md` §5; each step
