@@ -334,10 +334,10 @@ Named so that work on them is deliberate, not accidental:
 | `oid4vp::token::vp_token_validator` over `identity_credential` validators and the patched `sd-jwt-payload` | `identity_kit::vc` validators and `identity_kit::sd_jwt_vc`           |
 | `oid4vp::token::verifiable_presentation_jwt*` over `identity_credential::presentation`        | `identity_kit::vc::{Presentation, Jwt}`                                |
 | `oid4vc_manager::methods::KeySubject` and the `test-utils` resolver over `did-key`            | `identity_kit::methods::key` + `keys::{InMemoryKeyStore, SoftwareKeyStore, KeySigner}` |
-| `oid4vc_core::utils::did` over `did_url`                                                      | `identity_kit::did::DidUrl`                                            |
 
 Order: `oid4vc-core` (verifier, resolver) first, then `oid4vp`'s token layer, then the manager's
-subject and the tests. Each step removes a git dependency or an advisory ignore.
+subject and the tests. Each step removes a git dependency or an advisory ignore. Done: DID syntax
+(`DidMethod`'s conversion and the test subjects) uses `identity_kit::did::Did` instead of `did_url`.
 
 ## Conformance and CI
 
