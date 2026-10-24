@@ -115,7 +115,8 @@ Releases are automated with [release-plz](https://release-plz.dev/): it keeps a 
 open with the next version and changelog of every changed crate, and publishes those crates to
 crates.io once that pull request is merged. Each crate is versioned on its own
 ([ADR 0001](docs/adr/0001-independent-crate-versions.md)). Don't bump a version or edit a
-`CHANGELOG.md` by hand. [`docs/RELEASE.md`](docs/RELEASE.md) describes the full process.
+`CHANGELOG.md` by hand; only a maintainer adjusts them, on the release pull request.
+[`docs/RELEASE.md`](docs/RELEASE.md) describes the full process.
 
 ## Security
 

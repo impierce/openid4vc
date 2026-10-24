@@ -1,8 +1,9 @@
 # Release process
 
 Releases are automated with [release-plz](https://release-plz.dev/) and follow
-[Cargo's SemVer rules](https://doc.rust-lang.org/cargo/reference/semver.html). Versions are never
-bumped by hand, and the `CHANGELOG.md` files are never edited by hand.
+[Cargo's SemVer rules](https://doc.rust-lang.org/cargo/reference/semver.html). Outside the release
+pull request, versions are never bumped by hand and the `CHANGELOG.md` files are never edited by
+hand (see step 2 of the flow).
 
 Five crates are released: `oid4vc-core`, `oid4vci`, `oid4vp`, `siopv2` and `oid4vc-manager`. Each
 has its own version, its own `CHANGELOG.md` next to its `Cargo.toml`, its own tag

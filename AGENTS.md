@@ -54,8 +54,8 @@ specification family: five published crates and one unpublished facade.
   crate name when the change is in one crate (`feat(oid4vp): ...`). Pull requests are
   squash-merged, so the title is the commit on the default branch and the changelog entry.
   Titles and commit messages use terse commit style, without articles (`CONTRIBUTING.md`).
-- Never bump a crate version or edit a changelog by hand; release-plz owns both
-  (`docs/RELEASE.md`).
+- Never bump a crate version or edit a changelog by hand; release-plz owns both. The only
+  exception is a maintainer's adjustment on the release pull request's branch (`docs/RELEASE.md`).
 
 ## Agent skills
 
