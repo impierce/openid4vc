@@ -109,7 +109,8 @@ impl Verify for KeyValidator {
     }
 }
 
-/// Resolves the Ed25519 public key that the key identifier, a DID URL into a `did:key` document, names.
+/// Resolves the public key that the key identifier, a DID URL into a `did:key` document, names: an Ed25519 key as
+/// its 32 bytes, a P-256 key as its SEC1 point, the forms `jwt::decode` verifies `EdDSA` and `ES256` with.
 fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
     let kid = DidUrl::parse(kid)?;
     let document = DidKey::new().with_format(KeyFormat::JsonWebKey).document(kid.did())?;
@@ -119,17 +120,93 @@ fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
         .find(|method| method.id == kid)
         .and_then(|method| method.public_key_jwk())
         .ok_or(anyhow!("No public key found for `{kid}`"))?;
-    Ok(jwk.ed25519_public_bytes()?.to_vec())
+    match (jwk.kty(), jwk.crv()) {
+        ("OKP", Some("Ed25519")) => Ok(jwk.ed25519_public_bytes()?.to_vec()),
+        ("EC", Some("P-256")) => Ok(jwk.p256_public_bytes()?.to_vec()),
+        (kty, crv) => Err(anyhow!("Unsupported key type `{kty}` ({crv:?}) for `{kid}`")),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{ProviderManager, RelyingPartyManager};
+    use identity_kit::jose::{encode_compact, JwsHeader};
     use jsonwebtoken::Algorithm;
-    use oid4vc_core::authorization_request::{AuthorizationRequest, Object};
+    use oid4vc_core::{
+        authorization_request::{AuthorizationRequest, Object},
+        Validator,
+    };
+    use serde_json::{json, Value};
     use siopv2::siopv2::SIOPv2;
     use std::sync::Arc;
+
+    /// A signer over a new key of `key_type`, and the `did:key` URL of that key.
+    async fn did_key_signer(key_type: KeyType, alg: JwsAlgorithm) -> (KeySigner<InMemoryKeyStore>, Did) {
+        let store = InMemoryKeyStore::new();
+        let key = store.generate(KeySpec::new(key_type, alg)).await.unwrap();
+        let signer = KeySigner::new(store, key, alg).await.unwrap();
+        let did = DidKey::did(signer.public_jwk()).unwrap();
+        (signer, did)
+    }
+
+    /// A JWT with the header `kid`, signed by `signer`.
+    async fn jwt(signer: &KeySigner<InMemoryKeyStore>, kid: &str) -> String {
+        let header = JwsHeader::new(signer.alg()).with_kid(kid);
+        let payload = json!({"iss": "issuer", "nonce": "n-0S6_WzA2Mj"}).to_string();
+        encode_compact(&header, payload.as_bytes(), signer).await.unwrap()
+    }
+
+    /// Verifies `jwt` as a relying party does, with the key its `kid` names.
+    async fn verify(jwt: String) -> Result<Value> {
+        Validator::Verifier(Arc::new(KeyValidator::new())).decode(jwt).await
+    }
+
+    /// The `kid` of the one key of `did`, as `did:key` names it.
+    fn key_id(did: &Did) -> String {
+        format!("{did}#{}", did.method_specific_id())
+    }
+
+    #[tokio::test]
+    async fn ed25519_and_p256_keys_verify() {
+        for (key_type, alg) in [
+            (KeyType::Ed25519, JwsAlgorithm::EdDSA),
+            (KeyType::P256, JwsAlgorithm::ES256),
+        ] {
+            let (signer, did) = did_key_signer(key_type, alg).await;
+            let claims = verify(jwt(&signer, &key_id(&did)).await).await.unwrap();
+            assert_eq!(claims["nonce"], "n-0S6_WzA2Mj", "{alg:?}");
+        }
+    }
+
+    #[tokio::test]
+    async fn signature_by_another_key_is_rejected() {
+        let (signer, _) = did_key_signer(KeyType::P256, JwsAlgorithm::ES256).await;
+        let (_, other) = did_key_signer(KeyType::P256, JwsAlgorithm::ES256).await;
+        assert!(verify(jwt(&signer, &key_id(&other)).await).await.is_err());
+    }
+
+    /// The `kid` names a verification method (SIOPv2, OID4VCI): a DID without a fragment, a fragment the document
+    /// does not have, and a query are rejected.
+    #[tokio::test]
+    async fn kid_must_name_the_verification_method() {
+        let (signer, did) = did_key_signer(KeyType::Ed25519, JwsAlgorithm::EdDSA).await;
+        for kid in [
+            did.to_string(),
+            format!("{did}#other"),
+            format!("{did}?service=files#{}", did.method_specific_id()),
+        ] {
+            assert!(verify(jwt(&signer, &kid).await).await.is_err(), "{kid}");
+        }
+    }
+
+    #[tokio::test]
+    async fn keys_other_than_ed25519_and_p256_are_rejected() {
+        // The X25519 key of the did:key specification's examples; it agrees keys and signs nothing.
+        let kid = "did:key:z6LSeu9HkTHSfLLeUs2nnzUSNedgDUevfNQgQjQC23ZCit6F\
+            #z6LSeu9HkTHSfLLeUs2nnzUSNedgDUevfNQgQjQC23ZCit6F";
+        assert!(KeyValidator::new().public_key(kid).await.is_err());
+    }
 
     #[tokio::test]
     async fn test_key_subject() {
