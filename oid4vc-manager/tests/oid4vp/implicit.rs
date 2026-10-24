@@ -1,12 +1,15 @@
-use chrono::{Duration, Utc};
-use did_key::{generate, Ed25519KeyPair};
-use identity_credential::{credential::Jwt, presentation::Presentation};
+use chrono::{DateTime, Duration, Utc};
+use identity_kit::{
+    did::Did,
+    methods::DidKey,
+    resolver::Resolver,
+    vc::{
+        validation::{CredentialStatus, StatusCheck, StatusError},
+        Jwt, Presentation,
+    },
+};
 use jsonwebtoken::{Algorithm, Header};
-use lazy_static::lazy_static;
 use oid4vc_core::authentication::subject::Subject;
-use oid4vc_core::credential_status_verifier::MockCredentialStatusVerifier;
-use oid4vc_core::verification_material_resolver::test_utils::TestVerificationMaterialResolver;
-use oid4vc_core::verifier::SignatureVerifier;
 use oid4vc_core::{
     authorization_request::{AuthorizationRequest, Object},
     authorization_response::AuthorizationResponse,
@@ -28,14 +31,15 @@ use oid4vp::{
     dcql::dcql_query::{CredentialQueryId, DcqlQuery},
     token::vp_token_builder::VpTokenBuilder,
 };
+use std::sync::LazyLock;
 
 use serde_json::json;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
-lazy_static! {
-    pub static ref DCQL_QUERY: DcqlQuery = serde_json::from_value(json!({
+pub static DCQL_QUERY: LazyLock<DcqlQuery> = LazyLock::new(|| {
+    serde_json::from_value(json!({
         "credentials": [
             {
                 "id": "my_credential",
@@ -52,29 +56,23 @@ lazy_static! {
             }
         ]
     }))
-    .unwrap();
-}
+    .unwrap()
+});
 
 #[tokio::test]
 async fn test_implicit_flow() {
     const TEST_DID_METHOD: &str = "did:key";
 
     // Create a new issuer.
-    let issuer = Arc::new(KeySubject::from_keypair(
-        generate::<Ed25519KeyPair>(Some("this-is-a-very-UNSAFE-issuer-secret-key".as_bytes())),
-        None,
-    ));
+    let issuer = Arc::new(KeySubject::new().await.unwrap());
     let issuer_did = issuer.identifier(TEST_DID_METHOD, Algorithm::EdDSA).await.unwrap();
 
     // Create a new subject.
-    let subject = Arc::new(KeySubject::from_keypair(
-        generate::<Ed25519KeyPair>(Some("this-is-a-very-UNSAFE-secret-key".as_bytes())),
-        None,
-    ));
+    let subject = Arc::new(KeySubject::new().await.unwrap());
     let subject_did = subject.identifier(TEST_DID_METHOD, Algorithm::EdDSA).await.unwrap();
 
     // Create a new relying party.
-    let relying_party = Arc::new(KeySubject::new());
+    let relying_party = Arc::new(KeySubject::new().await.unwrap());
     let relying_party_did = relying_party
         .identifier(TEST_DID_METHOD, Algorithm::EdDSA)
         .await
@@ -121,6 +119,8 @@ async fn test_implicit_flow() {
         .sub(&subject_did)
         .iss(&issuer_did)
         .iat(0)
+        // The issuance date VCDM 1.1 requires, which its JWT encoding takes from `nbf`.
+        .nbf(0)
         .exp(9999999999i64)
         .verifiable_credential(serde_json::json!({
             "@context": [
@@ -157,10 +157,9 @@ async fn test_implicit_flow() {
     .unwrap();
 
     // Create a verifiable presentation using the JWT.
-    let verifiable_presentation_jwt = Presentation::builder(subject_did.parse().unwrap(), Default::default())
-        .credential(Jwt::from(jwt))
-        .build()
-        .unwrap();
+    let verifiable_presentation_jwt = Presentation::new()
+        .with_holder(Did::parse(&subject_did).unwrap())
+        .with_credential(Jwt::new(jwt).unwrap());
 
     let verifiable_presentation_jwt = VerifiablePresentationJwt::builder()
         .iss(subject_did.clone())
@@ -199,17 +198,23 @@ async fn test_implicit_flow() {
         .await
         .unwrap();
 
-    assert!(VpTokenValidator::new(
-        &SignatureVerifier,
-        &TestVerificationMaterialResolver,
-        &MockCredentialStatusVerifier::new()
-    )
-    .validate_vp_token(
-        &DCQL_QUERY,
-        &authorization_response.extension.vp_token,
-        &relying_party_did_with_prefix.to_string(),
-        Some(nonce),
-    )
-    .await
-    .is_ok());
+    VpTokenValidator::new(Resolver::builder().with(DidKey::default()).build(), Valid)
+        .validate_vp_token(
+            &DCQL_QUERY,
+            &authorization_response.extension.vp_token,
+            &relying_party_did_with_prefix.to_string(),
+            nonce,
+        )
+        .await
+        .unwrap();
+}
+
+/// A status check that finds every credential valid.
+struct Valid;
+
+#[async_trait::async_trait]
+impl StatusCheck for Valid {
+    async fn check(&self, _: CredentialStatus<'_>, _: DateTime<Utc>) -> Result<(), StatusError> {
+        Ok(())
+    }
 }

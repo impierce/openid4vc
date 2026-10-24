@@ -23,24 +23,24 @@ papered over. Deviations from this document are recorded as ADRs in [`adr/`](adr
    their parameters and token logic in through the `Extension` trait, so parsing, signing (JAR) and
    sending a request is written once.
 3. **Cryptography and identity behind traits.** Who signs (`Subject`, `Sign`, `ExternalSign`), how
-   a key is found (`Verify`, `VerificationMaterialResolver`), whether a credential is revoked
-   (`CredentialStatusVerifier`) and where an issuer keeps state (`Storage`) are traits. The
+   a key is found (`Verify`, identity-kit's `KeyResolver`), whether a credential is revoked
+   (identity-kit's `StatusCheck`) and where an issuer keeps state (`Storage`) are traits. The
    library ships a `did:key` subject for development; vendor and method specific implementations
    live in consumers.
 4. **Protocol logic free of I/O where it can be.** HTTP is confined to the `reqwest` clients
    (`oid4vci::Wallet`, `siopv2::Provider`, the client-metadata fetch in the extensions) and to
    `oid4vc-manager`'s `axum` issuer server. Parsing, validation and evaluation are pure functions
    over the wire types, which keeps them unit-testable and fuzzable.
-5. **Additive features.** `utoipa` adds OpenAPI schemas to the wire types; `test-utils` adds mocks
-   and test resolvers. Everything builds with any combination.
+5. **Additive features.** `utoipa` adds OpenAPI schemas to the wire types; `test-utils` adds test
+   subjects. Everything builds with any combination.
 6. **Specification versions are tracked explicitly.** The crate READMEs and
    [`FEATURES.md`](FEATURES.md) name the version each crate implements: OID4VCI 1.0 (final, 16
    September 2025), OID4VP 1.0 (final, 9 July 2025), SIOPv2 working group draft 13 (28 November
    2023), plus the OID4VCI Interactive Authorization draft.
 7. **Publishable.** No git or path dependencies outside the workspace, versions and changelogs
-   derived from Conventional Commits, `cargo publish --dry-run` green on every pull request. The
-   workspace does not meet this principle today; the identity-kit migration map under *Known gaps*
-   is the path to it.
+   derived from Conventional Commits, `cargo publish --dry-run` green on every pull request. All
+   but the versions and changelogs hold; those come with the release pipeline
+   ([`PLAN.md`](PLAN.md), Phase C).
 
 ## Layout
 
@@ -55,8 +55,6 @@ openid4vc/
 │       ├── client_metadata.rs, scope.rs, subject_syntax_type.rs, rfc7519_claims.rs
 │       ├── claim_path_pointer.rs    # JSON claim path pointer shared by OID4VCI and DCQL
 │       ├── jwt.rs, utils/           # JWT encode/decode, form-urlencoded, DID kid normalisation
-│       ├── verifier.rs              # SignatureVerifier (EdDSA, ES256, ES256K)
-│       ├── verification_material_resolver.rs, credential_status_verifier.rs
 │       └── test_utils.rs            # [test-utils]
 ├── oid4vci/                   # OID4VCI 1.0 wire types, CredentialIssuer, Wallet client
 │   └── src/
@@ -160,12 +158,14 @@ that serialize nested objects as JSON strings the way the specs expect.
 
 ### Verification
 
-`SignatureVerifier` implements `identity_verification::jws::JwsVerifier` for EdDSA, ES256 and
-ES256K. `VerificationMaterialResolver` resolves a DID to a DID document and a `kid` to a JWK, and
-`CredentialStatusVerifier` checks a credential's `status` claim; both are traits so that `oid4vp`'s
-validator is independent of any DID method or status list implementation. The `test-utils`
-feature ships a `did:key` resolver (over the `did-key` crate) and a `mockall` mock for the status
-verifier.
+Credentials and presentations are verified with identity-kit's three extension points: a
+`resolver::KeyResolver` turns the key reference of a JWT into a public key (identity-kit's
+`Resolver` with the DID methods a verifier accepts, `CompositeKeyResolver` to add keys by value or
+the key sets of HTTPS issuers), a `jose::JwsVerifier` checks the signature (`DefaultVerifier`:
+EdDSA, ES256, and ES256K with low `s` only), and a `vc::validation::StatusCheck` checks the
+`credentialStatus` entries and `status` claims (`StatusListCheck` for the Token Status List).
+`oid4vp`'s validator is generic over all three, so it is independent of any DID method or status
+list implementation.
 
 ## `oid4vci`
 
@@ -234,11 +234,17 @@ OID4VP 1.0 with DCQL. Presentation Exchange is gone, as in the specification.
 - **VP token** (`token/`): `VpToken` is the map from credential query id to presentations
   (`StringOrObject`). `VpTokenBuilder` checks a submission against the query before building
   (required sets, unrequested ids). `VerifiablePresentationJwt` and its builder wrap a W3C
-  presentation in a JWT. `VpTokenValidator<V, VMR, CSV>` takes a `JwsVerifier`, a
-  `VerificationMaterialResolver` and a `CredentialStatusVerifier`, and validates `jwt_vc_json`,
-  `dc+sd-jwt` and `vc+sd-jwt` presentations: presentation signature, `aud`/`nonce` (also in the
-  SD-JWT key binding JWT), credential signatures and validity dates with a configurable clock skew
-  leeway (default 60 s), credential status, and DCQL evaluation of the decoded result.
+  presentation in the claims of a JWT: a VCDM 1.1 `identity_kit::vc::Presentation` of credential
+  JWTs (`jwt_vc_json`) in the `vp` claim, or a VCDM 2.0 `PresentationV2` of enveloped credentials
+  (`vc+sd-jwt`) as the payload itself, with `iss` the holder, `aud` and `nonce`. `VpTokenValidator<R, V>` takes identity-kit's `KeyResolver`, a
+  `JwsVerifier` (`DefaultVerifier` unless given) and a `StatusCheck`, and validates `jwt_vc_json`,
+  `dc+sd-jwt` and `vc+sd-jwt` presentations with identity-kit's `JwtPresentationValidator` and
+  `SdJwtCredentialValidator`: presentation signature, `aud`/`nonce` (the SD-JWT key binding JWT's
+  signature, `aud`, `nonce` and `sd_hash`), credential signatures, that every credential subject is
+  the holder, validity dates with a configurable clock skew leeway (default 60 s), credential status
+  (per a `StatusPolicy`, `SkipUnsupported` by default), and DCQL evaluation of the decoded result.
+  A `vc+sd-jwt` presentation JWT may carry `typ: JWT` instead of `vp+jwt`, as `jwt::encode` signs
+  it and as presentations built with `identity_credential` did.
 
 ## `siopv2`
 
@@ -273,8 +279,9 @@ Thin, opinionated wrappers plus the only server in the workspace:
   `/.well-known/openid-credential-issuer`, `/credential_offer`, `/par`, `/authorize`, `/token`,
   `/credential`, `/notification`, plus an optional extension `Router`. `Storage` is the trait the
   server reads everything from (configurations, codes, token and credential responses, state).
-- `methods::KeySubject` is the development `Subject`: `did:key` over Ed25519 via the `did-key`
-  crate, with an optional `ExternalSign`.
+- `methods::KeySubject` is the development `Subject`: `did:key` over an Ed25519 key in an
+  identity-kit `KeyStore` (`InMemoryKeyStore` for `KeySubject::new`), signing through `KeySigner` or
+  an optional `ExternalSign`.
 - `tests/` are the end-to-end flows: pre-authorized code (with and without batch and by-reference
   offer), authorization code, SIOPv2 implicit flow over `did:key` and a custom method, OID4VP
   implicit flow, all over `wiremock` and an in-memory `Storage`.
@@ -304,40 +311,27 @@ Named so that work on them is deliberate, not accidental:
   several hundred `unwrap`/`expect` calls, some in parsing paths. Issue #78 (OID4VC error
   responses) is the umbrella for moving to typed errors that map to the specifications' error
   responses.
-- **Identity dependencies**: `oid4vc-core::verifier`, `VerificationMaterialResolver`, and
-  `oid4vp`'s token layer depend on eight `identity_*` crates as **git** dependencies, on a patched
-  `sd-jwt-payload`, on a `fastcrypto` patch their IOTA dependencies need and, for `did:key`, on the unmaintained `did-key` crate (issue #104). Cargo
-  cannot publish crates with git dependencies, so these block every release. `identity-kit` replaces
-  them; the mapping is below.
 - **Validator coverage**: `VpTokenValidator` handles `jwt_vc_json`, `dc+sd-jwt` and `vc+sd-jwt`;
   `ldp_vc` and `mso_mdoc` return `UnsupportedFormat`. `multiple` and `trusted_authorities` are
-  parsed but not enforced (TODOs in the validator); relative `kid` references are not resolved
-  against `iss`.
+  parsed but not enforced (TODOs in the validator).
 - **Response modes**: `direct_post` only; no JARM (`direct_post.jwt`), no encrypted responses, no
   Digital Credentials API transport.
 - **SIOPv2**: the JWK thumbprint subject syntax type is parsed but no `Subject` produces it
   (issue #8); `client_metadata_uri` is not resolved for syntax types (TODO); draft 13 is old.
 - **Signed metadata**: `signed_metadata` is carried but not verified.
-- **Large integers through `serde_json::Value`**: the IOTA dependencies of the `identity_*` crates
-  turn on serde_json's `arbitrary_precision`, under which an integer beyond `u64` in a `Value`
-  cannot pass serde's buffer for `flatten` and untagged types. Such a message parses from JSON text
-  but not from a `Value` (`from_value`, `from_generic`). Goes away with the identity-kit migration.
 - **Workspace-level lints absent** (`unsafe_code`, `missing_docs`, clippy `dbg_macro` and
   friends). Tracked in [`PLAN.md`](PLAN.md), Phase D.
 
 ### identity-kit migration map
 
-| Today                                                                                         | identity-kit replacement                                              |
-| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `oid4vc_core::verifier::SignatureVerifier` over `identity_{ecdsa,eddsa}_verifier`             | `identity_kit::jose::{JwsVerifier, DefaultVerifier}`                   |
-| `VerificationMaterialResolver` over `identity_did::CoreDID`, `identity_document::CoreDocument`, `identity_jose::Jwk` | `identity_kit::resolver::{DidResolver, Resolver}`, `did::DidDocument`, `jose::Jwk` |
-| `oid4vp::token::vp_token_validator` over `identity_credential` validators and the patched `sd-jwt-payload` | `identity_kit::vc` validators and `identity_kit::sd_jwt_vc`           |
-| `oid4vp::token::verifiable_presentation_jwt*` over `identity_credential::presentation`        | `identity_kit::vc::{Presentation, Jwt}`                                |
-| `oid4vc_manager::methods::KeySubject` and the `test-utils` resolver over `did-key`            | `identity_kit::methods::key` + `keys::{InMemoryKeyStore, SoftwareKeyStore, KeySigner}` |
-| `oid4vc_core::utils::did` over `did_url`                                                      | `identity_kit::did::DidUrl`                                            |
-
-Order: `oid4vc-core` (verifier, resolver) first, then `oid4vp`'s token layer, then the manager's
-subject and the tests. Each step removes a git dependency or an advisory ignore.
+Done; no `identity_*`, `did_url`, `did-key` or `sd-jwt-payload` code remains. DID syntax
+(`DidMethod`'s conversion and the test subjects) uses `identity_kit::did::Did` instead of `did_url`, and
+`KeySubject` uses `identity_kit::methods::key` and `keys::{InMemoryKeyStore, KeySigner}` instead of
+`did-key`. `VpTokenValidator` validates with `identity_kit::vc::validation` and
+`identity_kit::sd_jwt_vc`, over `resolver::KeyResolver`, `jose::JwsVerifier` and
+`vc::validation::StatusCheck`, which replace `SignatureVerifier`, `VerificationMaterialResolver` and
+`CredentialStatusVerifier`. `VerifiablePresentationJwt` carries `identity_kit::vc::{Presentation,
+PresentationV2}` instead of `identity_credential`'s `Presentation<CRED>`.
 
 ## Conformance and CI
 
@@ -350,10 +344,10 @@ What CI enforces, and what [`PLAN.md`](PLAN.md) adds:
   daily and on manifest changes; licenses, bans and sources on manifest changes); `coverage.yml`
   via `cargo-llvm-cov` and Codecov (informational); `pr-title.yml` for the Conventional Commit
   title; `fuzz.yml` running the `cargo-fuzz` targets of `fuzz/` (seeded from `*/tests/examples`)
-  for a minute per pull request and ten minutes nightly.
-- Release: `release-plz.yml` keeps a release pull request open and publishes on its merge
-  ([`RELEASE.md`](RELEASE.md)). A `cargo publish --dry-run` job joins QA once the crates are
-  publishable.
+  for a minute per pull request and ten minutes nightly; and `cargo publish --dry-run --workspace`
+  in QA, which packages and builds the five crates as crates.io would receive them.
+- Release: `release-plz.yml` keeps a release pull request up to date and publishes on its merge
+  ([`RELEASE.md`](RELEASE.md)).
 
 ## References
 

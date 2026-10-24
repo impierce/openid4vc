@@ -25,28 +25,20 @@ rust-version = "1.95"
 
 [workspace.dependencies]
 chrono = "0.4"
-# TODO: replace did-key
-did-key = "0.2"
 getset = "0.1"
 http = "1.3.1"
-identity_did = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
-identity_document = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
-identity_ecdsa_verifier = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
-identity_eddsa_verifier = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
-identity_core = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1", default-features = false }
-identity_credential = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1", default-features = false, features = [
-    "validator",
-    "credential",
-    "presentation",
-    "sd-jwt-vc",
-] }
-identity_jose = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
-identity_verification = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
+identity-kit = { version = "0.2.1", default-features = false }
 is_empty = "0.3"
 # The pure-Rust backend; `aws_lc_rs` would pull in a C library.
 jsonwebtoken = { version = "11.1", default-features = false, features = ["rust_crypto"] }
 monostate = "1.0"
 nutype = { version = "0.8", features = ["serde"] }
+# The workspace crates, with the version `cargo publish` requires next to the path.
+oid4vc-core = { path = "oid4vc-core", version = "0.2.0" }
+oid4vc-manager = { path = "oid4vc-manager", version = "0.2.0" }
+oid4vci = { path = "oid4vci", version = "0.2.0" }
+oid4vp = { path = "oid4vp", version = "0.2.0" }
+siopv2 = { path = "siopv2", version = "0.2.0" }
 # `rustls` with `ring`, installed by `oid4vc_core::http_client`; reqwest's own `rustls` feature would pull in
 # `aws-lc-rs`.
 reqwest = { version = "0.13", default-features = false, features = [
@@ -67,18 +59,8 @@ url = { version = "2", features = ["serde"] }
 utoipa = "6.0"
 
 [dependencies]
-oid4vc-core = { path = "oid4vc-core" }
-oid4vci = { path = "oid4vci" }
-oid4vp = { path = "oid4vp" }
-siopv2 = { path = "siopv2" }
-oid4vc-manager = { path = "oid4vc-manager" }
-
-[patch.crates-io]
-# We need this patch because it makes the `Hasher` trait `Send` and `Sync`. See: https://github.com/iotaledger/sd-jwt-payload/compare/main...impierce:sd-jwt-payload:fix/hasher-send-sync
-sd-jwt = { git = "https://github.com/impierce/sd-jwt-payload", rev = "f28789a", package = "sd-jwt-payload" }
-
-# identity_* v1.9.13-beta.1 pulls in IOTA v1.29.0, which takes `fastcrypto` from both crates.io and git and unifies
-# them with this patch in its own workspace; patches don't reach dependents, so we repeat it. It goes away with the
-# identity_* dependencies.
-[patch."https://github.com/MystenLabs/fastcrypto"]
-fastcrypto = "=0.1.11"
+oid4vc-core.workspace = true
+oid4vci.workspace = true
+oid4vp.workspace = true
+siopv2.workspace = true
+oid4vc-manager.workspace = true

@@ -29,10 +29,7 @@ Specification versions tracked: [OID4VCI 1.0][oid4vci] (final, 16 September 2025
 | `Scope`, `RFC7519Claims`, `StringOrObject`, `builder_fn!`                                |   ✅   |               | [RFC 7519][rfc7519]                         |       |
 | `ClaimPathPointer` with `get_values_from_json` (arrays, nulls)                           |   ✅   |               | [OID4VP 1.0, Claims Path Pointer][oid4vp]   |       |
 | Form-urlencoded helpers (nested objects as JSON strings)                                  |   ✅   |               |                                             |       |
-| `SignatureVerifier`: EdDSA, ES256, ES256K                                                |   ✅   |               | [RFC 7518][rfc7518], [RFC 8037][rfc8037]    |       |
-| `VerificationMaterialResolver` trait (DID document, `kid` → JWK)                         |   ✅   |               |                                             |       |
-| `CredentialStatusVerifier` trait                                                         |   ✅   |               |                                             | [#122](https://github.com/impierce/openid4vc/pull/122) |
-| `test-utils`: `did:key` resolver, `mockall` mocks                                        |   ✅   | `test-utils`  |                                             |       |
+| `test-utils`: test subjects                                                              |   ✅   | `test-utils`  |                                             |       |
 | OpenAPI schemas for the shared types                                                     |   ✅   | `utoipa`      |                                             | [#132](https://github.com/impierce/openid4vc/pull/132) |
 | Typed errors instead of `anyhow` on the public API                                       |   📋   |               |                                             | [#78](https://github.com/impierce/openid4vc/issues/78) |
 | `const` strings for the supported specification versions                                 |   📋   |               |                                             | [#77](https://github.com/impierce/openid4vc/issues/77) |
@@ -135,11 +132,11 @@ Specification versions tracked: [OID4VCI 1.0][oid4vci] (final, 16 September 2025
 | Transaction data in the response                                                         |   ⬜   |               | [OID4VP, Transaction Data][oid4vp]                    |       |
 | Error responses                                                                          |   📋   |               | [OID4VP, Error Response][oid4vp]                    | [#78](https://github.com/impierce/openid4vc/issues/78) |
 | `VpTokenValidator`: `jwt_vc_json` presentations and credentials                          |   ✅   |               | [OID4VP, Credential Format Specific Parameters: W3C][oid4vp]            |       |
-| `VpTokenValidator`: `dc+sd-jwt` and `vc+sd-jwt`, key binding JWT `aud`/`nonce`           |   ✅   |               | [OID4VP, Credential Format Specific Parameters: SD-JWT VC][oid4vp], [SD-JWT VC][sd-jwt-vc] |       |
+| `VpTokenValidator`: `dc+sd-jwt` and `vc+sd-jwt`, key binding JWT                         |   ✅   |               | [OID4VP, Credential Format Specific Parameters: SD-JWT VC][oid4vp], [SD-JWT VC][sd-jwt-vc] |       |
 | `VpTokenValidator`: `ldp_vc`, `mso_mdoc`                                                 |   ⬜   |               | [OID4VP, Credential Format Specific Parameters: `ldp_vc`, mdoc][oid4vp]     |       |
 | Credential validity dates with configurable clock skew leeway                            |   ✅   |               |                                          | [#137](https://github.com/impierce/openid4vc/pull/137) |
-| Credential status check through `CredentialStatusVerifier`                               |   ✅   |               |                                          | [#122](https://github.com/impierce/openid4vc/pull/122) |
-| Relative `kid` resolution against `iss`                                                  |   ⬜   |               |                                          |       |
+| Credential status check through identity-kit's `StatusCheck`                             |   ✅   |               |                                          | [#165](https://github.com/impierce/openid4vc/issues/165) |
+| Relative `kid` resolution against `iss`                                                  |   ✅   |               |                                          | [#165](https://github.com/impierce/openid4vc/issues/165) |
 | VP token replay prevention guidance (nonce binding is enforced; storage is the caller's) |   ✅   |               | [OID4VP, Security Considerations][oid4vp]                     |       |
 | OpenID4VP over the Digital Credentials API                                               |   ⬜   |               | [OID4VP, OpenID4VP over the Digital Credentials API][oid4vp]              |       |
 
@@ -170,8 +167,8 @@ Specification versions tracked: [OID4VCI 1.0][oid4vci] (final, 16 September 2025
 | `CredentialIssuerManager<S: Storage>` with offers by value and by reference                |   ✅   |               |               |       |
 | `axum` issuer server: metadata, offer, PAR, authorize, token, credential, notification routes, extension router |   ✅   |               |               |       |
 | `Storage` trait                                                                            |   ✅   |               |               |       |
-| `KeySubject` (`did:key`, Ed25519) with optional `ExternalSign`                             |   ✅   |               |               |       |
-| Replace `did-key` (unmaintained) with `identity-kit`                                       |   📋   |               |               | [#104](https://github.com/impierce/openid4vc/issues/104), [`PLAN.md`](PLAN.md) Phase D |
+| `KeySubject` (`did:key`, Ed25519, any identity-kit `KeyStore`) with optional `ExternalSign` |   ✅   |               |               |       |
+| Replace `did-key` (unmaintained) with `identity-kit`                                       |   ✅   |               |               | [#104](https://github.com/impierce/openid4vc/issues/104), [`PLAN.md`](PLAN.md) Phase D |
 | End-to-end tests: pre-authorized code (batch, by reference), authorization code, SIOPv2, OID4VP |   ✅   |               |               |       |
 | Nonce and deferred credential routes                                                      |   ⬜   |               |               |       |
 
@@ -184,8 +181,8 @@ Specification versions tracked: [OID4VCI 1.0][oid4vci] (final, 16 September 2025
 | `cargo deny` (advisories, licenses, bans, sources)                   |   ✅   | `deny.toml`, `.github/workflows/{audit,license}.yml` |
 | Fuzz targets over the parsers, seeded from the spec examples         |   ✅   | [`fuzz/`](../fuzz/README.md), `.github/workflows/fuzz.yml` |
 | Default branch `main`                                                |   ✅   | GitHub repository settings                    |
-| release-plz with per-crate versions, trusted publishing              |   🚧   | [`RELEASE.md`](RELEASE.md), [ADR 0001](adr/0001-independent-crate-versions.md); publishing waits for the row below |
-| Publishable: no git dependencies, no patches                         |   📋   | [`PLAN.md`](PLAN.md) Phase D, [#104](https://github.com/impierce/openid4vc/issues/104) |
+| release-plz with per-crate versions, trusted publishing              |   🚧   | [`RELEASE.md`](RELEASE.md), [ADR 0001](adr/0001-independent-crate-versions.md); the first release is pending |
+| Publishable: no git dependencies, no patches, `cargo publish --dry-run` in CI |   ✅   | `.github/workflows/qa.yml`, `deny.toml` |
 
 [oid4vci]: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html
 [oid4vci-ia]: https://openid.net/wg/digital-credentials-protocols/specifications/

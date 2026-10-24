@@ -1,30 +1,34 @@
 use crate::{StandardClaimsRequests, StandardClaimsValues};
 use anyhow::Result;
 use async_trait::async_trait;
-use derivative::{self, Derivative};
 use ed25519_dalek::{Signature, Signer, SigningKey};
 use jsonwebtoken::Algorithm;
-use lazy_static::lazy_static;
 use oid4vc_core::{authentication::sign::ExternalSign, Sign, Subject, Verify};
 use std::sync::Arc;
+use std::sync::LazyLock;
 
 // SigningKey for mocking purposes.
-lazy_static! {
-    pub static ref TEST_KEYPAIR: SigningKey = SigningKey::generate(&mut rand::rng());
+pub static TEST_KEYPAIR: LazyLock<SigningKey> = LazyLock::new(|| SigningKey::generate(&mut rand::rng()));
+
+#[derive(Debug)]
+pub struct TestSubject {
+    pub did: identity_kit::did::Did,
+    pub key_id: String,
 }
 
-#[derive(Derivative, Debug)]
-#[derivative(Default)]
-pub struct TestSubject {
-    #[derivative(Default(value = "did_url::DID::parse(\"did:test:123\").unwrap()"))]
-    pub did: did_url::DID,
-    pub key_id: String,
+impl Default for TestSubject {
+    fn default() -> Self {
+        TestSubject {
+            did: identity_kit::did::Did::parse("did:test:123").unwrap(),
+            key_id: String::default(),
+        }
+    }
 }
 
 impl TestSubject {
     pub fn new(did: String, key_id: String) -> Result<Self> {
         Ok(TestSubject {
-            did: did_url::DID::parse(did)?,
+            did: identity_kit::did::Did::parse(&did)?,
             key_id,
         })
     }

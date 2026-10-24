@@ -16,22 +16,16 @@ include = ["/src", "/README.md", "/CHANGELOG.md"]
 all-features = true
 
 [dependencies]
-oid4vc-core = { path = "../oid4vc-core", version = "0.2.0" }
-oid4vci = { path = "../oid4vci", version = "0.2.0" }
+oid4vc-core.workspace = true
+oid4vci.workspace = true
 
 anyhow = "1.0"
 chrono.workspace = true
 futures = "0.3"
 getset.workspace = true
-identity_core.workspace = true
-identity_credential.workspace = true
-identity_did.workspace = true
-identity_document.workspace = true
-identity_jose.workspace = true
-identity_verification.workspace = true
+identity-kit = { workspace = true, features = ["vc", "sd-jwt", "secp256k1"] }
 is_empty.workspace = true
 jsonwebtoken.workspace = true
-lazy_static = "1.4.0"
 monostate.workspace = true
 nutype.workspace = true
 reqwest.workspace = true
@@ -46,4 +40,7 @@ tracing.workspace = true
 url.workspace = true
 
 [dev-dependencies]
-oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
+oid4vc-core = { workspace = true, features = ["test-utils"] }
+
+async-trait = "0.1"
+identity-kit = { workspace = true, features = ["did-key", "in-memory"] }

@@ -2,7 +2,7 @@ use crate::credential_format;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-credential_format!("jwt_vc_json", JwtVcJson, {
+credential_format!("jwt_vc_json", JwtVcJson, JwtVcJsonParameters, JwtVcJsonCredential, {
     credential_definition: CredentialDefinition
 });
 

@@ -60,7 +60,7 @@ cargo +nightly fuzz coverage dcql_query fuzz/corpus/dcql_query fuzz/seeds/dcql_q
 ```
 
 `run.sh` passes the corpus directory first and the seeds second, which is how libFuzzer tells where to write (the first) from what to read (the rest); run `cargo fuzz run` by hand the same way, or the seeds are left out.
-The first build compiles the whole dependency graph, including the `identity_*` git dependencies, with sanitizers; allow several minutes.
+The first build compiles the whole dependency graph with sanitizers; allow several minutes.
 
 ## In CI
 

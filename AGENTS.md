@@ -30,16 +30,15 @@ specification family: five published crates and one unpublished facade.
 - Wire types mirror the specification's JSON exactly. Field names, optionality and defaults come
   from the spec section cited in the type's doc comment. The test oracle is the specification's own
   examples (`*/tests/examples/*.json`, inline vectors), never another implementation's output.
-- Extension points are traits (`Subject`, `Sign`, `Verify`, `VerificationMaterialResolver`,
-  `CredentialStatusVerifier`, `Storage`) and the `Extension` / `OpenID4VC` type-level mechanism in
+- Extension points are traits (`Subject`, `Sign`, `Verify`, `Storage`, and identity-kit's
+  `KeyResolver`, `JwsVerifier` and `StatusCheck`) and the `Extension` / `OpenID4VC` type-level mechanism in
   `oid4vc-core`. No closed enum of DID methods, key types or storage backends in the library.
 - Protocol logic stays free of I/O where it can. HTTP lives in the `reqwest` clients (`Wallet`,
   `Provider`) and in `oid4vc-manager`'s server; everything else is pure data and functions.
-- Cargo features are additive: `utoipa` (OpenAPI schemas) and `test-utils` (mocks and test
-  resolvers). Code must build with and without each.
-- No new git or path dependencies outside the workspace. The existing `identity_*` git
-  dependencies, the `sd-jwt-payload` patch and `did-key` are being replaced by `identity-kit`
-  (`docs/PLAN.md`, Phase D); do not deepen their use.
+- Cargo features are additive: `utoipa` (OpenAPI schemas) and `test-utils` (test
+  subjects). Code must build with and without each.
+- No git or path dependencies outside the workspace, and no `[patch]` sections: crates with them
+  cannot be published.
 - `deny.toml` is the dependency policy: every advisory ignore carries a `reason`, licenses outside
   the allow list are per-crate `exceptions`, no new git sources. An ignore that reflects a design
   choice also gets an ADR.

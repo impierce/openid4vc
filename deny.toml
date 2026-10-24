@@ -1,8 +1,7 @@
 # cargo-deny configuration: https://embarkstudios.github.io/cargo-deny/
 # `advisories` runs in the Audit workflow; `licenses`, `bans` and `sources` run in the License workflow.
 #
-# Most entries below exist because of the `identity_*` git dependencies (and their iota-sdk tree) and
-# `did-key`; remove each entry with the dependency that needs it.
+# Every ignore and exception names the crate that needs it; remove it with that crate.
 
 [graph]
 all-features = true
@@ -12,26 +11,7 @@ all-features = true
 unmaintained = "all"
 yanked = "deny"
 ignore = [
-    # did-key 0.2 (unmaintained itself, issue #104).
-    { id = "RUSTSEC-2022-0093", reason = "ed25519-dalek 1.x via did-key: keypairs are only created through did-key, which derives the public key from the secret key, so signing is never performed with a mismatched public key" },
-    { id = "RUSTSEC-2024-0344", reason = "curve25519-dalek 3.x via did-key: the timing leak requires measuring local signing operations; no signing oracle is exposed to remote parties" },
-    { id = "RUSTSEC-2025-0161", reason = "libsecp256k1 via did-key: unmaintained, no known vulnerability" },
-    { id = "RUSTSEC-2023-0089", reason = "atomic-polyfill via did-key -> bls12_381_plus -> heapless: unmaintained, no known vulnerability" },
-    # identity_* -> iota-sdk.
-    { id = "RUSTSEC-2023-0071", reason = "rsa 0.8 via iota-sdk -> fastcrypto: no RSA private-key operations are performed; no patched version exists" },
-    { id = "RUSTSEC-2026-0194", reason = "quick-xml via iota-sdk -> object_store: object_store is never invoked, no XML is parsed" },
-    { id = "RUSTSEC-2026-0195", reason = "quick-xml via iota-sdk -> object_store: object_store is never invoked, no XML is parsed" },
-    { id = "RUSTSEC-2025-0141", reason = "bincode 1 via iota-sdk: unmaintained, no known vulnerability" },
-    { id = "RUSTSEC-2026-0247", reason = "bitmaps via iota-sdk: unmaintained, no known vulnerability" },
-    { id = "RUSTSEC-2026-0248", reason = "im via iota-sdk: unmaintained, no known vulnerability" },
-    { id = "RUSTSEC-2026-0251", reason = "sized-chunks via iota-sdk: unmaintained, no known vulnerability" },
-    { id = "RUSTSEC-2024-0384", reason = "instant via iota-sdk: unmaintained, no known vulnerability" },
-    { id = "RUSTSEC-2024-0370", reason = "proc-macro-error via iota-sdk: unmaintained proc-macro helper, compile time only" },
-    { id = "RUSTSEC-2024-0320", reason = "yaml-rust via iota-sdk: unmaintained; this workspace parses no YAML" },
-    { id = "RUSTSEC-2026-0283", reason = "clear_on_drop via iota-sdk -> fastcrypto -> bulletproofs: unmaintained, no known vulnerability" },
-    # Direct dependencies, replaced in Phase D of docs/PLAN.md (also pulled in by identity_*).
-    { id = "RUSTSEC-2024-0388", reason = "derivative: unmaintained derive macro, compile time only" },
-    { id = "RUSTSEC-2024-0436", reason = "paste: unmaintained macro, compile time only" },
+    { id = "RUSTSEC-2023-0071", reason = "rsa 0.9 via jsonwebtoken (rust_crypto backend): RSA keys are only used to verify signatures, the Marvin attack concerns private-key operations; no patched version exists" },
 ]
 
 [licenses]
@@ -50,46 +30,15 @@ allow = [
 confidence-threshold = 0.8
 # Keep the list above as policy, even for licenses no dependency currently uses.
 unused-allowed-license = "allow"
-# Crates deep in the iota-sdk and did-key trees, used unmodified: weak copyleft (MPL-2.0, file-level
-# share-alike only), public domain (CC0-1.0) and a linking exception. Scoped to the crate so the
-# policy above stays strict.
-exceptions = [
-    { allow = ["MPL-2.0"], crate = "bitmaps" },
-    { allow = ["MPL-2.0"], crate = "im" },
-    { allow = ["MPL-2.0"], crate = "sized-chunks" },
-    { allow = ["MPL-2.0"], crate = "colored" },
-    { allow = ["MPL-2.0"], crate = "option-ext" },
-    { allow = ["CC0-1.0"], crate = "bitcoin-private" },
-    { allow = ["CC0-1.0"], crate = "bitcoin_hashes" },
-    { allow = ["CC0-1.0"], crate = "secp256k1" },
-    { allow = ["CC0-1.0"], crate = "secp256k1-sys" },
-    { allow = ["Apache-2.0 WITH LLVM-exception"], crate = "ar_archive_writer" },
-]
 
 [bans]
 multiple-versions = "warn"
-# A git dependency without a version and a path dependency without one both count as wildcards, and
-# that is the current state of this workspace (the `identity_*` git dependencies, the unversioned
-# internal path dependencies). Switch to "deny" once the git dependencies are gone
-# and the release setup (docs/PLAN.md, Phase C) has given the path dependencies a version.
-wildcards = "warn"
+# Published crates need a version on every dependency; `allow-wildcard-paths` exempts only the
+# unpublished packages (the facade and `fuzz/`) and dev-dependencies, which `cargo publish` strips.
+wildcards = "deny"
 allow-wildcard-paths = true
 
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-# The `identity_*` crates, the `sd-jwt-payload` patch (`[patch.crates-io]` in Cargo.toml) and what
-# the iota-sdk tree pins by revision.
-allow-git = [
-    "https://github.com/iotaledger/identity",
-    "https://github.com/impierce/sd-jwt-payload",
-    "https://github.com/iotaledger/iota.git",
-    "https://github.com/iotaledger/iota-rust-sdk.git",
-    "https://github.com/iotaledger/iota-sim.git",
-    "https://github.com/iotaledger/product-core.git",
-    "https://github.com/iotaledger/secret-storage.git",
-    "https://github.com/MystenLabs/fastcrypto",
-    "https://github.com/mystenlabs/anemo.git",
-    "https://github.com/zhiburt/tabled/",
-]

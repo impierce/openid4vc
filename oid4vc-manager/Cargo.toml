@@ -16,25 +16,20 @@ include = ["/src", "/README.md", "/CHANGELOG.md"]
 all-features = true
 
 [dependencies]
-oid4vc-core = { path = "../oid4vc-core", version = "0.2.0" }
-siopv2 = { path = "../siopv2", version = "0.2.0" }
-oid4vp = { path = "../oid4vp", version = "0.2.0" }
-oid4vci = { path = "../oid4vci", version = "0.2.0" }
+oid4vc-core.workspace = true
+siopv2.workspace = true
+oid4vp.workspace = true
+oid4vci.workspace = true
 
 anyhow = "1.0"
 async-trait = "0.1"
 axum = "0.8"
 axum-auth = "0.8"
 chrono.workspace = true
-derivative = "2.2"
-did-key.workspace = true
-did_url = "0.1"
 futures = "0.3"
 getset.workspace = true
-identity_credential.workspace = true
+identity-kit = { workspace = true, features = ["did-key", "in-memory"] }
 jsonwebtoken.workspace = true
-lazy_static = "1.4.0"
-paste = "1.0"
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -46,14 +41,10 @@ tracing.workspace = true
 url.workspace = true
 
 [dev-dependencies]
-oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
+oid4vc-core = { workspace = true, features = ["test-utils"] }
 
 ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
-identity_did.workspace = true
-identity_document.workspace = true
-identity_jose.workspace = true
-identity_verification.workspace = true
-lazy_static = "1.4"
+identity-kit.workspace = true
 rand = "0.10"
 rstest = "0.28"
 uuid = { version = "1.4", features = ["v4", "fast-rng"] }

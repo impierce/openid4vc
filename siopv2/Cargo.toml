@@ -16,12 +16,11 @@ include = ["/src", "/README.md", "/CHANGELOG.md"]
 all-features = true
 
 [dependencies]
-oid4vc-core = { path = "../oid4vc-core", version = "0.2.0" }
+oid4vc-core.workspace = true
 
 anyhow = "1.0.70"
 async-trait = "0.1.68"
 chrono.workspace = true
-did_url = "0.1.0"
 futures = "0.3"
 getset.workspace = true
 is_empty = "0.3.0"
@@ -39,10 +38,9 @@ tracing.workspace = true
 url = { version = "2.3.1", features = ["serde"] }
 
 [dev-dependencies]
-oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
+oid4vc-core = { workspace = true, features = ["test-utils"] }
 
-derivative = "2.2.0"
 ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
-lazy_static = "1.4.0"
+identity-kit.workspace = true
 rand = "0.10"
 wiremock = "0.6.5"

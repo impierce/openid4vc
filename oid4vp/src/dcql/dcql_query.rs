@@ -203,9 +203,9 @@ pub struct ClaimQuery {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lazy_static::lazy_static;
     use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer, ClaimValue, ClaimValues};
     use serde_json::from_str;
+    use std::sync::LazyLock;
     // OID4VP Credential Test Examples from
     // https://github.com/openid/OpenID4VP/tree/main/1.0/examples/query_lang
 
@@ -1040,8 +1040,8 @@ mod tests {
             .contains_key("require_cryptographic_holder_binding"));
     }
 
-    lazy_static! {
-        pub static ref INVALID_CREDENTIAL_SET: serde_json::Value = serde_json::json!(
+    pub static INVALID_CREDENTIAL_SET: LazyLock<serde_json::Value> = LazyLock::new(|| {
+        serde_json::json!(
                        {
           "credentials": [
             {
@@ -1136,8 +1136,10 @@ mod tests {
               ]
             }
           ]
-        });
-        pub static ref CREDENTIAL_SET_OPTION_MISSING: serde_json::Value = serde_json::json!(
+        })
+    });
+    pub static CREDENTIAL_SET_OPTION_MISSING: LazyLock<serde_json::Value> = LazyLock::new(|| {
+        serde_json::json!(
                        {
           "credentials": [
             {
@@ -1232,8 +1234,8 @@ mod tests {
               ]
             }
           ]
-        });
-    }
+        })
+    });
 
     #[test]
     fn test_invalid_credential_set_id() {

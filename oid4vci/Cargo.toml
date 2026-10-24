@@ -20,16 +20,13 @@ default = []
 utoipa = ["dep:utoipa", "oid4vc-core/utoipa"]
 
 [dependencies]
-oid4vc-core = { path = "../oid4vc-core", version = "0.2.0" }
+oid4vc-core.workspace = true
 anyhow = "1.0"
 chrono.workspace = true
-derivative = "2.2.0"
 getset.workspace = true
 http.workspace = true
 jsonwebtoken.workspace = true
-lazy_static = "1.4"
 nutype.workspace = true
-paste = "1.0"
 pkce = "0.2"
 reqwest.workspace = true
 reqwest-middleware.workspace = true
@@ -45,6 +42,6 @@ url.workspace = true
 utoipa = { workspace = true, features = ["url"], optional = true }
 
 [dev-dependencies]
-oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
+oid4vc-core = { workspace = true, features = ["test-utils"] }
 utoipa = { workspace = true, features = ["yaml"] }
 wiremock = "0.6"
