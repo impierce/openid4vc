@@ -9,10 +9,10 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-oid4vc-core = { path = "../oid4vc-core", version = "0.1.0" }
-siopv2 = { path = "../siopv2", version = "0.1.0" }
-oid4vp = { path = "../oid4vp", version = "0.1.0" }
-oid4vci = { path = "../oid4vci", version = "0.1.0" }
+oid4vc-core.workspace = true
+siopv2.workspace = true
+oid4vp.workspace = true
+oid4vci.workspace = true
 
 anyhow = "1.0"
 async-trait = "0.1"
@@ -34,7 +34,7 @@ tracing.workspace = true
 url.workspace = true
 
 [dev-dependencies]
-oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
+oid4vc-core = { workspace = true, features = ["test-utils"] }
 
 ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
 identity-kit.workspace = true

@@ -33,6 +33,12 @@ is_empty = "0.3"
 jsonwebtoken = { version = "11.1", default-features = false, features = ["rust_crypto"] }
 monostate = "1.0"
 nutype = { version = "0.8", features = ["serde"] }
+# The workspace crates, with the version `cargo publish` requires next to the path.
+oid4vc-core = { path = "oid4vc-core", version = "0.1.0" }
+oid4vc-manager = { path = "oid4vc-manager", version = "0.1.0" }
+oid4vci = { path = "oid4vci", version = "0.1.0" }
+oid4vp = { path = "oid4vp", version = "0.1.0" }
+siopv2 = { path = "siopv2", version = "0.1.0" }
 # `rustls` with `ring`, installed by `oid4vc_core::http_client`; reqwest's own `rustls` feature would pull in
 # `aws-lc-rs`.
 reqwest = { version = "0.13", default-features = false, features = [
@@ -53,8 +59,8 @@ url = { version = "2", features = ["serde"] }
 utoipa = "6.0"
 
 [dependencies]
-oid4vc-core = { path = "oid4vc-core" }
-oid4vci = { path = "oid4vci" }
-oid4vp = { path = "oid4vp" }
-siopv2 = { path = "siopv2" }
-oid4vc-manager = { path = "oid4vc-manager" }
+oid4vc-core.workspace = true
+oid4vci.workspace = true
+oid4vp.workspace = true
+siopv2.workspace = true
+oid4vc-manager.workspace = true
