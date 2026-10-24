@@ -1,12 +1,19 @@
 [package]
 name = "oid4vc-core"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 rust-version.workspace = true
 license.workspace = true
 description = "Core types and traits shared by the Rust implementations of the OpenID4VC specifications"
 homepage.workspace = true
 repository.workspace = true
+keywords = ["oid4vc", "openid4vc", "openid", "did", "credentials"]
+categories = ["authentication", "cryptography", "web-programming"]
+readme = "README.md"
+include = ["/src", "/README.md", "/CHANGELOG.md"]
+
+[package.metadata.docs.rs]
+all-features = true
 
 [dependencies]
 anyhow = "1.0.70"

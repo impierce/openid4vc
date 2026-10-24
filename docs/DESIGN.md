@@ -348,7 +348,8 @@ What CI enforces, and what [`PLAN.md`](PLAN.md) adds:
   title; `fuzz.yml` running the `cargo-fuzz` targets of `fuzz/` (seeded from `*/tests/examples`)
   for a minute per pull request and ten minutes nightly; and `cargo publish --dry-run --workspace`
   in QA, which packages and builds the five crates as crates.io would receive them.
-- Phase C: release-plz.
+- Release: `release-plz.yml` keeps a release pull request up to date and publishes on its merge
+  ([`RELEASE.md`](RELEASE.md)).
 
 ## References
 

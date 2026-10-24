@@ -1,12 +1,19 @@
 [package]
 name = "oid4vc-manager"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 rust-version.workspace = true
 license.workspace = true
 description = "Managers and an issuer server combining the OpenID4VCI, OpenID4VP and SIOPv2 implementations"
 homepage.workspace = true
 repository.workspace = true
+keywords = ["oid4vc", "openid4vc", "openid", "did", "credentials"]
+categories = ["authentication", "cryptography", "web-programming"]
+readme = "README.md"
+include = ["/src", "/README.md", "/CHANGELOG.md"]
+
+[package.metadata.docs.rs]
+all-features = true
 
 [dependencies]
 oid4vc-core.workspace = true

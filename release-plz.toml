@@ -1,0 +1,42 @@
+# release-plz configuration: https://release-plz.dev/docs/config
+#
+# Five crates are released independently (docs/adr/0001-independent-crate-versions.md): each has its
+# own version, `CHANGELOG.md` next to its manifest, tag and GitHub release. docs/RELEASE.md describes
+# the process.
+
+[workspace]
+# Publish only when the release PR is merged, not on every push to main.
+# This also avoids the race between squash merges and a running release.
+release_always = false
+pr_labels = ["release"]
+# One tag and one GitHub release per crate, for example `oid4vp-v0.2.0`.
+git_tag_name = "{{ package }}-v{{ version }}"
+git_release_name = "{{ package }} v{{ version }}"
+# cargo-semver-checks compares against the last published version. The 0.1.0 crates on crates.io date
+# from 2023 and no longer build against current dependencies, so there is no baseline yet; turn this
+# on after the first release under this process (docs/PLAN.md, Phase C).
+semver_check = false
+
+[[package]]
+# The facade is never released (docs/adr/0002-facade-crate.md); `publish = false` must match
+# `Cargo.toml` or `release-plz release` refuses to run.
+name = "oid4vc"
+release = false
+publish = false
+
+[changelog]
+# Breaking changes stay in the changelog even if a parser below would skip them.
+protect_breaking_commits = true
+commit_parsers = [
+    { message = "^feat", group = "added" },
+    { message = "^changed", group = "changed" },
+    { message = "^deprecated", group = "deprecated" },
+    { message = "^fix", group = "fixed" },
+    { message = "^security", group = "security" },
+    { message = "^perf", group = "performance" },
+    { message = "^docs", group = "documentation" },
+    { message = "^chore\\(deps\\)", group = "dependencies" },
+    # Not relevant to users of the crates (includes release-plz's own `chore: release` commits).
+    { message = "^(ci|test|style|chore)", skip = true },
+    { message = "^.*", group = "other" },
+]

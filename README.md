@@ -40,4 +40,5 @@ To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## Release
 
-Releases are not automated yet; [`docs/PLAN.md`](docs/PLAN.md) describes the planned process (release-plz, independent crate versions, trusted publishing).
+Releases are automated with [release-plz](https://release-plz.dev/): on every push to `main` it checks which crates changed since their last release and, if any did, opens or updates a release pull request with their next versions and changelogs, derived from the [Conventional Commits](https://www.conventionalcommits.org/) since that release; merging it publishes those crates to crates.io with a tag and GitHub release each.
+[`docs/RELEASE.md`](docs/RELEASE.md) describes the process, the first release and the credential setup.
