@@ -317,11 +317,11 @@ pub struct Address<C: sealed::Claim> {
 mod tests {
     use super::*;
     use crate::test_utils::{MemoryStorage, Storage};
-    use lazy_static::lazy_static;
     use serde_json::{json, Value};
+    use std::sync::LazyLock;
 
-    lazy_static! {
-        pub static ref USER_CLAIMS: Value = json!(
+    pub static USER_CLAIMS: LazyLock<Value> = LazyLock::new(|| {
+        json!(
             {
                 "name": "Jane Doe",
                 "given_name": "Jane",
@@ -343,8 +343,8 @@ mod tests {
                     "country": "US"
                 }
             }
-        );
-    }
+        )
+    });
 
     #[test]
     fn test_deserialize_user_claims() {

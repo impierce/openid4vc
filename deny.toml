@@ -24,9 +24,8 @@ ignore = [
     { id = "RUSTSEC-2024-0370", reason = "proc-macro-error via iota-sdk: unmaintained proc-macro helper, compile time only" },
     { id = "RUSTSEC-2024-0320", reason = "yaml-rust via iota-sdk: unmaintained; this workspace parses no YAML" },
     { id = "RUSTSEC-2026-0283", reason = "clear_on_drop via iota-sdk -> fastcrypto -> bulletproofs: unmaintained, no known vulnerability" },
-    # Direct dependencies, replaced in Phase D of docs/PLAN.md (also pulled in by identity_*).
-    { id = "RUSTSEC-2024-0388", reason = "derivative: unmaintained derive macro, compile time only" },
-    { id = "RUSTSEC-2024-0436", reason = "paste: unmaintained macro, compile time only" },
+    { id = "RUSTSEC-2024-0388", reason = "derivative via iota-sdk -> fastcrypto-zkp -> ark-*: unmaintained derive macro, compile time only" },
+    { id = "RUSTSEC-2024-0436", reason = "paste via iota-sdk -> fastcrypto-zkp -> ark-*: unmaintained macro, compile time only" },
 ]
 
 [licenses]
