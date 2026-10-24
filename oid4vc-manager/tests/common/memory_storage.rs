@@ -2,7 +2,6 @@ use std::{collections::HashMap, fs::File};
 
 use futures::executor::block_on;
 use jsonwebtoken::{Algorithm, Header};
-use lazy_static::lazy_static;
 use oid4vc_core::{authentication::subject::SigningSubject, generate_authorization_code, jwt};
 use oid4vc_manager::storage::Storage;
 use oid4vci::{
@@ -18,18 +17,17 @@ use oid4vci::{
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::sync::LazyLock;
 use uuid::Uuid;
 
-lazy_static! {
-    pub static ref CODE: String = generate_authorization_code(16);
-    pub static ref PRE_AUTHORIZED_CODE: PreAuthorizedCode = PreAuthorizedCode {
-        pre_authorized_code: generate_authorization_code(16),
-        ..Default::default()
-    };
-    pub static ref ACCESS_TOKEN: String = "czZCaGRSa3F0MzpnWDFmQmF0M2JW".to_string();
-    pub static ref C_NONCE: String = "tZignsnFbp".to_string();
-    pub static ref REQUEST_URI: String = Uuid::new_v4().to_string();
-}
+pub static CODE: LazyLock<String> = LazyLock::new(|| generate_authorization_code(16));
+pub static PRE_AUTHORIZED_CODE: LazyLock<PreAuthorizedCode> = LazyLock::new(|| PreAuthorizedCode {
+    pre_authorized_code: generate_authorization_code(16),
+    ..Default::default()
+});
+pub static ACCESS_TOKEN: LazyLock<String> = LazyLock::new(|| "czZCaGRSa3F0MzpnWDFmQmF0M2JW".to_string());
+pub static C_NONCE: LazyLock<String> = LazyLock::new(|| "tZignsnFbp".to_string());
+pub static REQUEST_URI: LazyLock<String> = LazyLock::new(|| Uuid::new_v4().to_string());
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MemoryStorage;

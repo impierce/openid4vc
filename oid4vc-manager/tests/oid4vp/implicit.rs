@@ -2,7 +2,6 @@ use chrono::{Duration, Utc};
 use did_key::{generate, Ed25519KeyPair};
 use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
-use lazy_static::lazy_static;
 use oid4vc_core::authentication::subject::Subject;
 use oid4vc_core::credential_status_verifier::MockCredentialStatusVerifier;
 use oid4vc_core::verification_material_resolver::test_utils::TestVerificationMaterialResolver;
@@ -28,14 +27,15 @@ use oid4vp::{
     dcql::dcql_query::{CredentialQueryId, DcqlQuery},
     token::vp_token_builder::VpTokenBuilder,
 };
+use std::sync::LazyLock;
 
 use serde_json::json;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
-lazy_static! {
-    pub static ref DCQL_QUERY: DcqlQuery = serde_json::from_value(json!({
+pub static DCQL_QUERY: LazyLock<DcqlQuery> = LazyLock::new(|| {
+    serde_json::from_value(json!({
         "credentials": [
             {
                 "id": "my_credential",
@@ -52,8 +52,8 @@ lazy_static! {
             }
         ]
     }))
-    .unwrap();
-}
+    .unwrap()
+});
 
 #[tokio::test]
 async fn test_implicit_flow() {
