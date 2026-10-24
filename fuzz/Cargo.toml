@@ -10,6 +10,10 @@ license = "Apache-2.0"
 cargo-fuzz = true
 
 [dependencies]
+async-trait = "0.1"
+chrono = "0.4"
+futures = "0.3"
+identity-kit = { version = "0.2.1", default-features = false, features = ["did-key", "vc"] }
 libfuzzer-sys = "0.4"
 oid4vc-core = { path = "../oid4vc-core" }
 oid4vci = { path = "../oid4vci" }
@@ -59,6 +63,13 @@ bench = false
 [[bin]]
 name = "jwt"
 path = "fuzz_targets/jwt.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "vp_token_validation"
+path = "fuzz_targets/vp_token_validation.rs"
 test = false
 doc = false
 bench = false
