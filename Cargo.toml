@@ -27,20 +27,12 @@ rust-version = "1.95"
 chrono = "0.4"
 getset = "0.1"
 http = "1.3.1"
-identity_did = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
-identity_document = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
-identity_ecdsa_verifier = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
-identity_eddsa_verifier = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
-identity_core = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1", default-features = false }
 identity_credential = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1", default-features = false, features = [
-    "validator",
     "credential",
     "presentation",
-    "sd-jwt-vc",
 ] }
-identity_jose = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
-identity_verification = { git = "https://github.com/iotaledger/identity", tag = "v1.9.13-beta.1" }
-identity-kit = { version = "0.2", default-features = false }
+# 0.2.1 checks the `status` claim of `jwt_vc_json` credentials.
+identity-kit = { version = "0.2.1", default-features = false }
 is_empty = "0.3"
 # The pure-Rust backend; `aws_lc_rs` would pull in a C library.
 jsonwebtoken = { version = "11.1", default-features = false, features = ["rust_crypto"] }
@@ -71,10 +63,6 @@ oid4vci = { path = "oid4vci" }
 oid4vp = { path = "oid4vp" }
 siopv2 = { path = "siopv2" }
 oid4vc-manager = { path = "oid4vc-manager" }
-
-[patch.crates-io]
-# We need this patch because it makes the `Hasher` trait `Send` and `Sync`. See: https://github.com/iotaledger/sd-jwt-payload/compare/main...impierce:sd-jwt-payload:fix/hasher-send-sync
-sd-jwt = { git = "https://github.com/impierce/sd-jwt-payload", rev = "f28789a", package = "sd-jwt-payload" }
 
 # identity_* v1.9.13-beta.1 pulls in IOTA v1.29.0, which takes `fastcrypto` from both crates.io and git and unifies
 # them with this patch in its own workspace; patches don't reach dependents, so we repeat it. It goes away with the

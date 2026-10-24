@@ -40,10 +40,6 @@ oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
 
 ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
 identity-kit.workspace = true
-identity_did.workspace = true
-identity_document.workspace = true
-identity_jose.workspace = true
-identity_verification.workspace = true
 lazy_static = "1.4"
 rand = "0.10"
 rstest = "0.28"

@@ -1,11 +1,13 @@
-use chrono::{Duration, Utc};
+use chrono::{DateTime, Duration, Utc};
 use identity_credential::{credential::Jwt, presentation::Presentation};
+use identity_kit::{
+    methods::DidKey,
+    resolver::Resolver,
+    vc::validation::{CredentialStatus, StatusCheck, StatusError},
+};
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
 use oid4vc_core::authentication::subject::Subject;
-use oid4vc_core::credential_status_verifier::MockCredentialStatusVerifier;
-use oid4vc_core::verification_material_resolver::test_utils::TestVerificationMaterialResolver;
-use oid4vc_core::verifier::SignatureVerifier;
 use oid4vc_core::{
     authorization_request::{AuthorizationRequest, Object},
     authorization_response::AuthorizationResponse,
@@ -114,6 +116,8 @@ async fn test_implicit_flow() {
         .sub(&subject_did)
         .iss(&issuer_did)
         .iat(0)
+        // The issuance date VCDM 1.1 requires, which its JWT encoding takes from `nbf`.
+        .nbf(0)
         .exp(9999999999i64)
         .verifiable_credential(serde_json::json!({
             "@context": [
@@ -192,17 +196,23 @@ async fn test_implicit_flow() {
         .await
         .unwrap();
 
-    assert!(VpTokenValidator::new(
-        &SignatureVerifier,
-        &TestVerificationMaterialResolver,
-        &MockCredentialStatusVerifier::new()
-    )
-    .validate_vp_token(
-        &DCQL_QUERY,
-        &authorization_response.extension.vp_token,
-        &relying_party_did_with_prefix.to_string(),
-        Some(nonce),
-    )
-    .await
-    .is_ok());
+    VpTokenValidator::new(Resolver::builder().with(DidKey::default()).build(), Valid)
+        .validate_vp_token(
+            &DCQL_QUERY,
+            &authorization_response.extension.vp_token,
+            &relying_party_did_with_prefix.to_string(),
+            nonce,
+        )
+        .await
+        .unwrap();
+}
+
+/// A status check that finds every credential valid.
+struct Valid;
+
+#[async_trait::async_trait]
+impl StatusCheck for Valid {
+    async fn check(&self, _: CredentialStatus<'_>, _: DateTime<Utc>) -> Result<(), StatusError> {
+        Ok(())
+    }
 }

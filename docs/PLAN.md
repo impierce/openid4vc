@@ -150,8 +150,8 @@ Model: identity-kit's, same section order, workspace-aware. Content to write:
   - Wire types are `serde` structs mirroring the specification's JSON exactly; field names and
     optionality come from the spec section cited in the doc comment. Spec examples are the test
     oracle (`*/tests/examples/*.json`), never another implementation's output.
-  - Extension points are traits (`Subject`, `Verifier`, `Validator`, `Storage`,
-    `CredentialStatusVerifier`, `VerificationMaterialResolver`) and the `Extension`/`OpenID4VC`
+  - Extension points are traits (`Subject`, `Verifier`, `Validator`, `Storage`, and identity-kit's
+    `KeyResolver`, `JwsVerifier` and `StatusCheck`) and the `Extension`/`OpenID4VC`
     type-level mechanism in `oid4vc-core`; no closed enums of DID methods or key types.
   - Cargo features stay additive (`utoipa`, `test-utils`); `cargo clippy --workspace --all-targets
     --all-features -- -D warnings` clean; `rustfmt.toml` (`max_width = 120`) is law.

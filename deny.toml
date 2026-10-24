@@ -74,11 +74,9 @@ allow-wildcard-paths = true
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-# The `identity_*` crates, the `sd-jwt-payload` patch (`[patch.crates-io]` in Cargo.toml) and what
-# the iota-sdk tree pins by revision.
+# The `identity_*` crates and what the iota-sdk tree pins by revision.
 allow-git = [
     "https://github.com/iotaledger/identity",
-    "https://github.com/impierce/sd-jwt-payload",
     "https://github.com/iotaledger/iota.git",
     "https://github.com/iotaledger/iota-rust-sdk.git",
     "https://github.com/iotaledger/iota-sim.git",

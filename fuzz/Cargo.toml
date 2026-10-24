@@ -71,8 +71,5 @@ unsafe_code = "forbid"
 [workspace]
 
 # Same patches as the library workspace (`../Cargo.toml`), which this workspace does not inherit.
-[patch.crates-io]
-sd-jwt = { git = "https://github.com/impierce/sd-jwt-payload", rev = "f28789a", package = "sd-jwt-payload" }
-
 [patch."https://github.com/MystenLabs/fastcrypto"]
 fastcrypto = "=0.1.11"
