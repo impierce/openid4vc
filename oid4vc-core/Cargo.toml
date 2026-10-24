@@ -12,16 +12,9 @@ base64 = "0.23"
 derive_more = { version = "2.1.1", features = ["display"] }
 ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
 getset = "0.1.2"
-identity-kit = { workspace = true, features = ["did-key"] }
-identity_did.workspace = true
-identity_document.workspace = true
-identity_ecdsa_verifier.workspace = true
-identity_eddsa_verifier.workspace = true
-identity_jose.workspace = true
-identity_verification.workspace = true
+identity-kit.workspace = true
 is_empty = "0.3.0"
 jsonwebtoken.workspace = true
-mockall = { version = "0.15.0", optional = true }
 nutype.workspace = true
 rand = "0.10"
 reqwest.workspace = true
@@ -39,5 +32,5 @@ tokio.workspace = true
 
 [features]
 default = []
-test-utils = ["dep:mockall"]
+test-utils = []
 utoipa = ["dep:utoipa"]
