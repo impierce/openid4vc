@@ -594,8 +594,13 @@ mod tests {
             .unwrap();
         let mut value = serde_json::to_value(&request).unwrap();
         value["client_metadata"]["max_age"] = from_str("18446744073709551616").unwrap();
+        let max_age = value["client_metadata"]["max_age"].clone();
 
         let from_value: AuthorizationRequest<Object<OID4VP>> = serde_json::from_value(value.clone()).unwrap();
+        let ClientMetadataResource::ClientMetadata { other, .. } = &from_value.body.extension.client_metadata else {
+            panic!("client_metadata is passed by value");
+        };
+        assert_eq!(other.get("max_age"), Some(&max_age));
         let from_text: AuthorizationRequest<Object<OID4VP>> = from_str(&value.to_string()).unwrap();
         assert_eq!(from_value, from_text);
         let generic: AuthorizationRequest<Object<oid4vc_core::openid4vc_extension::Generic>> =
