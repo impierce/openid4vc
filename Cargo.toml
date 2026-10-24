@@ -31,7 +31,6 @@ identity_credential = { git = "https://github.com/iotaledger/identity", tag = "v
     "credential",
     "presentation",
 ] }
-# 0.2.1 checks the `status` claim of `jwt_vc_json` credentials.
 identity-kit = { version = "0.2.1", default-features = false }
 is_empty = "0.3"
 # The pure-Rust backend; `aws_lc_rs` would pull in a C library.
