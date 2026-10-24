@@ -19,8 +19,8 @@ pub trait VerificationMaterialResolver: Send + Sync {
 #[cfg(feature = "test-utils")]
 pub mod test_utils {
     use super::*;
-    use did_key::DIDCore as _;
     use identity_did::{DIDUrl, DID as _};
+    use identity_kit::methods::{key::KeyFormat, DidKey};
 
     /// A simple implementation of the `VerificationMaterialResolver` trait for testing purposes. It uses the `did:key` method to resolve DIDs and public keys.
     pub struct TestVerificationMaterialResolver;
@@ -31,12 +31,9 @@ pub mod test_utils {
             &self,
             did: &identity_did::CoreDID,
         ) -> Result<CoreDocument, Box<dyn std::error::Error>> {
-            let res = Ok(serde_json::from_value(serde_json::json!(did_key::resolve(did.as_str())
-                .unwrap()
-                .get_did_document(did_key::CONFIG_JOSE_PUBLIC)))
-            .unwrap());
-
-            res
+            let did = identity_kit::did::Did::parse(did.as_str())?;
+            let document = DidKey::new().with_format(KeyFormat::JsonWebKey).document(&did)?;
+            Ok(serde_json::from_value(serde_json::to_value(document)?)?)
         }
 
         async fn resolve_public_key(&self, kid: &str) -> Result<identity_jose::jwk::Jwk, Box<dyn std::error::Error>> {

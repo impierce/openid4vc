@@ -1,8 +1,8 @@
 # cargo-deny configuration: https://embarkstudios.github.io/cargo-deny/
 # `advisories` runs in the Audit workflow; `licenses`, `bans` and `sources` run in the License workflow.
 #
-# Most entries below exist because of the `identity_*` git dependencies (and their iota-sdk tree) and
-# `did-key`; remove each entry with the dependency that needs it.
+# Most entries below exist because of the `identity_*` git dependencies (and their iota-sdk tree);
+# remove each entry with the dependency that needs it.
 
 [graph]
 all-features = true
@@ -12,11 +12,6 @@ all-features = true
 unmaintained = "all"
 yanked = "deny"
 ignore = [
-    # did-key 0.2 (unmaintained itself, issue #104).
-    { id = "RUSTSEC-2022-0093", reason = "ed25519-dalek 1.x via did-key: keypairs are only created through did-key, which derives the public key from the secret key, so signing is never performed with a mismatched public key" },
-    { id = "RUSTSEC-2024-0344", reason = "curve25519-dalek 3.x via did-key: the timing leak requires measuring local signing operations; no signing oracle is exposed to remote parties" },
-    { id = "RUSTSEC-2025-0161", reason = "libsecp256k1 via did-key: unmaintained, no known vulnerability" },
-    { id = "RUSTSEC-2023-0089", reason = "atomic-polyfill via did-key -> bls12_381_plus -> heapless: unmaintained, no known vulnerability" },
     # identity_* -> iota-sdk.
     { id = "RUSTSEC-2023-0071", reason = "rsa 0.8 via iota-sdk -> fastcrypto: no RSA private-key operations are performed; no patched version exists" },
     { id = "RUSTSEC-2026-0194", reason = "quick-xml via iota-sdk -> object_store: object_store is never invoked, no XML is parsed" },
@@ -49,7 +44,7 @@ allow = [
 confidence-threshold = 0.8
 # Keep the list above as policy, even for licenses no dependency currently uses.
 unused-allowed-license = "allow"
-# Crates deep in the iota-sdk and did-key trees, used unmodified: weak copyleft (MPL-2.0, file-level
+# Crates deep in the iota-sdk tree, used unmodified: weak copyleft (MPL-2.0, file-level
 # share-alike only), public domain (CC0-1.0) and a linking exception. Scoped to the crate so the
 # policy above stays strict.
 exceptions = [

@@ -17,9 +17,9 @@ async-trait = "0.1"
 axum = "0.8"
 axum-auth = "0.8"
 chrono.workspace = true
-did-key.workspace = true
 futures = "0.3"
 getset.workspace = true
+identity-kit = { workspace = true, features = ["did-key", "in-memory"] }
 identity_credential.workspace = true
 jsonwebtoken.workspace = true
 reqwest.workspace = true

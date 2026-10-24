@@ -170,8 +170,8 @@ Specification versions tracked: [OID4VCI 1.0][oid4vci] (final, 16 September 2025
 | `CredentialIssuerManager<S: Storage>` with offers by value and by reference                |   ✅   |               |               |       |
 | `axum` issuer server: metadata, offer, PAR, authorize, token, credential, notification routes, extension router |   ✅   |               |               |       |
 | `Storage` trait                                                                            |   ✅   |               |               |       |
-| `KeySubject` (`did:key`, Ed25519) with optional `ExternalSign`                             |   ✅   |               |               |       |
-| Replace `did-key` (unmaintained) with `identity-kit`                                       |   📋   |               |               | [#104](https://github.com/impierce/openid4vc/issues/104), [`PLAN.md`](PLAN.md) Phase D |
+| `KeySubject` (`did:key`, Ed25519, any identity-kit `KeyStore`) with optional `ExternalSign` |   ✅   |               |               |       |
+| Replace `did-key` (unmaintained) with `identity-kit`                                       |   ✅   |               |               | [#104](https://github.com/impierce/openid4vc/issues/104), [`PLAN.md`](PLAN.md) Phase D |
 | End-to-end tests: pre-authorized code (batch, by reference), authorization code, SIOPv2, OID4VP |   ✅   |               |               |       |
 | Nonce and deferred credential routes                                                      |   ⬜   |               |               |       |
 

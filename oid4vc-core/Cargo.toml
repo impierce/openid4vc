@@ -10,10 +10,9 @@ anyhow = "1.0.70"
 async-trait = "0.1.68"
 base64 = "0.23"
 derive_more = { version = "2.1.1", features = ["display"] }
-did-key.workspace = true
 ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
 getset = "0.1.2"
-identity-kit.workspace = true
+identity-kit = { workspace = true, features = ["did-key"] }
 identity_did.workspace = true
 identity_document.workspace = true
 identity_ecdsa_verifier.workspace = true

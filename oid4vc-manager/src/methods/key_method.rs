@@ -1,70 +1,74 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use did_key::{generate, resolve, Config, CoreSign, DIDCore, Document, Ed25519KeyPair, KeyMaterial, PatchedKeyPair};
+use identity_kit::{
+    did::{Did, DidUrl},
+    jose::{JwsAlgorithm, KeyType, Signer as _},
+    keys::{InMemoryKeyStore, KeyId, KeySigner, KeySpec, KeyStore},
+    methods::{key::KeyFormat, DidKey},
+};
 use jsonwebtoken::Algorithm;
 use oid4vc_core::{authentication::sign::ExternalSign, Sign, Subject, Verify};
 use std::sync::Arc;
 
 /// This [`KeySubject`] implements the [`Subject`] trait and can be used as a subject for a [`siopv2::Provider`]. It uses the
-/// 'key' DID method.
+/// 'key' DID method over an Ed25519 key in an identity-kit [`KeyStore`].
 pub struct KeySubject {
-    keypair: PatchedKeyPair,
-    document: Document,
+    signer: KeySigner<Arc<dyn KeyStore>>,
+    did: Did,
+    key_id: DidUrl,
     external_signer: Option<Arc<dyn ExternalSign>>,
 }
 
-/// Leaves out the key pair.
+/// Leaves out the signer.
 impl std::fmt::Debug for KeySubject {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("KeySubject")
-            .field("document", &self.document)
+            .field("did", &self.did)
+            .field("key_id", &self.key_id)
             .field("external_signer", &self.external_signer)
             .finish_non_exhaustive()
     }
 }
 
 impl KeySubject {
-    /// Creates a new [`KeySubject`].
-    pub fn new() -> Self {
-        let keypair = generate::<Ed25519KeyPair>(None);
-        let document = keypair.get_did_document(Config::default());
-        KeySubject {
-            keypair,
-            document,
-            external_signer: None,
-        }
+    /// Creates a new [`KeySubject`] over a new Ed25519 key in an [`InMemoryKeyStore`].
+    pub async fn new() -> Result<Self> {
+        let store = InMemoryKeyStore::new();
+        let key = store
+            .generate(KeySpec::new(KeyType::Ed25519, JwsAlgorithm::EdDSA))
+            .await?;
+        Self::from_key_store(Arc::new(store), key, None).await
     }
 
-    /// Creates a new [`KeySubject`] from a [`PatchedKeyPair`].
-    pub fn from_keypair(keypair: PatchedKeyPair, external_signer: Option<Arc<dyn ExternalSign>>) -> Self {
-        let document = keypair.get_did_document(Config::default());
-        KeySubject {
-            keypair,
-            document,
+    /// Creates a new [`KeySubject`] over the Ed25519 `key` of `store`, whose `did:key` is derived from the key's public
+    /// JWK. With an `external_signer`, signatures come from it instead of the store.
+    pub async fn from_key_store(
+        store: Arc<dyn KeyStore>,
+        key: KeyId,
+        external_signer: Option<Arc<dyn ExternalSign>>,
+    ) -> Result<Self> {
+        let signer = KeySigner::new(store, key, JwsAlgorithm::EdDSA).await?;
+        let did = DidKey::did(signer.public_jwk())?;
+        let key_id = did.join(&format!("#{}", did.method_specific_id()))?;
+        Ok(KeySubject {
+            signer,
+            did,
+            key_id,
             external_signer,
-        }
-    }
-}
-
-impl Default for KeySubject {
-    fn default() -> Self {
-        Self::new()
+        })
     }
 }
 
 #[async_trait]
 impl Sign for KeySubject {
     async fn key_id(&self, _subject_syntax_type: &str, _algorithm: Algorithm) -> Option<String> {
-        self.document
-            .authentication
-            .as_ref()
-            .and_then(|authentication_methods| authentication_methods.first().cloned())
+        Some(self.key_id.to_string())
     }
 
     async fn sign(&self, message: &str, _subject_syntax_type: &str, _algorithm: Algorithm) -> Result<Vec<u8>> {
         match self.external_signer() {
             Some(external_signer) => external_signer.sign(message),
-            None => Ok(self.keypair.sign(message.as_bytes())),
+            None => Ok(self.signer.sign(message.as_bytes()).await?),
         }
     }
 
@@ -76,14 +80,14 @@ impl Sign for KeySubject {
 #[async_trait]
 impl Verify for KeySubject {
     async fn public_key(&self, kid: &str) -> Result<Vec<u8>> {
-        Ok(resolve_public_key(kid).await?)
+        resolve_public_key(kid)
     }
 }
 
 #[async_trait]
 impl Subject for KeySubject {
     async fn identifier(&self, _subject_syntax_type: &str, _algorithm: Algorithm) -> Result<String> {
-        Ok(self.document.id.clone())
+        Ok(self.did.to_string())
     }
 }
 
@@ -101,21 +105,21 @@ impl KeyValidator {
 #[async_trait]
 impl Verify for KeyValidator {
     async fn public_key(&self, kid: &str) -> Result<Vec<u8>> {
-        Ok(resolve_public_key(kid).await?)
+        resolve_public_key(kid)
     }
 }
 
-/// Resolves the public key from the given key identifier.
-async fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
-    let keypair = resolve(kid).map_err(|_| anyhow!("Failed to resolve the key identifier"))?;
-    let authentication_method = keypair
-        .get_did_document(Config::default())
-        .authentication
-        .and_then(|authentication_methods| authentication_methods.first().cloned())
-        .ok_or(anyhow!("No public key found"))?;
-    PatchedKeyPair::try_from(authentication_method.as_str())
-        .map(|keypair| keypair.public_key_bytes())
-        .map_err(|_| anyhow!("Failed to construct keypair from the default authentication method"))
+/// Resolves the Ed25519 public key that the key identifier, a DID URL into a `did:key` document, names.
+fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
+    let kid = DidUrl::parse(kid)?;
+    let document = DidKey::new().with_format(KeyFormat::JsonWebKey).document(kid.did())?;
+    let jwk = document
+        .verification_method
+        .iter()
+        .find(|method| method.id == kid)
+        .and_then(|method| method.public_key_jwk())
+        .ok_or(anyhow!("No public key found for `{kid}`"))?;
+    Ok(jwk.ed25519_public_bytes()?.to_vec())
 }
 
 #[cfg(test)]
@@ -130,7 +134,7 @@ mod tests {
     #[tokio::test]
     async fn test_key_subject() {
         // Create a new subject.
-        let subject = KeySubject::new();
+        let subject = KeySubject::new().await.unwrap();
 
         // Create a new provider manager.
         let provider_manager =
@@ -166,8 +170,12 @@ mod tests {
             .unwrap();
 
         // Let the relying party validate the authorization_response.
-        let relying_party_manager =
-            RelyingPartyManager::new(Arc::new(KeySubject::new()), "did:key", vec![Algorithm::EdDSA]).unwrap();
+        let relying_party_manager = RelyingPartyManager::new(
+            Arc::new(KeySubject::new().await.unwrap()),
+            "did:key",
+            vec![Algorithm::EdDSA],
+        )
+        .unwrap();
 
         #[allow(deprecated)]
         let res = relying_party_manager.validate_response(&authorization_response).await;
