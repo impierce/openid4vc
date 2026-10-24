@@ -1950,15 +1950,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "did_url"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70d5f6334e473e3bb5650ab4ef3e4c910296b76968e62758e7c66157ff767c05"
-dependencies = [
- "form_urlencoded",
-]
-
-[[package]]
 name = "did_url_parser"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6260,7 +6251,6 @@ dependencies = [
  "base64 0.23.1",
  "derivative",
  "derive_more 2.1.1",
- "did_url",
  "ed25519-dalek 3.0.0",
  "getset",
  "identity-kit",
@@ -6298,7 +6288,6 @@ dependencies = [
  "axum-auth",
  "chrono",
  "derivative",
- "did_url",
  "ed25519-dalek 3.0.0",
  "futures",
  "getset",
@@ -8702,10 +8691,10 @@ dependencies = [
  "async-trait",
  "chrono",
  "derivative",
- "did_url",
  "ed25519-dalek 3.0.0",
  "futures",
  "getset",
+ "identity-kit",
  "is_empty",
  "jsonwebtoken",
  "lazy_static",
