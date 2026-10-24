@@ -1,6 +1,5 @@
 use crate::common::{MemoryStorage, Storage, TestSubject};
 use async_trait::async_trait;
-use did_key::{generate, Ed25519KeyPair};
 use jsonwebtoken::Algorithm;
 use lazy_static::lazy_static;
 use oid4vc_core::{
@@ -120,7 +119,7 @@ async fn test_implicit_flow(#[case] did_method: &str) {
             "did:test:relying_party#key_id".to_string(),
         )
         .unwrap(),
-        key_subject: KeySubject::from_keypair(generate::<Ed25519KeyPair>(None), None),
+        key_subject: KeySubject::new().await.unwrap(),
     };
 
     let client_id = subject.identifier(did_method, Algorithm::EdDSA).await.unwrap();
@@ -183,7 +182,7 @@ async fn test_implicit_flow(#[case] did_method: &str) {
     // Create a new subject.
     let subject = MultiDidMethodSubject {
         test_subject: TestSubject::new("did:test:subject".to_string(), "did:test:subject#key_id".to_string()).unwrap(),
-        key_subject: KeySubject::from_keypair(generate::<Ed25519KeyPair>(None), None),
+        key_subject: KeySubject::new().await.unwrap(),
     };
 
     // Create a new provider manager.

@@ -38,7 +38,7 @@ specification family: five published crates and one unpublished facade.
 - Cargo features are additive: `utoipa` (OpenAPI schemas) and `test-utils` (mocks and test
   resolvers). Code must build with and without each.
 - No new git or path dependencies outside the workspace. The existing `identity_*` git
-  dependencies, the `sd-jwt-payload` patch and `did-key` are being replaced by `identity-kit`
+  dependencies and the `sd-jwt-payload` patch are being replaced by `identity-kit`
   (`docs/PLAN.md`, Phase D); do not deepen their use.
 - `deny.toml` is the dependency policy: every advisory ignore carries a `reason`, licenses outside
   the allow list are per-crate `exceptions`, no new git sources. An ignore that reflects a design

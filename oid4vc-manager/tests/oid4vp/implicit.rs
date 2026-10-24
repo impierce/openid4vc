@@ -1,5 +1,4 @@
 use chrono::{Duration, Utc};
-use did_key::{generate, Ed25519KeyPair};
 use identity_credential::{credential::Jwt, presentation::Presentation};
 use jsonwebtoken::{Algorithm, Header};
 use lazy_static::lazy_static;
@@ -60,21 +59,15 @@ async fn test_implicit_flow() {
     const TEST_DID_METHOD: &str = "did:key";
 
     // Create a new issuer.
-    let issuer = Arc::new(KeySubject::from_keypair(
-        generate::<Ed25519KeyPair>(Some("this-is-a-very-UNSAFE-issuer-secret-key".as_bytes())),
-        None,
-    ));
+    let issuer = Arc::new(KeySubject::new().await.unwrap());
     let issuer_did = issuer.identifier(TEST_DID_METHOD, Algorithm::EdDSA).await.unwrap();
 
     // Create a new subject.
-    let subject = Arc::new(KeySubject::from_keypair(
-        generate::<Ed25519KeyPair>(Some("this-is-a-very-UNSAFE-secret-key".as_bytes())),
-        None,
-    ));
+    let subject = Arc::new(KeySubject::new().await.unwrap());
     let subject_did = subject.identifier(TEST_DID_METHOD, Algorithm::EdDSA).await.unwrap();
 
     // Create a new relying party.
-    let relying_party = Arc::new(KeySubject::new());
+    let relying_party = Arc::new(KeySubject::new().await.unwrap());
     let relying_party_did = relying_party
         .identifier(TEST_DID_METHOD, Algorithm::EdDSA)
         .await

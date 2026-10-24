@@ -1,5 +1,4 @@
 use crate::common::{get_jwt_claims, memory_storage::MemoryStorage};
-use did_key::{generate, Ed25519KeyPair};
 use jsonwebtoken::Algorithm;
 use oid4vc_core::Subject;
 use oid4vc_manager::{
@@ -21,15 +20,7 @@ use uuid::Uuid;
 async fn test_authorization_code_flow() {
     // Setup the credential issuer.
     let mut credential_issuer: Server<_> = Server::setup(
-        CredentialIssuerManager::<_>::new(
-            None,
-            MemoryStorage,
-            Arc::new(KeySubject::from_keypair(
-                generate::<Ed25519KeyPair>(Some("this-is-a-very-UNSAFE-issuer-secret-key".as_bytes())),
-                None,
-            )),
-        )
-        .unwrap(),
+        CredentialIssuerManager::<_>::new(None, MemoryStorage, Arc::new(KeySubject::new().await.unwrap())).unwrap(),
         None,
     )
     .unwrap()
@@ -37,7 +28,7 @@ async fn test_authorization_code_flow() {
     credential_issuer.start_server().await.unwrap();
 
     // Create a new subject.
-    let subject = KeySubject::new();
+    let subject = KeySubject::new().await.unwrap();
     let subject_did = subject.identifier("did:key", Algorithm::EdDSA).await.unwrap();
 
     // Create a new wallet.

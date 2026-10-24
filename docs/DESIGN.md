@@ -164,7 +164,7 @@ that serialize nested objects as JSON strings the way the specs expect.
 ES256K. `VerificationMaterialResolver` resolves a DID to a DID document and a `kid` to a JWK, and
 `CredentialStatusVerifier` checks a credential's `status` claim; both are traits so that `oid4vp`'s
 validator is independent of any DID method or status list implementation. The `test-utils`
-feature ships a `did:key` resolver (over the `did-key` crate) and a `mockall` mock for the status
+feature ships a `did:key` resolver (over identity-kit's `did:key` method) and a `mockall` mock for the status
 verifier.
 
 ## `oid4vci`
@@ -273,8 +273,9 @@ Thin, opinionated wrappers plus the only server in the workspace:
   `/.well-known/openid-credential-issuer`, `/credential_offer`, `/par`, `/authorize`, `/token`,
   `/credential`, `/notification`, plus an optional extension `Router`. `Storage` is the trait the
   server reads everything from (configurations, codes, token and credential responses, state).
-- `methods::KeySubject` is the development `Subject`: `did:key` over Ed25519 via the `did-key`
-  crate, with an optional `ExternalSign`.
+- `methods::KeySubject` is the development `Subject`: `did:key` over an Ed25519 key in an
+  identity-kit `KeyStore` (`InMemoryKeyStore` for `KeySubject::new`), signing through `KeySigner` or
+  an optional `ExternalSign`.
 - `tests/` are the end-to-end flows: pre-authorized code (with and without batch and by-reference
   offer), authorization code, SIOPv2 implicit flow over `did:key` and a custom method, OID4VP
   implicit flow, all over `wiremock` and an in-memory `Storage`.
@@ -306,7 +307,7 @@ Named so that work on them is deliberate, not accidental:
   responses.
 - **Identity dependencies**: `oid4vc-core::verifier`, `VerificationMaterialResolver`, and
   `oid4vp`'s token layer depend on eight `identity_*` crates as **git** dependencies, on a patched
-  `sd-jwt-payload`, on a `fastcrypto` patch their IOTA dependencies need and, for `did:key`, on the unmaintained `did-key` crate (issue #104). Cargo
+  `sd-jwt-payload` and on a `fastcrypto` patch their IOTA dependencies need. Cargo
   cannot publish crates with git dependencies, so these block every release. `identity-kit` replaces
   them; the mapping is below.
 - **Validator coverage**: `VpTokenValidator` handles `jwt_vc_json`, `dc+sd-jwt` and `vc+sd-jwt`;
@@ -333,7 +334,6 @@ Named so that work on them is deliberate, not accidental:
 | `VerificationMaterialResolver` over `identity_did::CoreDID`, `identity_document::CoreDocument`, `identity_jose::Jwk` | `identity_kit::resolver::{DidResolver, Resolver}`, `did::DidDocument`, `jose::Jwk` |
 | `oid4vp::token::vp_token_validator` over `identity_credential` validators and the patched `sd-jwt-payload` | `identity_kit::vc` validators and `identity_kit::sd_jwt_vc`           |
 | `oid4vp::token::verifiable_presentation_jwt*` over `identity_credential::presentation`        | `identity_kit::vc::{Presentation, Jwt}`                                |
-| `oid4vc_manager::methods::KeySubject` and the `test-utils` resolver over `did-key`            | `identity_kit::methods::key` + `keys::{InMemoryKeyStore, SoftwareKeyStore, KeySigner}` |
 | `oid4vc_core::utils::did` over `did_url`                                                      | `identity_kit::did::DidUrl`                                            |
 
 Order: `oid4vc-core` (verifier, resolver) first, then `oid4vp`'s token layer, then the manager's

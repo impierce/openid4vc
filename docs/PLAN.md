@@ -55,7 +55,7 @@ can be run as `ready-for-agent` issues.
   2. `[patch.crates-io]` for `sd-jwt-payload` (fork making `Hasher` `Send + Sync`), and a `fastcrypto`
      patch that the IOTA crates behind `identity_*` need; patches do not propagate to consumers.
   3. `did-key = "0.2"` (issue #104), unmaintained, drags in `ed25519-dalek 1.x` and `curve25519-dalek 3.x`
-     (two of the six ignored advisories).
+     (two of the six ignored advisories). Replaced by identity-kit's `did:key` with #104.
   4. Internal path dependencies carry no `version` (PR #135 fixes this).
   5. Root `oid4vc` facade package with path-only deps (PR #135 sets `release = false`).
 

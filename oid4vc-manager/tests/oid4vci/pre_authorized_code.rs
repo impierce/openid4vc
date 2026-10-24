@@ -1,5 +1,4 @@
 use crate::common::{get_jwt_claims, memory_storage::MemoryStorage};
-use did_key::{generate, Ed25519KeyPair};
 use jsonwebtoken::Algorithm;
 use oid4vc_manager::{
     managers::credential_issuer::CredentialIssuerManager, methods::key_method::KeySubject,
@@ -24,15 +23,7 @@ use std::sync::Arc;
 async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference: bool) {
     // Setup the credential issuer.
     let mut credential_issuer = Server::<_>::setup(
-        CredentialIssuerManager::new(
-            None,
-            MemoryStorage,
-            Arc::new(KeySubject::from_keypair(
-                generate::<Ed25519KeyPair>(Some("this-is-a-very-UNSAFE-issuer-secret-key".as_bytes())),
-                None,
-            )),
-        )
-        .unwrap(),
+        CredentialIssuerManager::new(None, MemoryStorage, Arc::new(KeySubject::new().await.unwrap())).unwrap(),
         None,
     )
     .unwrap()
@@ -40,7 +31,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
     credential_issuer.start_server().await.unwrap();
 
     // Create a new subject.
-    let subject = KeySubject::new();
+    let subject = KeySubject::new().await.unwrap();
 
     // TODO: Update this test so that it communicates the `subject_did` out-of-band with the credential issuer (instead of through the`proof` in the Credential Request).
     // See: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0-15.html#section-8.2.1.1-2.2.2.1
