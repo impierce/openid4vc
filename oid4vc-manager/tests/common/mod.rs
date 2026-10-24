@@ -16,14 +16,14 @@ pub static TEST_KEYPAIR: LazyLock<SigningKey> = LazyLock::new(|| SigningKey::gen
 
 #[derive(Debug)]
 pub struct TestSubject {
-    pub did: did_url::DID,
+    pub did: identity_kit::did::Did,
     pub key_id: String,
 }
 
 impl Default for TestSubject {
     fn default() -> Self {
         TestSubject {
-            did: did_url::DID::parse("did:test:123").unwrap(),
+            did: identity_kit::did::Did::parse("did:test:123").unwrap(),
             key_id: String::default(),
         }
     }
@@ -32,7 +32,7 @@ impl Default for TestSubject {
 impl TestSubject {
     pub fn new(did: String, key_id: String) -> Result<Self> {
         Ok(TestSubject {
-            did: did_url::DID::parse(did)?,
+            did: identity_kit::did::Did::parse(&did)?,
             key_id,
         })
     }

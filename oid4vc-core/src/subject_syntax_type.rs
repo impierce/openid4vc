@@ -126,8 +126,10 @@ impl<'de> Deserialize<'de> for DidMethod {
     }
 }
 
-impl From<did_url::DID> for DidMethod {
-    fn from(did: did_url::DID) -> Self {
+/// The method of `did`, without a namespace: whether the method-specific identifier starts with one
+/// depends on the method, so `did:iota:smr:0x…` gives `did:iota`.
+impl From<identity_kit::did::Did> for DidMethod {
+    fn from(did: identity_kit::did::Did) -> Self {
         DidMethod {
             method_name: did.method().to_owned(),
             namespace: None,
@@ -187,6 +189,22 @@ mod tests {
         );
         assert!(DidMethod::from_str_with_namespace("did:example:namespace:").is_err());
         assert!(DidMethod::from_str_with_namespace("did:example:namespace:123").is_err());
+    }
+
+    #[test]
+    fn test_did_method_from_did() {
+        use identity_kit::did::Did;
+
+        let did_method = |did: &str| DidMethod::from(Did::parse(did).unwrap());
+        assert_eq!(
+            did_method("did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK"),
+            DidMethod::from_str("did:key").unwrap()
+        );
+        // The namespace of `did:iota` is part of the method-specific identifier, which only the method can read.
+        assert_eq!(
+            did_method("did:iota:smr:0xe4edef97da1257e83cbeb49159cfdd2da6ac971ac447f233f8439cf29376ebfe"),
+            DidMethod::from_str("did:iota").unwrap()
+        );
     }
 
     #[test]

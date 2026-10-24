@@ -15,7 +15,6 @@ oid4vc-core = { path = "../oid4vc-core" }
 anyhow = "1.0.70"
 async-trait = "0.1.68"
 chrono.workspace = true
-did_url = "0.1.0"
 futures = "0.3"
 getset.workspace = true
 is_empty = "0.3.0"
@@ -36,5 +35,6 @@ url = { version = "2.3.1", features = ["serde"] }
 oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
 
 ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
+identity-kit.workspace = true
 rand = "0.10"
 wiremock = "0.6.5"
