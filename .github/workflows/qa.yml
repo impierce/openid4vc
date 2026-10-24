@@ -119,11 +119,28 @@ jobs:
           save-if: ${{ github.ref_name == github.event.repository.default_branch }}
       - run: cargo check --workspace --all-features --locked
 
+  # Packages and builds the five crates as crates.io would receive them, in dependency order; the
+  # unpublished facade is skipped. A version that already exists on crates.io only warns.
+  publish:
+    name: Publish (dry run)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          save-if: ${{ github.ref_name == github.event.repository.default_branch }}
+      - run: cargo publish --dry-run --workspace --locked
+
   # Single required check for branch protection.
   qa:
     name: QA
     if: always()
-    needs: [fmt, clippy, test, features, docs, msrv]
+    needs: [fmt, clippy, test, features, docs, msrv, publish]
     runs-on: ubuntu-latest
     steps:
       - env:

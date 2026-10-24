@@ -10,7 +10,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-oid4vc-core = { path = "../oid4vc-core" }
+oid4vc-core.workspace = true
 
 anyhow = "1.0.70"
 async-trait = "0.1.68"
@@ -32,7 +32,7 @@ tracing.workspace = true
 url = { version = "2.3.1", features = ["serde"] }
 
 [dev-dependencies]
-oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
+oid4vc-core = { workspace = true, features = ["test-utils"] }
 
 ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
 identity-kit.workspace = true

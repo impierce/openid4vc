@@ -36,6 +36,7 @@ When the change touches a `Cargo.toml`, `Cargo.lock` or `deny.toml`, also run:
 ```sh
 cargo deny check            # advisories, licenses, bans, sources; policy in deny.toml
 cargo +1.95 check --workspace --all-features --locked   # the MSRV from [workspace.package] rust-version
+cargo publish --dry-run --workspace --locked             # the five crates still package and build
 ```
 
 When the change touches a parser or wire type, run its fuzz target for a minute (see the
@@ -56,6 +57,11 @@ When the change touches a parser or wire type, run its fuzz target for a minute 
   problem, but say so in the PR. A new ignore in `deny.toml` needs a `reason` like the existing
   ones, and an ADR in `docs/adr/` if it reflects a design choice. A license outside the allow list
   is a per-crate `exception`, a new git source is not accepted.
+- **`cargo publish --dry-run`**: "all dependencies must have a version requirement" means a
+  dependency on a workspace crate does not inherit it from `[workspace.dependencies]`, where the
+  workspace crates carry their `version` next to the `path`; a file the build needs but the package
+  leaves out is missing from `include`. "already exists on crates.io index" is a warning, not a
+  failure.
 - **MSRV**: the error names the feature or the dependency that needs a newer compiler. Avoid the
   feature; for a dependency, pin the older version in `Cargo.lock` or raise `rust-version` in the
   same PR and say so in the title.

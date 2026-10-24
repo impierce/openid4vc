@@ -41,6 +41,7 @@ cargo test --workspace --all-features --locked
 RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace --all-features --locked
 cargo hack check --workspace --each-feature --locked   # feature-gated code builds with and without its feature
 cargo deny check                                       # advisories, licenses, bans, sources (deny.toml)
+cargo publish --dry-run --workspace --locked           # the five crates package and build as crates.io would receive them
 ```
 
 `Cargo.lock` is committed and CI runs with `--locked`: a change to a `Cargo.toml` comes with the
