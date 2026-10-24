@@ -281,7 +281,9 @@ Thin, opinionated wrappers plus the only server in the workspace:
   server reads everything from (configurations, codes, token and credential responses, state).
 - `methods::KeySubject` is the development `Subject`: `did:key` over an Ed25519 key in an
   identity-kit `KeyStore` (`InMemoryKeyStore` for `KeySubject::new`), signing through `KeySigner` or
-  an optional `ExternalSign`.
+  an optional `ExternalSign`. `methods::KeyValidator` (and `KeySubject`'s `Verify`) resolves the
+  `kid` of a JWT to an Ed25519 or P-256 `did:key` key, for `EdDSA` and `ES256`; the `kid` must be a
+  DID URL naming the key's verification method.
 - `tests/` are the end-to-end flows: pre-authorized code (with and without batch and by-reference
   offer), authorization code, SIOPv2 implicit flow over `did:key` and a custom method, OID4VP
   implicit flow, all over `wiremock` and an in-memory `Storage`.
