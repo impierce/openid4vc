@@ -27,7 +27,6 @@ rust-version = "1.95"
 chrono = "0.4"
 getset = "0.1"
 http = "1.3.1"
-# 0.2.1 checks the `status` claim of `jwt_vc_json` credentials.
 identity-kit = { version = "0.2.1", default-features = false }
 is_empty = "0.3"
 # The pure-Rust backend; `aws_lc_rs` would pull in a C library.
