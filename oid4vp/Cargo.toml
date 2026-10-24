@@ -18,7 +18,6 @@ chrono.workspace = true
 futures = "0.3"
 getset.workspace = true
 identity-kit = { workspace = true, features = ["vc", "sd-jwt", "secp256k1"] }
-identity_credential.workspace = true
 is_empty.workspace = true
 jsonwebtoken.workspace = true
 monostate.workspace = true

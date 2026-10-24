@@ -69,7 +69,3 @@ unsafe_code = "forbid"
 # A workspace of its own: the fuzz targets build on nightly with sanitizers and never join the
 # library workspace, which `exclude`s this directory.
 [workspace]
-
-# Same patches as the library workspace (`../Cargo.toml`), which this workspace does not inherit.
-[patch."https://github.com/MystenLabs/fastcrypto"]
-fastcrypto = "=0.1.11"

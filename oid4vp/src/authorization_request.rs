@@ -568,4 +568,41 @@ mod tests {
         let invalid = EncryptedResponseEncValues::try_new(vec![]);
         assert!(invalid.is_err());
     }
+
+    /// An integer beyond `u64` passes through a `serde_json::Value` as it does through JSON text, here in a client
+    /// metadata parameter the request keeps as is, behind two `flatten`s. It did not while serde_json's
+    /// `arbitrary_precision` was on.
+    #[test]
+    fn integer_beyond_u64_passes_through_value() {
+        let request = AuthorizationRequest::<Object<OID4VP>>::builder()
+            .client_id(
+                "redirect_uri:https://client.example.org/cb"
+                    .parse::<ClientId>()
+                    .unwrap(),
+            )
+            .response_uri("https://client.example.org/post".parse::<Url>().unwrap())
+            .response_mode("direct_post".to_string())
+            .nonce("n-0S6_WzA2Mj".to_string())
+            .dcql_query(from_str::<DcqlQuery>(include_str!("../tests/examples/request/dcql_jwt_vc.json")).unwrap())
+            .client_metadata(ClientMetadataResource::ClientMetadata {
+                client_name: None,
+                logo_uri: None,
+                extension: ClientMetadataParameters::default(),
+                other: HashMap::new(),
+            })
+            .build()
+            .unwrap();
+        let mut value = serde_json::to_value(&request).unwrap();
+        value["client_metadata"]["max_age"] = from_str("18446744073709551616").unwrap();
+
+        let from_value: AuthorizationRequest<Object<OID4VP>> = serde_json::from_value(value.clone()).unwrap();
+        let from_text: AuthorizationRequest<Object<OID4VP>> = from_str(&value.to_string()).unwrap();
+        assert_eq!(from_value, from_text);
+        let generic: AuthorizationRequest<Object<oid4vc_core::openid4vc_extension::Generic>> =
+            serde_json::from_value(value).unwrap();
+        assert_eq!(
+            AuthorizationRequest::<Object<OID4VP>>::from_generic(&generic).unwrap(),
+            from_value
+        );
+    }
 }

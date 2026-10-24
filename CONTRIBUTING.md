@@ -14,9 +14,6 @@ Thanks for your interest in contributing to `openid4vc`!
 - [`cargo-hack`](https://github.com/taiki-e/cargo-hack) for the feature matrix and
   [`cargo-llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov) for coverage, both optional.
 
-The workspace has git dependencies (see the known gaps in [`docs/DESIGN.md`](docs/DESIGN.md)),
-so the first build fetches `iotaledger/identity`; allow a few minutes.
-
 ## Layout
 
 | Crate            | What it is                                                                 |
@@ -108,8 +105,8 @@ deviates from [`docs/DESIGN.md`](docs/DESIGN.md), add an ADR.
   crates.
 - [`deny.toml`](deny.toml) is the dependency policy. A new advisory ignore carries a `reason`, a new
   license goes in `exceptions` scoped to the crate (not in `allow`) unless it is a policy decision,
-  and a new git source is not accepted at all. Most current entries exist because of the `identity_*`
-  dependencies; remove them with the dependency.
+  and a new git source is not accepted at all. Remove an entry with the dependency it
+  exists for.
 
 ## Releases
 

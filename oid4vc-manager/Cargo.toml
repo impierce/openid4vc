@@ -20,7 +20,6 @@ chrono.workspace = true
 futures = "0.3"
 getset.workspace = true
 identity-kit = { workspace = true, features = ["did-key", "in-memory"] }
-identity_credential.workspace = true
 jsonwebtoken.workspace = true
 reqwest.workspace = true
 serde.workspace = true
