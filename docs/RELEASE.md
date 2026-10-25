@@ -50,29 +50,22 @@ Only commits that matter to users of the crates appear in the changelogs: `ci`, 
 `chore` commits are left out, except dependency updates (`chore(deps)`). The rules are configured in
 [`release-plz.toml`](../release-plz.toml).
 
-## First release
+## Adding a crate
 
-The manifests are at `0.2.0` already, set once by hand before the pipeline existed: `oid4vci`,
-`oid4vp` and `siopv2` were published at `0.1.0` in 2023, and the first release brings all five
-crates to `0.2.0` (ADR 0001). release-plz sees that `0.2.0` is not on crates.io yet, keeps the
-version and only writes the changelogs, which cover everything since the start of the repository.
-The 2023 releases were never tagged, so the compare links in those first entries point at tags that
-do not exist; fix them in the release pull request if they bother you.
+crates.io only accepts trusted publishing for a crate that exists. Before a new crate's first
+release pull request is merged:
 
-Nothing blocks publishing any more: the identity-kit migration removed the `identity_*` git
-dependencies and the `[patch]` sections, and QA runs `cargo publish --dry-run --workspace` on every
-pull request, so a crate that could not be published fails CI before it reaches the release pull
-request. Before the first release pull request is merged:
+1. Reserve the name with an empty `0.0.0` placeholder, published with a crates.io token scoped to
+   publishing new crates. Revoke the token and yank the placeholder afterwards.
+2. Configure the trusted publisher on crates.io: repository `impierce/openid4vc`, workflow
+   `release-plz.yml`, environment `release`.
 
-1. `oid4vc-core` and `oid4vc-manager` have never been published, and crates.io only lets you
-   configure trusted publishing for a crate that exists. Reserve both names once by hand, for
-   example with an empty `0.0.0` placeholder, using a crates.io token scoped to publishing new
-   crates; revoke the token afterwards.
-2. Configure the trusted publisher on crates.io for all five crates: repository
-   `impierce/openid4vc`, workflow `release-plz.yml`, environment `release`.
-3. Merge the release pull request. It publishes `0.2.0` of all five crates, tags them and creates
-   their GitHub releases; from then on every merged release pull request does the same for the
-   crates it bumps.
+## A failed release
+
+The release job publishes the crates in dependency order and stops at the first one that fails, for
+example a crate without a trusted publisher (`403 Forbidden: The provided access token is not valid
+for crate ...`). Fix the cause and re-run the failed job: it skips the crates already on crates.io
+and publishes the rest.
 
 ## Credentials
 

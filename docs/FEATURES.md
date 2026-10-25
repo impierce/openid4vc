@@ -182,7 +182,7 @@ Specification versions tracked: [OID4VCI 1.0][oid4vci] (final, 16 September 2025
 | `cargo deny` (advisories, licenses, bans, sources)                   |   ✅   | `deny.toml`, `.github/workflows/{audit,license}.yml` |
 | Fuzz targets over the parsers, seeded from the spec examples         |   ✅   | [`fuzz/`](../fuzz/README.md), `.github/workflows/fuzz.yml` |
 | Default branch `main`                                                |   ✅   | GitHub repository settings                    |
-| release-plz with per-crate versions, trusted publishing              |   🚧   | [`RELEASE.md`](RELEASE.md), [ADR 0001](adr/0001-independent-crate-versions.md); the first release is pending |
+| release-plz with per-crate versions, trusted publishing              |   ✅   | [`RELEASE.md`](RELEASE.md), [ADR 0001](adr/0001-independent-crate-versions.md) |
 | Publishable: no git dependencies, no patches, `cargo publish --dry-run` in CI |   ✅   | `.github/workflows/qa.yml`, `deny.toml` |
 
 [oid4vci]: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html
