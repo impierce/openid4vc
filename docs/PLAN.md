@@ -1,7 +1,7 @@
 # openid4vc: hardening and release plan
 
 - Date: 2026-10-18
-- Status: Phase A implemented (this document's PR); Phases B–D open
+- Status: Phases A–C implemented; Phase D ongoing
 - Basis: side-by-side comparison of `impierce/openid4vc` (`dev` @ 64036ca) with `impierce/identity-kit`
   (`main` @ dfceb57), plus the GitHub state of both repos (issues, PRs, releases, crates.io).
 
@@ -297,10 +297,10 @@ Status: items 1 to 8 are done (PRs 2 and 3 in §8).
 
 ## 5. Phase C: release process
 
-Status: item 1 is PR 4 in §8, which also sets the versions for item 3 and generates the changelogs
-for item 4 (release-plz writes the full history per crate, so no hand-written entry is needed).
-Item 5 lands with it. Item 2, the first publish, comes next; [`RELEASE.md`](RELEASE.md) describes
-it.
+Status: done. Item 1 is PR 4 in §8 (#156), which also set the versions for item 3 and generated
+the changelogs for item 4 (release-plz writes the full history per crate, so no hand-written entry
+is needed). Item 5 landed with it. Item 2, the first publish, released all five crates at `0.2.0`
+on 2026-10-25 (#178); [`RELEASE.md`](RELEASE.md) describes it.
 
 The publishing blockers in §1.2 are gone and QA runs `cargo publish --dry-run --workspace` on every
 pull request (#168).
@@ -363,7 +363,7 @@ pull request (#168).
 | 1 | `docs: add agent setup, design document, feature checklist, ADRs and contributing guide` | A1–A7 | – | #139, merged |
 | 2 | `ci: commit Cargo.lock, replace the workflows with QA, coverage, deny and PR title checks` | B1–B7 | 1 | #140, merged |
 | 3 | `test: add cargo-fuzz targets seeded from specification examples` | B8 | 2 | #155, merged |
-| 4 | `ci: add release-plz pipeline with per-crate tags and trusted publishing` (supersedes #135) | C1, C3–C5 | 2 | this PR |
+| 4 | `ci: add release-plz pipeline with per-crate tags and trusted publishing` (supersedes #135) | C1, C3–C5 | 2 | #156, merged; first release #178 |
 | 5+ | Phase D issues, one PR each, `ready-for-agent` | D | 1–2 | |
 
 Manual steps alongside PR 1 (A8): create the five triage labels, install nothing else yet.
