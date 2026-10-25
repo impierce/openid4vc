@@ -39,10 +39,11 @@ The scope decides nothing (the touched files do), but it makes the changelog rea
 `feat(oid4vp): ...`. [`CONTRIBUTING.md`](../CONTRIBUTING.md#pull-requests) describes the title
 format.
 
-[`cargo-semver-checks`](https://github.com/obi1kenobi/cargo-semver-checks) is off for now: the 2023
-`0.1.0` releases do not build against current dependencies, so there is no baseline to compare to.
-It is turned on (`semver_check` in [`release-plz.toml`](../release-plz.toml)) after the first
-release.
+release-plz also runs [`cargo-semver-checks`](https://github.com/obi1kenobi/cargo-semver-checks)
+(`semver_check` in [`release-plz.toml`](../release-plz.toml)) against each crate's last version on
+crates.io. A breaking API change it finds bumps the minor version even if the pull request title
+has no `!`, and the release pull request lists what it found. It was off until the first release,
+because the 2023 `0.1.0` releases do not build against current dependencies.
 
 ## Changelog
 

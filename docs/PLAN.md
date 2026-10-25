@@ -90,7 +90,7 @@ PR #135 is a sound foundation but predates the identity-kit learnings. Differenc
 | Credentials | `CARGO_REGISTRY_TOKEN` secret, optional `RELEASE_PLZ_TOKEN` PAT | crates.io trusted publishing (OIDC) + `impierce-release-plz` GitHub App | identity-kit model. Caveat: trusted publishing cannot create a crate, so `oid4vc-core` and `oid4vc-manager` need one token-based first publish, then the trusted publisher is configured on crates.io |
 | Tags | `{{ package }}-v{{ version }}` | `v{{ version }}` (single crate) | keep per-crate tags; the workspace releases crates independently |
 | Version bumps | `features_always_increment_minor = true` because `!` is never used | standard Cargo semantics, `!` marks breaking changes | adopt `!` (enforced by the PR title check, documented in `CONTRIBUTING.md`) and drop the override |
-| semver check | `semver_check = false` (no baseline) | on | off until the first release under the pipeline, then on; record in release-plz.toml as PR #135 already does |
+| semver check | `semver_check = false` (no baseline) | on | off until the first release under the pipeline, then on; record in release-plz.toml as PR #135 already does (on since the `0.2.0` release) |
 | Changelog | one `CHANGELOG.md` per crate, Keep a Changelog header | one at root | per crate (release-plz default for workspaces) |
 | Docs | `RELEASING.md` at root | `docs/RELEASE.md` + section in `CONTRIBUTING.md` | `docs/RELEASE.md`, port the excellent "Known blocker" section |
 | Default branch | switches CI to `main`, states default branch changes | `main` | yes, as a separate, announced step |
