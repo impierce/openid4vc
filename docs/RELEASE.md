@@ -84,6 +84,7 @@ credentials:
   running in the `release` environment, which is limited to `main`.
 - The release pull request, tags and GitHub releases are created by the `impierce-release-plz`
   GitHub App, so CI runs on the release pull request like on any other. The App's client ID is the
-  repository variable `RELEASE_PLZ_CLIENT_ID` and a private key of the App is the secret
-  `RELEASE_PLZ_PRIVATE_KEY`, as in `impierce/identity-kit`. Both come from the App's settings page:
-  the client ID is shown under "About", a private key is generated under "Private keys".
+  Actions variable `RELEASE_PLZ_CLIENT_ID` and a private key of the App is the Actions secret
+  `RELEASE_PLZ_PRIVATE_KEY`, set on this repository or on the organization with access to this
+  repository. Both come from the App's settings page: the client ID is shown under "About", a
+  private key is generated under "Private keys".
