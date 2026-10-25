@@ -64,18 +64,16 @@ impl ClaimPathPointer {
             for selected_value in current_selections.drain(..) {
                 match element {
                     ClaimPathElement::String(key) => {
-                        if let Some(obj) = selected_value.as_object() {
-                            if let Some(value_found) = obj.get(key) {
+                        if let Some(obj) = selected_value.as_object()
+                            && let Some(value_found) = obj.get(key) {
                                 next_selections.push(value_found);
                             }
-                        }
                     }
                     ClaimPathElement::Integer(index) => {
-                        if let Some(arr) = selected_value.as_array() {
-                            if let Some(value_found) = arr.get(*index as usize) {
+                        if let Some(arr) = selected_value.as_array()
+                            && let Some(value_found) = arr.get(*index as usize) {
                                 next_selections.push(value_found);
                             }
-                        }
                     }
                     ClaimPathElement::Null => {
                         if let Some(arr) = selected_value.as_array() {
