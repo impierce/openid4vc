@@ -12,10 +12,9 @@ pr_labels = ["release"]
 # One tag and one GitHub release per crate, for example `oid4vp-v0.2.0`.
 git_tag_name = "{{ package }}-v{{ version }}"
 git_release_name = "{{ package }} v{{ version }}"
-# cargo-semver-checks compares against the last published version. The 0.1.0 crates on crates.io date
-# from 2023 and no longer build against current dependencies, so there is no baseline yet; turn this
-# on after the first release under this process (docs/PLAN.md, Phase C).
-semver_check = false
+# cargo-semver-checks compares each crate against its last version on crates.io and bumps the minor
+# version on a breaking change, even if the commit title has no `!`.
+semver_check = true
 
 [[package]]
 # The facade is never released (docs/adr/0002-facade-crate.md); `publish = false` must match
