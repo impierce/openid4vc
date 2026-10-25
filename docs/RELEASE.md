@@ -84,5 +84,5 @@ credentials:
   running in the `release` environment, which is limited to `main`.
 - The release pull request, tags and GitHub releases are created by the `impierce-release-plz`
   GitHub App, so CI runs on the release pull request like on any other. The App's credentials are
-  stored in the repository variable `RELEASE_PLZ_CLIENT_ID` and the secret
-  `RELEASE_PLZ_PRIVATE_KEY` (the same App and credentials as in `impierce/identity-kit`).
+  the organization variable `RELEASE_PLZ_CLIENT_ID` and secret `RELEASE_PLZ_PRIVATE_KEY`, shared
+  with `impierce/identity-kit`; their repository access must include this repository.
