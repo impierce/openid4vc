@@ -50,28 +50,21 @@ Only commits that matter to users of the crates appear in the changelogs: `ci`, 
 `chore` commits are left out, except dependency updates (`chore(deps)`). The rules are configured in
 [`release-plz.toml`](../release-plz.toml).
 
-## First release
+## Adding a crate
 
-The first release under this process published all five crates at `0.2.0` on 2026-10-25 (#178,
-ADR 0001). `oid4vci`, `oid4vp` and `siopv2` had been published at `0.1.0` in 2023; `oid4vc-core` and
-`oid4vc-manager` were new. Their first changelog entries cover everything since the start of the
-repository. The 2023 releases were never tagged, so the compare links in those entries point at
-tags that do not exist.
+crates.io only accepts trusted publishing for a crate that exists. Before a new crate's first
+release pull request is merged:
 
-crates.io only lets you configure trusted publishing for a crate that exists, so the two new names
-were reserved by hand first: an empty `0.0.0` placeholder each, published with a crates.io token
-scoped to publishing new crates, revoked afterwards, and the placeholders yanked. Then the trusted
-publisher was configured for all five crates: repository `impierce/openid4vc`, workflow
-`release-plz.yml`, environment `release`. A crate added to the workspace later needs the same two
-steps before its first release pull request is merged.
+1. Reserve the name with an empty `0.0.0` placeholder, published with a crates.io token scoped to
+   publishing new crates. Revoke the token and yank the placeholder afterwards.
+2. Configure the trusted publisher on crates.io: repository `impierce/openid4vc`, workflow
+   `release-plz.yml`, environment `release`.
 
 ## A failed release
 
-The release job publishes the crates in dependency order and stops at the first one that fails,
-for example a crate without a trusted publisher (crates.io answers `403 Forbidden: The provided
-access token is not valid for crate ...`). The crates before it are published, tagged and released.
-Fix the cause and re-run the failed job (Actions, the failed Release-plz run, "Re-run failed
-jobs"): it runs on the same merge commit, skips the crates whose version is on crates.io already
+The release job publishes the crates in dependency order and stops at the first one that fails, for
+example a crate without a trusted publisher (`403 Forbidden: The provided access token is not valid
+for crate ...`). Fix the cause and re-run the failed job: it skips the crates already on crates.io
 and publishes the rest.
 
 ## Credentials

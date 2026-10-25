@@ -1,7 +1,7 @@
 # openid4vc: hardening and release plan
 
 - Date: 2026-10-18
-- Status: Phases A–C implemented; Phase D ongoing
+- Status: Phase A implemented (this document's PR); Phases B–D open
 - Basis: side-by-side comparison of `impierce/openid4vc` (`dev` @ 64036ca) with `impierce/identity-kit`
   (`main` @ dfceb57), plus the GitHub state of both repos (issues, PRs, releases, crates.io).
 
@@ -297,9 +297,10 @@ Status: items 1 to 8 are done (PRs 2 and 3 in §8).
 
 ## 5. Phase C: release process
 
-Status: done. PR 4 in §8 (#156) implemented items 1, 3, 4 and 5, and the first publish (item 2)
-released all five crates at `0.2.0` on 2026-10-25 (#178); [`RELEASE.md`](RELEASE.md) describes it.
-The list below is the plan as written, with what happened noted per item.
+Status: item 1 is PR 4 in §8, which also sets the versions for item 3 and generates the changelogs
+for item 4 (release-plz writes the full history per crate, so no hand-written entry is needed).
+Item 5 lands with it. Item 2, the first publish, comes next; [`RELEASE.md`](RELEASE.md) describes
+it.
 
 The publishing blockers in §1.2 are gone and QA runs `cargo publish --dry-run --workspace` on every
 pull request (#168).
@@ -310,21 +311,16 @@ pull request (#168).
    Change: `release_always = false`, trusted publishing with the `release` environment limited to
    `main`, GitHub App token for the release PR, standard bump semantics with `!`, `semver_check`
    off until first release, `docs/RELEASE.md` instead of `RELEASING.md`, SHA-pinned actions.
-   Done in #156.
 2. **First publish bootstrap**: `oid4vc-core` and `oid4vc-manager` do not exist on crates.io, and
    trusted publishing only works for existing crates. One manual `cargo publish` with a scoped
    token for those two, then configure the trusted publisher for all five, then the workflow takes
-   over. Done: both names were reserved with `0.0.0` placeholders (since yanked), and #178 published
-   `0.2.0` of all five.
+   over.
 3. **Versions**: `oid4vci`/`oid4vp`/`siopv2` go from the 2023 `0.1.0` to `0.2.0` (breaking by any
    measure); `oid4vc-core` and `oid4vc-manager` start at `0.1.0` or join at `0.2.0` for a uniform
-   first release (ADR 0001 decides). Afterwards release-plz bumps independently. Done: ADR 0001
-   chose `0.2.0` for all five.
+   first release (ADR 0001 decides). Afterwards release-plz bumps independently.
 4. **Changelog** per crate, first entry summarising "everything since 0.1.0" by hand once (allowed
-   before the pipeline owns the file), then generated. Done differently: release-plz generated the
-   first entries too, from the full history of each crate, so none was written by hand.
+   before the pipeline owns the file), then generated.
 5. **`CONTRIBUTING.md`/`AGENTS.md`** gain the "never bump by hand" rule the moment the pipeline merges.
-   Done in #156.
 
 ---
 
@@ -367,7 +363,7 @@ pull request (#168).
 | 1 | `docs: add agent setup, design document, feature checklist, ADRs and contributing guide` | A1–A7 | – | #139, merged |
 | 2 | `ci: commit Cargo.lock, replace the workflows with QA, coverage, deny and PR title checks` | B1–B7 | 1 | #140, merged |
 | 3 | `test: add cargo-fuzz targets seeded from specification examples` | B8 | 2 | #155, merged |
-| 4 | `ci: add release-plz pipeline with per-crate tags and trusted publishing` (supersedes #135) | C1, C3–C5 | 2 | #156, merged; first release #178 |
+| 4 | `ci: add release-plz pipeline with per-crate tags and trusted publishing` (supersedes #135) | C1, C3–C5 | 2 | this PR |
 | 5+ | Phase D issues, one PR each, `ready-for-agent` | D | 1–2 | |
 
 Manual steps alongside PR 1 (A8): create the five triage labels, install nothing else yet.
