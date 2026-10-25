@@ -7,7 +7,9 @@ pub enum DcqlClaimsError {
     EmptyClaims,
     #[error("Claim ID is required when claim_sets is present, missing at index {0}")]
     MissingClaimId(usize),
-    #[error("Claim ID '{0}' at index {1} contains invalid characters. Only alphanumeric, underscore, and hyphen characters are allowed")]
+    #[error(
+        "Claim ID '{0}' at index {1} contains invalid characters. Only alphanumeric, underscore, and hyphen characters are allowed"
+    )]
     InvalidClaimIdFormat(String, usize),
     #[error("Claim ID cannot be empty at index {0}")]
     EmptyClaimId(usize),

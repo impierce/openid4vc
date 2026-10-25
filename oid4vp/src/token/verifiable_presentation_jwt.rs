@@ -2,7 +2,7 @@ use super::verifiable_presentation_jwt_builder::VerifiablePresentationJwtBuilder
 use getset::Getters;
 use identity_kit::vc::{Party, Presentation, PresentationV2};
 use oid4vc_core::{JsonObject, RFC7519Claims};
-use serde::{ser::Error as _, Serialize, Serializer};
+use serde::{Serialize, Serializer, ser::Error as _};
 
 /// The presentation a [`VerifiablePresentationJwt`] carries.
 #[derive(Clone, Debug, PartialEq)]

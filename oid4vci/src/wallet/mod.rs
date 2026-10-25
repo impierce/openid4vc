@@ -1,3 +1,4 @@
+use crate::Proof;
 use crate::authorization_details::AuthorizationDetailsObject;
 use crate::authorization_request::{AuthorizationRequest, CodeChallengeMethod};
 use crate::authorization_response::AuthorizationResponse;
@@ -17,18 +18,17 @@ use crate::nonce_response::NonceResponse;
 use crate::notification_request::{NotificationEvent, NotificationRequest};
 use crate::proof::ProofType;
 use crate::proofs::Proofs;
-use crate::Proof;
 use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use jsonwebtoken::Algorithm;
+use oid4vc_core::SubjectSyntaxType;
 use oid4vc_core::authentication::subject::SigningSubject;
 use oid4vc_core::utils::form_urlencoded::to_form_urlencoded_string;
-use oid4vc_core::SubjectSyntaxType;
-use reqwest::header::{HeaderValue, CONTENT_TYPE};
 use reqwest::Url;
+use reqwest::header::{CONTENT_TYPE, HeaderValue};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
+use reqwest_retry::policies::ExponentialBackoff;
 use std::str::FromStr;
 
 #[derive(Debug)]
@@ -417,7 +417,9 @@ impl Wallet {
             .is_empty()
             && credential_configuration.proof_types_supported.is_empty()
         {
-            return Err(anyhow::anyhow!("Proof types supported must be defined if cryptographic binding methods are defined in the credential configuration."));
+            return Err(anyhow::anyhow!(
+                "Proof types supported must be defined if cryptographic binding methods are defined in the credential configuration."
+            ));
         }
 
         let credential_issuer_cryptographic_binding_methods_supported: Vec<SubjectSyntaxType> =
@@ -720,8 +722,8 @@ pub mod tests {
     use oid4vc_core::test_utils::TestSubject;
     use std::{collections::HashMap, sync::Arc};
     use wiremock::{
-        matchers::{method, path},
         Mock, MockServer, ResponseTemplate,
+        matchers::{method, path},
     };
 
     #[test]
@@ -817,16 +819,20 @@ pub mod tests {
 
         // Assert that the Wallet can get the Authorization Server Metadata from the Credential Issuer URL with or without a trailing slash.
         let credential_issuer_url = format!("{}/some/path/", mock_server.uri()).parse().unwrap();
-        assert!(wallet
-            .get_authorization_server_metadata(credential_issuer_url)
-            .await
-            .is_ok());
+        assert!(
+            wallet
+                .get_authorization_server_metadata(credential_issuer_url)
+                .await
+                .is_ok()
+        );
 
         let credential_issuer_url = format!("{}/some/path", mock_server.uri()).parse().unwrap();
-        assert!(wallet
-            .get_authorization_server_metadata(credential_issuer_url)
-            .await
-            .is_ok());
+        assert!(
+            wallet
+                .get_authorization_server_metadata(credential_issuer_url)
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
@@ -849,16 +855,20 @@ pub mod tests {
 
         // Assert that the Wallet can get the Authorization Server Metadata from the Credential Issuer URL with or without a trailing slash.
         let credential_issuer_url = format!("{}/some/path/", mock_server.uri()).parse().unwrap();
-        assert!(wallet
-            .get_authorization_server_metadata(credential_issuer_url)
-            .await
-            .is_ok());
+        assert!(
+            wallet
+                .get_authorization_server_metadata(credential_issuer_url)
+                .await
+                .is_ok()
+        );
 
         let credential_issuer_url = format!("{}/some/path", mock_server.uri()).parse().unwrap();
-        assert!(wallet
-            .get_authorization_server_metadata(credential_issuer_url)
-            .await
-            .is_ok());
+        assert!(
+            wallet
+                .get_authorization_server_metadata(credential_issuer_url)
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
@@ -881,15 +891,19 @@ pub mod tests {
 
         // Assert that the Wallet can get the Credential Issuer Metadata from the Credential Issuer URL with or without a trailing slash.
         let credential_issuer_url = format!("{}/some/path/", mock_server.uri()).parse().unwrap();
-        assert!(wallet
-            .get_credential_issuer_metadata(credential_issuer_url)
-            .await
-            .is_ok());
+        assert!(
+            wallet
+                .get_credential_issuer_metadata(credential_issuer_url)
+                .await
+                .is_ok()
+        );
 
         let credential_issuer_url = format!("{}/some/path", mock_server.uri()).parse().unwrap();
-        assert!(wallet
-            .get_credential_issuer_metadata(credential_issuer_url)
-            .await
-            .is_ok());
+        assert!(
+            wallet
+                .get_credential_issuer_metadata(credential_issuer_url)
+                .await
+                .is_ok()
+        );
     }
 }

@@ -12,7 +12,7 @@ pub mod types;
 pub mod utils;
 
 pub use authentication::{sign::Sign, subject::Subject, validator::Validator, verify::Verify};
-use rand::{distr::Alphanumeric, RngExt};
+use rand::{RngExt, distr::Alphanumeric};
 pub use rfc7519_claims::RFC7519Claims;
 use serde::Serialize;
 pub use subject_syntax_type::{DidMethod, SubjectSyntaxType};

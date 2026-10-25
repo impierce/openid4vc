@@ -1,7 +1,7 @@
 use anyhow::Result;
 use nutype::nutype;
 use oid4vc_core::utils::predicates::not_empty;
-use oid4vc_core::{to_query_value, JsonObject};
+use oid4vc_core::{JsonObject, to_query_value};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 

@@ -4,8 +4,8 @@ use identity_kit::{
     methods::DidKey,
     resolver::Resolver,
     vc::{
-        validation::{CredentialStatus, StatusCheck, StatusError},
         Jwt, Presentation,
+        validation::{CredentialStatus, StatusCheck, StatusError},
     },
 };
 use jsonwebtoken::{Algorithm, Header};
@@ -16,7 +16,7 @@ use oid4vc_core::{
     client_metadata::ClientMetadataResource,
     jwt,
 };
-use oid4vc_manager::{methods::key_method::KeySubject, ProviderManager};
+use oid4vc_manager::{ProviderManager, methods::key_method::KeySubject};
 use oid4vci::VerifiableCredentialJwt;
 use oid4vp::authorization_request::AlgValues;
 use oid4vp::authorization_request::{JwtVcJsonParameters, VpFormatsSupported};

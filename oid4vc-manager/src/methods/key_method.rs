@@ -1,13 +1,13 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use identity_kit::{
     did::{Did, DidUrl},
     jose::{JwsAlgorithm, KeyType, Signer as _},
     keys::{InMemoryKeyStore, KeyId, KeySigner, KeySpec, KeyStore},
-    methods::{key::KeyFormat, DidKey},
+    methods::{DidKey, key::KeyFormat},
 };
 use jsonwebtoken::Algorithm;
-use oid4vc_core::{authentication::sign::ExternalSign, Sign, Subject, Verify};
+use oid4vc_core::{Sign, Subject, Verify, authentication::sign::ExternalSign};
 use std::sync::Arc;
 
 /// This [`KeySubject`] implements the [`Subject`] trait and can be used as a subject for a [`siopv2::Provider`]. It uses the
@@ -131,13 +131,13 @@ fn resolve_public_key(kid: &str) -> Result<Vec<u8>> {
 mod tests {
     use super::*;
     use crate::{ProviderManager, RelyingPartyManager};
-    use identity_kit::jose::{encode_compact, JwsHeader};
+    use identity_kit::jose::{JwsHeader, encode_compact};
     use jsonwebtoken::Algorithm;
     use oid4vc_core::{
-        authorization_request::{AuthorizationRequest, Object},
         Validator,
+        authorization_request::{AuthorizationRequest, Object},
     };
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
     use siopv2::siopv2::SIOPv2;
     use std::sync::Arc;
 

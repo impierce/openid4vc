@@ -7,7 +7,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use ed25519_dalek::{Signature, Signer, SigningKey};
 use jsonwebtoken::Algorithm;
-use oid4vc_core::{authentication::sign::ExternalSign, Sign, Subject, Verify};
+use oid4vc_core::{Sign, Subject, Verify, authentication::sign::ExternalSign};
 use siopv2::{StandardClaimsRequests, StandardClaimsValues};
 use std::sync::LazyLock;
 

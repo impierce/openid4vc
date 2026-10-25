@@ -58,11 +58,7 @@ impl InteractiveAuthorizationResponse {
 
     /// Returns the authorization code if the response is complete.
     pub fn authorization_code(&self) -> Option<&str> {
-        if self.is_complete() {
-            self.code.as_deref()
-        } else {
-            None
-        }
+        if self.is_complete() { self.code.as_deref() } else { None }
     }
 }
 

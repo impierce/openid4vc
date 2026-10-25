@@ -13,9 +13,9 @@ use identity_kit::methods::DidKey;
 use identity_kit::resolver::Resolver;
 use identity_kit::vc::validation::{CredentialStatus, StatusCheck, StatusError};
 use libfuzzer_sys::fuzz_target;
+use oid4vp::VpToken;
 use oid4vp::dcql::dcql_query::DcqlQuery;
 use oid4vp::token::vp_token_validator::VpTokenValidator;
-use oid4vp::VpToken;
 use serde_json::json;
 
 /// The `client_id` the seeds' presentations are bound to.

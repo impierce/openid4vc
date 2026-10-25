@@ -2,26 +2,26 @@ use crate::common::{MemoryStorage, Storage, TestSubject};
 use async_trait::async_trait;
 use jsonwebtoken::Algorithm;
 use oid4vc_core::{
+    DidMethod, Sign, Subject, SubjectSyntaxType, Verify,
     authentication::sign::ExternalSign,
     authorization_request::{AuthorizationRequest, ByReference, Object},
     authorization_response::AuthorizationResponse,
     client_metadata::ClientMetadataResource,
     scope::{Scope, ScopeValue},
-    DidMethod, Sign, Subject, SubjectSyntaxType, Verify,
 };
-use oid4vc_manager::{methods::key_method::KeySubject, ProviderManager, RelyingPartyManager};
+use oid4vc_manager::{ProviderManager, RelyingPartyManager, methods::key_method::KeySubject};
 use siopv2::{
+    StandardClaimsRequests, StandardClaimsValues,
     authorization_request::ClientMetadataParameters,
     claims::{Address, IndividualClaimRequest},
     siopv2::SIOPv2,
-    StandardClaimsRequests, StandardClaimsValues,
 };
 use std::sync::LazyLock;
 use std::{str::FromStr, sync::Arc};
 use wiremock::{
+    Mock, MockServer, ResponseTemplate,
     http::Method,
     matchers::{method, path},
-    Mock, MockServer, ResponseTemplate,
 };
 
 /// A Subject that can sign and verify messages with multiple different DID Methods.

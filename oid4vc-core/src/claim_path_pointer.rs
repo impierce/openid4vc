@@ -65,15 +65,17 @@ impl ClaimPathPointer {
                 match element {
                     ClaimPathElement::String(key) => {
                         if let Some(obj) = selected_value.as_object()
-                            && let Some(value_found) = obj.get(key) {
-                                next_selections.push(value_found);
-                            }
+                            && let Some(value_found) = obj.get(key)
+                        {
+                            next_selections.push(value_found);
+                        }
                     }
                     ClaimPathElement::Integer(index) => {
                         if let Some(arr) = selected_value.as_array()
-                            && let Some(value_found) = arr.get(*index as usize) {
-                                next_selections.push(value_found);
-                            }
+                            && let Some(value_found) = arr.get(*index as usize)
+                        {
+                            next_selections.push(value_found);
+                        }
                     }
                     ClaimPathElement::Null => {
                         if let Some(arr) = selected_value.as_array() {

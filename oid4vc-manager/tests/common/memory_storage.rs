@@ -5,6 +5,7 @@ use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::{authentication::subject::SigningSubject, generate_authorization_code, jwt};
 use oid4vc_manager::storage::Storage;
 use oid4vci::{
+    VerifiableCredentialJwt,
     authorization_response::AuthorizationResponse,
     credential_issuer::credential_configurations_supported::CredentialConfigurationsSupportedObject,
     credential_offer::{AuthorizationCode, PreAuthorizedCode},
@@ -12,7 +13,6 @@ use oid4vci::{
     token_request::TokenRequest,
     token_response::TokenResponse,
     wallet::PushedAuthorizationResponse,
-    VerifiableCredentialJwt,
 };
 use reqwest::Url;
 use serde::{Deserialize, Serialize};

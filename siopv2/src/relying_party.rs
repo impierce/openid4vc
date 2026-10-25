@@ -2,12 +2,12 @@ use crate::siopv2::SIOPv2;
 use anyhow::Result;
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::{
+    SubjectSyntaxType, Validator,
     authentication::subject::SigningSubject,
     authorization_request::{AuthorizationRequest, Object},
     authorization_response::AuthorizationResponse,
     jwt,
     openid4vc_extension::{Extension, ResponseHandle},
-    SubjectSyntaxType, Validator,
 };
 use std::collections::HashMap;
 

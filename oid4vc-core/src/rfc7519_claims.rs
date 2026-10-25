@@ -1,7 +1,7 @@
 use getset::Getters;
 use is_empty::IsEmpty;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, skip_serializing_none, DisplayFromStr, PickFirst};
+use serde_with::{DisplayFromStr, PickFirst, serde_as, skip_serializing_none};
 
 /// Set of IANA registered claims by the Internet Engineering Task Force (IETF) in
 /// [RFC 7519](https://tools.ietf.org/html/rfc7519#section-4.1).

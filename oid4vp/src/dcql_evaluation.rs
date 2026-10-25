@@ -187,7 +187,7 @@ pub fn matches_claim_values(actual_value: &Value, required_value: &ClaimValues) 
 mod tests {
     use super::*;
     use crate::{
-        dcql::claims::{validate_claims, ClaimsContext},
+        dcql::claims::{ClaimsContext, validate_claims},
         token::vp_token_validator::DecodedVpTokenBuilder,
     };
     use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer, ClaimValue, ClaimValues};

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{authentication::sign::ExternalSign, Sign, Subject, Verify};
+use crate::{Sign, Subject, Verify, authentication::sign::ExternalSign};
 use anyhow::Result;
 use async_trait::async_trait;
 use ed25519_dalek::{Signature, Signer, SigningKey};

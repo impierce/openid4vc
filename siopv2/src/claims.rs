@@ -1,7 +1,7 @@
 use crate::parse_other;
 use oid4vc_core::{
-    scope::{Scope, ScopeValue},
     JsonObject,
+    scope::{Scope, ScopeValue},
 };
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_with::skip_serializing_none;
@@ -317,7 +317,7 @@ pub struct Address<C: sealed::Claim> {
 mod tests {
     use super::*;
     use crate::test_utils::{MemoryStorage, Storage};
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
     use std::sync::LazyLock;
 
     pub static USER_CLAIMS: LazyLock<Value> = LazyLock::new(|| {

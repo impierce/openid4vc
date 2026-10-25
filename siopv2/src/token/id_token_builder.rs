@@ -1,6 +1,6 @@
 use super::id_token::SubJwk;
 use crate::{IdToken, StandardClaimsValues};
-use oid4vc_core::{builder_fn, JsonObject, RFC7519Claims};
+use oid4vc_core::{JsonObject, RFC7519Claims, builder_fn};
 
 #[derive(Default)]
 pub struct IdTokenBuilder {
@@ -78,26 +78,30 @@ mod tests {
 
     #[test]
     fn test_valid_build() {
-        assert!(IdTokenBuilder::new()
-            .iss("NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs")
-            .sub("NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs")
-            .aud("https://client.example.org/cb")
-            .exp(1311281970)
-            .iat(1311280970)
-            .build()
-            .is_ok());
+        assert!(
+            IdTokenBuilder::new()
+                .iss("NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs")
+                .sub("NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs")
+                .aud("https://client.example.org/cb")
+                .exp(1311281970)
+                .iat(1311280970)
+                .build()
+                .is_ok()
+        );
     }
 
     #[test]
     fn test_invalid_build() {
         assert!(IdTokenBuilder::new().build().is_err());
 
-        assert!(IdTokenBuilder::new()
-            .iss("iss")
-            .build()
-            .unwrap_err()
-            .to_string()
-            .contains("sub claim is required"));
+        assert!(
+            IdTokenBuilder::new()
+                .iss("iss")
+                .build()
+                .unwrap_err()
+                .to_string()
+                .contains("sub claim is required")
+        );
 
         // TODO: According to https://openid.net/specs/openid-connect-core-1_0.html#IDToken, the sub claim MUST NOT
         // exceed 255 ASCII characters in length. However, for `did:jwk` it can be longer so we need to figure out how
@@ -110,15 +114,17 @@ mod tests {
         //     .to_string()
         //     .contains("sub claim MUST NOT exceed 255 ASCII characters in length"));
 
-        assert!(IdTokenBuilder::new()
-            .iss("iss")
-            .sub("sub")
-            .aud("aud")
-            .exp(0)
-            .iat(0)
-            .build()
-            .unwrap_err()
-            .to_string()
-            .contains("iss and sub must be equal"));
+        assert!(
+            IdTokenBuilder::new()
+                .iss("iss")
+                .sub("sub")
+                .aud("aud")
+                .exp(0)
+                .iat(0)
+                .build()
+                .unwrap_err()
+                .to_string()
+                .contains("iss and sub must be equal")
+        );
     }
 }

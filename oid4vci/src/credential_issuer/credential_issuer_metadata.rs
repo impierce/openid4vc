@@ -187,18 +187,20 @@ mod tests {
                         .into_iter()
                         .collect(),
                         credential_metadata: Some(CredentialMetadata {
-                            display: Some(vec![serde_json::from_value(json!({
-                                "name": "IdentityCredential",
-                                "locale": "en-US",
-                                "logo": {
-                                    "uri": "https://university.example.edu/public/logo_credential.png",
-                                    "alt_text": "a square logo of a university credential"
-                                },
-                                "description": "A credential that signals the membership of a university",
-                                "background_color": "#12107c",
-                                "text_color": "#FFFFFF"
-                            }))
-                            .unwrap()]),
+                            display: Some(vec![
+                                serde_json::from_value(json!({
+                                    "name": "IdentityCredential",
+                                    "locale": "en-US",
+                                    "logo": {
+                                        "uri": "https://university.example.edu/public/logo_credential.png",
+                                        "alt_text": "a square logo of a university credential"
+                                    },
+                                    "description": "A credential that signals the membership of a university",
+                                    "background_color": "#12107c",
+                                    "text_color": "#FFFFFF"
+                                }))
+                                .unwrap()
+                            ]),
                             claims: Some(vec![
                                 ClaimDescription {
                                     path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
@@ -362,13 +364,17 @@ mod tests {
         let credential_issuer_metadata: CredentialIssuerMetadata = serde_json::from_value(json_data).unwrap();
 
         // Check that only the valid entry is present in the resulting map.
-        assert!(credential_issuer_metadata
-            .credential_configurations_supported
-            .contains_key("ValidCredential"));
+        assert!(
+            credential_issuer_metadata
+                .credential_configurations_supported
+                .contains_key("ValidCredential")
+        );
 
         // Check that the invalid entry has been filtered out.
-        assert!(!credential_issuer_metadata
-            .credential_configurations_supported
-            .contains_key("InvalidCredential"));
+        assert!(
+            !credential_issuer_metadata
+                .credential_configurations_supported
+                .contains_key("InvalidCredential")
+        );
     }
 }
