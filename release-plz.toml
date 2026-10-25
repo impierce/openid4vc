@@ -12,8 +12,8 @@ pr_labels = ["release"]
 # One tag and one GitHub release per crate, for example `oid4vp-v0.2.0`.
 git_tag_name = "{{ package }}-v{{ version }}"
 git_release_name = "{{ package }} v{{ version }}"
-# cargo-semver-checks compares each crate against its last version on crates.io (0.2.0 or later) and
-# bumps the minor version on a breaking change, even if the commit title has no `!`.
+# cargo-semver-checks compares each crate against its last version on crates.io and bumps the minor
+# version on a breaking change, even if the commit title has no `!`.
 semver_check = true
 
 [[package]]

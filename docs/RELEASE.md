@@ -42,8 +42,7 @@ format.
 release-plz also runs [`cargo-semver-checks`](https://github.com/obi1kenobi/cargo-semver-checks)
 (`semver_check` in [`release-plz.toml`](../release-plz.toml)) against each crate's last version on
 crates.io. A breaking API change it finds bumps the minor version even if the pull request title
-has no `!`, and the release pull request lists what it found. It was off until the first release,
-because the 2023 `0.1.0` releases do not build against current dependencies.
+has no `!`, and the release pull request lists what it found.
 
 ## Changelog
 
