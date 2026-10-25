@@ -20,6 +20,7 @@ input: nothing panics, and whatever parses survives a round trip through its ser
 | OID4VCI JSON messages (metadata, token, credential, nonce, notification) | `issuance_messages`     |
 | OID4VP and SIOPv2 JSON messages (request parameters, client metadata, VP token, claims) | `presentation_messages` |
 | Compact JWTs and SD-JWTs before signature check, Subject Syntax Types, DID methods | `jwt` |
+| `VpTokenValidator` (signature, holder binding, status, DCQL evaluation of the decoded credentials) | `vp_token_validation` |
 
 A new JSON type joins `issuance_messages` or `presentation_messages` with one `round_trip::<T>(data)`
 line. A new input format (a new URL scheme, a compact serialization, a new query language) gets a

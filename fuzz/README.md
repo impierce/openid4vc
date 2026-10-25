@@ -17,6 +17,7 @@ One file per target in [`fuzz_targets/`](fuzz_targets/); the doc comment at the 
 | `issuance_messages`     | OID4VCI: issuer and authorization server metadata, credential configurations, authorization details, token request (JSON and form-encoded) and response, credential request and response, nonce and notification | a JSON document or a form-encoded token request |
 | `presentation_messages` | OID4VP and SIOPv2: request parameters, client metadata, VP token and decoded VP token, response parameters, claim requests   | a JSON document                                                  |
 | `jwt`                   | Compact JWTs and SD-JWTs before signature check (`extract_header`, `extract_normalized_did_kid_from_jwt`, unverified claims), `SubjectSyntaxType`, `DidMethod` | a JWT, an SD-JWT or a Subject Syntax Type |
+| `vp_token_validation`   | `VpTokenValidator::validate_vp_token` for `jwt_vc_json`, `dc+sd-jwt` and `vc+sd-jwt`, with and without holder binding, keys over `did:key` | a selector byte (`'0'` to `'5'`), then a presentation |
 
 ## Layout
 
@@ -33,7 +34,7 @@ fuzz/
 ### Seeds
 
 libFuzzer starts from whatever inputs it is given and mutates from there, so a seed that already parses puts it deep into the code from the first run instead of leaving it to guess the shape of a DCQL query or a credential offer URL byte by byte.
-The seeds in `seeds/<target>/` are the specification examples the unit tests run against (`oid4vci/tests/examples`, `oid4vp/tests/examples`), the URL forms built from them, and a few hand-made messages for the types the specifications give no standalone example of.
+The seeds in `seeds/<target>/` are the specification examples the unit tests run against (`oid4vci/tests/examples`, `oid4vp/tests/examples`), the URL forms built from them, and a few hand-made messages for the types the specifications give no standalone example of; `vp_token_validation` starts from the signed presentations of the validator's tests, since only a correctly signed presentation gets past the signature checks.
 Every file is named after what it holds, so it can be read and reviewed: `oid4vp-dcql-complex-mdoc.json` is the complex mdoc example of the OID4VP DCQL section, `oid4vci-credential-offer-by-reference-url.txt` is that credential offer as an `openid-credential-offer://` URL, `evaluation-credential-set-alternatives.json` is a query with credential sets next to the presentations it is evaluated against.
 The names are for people; libFuzzer reads only the bytes.
 
