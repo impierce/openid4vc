@@ -87,7 +87,8 @@ default branch. It must follow [Conventional Commits](https://www.conventionalco
 Scope the title with the crate name when the change is in one crate; leave the scope out when it
 spans several. Mark a breaking change with `!`: the title determines the next version number of
 the crates it touches and their changelog entry, and before 1.0 a `!` bumps the minor version.
-So describe the change from a user's point of view.
+Titles of type `ci`, `test`, `style` and `chore` get no changelog entry, except `chore(deps)` and
+breaking changes. So describe the change from a user's point of view.
 
 Write the title, and every commit message, in terse commit style: imperative mood, lowercase after
 the colon, no trailing period, no articles (_the_, _a_, _an_), and code literals in backticks, as in
