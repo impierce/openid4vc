@@ -1752,7 +1752,7 @@ dependencies = [
 
 [[package]]
 name = "oid4vc-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1779,7 +1779,7 @@ dependencies = [
 
 [[package]]
 name = "oid4vc-manager"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1812,7 +1812,7 @@ dependencies = [
 
 [[package]]
 name = "oid4vci"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1839,7 +1839,7 @@ dependencies = [
 
 [[package]]
 name = "oid4vp"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2766,7 +2766,7 @@ checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
 
 [[package]]
 name = "siopv2"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-trait",
