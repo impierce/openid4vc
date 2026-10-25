@@ -83,6 +83,7 @@ credentials:
   [trusted publishing](https://crates.io/docs/trusted-publishing), only from `release-plz.yml`
   running in the `release` environment, which is limited to `main`.
 - The release pull request, tags and GitHub releases are created by the `impierce-release-plz`
-  GitHub App, so CI runs on the release pull request like on any other. The App's credentials are
-  the organization variable `RELEASE_PLZ_CLIENT_ID` and secret `RELEASE_PLZ_PRIVATE_KEY`, shared
-  with `impierce/identity-kit`; their repository access must include this repository.
+  GitHub App, so CI runs on the release pull request like on any other. The App's client ID is the
+  repository variable `RELEASE_PLZ_CLIENT_ID` and a private key of the App is the secret
+  `RELEASE_PLZ_PRIVATE_KEY`, as in `impierce/identity-kit`. Both come from the App's settings page:
+  the client ID is shown under "About", a private key is generated under "Private keys".
