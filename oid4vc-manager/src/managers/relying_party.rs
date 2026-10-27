@@ -1,10 +1,10 @@
 use anyhow::Result;
 use jsonwebtoken::Algorithm;
 use oid4vc_core::{
+    Subject, SubjectSyntaxType,
     authorization_request::{AuthorizationRequest, Object},
     authorization_response::AuthorizationResponse,
     openid4vc_extension::{Extension, ResponseHandle},
-    Subject, SubjectSyntaxType,
 };
 use siopv2::RelyingParty;
 use std::sync::Arc;

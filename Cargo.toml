@@ -1,7 +1,7 @@
 [package]
 name = "oid4vc"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
 description = "Rust implementation of the OpenID4VC standards"
 homepage = "https://www.impierce.com/"
 keywords = ["openid4vc", "siopv2", "openid4vp", "openid4vci", "OpenID"]
@@ -17,6 +17,7 @@ members = ["oid4vc-core", "oid4vci", "oid4vp", "siopv2", "oid4vc-manager"]
 exclude = ["fuzz"]
 
 [workspace.package]
+edition = "2024"
 homepage = "https://www.impierce.com/"
 license = "Apache-2.0"
 repository = "https://github.com/impierce/openid4vc"

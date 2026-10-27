@@ -1,5 +1,5 @@
-use super::claims::{validate_claims, ClaimsContext, DcqlClaimsError};
-use super::meta::{validate_meta, MetaContext, MetaError};
+use super::claims::{ClaimsContext, DcqlClaimsError, validate_claims};
+use super::meta::{MetaContext, MetaError, validate_meta};
 use nutype::nutype;
 use oid4vc_core::claim_path_pointer::{ClaimPathPointer, ClaimValues};
 use serde::{Deserialize, Serialize};
@@ -1034,10 +1034,12 @@ mod tests {
 
         assert!(!parsed.as_object().unwrap().contains_key("multiple"));
         assert!(!parsed.as_object().unwrap().contains_key("trusted_authorities"));
-        assert!(parsed
-            .as_object()
-            .unwrap()
-            .contains_key("require_cryptographic_holder_binding"));
+        assert!(
+            parsed
+                .as_object()
+                .unwrap()
+                .contains_key("require_cryptographic_holder_binding")
+        );
     }
 
     pub static INVALID_CREDENTIAL_SET: LazyLock<serde_json::Value> = LazyLock::new(|| {

@@ -8,10 +8,10 @@ use oid4vc_manager::{
 use oid4vci::authorization_request::CodeChallengeMethod;
 use oid4vci::pkce;
 use oid4vci::{
+    Wallet,
     authorization_details::{AuthorizationDetailsObject, OpenidCredential},
     credential_response::{CredentialResponse, CredentialResponseType},
     token_request::TokenRequest,
-    Wallet,
 };
 use std::sync::Arc;
 use uuid::Uuid;

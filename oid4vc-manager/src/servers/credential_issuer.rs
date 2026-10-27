@@ -3,14 +3,14 @@ use std::time::Duration;
 use crate::{managers::credential_issuer::CredentialIssuerManager, storage::Storage};
 use anyhow::Result;
 use axum::{
+    Form, Json, Router,
     extract::{RawForm, State},
-    http::{header::CONTENT_TYPE, Method, StatusCode},
+    http::{Method, StatusCode, header::CONTENT_TYPE},
     response::{AppendHeaders, IntoResponse},
     routing::{get, post},
-    Form, Json, Router,
 };
 use axum_auth::AuthBearer;
-use oid4vc_core::{utils::form_urlencoded::from_form_urlencoded_string, Validator};
+use oid4vc_core::{Validator, utils::form_urlencoded::from_form_urlencoded_string};
 use oid4vci::{
     credential_request::{CredentialIdentifierOrCredentialConfigurationId, CredentialRequest},
     notification_request::NotificationRequest,

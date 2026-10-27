@@ -8,7 +8,7 @@ use self::{
     sealed::FormatExtension,
     vc_jose_cose::vc_sd_jwt::VcSdJwt,
     w3c_verifiable_credentials::{
-        jwt_vc_json::JwtVcJson, jwt_vc_json_ld::JwtVcJsonLd, ldp_vc::LdpVc, CredentialSubject,
+        CredentialSubject, jwt_vc_json::JwtVcJson, jwt_vc_json_ld::JwtVcJsonLd, ldp_vc::LdpVc,
     },
 };
 use ietf_sd_jwt_vc::dc_sd_jwt::DcSdJwt;

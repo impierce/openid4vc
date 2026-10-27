@@ -1,6 +1,6 @@
-use crate::{authorization_response::AuthorizationResponse, Subject, SubjectSyntaxType, Validator};
+use crate::{Subject, SubjectSyntaxType, Validator, authorization_response::AuthorizationResponse};
 use jsonwebtoken::Algorithm;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::{future::Future, sync::Arc};
 
 /// A [`RequestHandle`] is used to declare what functionality a request should have. Most notable, it declares the

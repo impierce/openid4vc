@@ -19,8 +19,8 @@ use oid4vci::nonce_response::NonceResponse;
 use oid4vci::notification_request::NotificationRequest;
 use oid4vci::token_request::TokenRequest;
 use oid4vci::token_response::TokenResponse;
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use serde_json::Value;
 
 fn round_trip<T: Serialize + DeserializeOwned + PartialEq + Debug>(data: &[u8]) -> Option<T> {

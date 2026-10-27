@@ -1,6 +1,6 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use getset::Getters;
-use oid4vc_core::{builder_fn, RFC7519Claims};
+use oid4vc_core::{RFC7519Claims, builder_fn};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize, Getters)]

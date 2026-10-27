@@ -1,9 +1,9 @@
 use crate::{
+    JsonObject, RFC7519Claims,
     openid4vc_extension::{Extension, Generic, OpenID4VC, RequestHandle},
     utils::form_urlencoded::form_urlencoded_to_json_object,
-    JsonObject, RFC7519Claims,
 };
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::json;
 
 // TODO: refactor this

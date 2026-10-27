@@ -109,8 +109,8 @@ pub struct CredentialConfigurationsSupportedDisplay {
 mod tests {
     use super::*;
     use crate::credential_format_profiles::{
-        w3c_verifiable_credentials::{jwt_vc_json, ldp_vc},
         CredentialFormats, Parameters,
+        w3c_verifiable_credentials::{jwt_vc_json, ldp_vc},
     };
     use oid4vc_core::claim_path_pointer::ClaimPathElement;
     use serde_json::{from_str, json};
@@ -160,11 +160,13 @@ mod tests {
                                     ])
                                     .unwrap(),
                                     mandatory: false,
-                                    display: vec![serde_json::from_value(json!({
-                                        "name": "Given Name",
-                                        "locale": "en-US"
-                                    }))
-                                    .unwrap()],
+                                    display: vec![
+                                        serde_json::from_value(json!({
+                                            "name": "Given Name",
+                                            "locale": "en-US"
+                                        }))
+                                        .unwrap()
+                                    ],
                                 },
                                 ClaimDescription {
                                     path: ClaimPathPointer::try_new(vec![
@@ -173,11 +175,13 @@ mod tests {
                                     ])
                                     .unwrap(),
                                     mandatory: false,
-                                    display: vec![serde_json::from_value(json!({
-                                        "name": "Surname",
-                                        "locale": "en-US"
-                                    }))
-                                    .unwrap()],
+                                    display: vec![
+                                        serde_json::from_value(json!({
+                                            "name": "Surname",
+                                            "locale": "en-US"
+                                        }))
+                                        .unwrap()
+                                    ],
                                 },
                                 ClaimDescription {
                                     path: ClaimPathPointer::try_new(vec![
@@ -195,10 +199,12 @@ mod tests {
                                     ])
                                     .unwrap(),
                                     mandatory: true,
-                                    display: vec![serde_json::from_value(json!({
-                                        "name": "GPA",
-                                    }))
-                                    .unwrap()],
+                                    display: vec![
+                                        serde_json::from_value(json!({
+                                            "name": "GPA",
+                                        }))
+                                        .unwrap()
+                                    ],
                                 }
                             ]),
                             display: Some(vec![CredentialConfigurationsSupportedDisplay {
@@ -250,18 +256,20 @@ mod tests {
                         )],
                         proof_types_supported: HashMap::new(),
                         credential_metadata: Some(CredentialMetadata {
-                            display: Some(vec![serde_json::from_value(json!({
-                                    "name": "University Credential",
-                                    "locale": "en-US",
-                                    "logo": {
-                                        "uri": "https://university.example.edu/public/logo.png",
-                                        "alt_text": "a square logo of a university"
-                                    },
-                                    "background_color": "#12107c",
-                                    "text_color": "#FFFFFF"
-                                }
-                            ))
-                            .unwrap()]),
+                            display: Some(vec![
+                                serde_json::from_value(json!({
+                                        "name": "University Credential",
+                                        "locale": "en-US",
+                                        "logo": {
+                                            "uri": "https://university.example.edu/public/logo.png",
+                                            "alt_text": "a square logo of a university"
+                                        },
+                                        "background_color": "#12107c",
+                                        "text_color": "#FFFFFF"
+                                    }
+                                ))
+                                .unwrap()
+                            ]),
                             claims: Some(vec![
                                 ClaimDescription {
                                     path: ClaimPathPointer::try_new(vec![
@@ -270,11 +278,13 @@ mod tests {
                                     ])
                                     .unwrap(),
                                     mandatory: false,
-                                    display: vec![serde_json::from_value(json!({
-                                        "name": "Given Name",
-                                        "locale": "en-US"
-                                    }))
-                                    .unwrap()],
+                                    display: vec![
+                                        serde_json::from_value(json!({
+                                            "name": "Given Name",
+                                            "locale": "en-US"
+                                        }))
+                                        .unwrap()
+                                    ],
                                 },
                                 ClaimDescription {
                                     path: ClaimPathPointer::try_new(vec![
@@ -283,11 +293,13 @@ mod tests {
                                     ])
                                     .unwrap(),
                                     mandatory: false,
-                                    display: vec![serde_json::from_value(json!({
-                                        "name": "Surname",
-                                        "locale": "en-US"
-                                    }))
-                                    .unwrap()],
+                                    display: vec![
+                                        serde_json::from_value(json!({
+                                            "name": "Surname",
+                                            "locale": "en-US"
+                                        }))
+                                        .unwrap()
+                                    ],
                                 },
                                 ClaimDescription {
                                     path: ClaimPathPointer::try_new(vec![
@@ -305,10 +317,12 @@ mod tests {
                                     ])
                                     .unwrap(),
                                     mandatory: true,
-                                    display: vec![serde_json::from_value(json!({
-                                        "name": "GPA",
-                                    }))
-                                    .unwrap()],
+                                    display: vec![
+                                        serde_json::from_value(json!({
+                                            "name": "GPA",
+                                        }))
+                                        .unwrap()
+                                    ],
                                 }
                             ])
                         },)
@@ -388,11 +402,13 @@ mod tests {
                                     ])
                                     .unwrap(),
                                     mandatory: false,
-                                    display: vec![serde_json::from_value(json!({
-                                        "name": "Surname",
-                                        "locale": "en-US"
-                                    }))
-                                    .unwrap()],
+                                    display: vec![
+                                        serde_json::from_value(json!({
+                                            "name": "Surname",
+                                            "locale": "en-US"
+                                        }))
+                                        .unwrap()
+                                    ],
                                 },
                                 ClaimDescription {
                                     path: ClaimPathPointer::try_new(vec![
@@ -442,17 +458,19 @@ mod tests {
                         .into_iter()
                         .collect(),
                         credential_metadata: Some(CredentialMetadata {
-                            display: Some(vec![serde_json::from_value(json!(        {
-                              "name": "IdentityCredential",
-                              "logo": {
-                                "uri": "https://university.example.edu/public/logo.png",
-                                "alt_text": "a square logo of a university"
-                              },
-                              "locale": "en-US",
-                              "background_color": "#12107c",
-                              "text_color": "#FFFFFF"
-                            }))
-                            .unwrap()]),
+                            display: Some(vec![
+                                serde_json::from_value(json!(        {
+                                  "name": "IdentityCredential",
+                                  "logo": {
+                                    "uri": "https://university.example.edu/public/logo.png",
+                                    "alt_text": "a square logo of a university"
+                                  },
+                                  "locale": "en-US",
+                                  "background_color": "#12107c",
+                                  "text_color": "#FFFFFF"
+                                }))
+                                .unwrap()
+                            ]),
                             claims: Some(vec![
                                 ClaimDescription {
                                     path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(

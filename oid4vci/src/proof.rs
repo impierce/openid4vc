@@ -1,6 +1,6 @@
 use crate::credential_issuer::credential_configurations_supported::AlgIdentifier;
 use jsonwebtoken::{Algorithm, Header};
-use oid4vc_core::{builder_fn, jwt, RFC7519Claims, Subject};
+use oid4vc_core::{RFC7519Claims, Subject, builder_fn, jwt};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 

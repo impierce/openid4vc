@@ -8,12 +8,12 @@ use std::fmt::Debug;
 
 use libfuzzer_sys::fuzz_target;
 use oid4vc_core::client_metadata::ClientMetadataResource;
+use oid4vp::VpToken;
 use oid4vp::authorization_request::{AuthorizationRequestParameters, ClientMetadataParameters};
 use oid4vp::oid4vp::AuthorizationResponseParameters;
 use oid4vp::token::vp_token_validator::DecodedVpToken;
-use oid4vp::VpToken;
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use siopv2::authorization_request::AuthorizationRequestParameters as SiopRequestParameters;
 use siopv2::siopv2::AuthorizationResponseParameters as SiopResponseParameters;
 use siopv2::{ClaimRequests, StandardClaimsRequests, StandardClaimsValues};

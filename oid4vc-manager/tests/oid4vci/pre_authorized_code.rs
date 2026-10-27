@@ -6,11 +6,11 @@ use oid4vc_manager::{
 };
 use oid4vci::credential_offer::CredentialConfigurationIds;
 use oid4vci::{
+    Wallet,
     credential_offer::{CredentialOffer, CredentialOfferParameters, Grants},
     credential_response::{CredentialResponse, CredentialResponseType},
     notification_request::NotificationEvent,
     token_request::TokenRequest,
-    Wallet,
 };
 use std::sync::Arc;
 
@@ -169,16 +169,18 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         let event = NotificationEvent::CredentialAccepted;
         let event_description = None;
 
-        assert!(wallet
-            .send_notification_request(
-                notification_endpoint,
-                notification_id,
-                access_token,
-                event,
-                event_description,
-            )
-            .await
-            .is_ok());
+        assert!(
+            wallet
+                .send_notification_request(
+                    notification_endpoint,
+                    notification_id,
+                    access_token,
+                    event,
+                    event_description,
+                )
+                .await
+                .is_ok()
+        );
     } else if batch {
         use oid4vc_manager::servers::credential_issuer::TEST_PRE_AUTHORIZED_SUBJECT_DID;
 

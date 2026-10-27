@@ -1,8 +1,8 @@
 use crate::{
+    VpToken,
     dcql::dcql_query::{CredentialQueryId, DcqlQuery, Format},
     dcql_evaluation::evaluate_dcql_query,
-    token::vp_token_builder::{validate_presentation_submission, VpTokenBuilderError},
-    VpToken,
+    token::vp_token_builder::{VpTokenBuilderError, validate_presentation_submission},
 };
 use getset::Getters;
 use identity_kit::{
@@ -13,15 +13,15 @@ use identity_kit::{
         SdJwtValidationOptions, SdJwtVc,
     },
     vc::{
+        Jwt,
         validation::{
             CredentialValidationOptions, DecodedCredential, JwtPresentationValidator, PresentationValidationError,
             PresentationValidationOptions, StatusCheck, StatusPolicy, TimeOptions, ValidationError,
         },
-        Jwt,
     },
 };
 use nutype::nutype;
-use oid4vc_core::{types::string_or_object::StringOrObject, utils::predicates::not_empty, JsonObject};
+use oid4vc_core::{JsonObject, types::string_or_object::StringOrObject, utils::predicates::not_empty};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use thiserror::Error;
@@ -481,8 +481,8 @@ mod tests {
         resolver::Resolver,
         sd_jwt_vc::{Confirmation, KeyBinding, SdJwtCredentialV2Builder, SdJwtVcBuilder, Status},
         vc::{
-            validation::{CredentialStatus, StatusError},
             Credential, CredentialV2, EnvelopedVc, JwtClaims, Presentation, PresentationV2, Subject,
+            validation::{CredentialStatus, StatusError},
         },
     };
     use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer};
@@ -940,16 +940,18 @@ mod tests {
 
     #[tokio::test]
     async fn status_is_not_checked_under_skip_all() {
-        assert!(VpTokenValidator::new(resolver(), Revoked)
-            .with_status_policy(StatusPolicy::SkipAll)
-            .validate_vp_token(
-                &dcql_query(Format::JwtVcJson, &["credentialSubject", "first_name"]),
-                &vp_token("CredentialQuery", VALID_JWT_VC_JSON_CREDENTIAL),
-                VERIFIER,
-                JWT_VC_JSON_NONCE,
-            )
-            .await
-            .is_ok());
+        assert!(
+            VpTokenValidator::new(resolver(), Revoked)
+                .with_status_policy(StatusPolicy::SkipAll)
+                .validate_vp_token(
+                    &dcql_query(Format::JwtVcJson, &["credentialSubject", "first_name"]),
+                    &vp_token("CredentialQuery", VALID_JWT_VC_JSON_CREDENTIAL),
+                    VERIFIER,
+                    JWT_VC_JSON_NONCE,
+                )
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
@@ -1123,9 +1125,11 @@ mod tests {
         // A wallet whose clock runs one second ahead of the verifier's.
         let now = VALID_JWT_VC_JSON_PRESENTATION_IAT - 1;
 
-        assert!(validate_fixture_presentation_at(now, DEFAULT_CLOCK_SKEW_LEEWAY)
-            .await
-            .is_ok());
+        assert!(
+            validate_fixture_presentation_at(now, DEFAULT_CLOCK_SKEW_LEEWAY)
+                .await
+                .is_ok()
+        );
 
         let error = validate_fixture_presentation_at(now, Duration::ZERO).await.unwrap_err();
         assert!(is_issued_in_future_error(&error));
@@ -1150,9 +1154,11 @@ mod tests {
         // A wallet whose clock runs 30 seconds behind the verifier's.
         let now = VALID_JWT_VC_JSON_PRESENTATION_EXP + 30;
 
-        assert!(validate_fixture_presentation_at(now, DEFAULT_CLOCK_SKEW_LEEWAY)
-            .await
-            .is_ok());
+        assert!(
+            validate_fixture_presentation_at(now, DEFAULT_CLOCK_SKEW_LEEWAY)
+                .await
+                .is_ok()
+        );
 
         let error = validate_fixture_presentation_at(now, Duration::ZERO).await.unwrap_err();
         assert!(is_expired_error(&error));

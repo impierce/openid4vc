@@ -19,7 +19,7 @@ pub enum InteractionType {
 #[cfg(feature = "utoipa")]
 impl utoipa::PartialSchema for InteractionType {
     fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
-        use utoipa::openapi::{schema::Type, Object, OneOf};
+        use utoipa::openapi::{Object, OneOf, schema::Type};
 
         OneOf::builder()
             .item(

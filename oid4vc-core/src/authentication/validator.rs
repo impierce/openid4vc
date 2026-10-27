@@ -1,4 +1,4 @@
-use crate::{jwt, Subject, Verify};
+use crate::{Subject, Verify, jwt};
 use anyhow::Result;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;

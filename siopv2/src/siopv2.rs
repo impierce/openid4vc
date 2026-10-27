@@ -7,11 +7,11 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::client_metadata::ClientMetadataResource;
 use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};
-use oid4vc_core::{authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension, Subject};
+use oid4vc_core::{Subject, authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension};
 use oid4vc_core::{SubjectSyntaxType, Validator};
 use reqwest_middleware::ClientBuilder;
-use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
+use reqwest_retry::policies::ExponentialBackoff;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 

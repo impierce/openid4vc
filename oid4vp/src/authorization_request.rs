@@ -1,6 +1,6 @@
 use crate::dcql::dcql_query::DcqlQuery;
 use crate::oid4vp::OID4VP;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use is_empty::IsEmpty;
 use jsonwebtoken::Algorithm;
 use monostate::MustBe;
@@ -9,7 +9,7 @@ use oid4vc_core::authorization_request::{Object, RedirectOrResponseUri};
 use oid4vc_core::builder_fn;
 use oid4vc_core::utils::predicates::not_empty;
 use oid4vc_core::{
-    authorization_request::AuthorizationRequest, client_metadata::ClientMetadataResource, scope::Scope, RFC7519Claims,
+    RFC7519Claims, authorization_request::AuthorizationRequest, client_metadata::ClientMetadataResource, scope::Scope,
 };
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -398,9 +398,11 @@ mod tests {
         assert_eq!(client_id.prefix(), &ClientIdPrefix::RedirectUri);
         assert_eq!(client_id.identifier(), "https://client.example.org/cb");
         assert_eq!(client_id.to_string(), "redirect_uri:https://client.example.org/cb");
-        assert!("response_uri:https://client.example.org/cb"
-            .parse::<ClientId>()
-            .is_err());
+        assert!(
+            "response_uri:https://client.example.org/cb"
+                .parse::<ClientId>()
+                .is_err()
+        );
     }
 
     #[test]

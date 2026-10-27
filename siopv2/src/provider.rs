@@ -2,15 +2,15 @@ use anyhow::Result;
 use jsonwebtoken::Algorithm;
 use oid4vc_core::utils::form_urlencoded::to_form_urlencoded_string;
 use oid4vc_core::{
+    SubjectSyntaxType, Validator,
     authentication::subject::SigningSubject,
     authorization_request::{AuthorizationRequest, Body, ByReference, ByValue, Object},
     authorization_response::AuthorizationResponse,
     openid4vc_extension::{Extension, ResponseHandle},
-    SubjectSyntaxType, Validator,
 };
 use reqwest::StatusCode;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
+use reqwest_retry::{RetryTransientMiddleware, policies::ExponentialBackoff};
 use std::str::FromStr;
 
 /// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`crate::IdToken`]'s in response to
@@ -216,10 +216,12 @@ mod tests {
             AuthorizationRequest::<Object<SIOPv2>>::from_generic(&authorization_request).unwrap();
 
         // Test whether the provider can generate a authorization_response for the authorization_request succesfully.
-        assert!(provider
-            .generate_response(&authorization_request, Default::default())
-            .await
-            .is_ok());
+        assert!(
+            provider
+                .generate_response(&authorization_request, Default::default())
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
@@ -227,9 +229,11 @@ mod tests {
         let subject = TestSubject::new("did:test:123".to_string(), "key_id".to_string()).unwrap();
         let provider = Provider::new(Arc::new(subject), vec!["did:test"], vec![Algorithm::EdDSA]).unwrap();
 
-        assert!(provider
-            .validate_request("siopv2://idtoken?client_id=did%3Aexample%3A123&request=not-a-jwt".to_string())
-            .await
-            .is_err());
+        assert!(
+            provider
+                .validate_request("siopv2://idtoken?client_id=did%3Aexample%3A123&request=not-a-jwt".to_string())
+                .await
+                .is_err()
+        );
     }
 }

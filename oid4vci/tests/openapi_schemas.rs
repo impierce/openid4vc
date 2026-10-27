@@ -110,9 +110,11 @@ fn aggregate_protocol_schema_preserves_wire_shapes_and_constraints() {
         schemas["TokenRequest"]["oneOf"][1]["properties"]["grant_type"]["enum"][0],
         "urn:ietf:params:oauth:grant-type:pre-authorized_code"
     );
-    assert!(schemas["Grants"]["properties"]
-        .get("urn:ietf:params:oauth:grant-type:pre-authorized_code")
-        .is_some());
+    assert!(
+        schemas["Grants"]["properties"]
+            .get("urn:ietf:params:oauth:grant-type:pre-authorized_code")
+            .is_some()
+    );
     assert_eq!(schemas["BatchSize"]["minimum"], 2);
     assert_eq!(schemas["CredentialConfigurationIds"]["minItems"], 1);
     assert_eq!(schemas["ClaimPathPointer"]["minItems"], 1);

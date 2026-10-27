@@ -1,6 +1,6 @@
 use super::verifiable_presentation_jwt::{VerifiablePresentation, VerifiablePresentationJwt};
-use anyhow::{anyhow, Result};
-use oid4vc_core::{builder_fn, RFC7519Claims};
+use anyhow::{Result, anyhow};
+use oid4vc_core::{RFC7519Claims, builder_fn};
 
 #[derive(Default)]
 pub struct VerifiablePresentationJwtBuilder {

@@ -1,7 +1,7 @@
 [package]
 name = "oid4vc-fuzz"
 version = "0.0.0"
-edition = "2021"
+edition = "2024"
 publish = false
 description = "cargo-fuzz targets for the openid4vc workspace: `cargo +nightly fuzz run <target>` from this directory"
 license = "Apache-2.0"
