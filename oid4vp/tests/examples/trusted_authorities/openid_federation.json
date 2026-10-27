@@ -1,0 +1,4 @@
+{
+  "type": "openid_federation",
+  "values": ["https://trustanchor.example.com"]
+}

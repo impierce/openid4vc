@@ -2,7 +2,10 @@ use crate::{
     dcql::dcql_query::{ClaimQuery, CredentialQuery, CredentialSetQuery, DcqlQuery, MetaTypes},
     token::vp_token_validator::{DecodedPresentations, DecodedVpToken},
 };
-use oid4vc_core::claim_path_pointer::{ClaimValue, ClaimValues};
+use oid4vc_core::{
+    JsonObject,
+    claim_path_pointer::{ClaimValue, ClaimValues},
+};
 use serde_json::Value;
 
 /// Processing a dcql_query with credential sets as described in OID4VP - Section 6.4.2 Selecting Credentials:
@@ -94,85 +97,77 @@ pub fn evaluate_credential_query(
     credential_query: &CredentialQuery,
     decoded_presentations: &DecodedPresentations,
 ) -> bool {
-    // If claims is absent, the Verifier is requesting no claims that are selectively disclosable;
-    // the Wallet MUST return only the claims that are mandatory to present (e.g., SD-JWT and Key Binding JWT for a Credential of format IETF SD-JWT VC).
-    if credential_query.claims.as_deref().unwrap_or(&[]).is_empty() {
-        return true;
-    }
-
-    // If `multiple` is `false`, the Verifier is requesting that only one presentation of a Credential matching the Credential Query be returned.
+    // If `multiple` is omitted or `false`, the array MUST contain exactly one Presentation (OID4VP 1.0, §8.1).
     if !credential_query.multiple.unwrap_or_default() && decoded_presentations.len() > 1 {
         return false;
     }
 
-    decoded_presentations.iter().any(|decoded_presentation| {
-        // If meta is present, check the meta requirements.
-        match &credential_query.meta {
-            MetaTypes::W3CFormatMeta { type_values } => {
-                // For W3C Verifiable Credentials, check the "type" field in the credential
-                if let Some(credential_types) = decoded_presentation.get("type").and_then(|t| t.as_array()) {
-                    let credential_type_strings: Vec<&str> =
-                        credential_types.iter().filter_map(|t| t.as_str()).collect();
-
-                    // Check if any of the type_values arrays is a subset of the credential's types
-                    let type_match = type_values.iter().any(|type_option| {
-                        type_option
-                            .iter()
-                            .all(|required_type| credential_type_strings.contains(&required_type.as_str()))
-                    });
-
-                    if !type_match {
-                        return false;
-                    }
-                } else {
-                    return false;
-                }
-            }
-            MetaTypes::SdJwtMeta { vct_values } => {
-                if let Some(vct_string) = decoded_presentation.get("vct").and_then(|v| v.as_str()) {
-                    let type_match = vct_values.iter().any(|required_vct| required_vct == vct_string);
-
-                    if !type_match {
-                        return false;
-                    }
-                } else {
-                    return false;
-                }
-            }
-            MetaTypes::MsoMdocMeta {
-                doctype_value: _doctype_value,
-            } => {
-                // TODO: Implement MSO mDoc type checking
-            }
-        }
-
-        // TODO: Check `trusted_authorities` if present
+    // Each Presentation in the array MUST match the Credential Query (OID4VP 1.0, §8.1).
+    decoded_presentations.iter().all(|decoded_presentation| {
         // TODO: Check `require_cryptographic_holder_binding`
-
-        let presentation_value = serde_json::Value::Object(decoded_presentation.clone());
-
-        // If claims is present, but claim_sets is absent, the Verifier requests all claims listed in claims.
-        match &credential_query.claim_sets {
-            None => credential_query
-                .claims
-                .as_deref()
-                .unwrap_or(&[])
-                .iter()
-                .all(|claim| evaluate_single_claim_query(claim, &presentation_value)),
-
-            // If both claims and claim_sets are present, the Verifier requests one combination of the claims listed in claim_sets. The order of the options conveyed in the claim_sets array expresses the Verifier's preference for what is returned;
-            // the Wallet SHOULD return the first option that it can satisfy. If the Wallet cannot satisfy any of the options, it MUST NOT return any claims.
-            Some(claim_sets) => claim_sets.iter().any(|claim_set| {
-                claim_set.iter().all(|claim_id| {
-                    credential_query
-                        .claims
-                        .as_ref()
-                        .and_then(|claims| claims.iter().find(|claim| claim.id.as_ref() == Some(claim_id)))
-                        .is_some_and(|claim| evaluate_single_claim_query(claim, &presentation_value))
-                })
-            }),
-        }
+        matches_meta(&credential_query.meta, decoded_presentation)
+            && matches_claims(credential_query, decoded_presentation)
     })
+}
+
+/// Whether `decoded_presentation` has the type `meta` asks for.
+fn matches_meta(meta: &MetaTypes, decoded_presentation: &JsonObject) -> bool {
+    match meta {
+        MetaTypes::W3CFormatMeta { type_values } => {
+            // For W3C Verifiable Credentials, check the "type" field in the credential
+            let Some(credential_types) = decoded_presentation.get("type").and_then(|t| t.as_array()) else {
+                return false;
+            };
+            let credential_type_strings: Vec<&str> = credential_types.iter().filter_map(|t| t.as_str()).collect();
+
+            // Check if any of the type_values arrays is a subset of the credential's types
+            type_values.iter().any(|type_option| {
+                type_option
+                    .iter()
+                    .all(|required_type| credential_type_strings.contains(&required_type.as_str()))
+            })
+        }
+        MetaTypes::SdJwtMeta { vct_values } => decoded_presentation
+            .get("vct")
+            .and_then(|v| v.as_str())
+            .is_some_and(|vct_string| vct_values.iter().any(|required_vct| required_vct == vct_string)),
+        MetaTypes::MsoMdocMeta {
+            doctype_value: _doctype_value,
+        } => {
+            // TODO: Implement MSO mDoc type checking
+            true
+        }
+    }
+}
+
+/// Whether `decoded_presentation` has the claims `claims` and `claim_sets` ask for.
+fn matches_claims(credential_query: &CredentialQuery, decoded_presentation: &JsonObject) -> bool {
+    // If claims is absent, the Verifier is requesting no claims that are selectively disclosable;
+    // the Wallet MUST return only the claims that are mandatory to present (e.g., SD-JWT and Key Binding JWT for a Credential of format IETF SD-JWT VC).
+    let claims = credential_query.claims.as_deref().unwrap_or(&[]);
+    if claims.is_empty() {
+        return true;
+    }
+
+    let presentation_value = serde_json::Value::Object(decoded_presentation.clone());
+
+    // If claims is present, but claim_sets is absent, the Verifier requests all claims listed in claims.
+    match &credential_query.claim_sets {
+        None => claims
+            .iter()
+            .all(|claim| evaluate_single_claim_query(claim, &presentation_value)),
+
+        // If both claims and claim_sets are present, the Verifier requests one combination of the claims listed in claim_sets. The order of the options conveyed in the claim_sets array expresses the Verifier's preference for what is returned;
+        // the Wallet SHOULD return the first option that it can satisfy. If the Wallet cannot satisfy any of the options, it MUST NOT return any claims.
+        Some(claim_sets) => claim_sets.iter().any(|claim_set| {
+            claim_set.iter().all(|claim_id| {
+                claims
+                    .iter()
+                    .find(|claim| claim.id.as_ref() == Some(claim_id))
+                    .is_some_and(|claim| evaluate_single_claim_query(claim, &presentation_value))
+            })
+        }),
+    }
 }
 
 pub fn matches_claim_values(actual_value: &Value, required_value: &ClaimValues) -> bool {
@@ -499,5 +494,85 @@ mod tests {
         let builder = DecodedVpTokenBuilder::new();
 
         assert!(!evaluate_dcql_query(&dcql_query, &builder.build()));
+    }
+
+    /// A `dc+sd-jwt` Credential Query for `identity_credential`, with `multiple` and `claims` as given.
+    fn identity_credential_query(multiple: Option<bool>, claims: Option<Value>) -> CredentialQuery {
+        let mut query = json!({
+            "id": "identity",
+            "format": "dc+sd-jwt",
+            "meta": { "vct_values": ["https://credentials.example.com/identity_credential"] },
+        });
+        if let Some(multiple) = multiple {
+            query["multiple"] = json!(multiple);
+        }
+        if let Some(claims) = claims {
+            query["claims"] = claims;
+        }
+        serde_json::from_value(query).unwrap()
+    }
+
+    fn presentations(credentials: &[Value]) -> DecodedPresentations {
+        DecodedPresentations::try_new(
+            credentials
+                .iter()
+                .map(|credential| credential.as_object().unwrap().clone())
+                .collect(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn every_presentation_must_match_a_query_with_multiple() {
+        let query = identity_credential_query(Some(true), Some(json!([{ "path": ["email"] }])));
+        let matching = json!({
+            "vct": "https://credentials.example.com/identity_credential",
+            "email": "ferris.crabman@crabmail.com",
+        });
+        let without_email = json!({ "vct": "https://credentials.example.com/identity_credential" });
+        let other_type = json!({
+            "vct": "https://credentials.example.com/residence_credential",
+            "email": "ferris.crabman@crabmail.com",
+        });
+
+        assert!(evaluate_credential_query(
+            &query,
+            &presentations(&[matching.clone(), matching.clone()])
+        ));
+        assert!(!evaluate_credential_query(
+            &query,
+            &presentations(&[matching.clone(), without_email])
+        ));
+        assert!(!evaluate_credential_query(
+            &query,
+            &presentations(&[other_type, matching])
+        ));
+    }
+
+    #[test]
+    fn more_than_one_presentation_fails_a_query_without_multiple() {
+        let credential = json!({ "vct": "https://credentials.example.com/identity_credential" });
+
+        for multiple in [None, Some(false)] {
+            assert!(!evaluate_credential_query(
+                &identity_credential_query(multiple, None),
+                &presentations(&[credential.clone(), credential.clone()])
+            ));
+        }
+    }
+
+    #[test]
+    fn meta_is_checked_without_claims() {
+        let query = identity_credential_query(None, None);
+
+        assert!(evaluate_credential_query(
+            &query,
+            &presentations(&[json!({ "vct": "https://credentials.example.com/identity_credential" })])
+        ));
+        assert!(!evaluate_credential_query(
+            &query,
+            &presentations(&[json!({ "vct": "https://credentials.example.com/residence_credential" })])
+        ));
+        assert!(!evaluate_credential_query(&query, &presentations(&[json!({})])));
     }
 }
