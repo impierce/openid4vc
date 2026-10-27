@@ -35,11 +35,11 @@ jsonwebtoken = { version = "11.1", default-features = false, features = ["rust_c
 monostate = "1.0"
 nutype = { version = "0.8", features = ["serde"] }
 # The workspace crates, with the version `cargo publish` requires next to the path.
-oid4vc-core = { path = "oid4vc-core", version = "0.2.1" }
-oid4vc-manager = { path = "oid4vc-manager", version = "0.2.1" }
-oid4vci = { path = "oid4vci", version = "0.2.1" }
+oid4vc-core = { path = "oid4vc-core", version = "0.3.0" }
+oid4vc-manager = { path = "oid4vc-manager", version = "0.3.0" }
+oid4vci = { path = "oid4vci", version = "0.3.0" }
 oid4vp = { path = "oid4vp", version = "0.3.0" }
-siopv2 = { path = "siopv2", version = "0.2.1" }
+siopv2 = { path = "siopv2", version = "0.3.0" }
 # `rustls` with `ring`, installed by `oid4vc_core::http_client`; reqwest's own `rustls` feature would pull in
 # `aws-lc-rs`.
 reqwest = { version = "0.13", default-features = false, features = [
