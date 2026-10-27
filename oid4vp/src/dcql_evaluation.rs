@@ -21,6 +21,24 @@ pub fn evaluate_dcql_query(dcql_query: &DcqlQuery, decoded_vp_token: &DecodedVpT
         "Evaluating DCQL query against decoded VP token"
     );
 
+    // Every Presentation in the VP Token MUST match its Credential Query (OID4VP 1.0, §8.1), also when no required
+    // credential set asks for it.
+    let presentations_match =
+        decoded_vp_token
+            .decoded_presentations()
+            .iter()
+            .all(|(credential_query_id, decoded_presentations)| {
+                dcql_query
+                    .credentials
+                    .iter()
+                    .find(|credential_query| credential_query.id == *credential_query_id)
+                    .is_some_and(|credential_query| evaluate_credential_query(credential_query, decoded_presentations))
+            });
+    if !presentations_match {
+        tracing::debug!("Presentation does not match its credential query");
+        return false;
+    }
+
     // If there are credential sets, check if all required sets can be satisfied.
     if let Some(credential_sets) = &dcql_query.credential_sets {
         // All of the Credential Set Queries in the credential_sets array where
@@ -41,12 +59,13 @@ pub fn evaluate_dcql_query(dcql_query: &DcqlQuery, decoded_vp_token: &DecodedVpT
 
     // If credential_sets is not provided, the Verifier requests presentations for all Credentials in credentials to be returned.
     let result = dcql_query.credentials.iter().all(|credential_query| {
-        if let Some(decoded_presentations) = decoded_vp_token.decoded_presentations().get(&credential_query.id) {
-            evaluate_credential_query(credential_query, decoded_presentations)
-        } else {
+        let present = decoded_vp_token
+            .decoded_presentations()
+            .contains_key(&credential_query.id);
+        if !present {
             tracing::debug!(query_id = %credential_query.id, "Missing presentation for required credential query");
-            false
         }
+        present
     });
     tracing::debug!(result, "DCQL query evaluation result");
     result
@@ -91,8 +110,8 @@ fn evaluate_single_claim_query(claim_query: &ClaimQuery, credential_json: &Value
     true
 }
 
-/// Processing with claims_sets as described in OID4VP Section 6.4.1 Selecting Claims:
-/// <https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-selecting-claims>
+/// Whether `decoded_presentations` answer `credential_query`: at most one presentation unless `multiple` is `true`, and
+/// each with the type `meta` asks for and the claims of `claims` and `claim_sets` (OID4VP 1.0, §6.1, §6.4.1 and §8.1).
 pub fn evaluate_credential_query(
     credential_query: &CredentialQuery,
     decoded_presentations: &DecodedPresentations,
@@ -574,5 +593,67 @@ mod tests {
             &presentations(&[json!({ "vct": "https://credentials.example.com/residence_credential" })])
         ));
         assert!(!evaluate_credential_query(&query, &presentations(&[json!({})])));
+    }
+
+    #[test]
+    fn presentation_for_an_optional_credential_set_must_match() {
+        let dcql_query: DcqlQuery = serde_json::from_str(TESTCREDENTIALQUERY_WITH_SETS).unwrap();
+        let pid = json!({
+            "vct": "https://credentials.example.com/identity_credential",
+            "given_name": "John",
+            "family_name": "Doe",
+            "address": { "street_address": "123 Main St" }
+        });
+        let decoded_vp_token = |nice_to_have: Value| {
+            DecodedVpTokenBuilder::new()
+                .insert("pid".parse().unwrap(), vec![pid.as_object().unwrap().clone()])
+                .unwrap()
+                .insert(
+                    "nice_to_have".parse().unwrap(),
+                    vec![nice_to_have.as_object().unwrap().clone()],
+                )
+                .unwrap()
+                .build()
+        };
+
+        assert!(evaluate_dcql_query(
+            &dcql_query,
+            &decoded_vp_token(json!({
+                "vct": "https://company.example/company_rewards",
+                "rewards_number": "12345"
+            }))
+        ));
+        // `nice_to_have` is in an optional set only, and this presentation has another type.
+        assert!(!evaluate_dcql_query(
+            &dcql_query,
+            &decoded_vp_token(json!({
+                "vct": "https://credentials.example.com/identity_credential",
+                "rewards_number": "12345"
+            }))
+        ));
+    }
+
+    #[test]
+    fn presentation_for_another_option_of_a_required_set_must_match() {
+        let dcql_query: DcqlQuery = serde_json::from_str(TESTCREDENTIALQUERY_WITH_SETS).unwrap();
+        let pid = json!({
+            "vct": "https://credentials.example.com/identity_credential",
+            "given_name": "John",
+            "family_name": "Doe",
+            "address": { "street_address": "123 Main St" }
+        });
+        // `other_pid` without the claims its query asks for, next to a `pid` that satisfies the set.
+        let other_pid = json!({ "vct": "https://othercredentials.example/pid" });
+        let decoded_vp_token = DecodedVpTokenBuilder::new()
+            .insert("pid".parse().unwrap(), vec![pid.as_object().unwrap().clone()])
+            .unwrap()
+            .insert(
+                "other_pid".parse().unwrap(),
+                vec![other_pid.as_object().unwrap().clone()],
+            )
+            .unwrap()
+            .build();
+
+        assert!(!evaluate_dcql_query(&dcql_query, &decoded_vp_token));
     }
 }
