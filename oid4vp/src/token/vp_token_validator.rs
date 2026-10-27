@@ -75,7 +75,7 @@ const LEGACY_PRESENTATION_TYP: &str = "JWT";
 /// Keys are resolved with a [`KeyResolver`] (for instance a [`Resolver`](identity_kit::resolver::Resolver) with the DID
 /// methods the verifier accepts) and signatures verified with a [`JwsVerifier`] ([`DefaultVerifier`] unless another is
 /// given). The [`StatusCheck`] receives every `credentialStatus` entry and `status` claim of the presented credentials;
-/// `sd_jwt_vc::validation::StatusListCheck` checks the Token Status List. What it does not support is skipped, unless
+/// `status_list::StatusListCheck` checks the Token Status List. What it does not support is skipped, unless
 /// the [`StatusPolicy`] says otherwise ([`with_status_policy`](Self::with_status_policy)).
 pub struct VpTokenValidator<R, V = DefaultVerifier> {
     jwt_presentation_validator: JwtPresentationValidator<Arc<R>, Arc<V>>,
@@ -479,7 +479,8 @@ mod tests {
         keys::{InMemoryKeyStore, KeySigner, KeySpec, KeyStore as _},
         methods::DidKey,
         resolver::Resolver,
-        sd_jwt_vc::{Confirmation, KeyBinding, SdJwtCredentialV2Builder, SdJwtVcBuilder, Status},
+        sd_jwt_vc::{Confirmation, KeyBinding, SdJwtCredentialV2Builder, SdJwtVcBuilder},
+        status_list::Status,
         vc::{
             Credential, CredentialV2, EnvelopedVc, JwtClaims, Presentation, PresentationV2, Subject,
             validation::{CredentialStatus, StatusError},
@@ -523,7 +524,7 @@ mod tests {
     impl StatusCheck for Revoked {
         async fn check(&self, status: CredentialStatus<'_>, _: DateTime<Utc>) -> Result<(), StatusError> {
             match status {
-                CredentialStatus::SdJwt(_) => Err(StatusError::Invalid("revoked".to_owned())),
+                CredentialStatus::StatusClaim(_) => Err(StatusError::Invalid("revoked".to_owned())),
                 other => Err(StatusError::Unsupported(other.mechanism())),
             }
         }
@@ -660,6 +661,18 @@ mod tests {
 
     fn validator() -> VpTokenValidator<Resolver> {
         VpTokenValidator::new(resolver(), Valid)
+    }
+
+    /// The future of `validate_vp_token` is `Send`, so it can run in a spawned task such as a web handler.
+    #[test]
+    fn validate_vp_token_future_is_send() {
+        fn assert_send<T: Send>(_: &T) {}
+
+        let validator = validator();
+        let dcql_query = dcql_query(Format::DcSdJwt, &["first_name"]);
+        let vp_token: VpToken =
+            serde_json::from_value(json!({ "CredentialQuery": [UNICORE_DC_SD_JWT_CREDENTIAL] })).unwrap();
+        assert_send(&validator.validate_vp_token(&dcql_query, &vp_token, VERIFIER, DC_SD_JWT_NONCE));
     }
 
     /// A DCQL query with one credential query `CredentialQuery` of `format`, asking for the claim at `path`.

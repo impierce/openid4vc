@@ -28,7 +28,7 @@ rust-version = "1.95"
 chrono = "0.4"
 getset = "0.1"
 http = "1.3.1"
-identity-kit = { version = "0.2.1", default-features = false }
+identity-kit = { version = "0.3.0", default-features = false }
 is_empty = "0.3"
 # The pure-Rust backend; `aws_lc_rs` would pull in a C library.
 jsonwebtoken = { version = "11.1", default-features = false, features = ["rust_crypto"] }
