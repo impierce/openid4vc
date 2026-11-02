@@ -7,11 +7,10 @@
 
 use std::sync::LazyLock;
 
-use chrono::{DateTime, Utc};
 use futures::executor::block_on;
 use identity_kit::methods::DidKey;
 use identity_kit::resolver::Resolver;
-use identity_kit::vc::validation::{CredentialStatus, StatusCheck, StatusError};
+use identity_kit::vc::validation::{CredentialStatus, StatusCheck, StatusError, TimeOptions};
 use libfuzzer_sys::fuzz_target;
 use oid4vp::VpToken;
 use oid4vp::dcql::dcql_query::DcqlQuery;
@@ -26,7 +25,7 @@ struct Valid;
 
 #[async_trait::async_trait]
 impl StatusCheck for Valid {
-    async fn check(&self, _: CredentialStatus<'_>, _: DateTime<Utc>) -> Result<(), StatusError> {
+    async fn check(&self, _: CredentialStatus<'_>, _: TimeOptions) -> Result<(), StatusError> {
         Ok(())
     }
 }

@@ -511,7 +511,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl StatusCheck for Valid {
-        async fn check(&self, _: CredentialStatus<'_>, _: DateTime<Utc>) -> Result<(), StatusError> {
+        async fn check(&self, _: CredentialStatus<'_>, _: TimeOptions) -> Result<(), StatusError> {
             Ok(())
         }
     }
@@ -522,7 +522,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl StatusCheck for Revoked {
-        async fn check(&self, status: CredentialStatus<'_>, _: DateTime<Utc>) -> Result<(), StatusError> {
+        async fn check(&self, status: CredentialStatus<'_>, _: TimeOptions) -> Result<(), StatusError> {
             match status {
                 CredentialStatus::StatusClaim(_) => Err(StatusError::Invalid("revoked".to_owned())),
                 other => Err(StatusError::Unsupported(other.mechanism())),
