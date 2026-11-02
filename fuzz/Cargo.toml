@@ -11,7 +11,6 @@ cargo-fuzz = true
 
 [dependencies]
 async-trait = "0.1"
-chrono = "0.4"
 futures = "0.3"
 identity-kit = { version = "0.4.0", default-features = false, features = ["did-key", "vc"] }
 libfuzzer-sys = "0.4"
