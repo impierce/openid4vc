@@ -1,11 +1,11 @@
-use chrono::{DateTime, Duration, Utc};
+use chrono::{Duration, Utc};
 use identity_kit::{
     did::Did,
     methods::DidKey,
     resolver::Resolver,
     vc::{
         Jwt, Presentation,
-        validation::{CredentialStatus, StatusCheck, StatusError},
+        validation::{CredentialStatus, StatusCheck, StatusError, TimeOptions},
     },
 };
 use jsonwebtoken::{Algorithm, Header};
@@ -214,7 +214,7 @@ struct Valid;
 
 #[async_trait::async_trait]
 impl StatusCheck for Valid {
-    async fn check(&self, _: CredentialStatus<'_>, _: DateTime<Utc>) -> Result<(), StatusError> {
+    async fn check(&self, _: CredentialStatus<'_>, _: TimeOptions) -> Result<(), StatusError> {
         Ok(())
     }
 }
