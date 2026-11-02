@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/impierce/openid4vc/compare/siopv2-v0.3.0...siopv2-v0.4.0) - 2026-11-02
+
+### Dependencies
+
+- *(deps)* [**breaking**] update `oid4vc-core` to 0.4.0, which uses identity-kit 0.4.0 ([#197](https://github.com/impierce/openid4vc/pull/197))
+
 ## [0.3.0](https://github.com/impierce/openid4vc/compare/siopv2-v0.2.0...siopv2-v0.3.0) - 2026-10-27
 
 ### Dependencies
