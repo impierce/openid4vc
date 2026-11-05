@@ -95,9 +95,16 @@ impl Wallet {
         }
 
         let offer: CredentialOfferParameters = serde_json::from_str(&text).map_err(|e| {
-            anyhow::anyhow!("Failed to parse credential offer (HTTP {status}): {e}. Raw response: {text}")
+            anyhow::anyhow!(
+                "Failed to parse credential offer (HTTP {status}, {} bytes): {e}",
+                text.len()
+            )
         })?;
-        tracing::debug!(?offer, "Received credential offer parameters");
+        tracing::debug!(
+            credential_issuer = %offer.credential_issuer,
+            credential_configuration_ids = ?offer.credential_configuration_ids,
+            "Received credential offer parameters"
+        );
         Ok(offer)
     }
 
@@ -206,7 +213,7 @@ impl Wallet {
     // TODO: Move everything related to pushed authorization response to a separate module?
     // TODO: refactor to reduce the number of arguments
     #[allow(clippy::too_many_arguments)]
-    #[tracing::instrument(level = "debug", err, skip(self, authorization_details))]
+    #[tracing::instrument(level = "debug", err, skip(self, state, authorization_details, issuer_state))]
     pub async fn get_pushed_authorization_response(
         &self,
         pushed_authorization_request_endpoint: Url,
@@ -258,10 +265,14 @@ impl Wallet {
 
         let par_response: PushedAuthorizationResponse = serde_json::from_str(&text).map_err(|err| {
             anyhow::anyhow!(
-                "Failed to parse pushed authorization response (HTTP {status}): {err}. Raw response: {text}"
+                "Failed to parse pushed authorization response (HTTP {status}, {} bytes): {err}",
+                text.len()
             )
         })?;
-        tracing::debug!(?par_response, "Received pushed authorization response");
+        tracing::debug!(
+            expires_in = par_response.expires_in,
+            "Received pushed authorization response"
+        );
         Ok(par_response)
     }
 
@@ -312,7 +323,6 @@ impl Wallet {
     #[tracing::instrument(level = "debug", err, skip(self, token_request))]
     pub async fn get_access_token(&self, token_endpoint: Url, token_request: TokenRequest) -> Result<TokenResponse> {
         tracing::info!(%token_endpoint, "Sending token request to token endpoint");
-        tracing::debug!(?token_request, "Token request parameters");
         let response = self.client.post(token_endpoint).form(&token_request).send().await?;
         let status = response.status();
         let text = response
@@ -325,7 +335,10 @@ impl Wallet {
         }
 
         let token_response: TokenResponse = serde_json::from_str(&text).map_err(|e| {
-            anyhow::anyhow!("Failed to parse token response (HTTP {status}): {e}. Raw response: {text}")
+            anyhow::anyhow!(
+                "Failed to parse token response (HTTP {status}, {} bytes): {e}",
+                text.len()
+            )
         })?;
         tracing::debug!("Successfully received token response");
         Ok(token_response)
@@ -451,14 +464,17 @@ impl Wallet {
         }
 
         let NonceResponse { c_nonce } = serde_json::from_str(&text).map_err(|e| {
-            anyhow::anyhow!("Failed to parse nonce response (HTTP {status}): {e}. Raw response: {text}")
+            anyhow::anyhow!(
+                "Failed to parse nonce response (HTTP {status}, {} bytes): {e}",
+                text.len()
+            )
         })?;
 
         tracing::debug!("Successfully received c_nonce");
         Ok(c_nonce)
     }
 
-    #[tracing::instrument(level = "debug", err, skip(self, token_response, credential_configuration))]
+    #[tracing::instrument(level = "debug", err, skip(self, token_response, nonce, credential_configuration))]
     pub async fn get_credential(
         &self,
         credential_issuer_metadata: CredentialIssuerMetadata,
@@ -521,11 +537,10 @@ impl Wallet {
             proofs,
         };
 
-        let request_body_json = serde_json::to_string(&credential_request).unwrap_or_default();
-        tracing::info!(%request_body_json, "Sending credential request body to issuer");
+        tracing::info!("Sending credential request to issuer");
 
         if let Ok((kid, alg)) = oid4vc_core::jwt::extract_header(&jwt_string) {
-            tracing::info!(%kid, ?alg, "Proof JWT header parameters");
+            tracing::debug!(%kid, ?alg, "Proof JWT header parameters");
         }
 
         let response = self
@@ -545,9 +560,12 @@ impl Wallet {
             return Err(anyhow::anyhow!("Credential issuance failed (HTTP {status}): {text}"));
         }
 
-        tracing::debug!(%status, %text, "Received raw credential response from issuer");
+        tracing::debug!(%status, "Received credential response from issuer");
         let credential_response: CredentialResponse = serde_json::from_str(&text).map_err(|e| {
-            anyhow::anyhow!("Failed to parse credential response (HTTP {status}): {e}. Raw response: {text}")
+            anyhow::anyhow!(
+                "Failed to parse credential response (HTTP {status}, {} bytes): {e}",
+                text.len()
+            )
         })?;
         tracing::info!("Successfully received credential response from issuer");
         Ok(credential_response)
@@ -558,7 +576,7 @@ impl Wallet {
     /// This is similar to a Pushed Authorization Request but adds `interaction_types_supported`
     /// and returns an `InteractiveAuthorizationResponse` indicating the next step.
     #[allow(clippy::too_many_arguments)]
-    #[tracing::instrument(level = "debug", err, skip(self, authorization_details))]
+    #[tracing::instrument(level = "debug", err, skip(self, state, authorization_details, issuer_state))]
     pub async fn send_interactive_authorization_request(
         &self,
         interactive_authorization_endpoint: Url,
@@ -615,10 +633,15 @@ impl Wallet {
 
         let ia_response: InteractiveAuthorizationResponse = serde_json::from_str(&text).map_err(|err| {
             anyhow::anyhow!(
-                "Failed to parse interactive authorization response (HTTP {status}): {err}. Raw response: {text}"
+                "Failed to parse interactive authorization response (HTTP {status}, {} bytes): {err}",
+                text.len()
             )
         })?;
-        tracing::debug!(?ia_response, "Received interactive authorization response");
+        tracing::debug!(
+            auth_session_present = ia_response.auth_session.is_some(),
+            openid4vp_request_present = ia_response.openid4vp_request.is_some(),
+            "Received interactive authorization response"
+        );
         Ok(ia_response)
     }
 
@@ -657,9 +680,16 @@ impl Wallet {
         }
 
         let ia_response: InteractiveAuthorizationResponse = serde_json::from_str(&text).map_err(|err| {
-            anyhow::anyhow!("Failed to parse interactive authorization follow-up response (HTTP {status}): {err}. Raw response: {text}")
+            anyhow::anyhow!(
+                "Failed to parse interactive authorization follow-up response (HTTP {status}, {} bytes): {err}",
+                text.len()
+            )
         })?;
-        tracing::debug!(?ia_response, "Received interactive authorization follow-up response");
+        tracing::debug!(
+            auth_session_present = ia_response.auth_session.is_some(),
+            openid4vp_request_present = ia_response.openid4vp_request.is_some(),
+            "Received interactive authorization follow-up response"
+        );
         Ok(ia_response)
     }
 
