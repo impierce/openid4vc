@@ -38,6 +38,7 @@ url.workspace = true
 utoipa = { workspace = true, optional = true }
 
 [dev-dependencies]
+jsonwebtoken = { workspace = true, features = ["rust_crypto"] }
 tokio.workspace = true
 
 [features]

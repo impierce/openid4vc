@@ -42,6 +42,7 @@ url.workspace = true
 utoipa = { workspace = true, features = ["url"], optional = true }
 
 [dev-dependencies]
+jsonwebtoken = { workspace = true, features = ["rust_crypto"] }
 oid4vc-core = { workspace = true, features = ["test-utils"] }
 utoipa = { workspace = true, features = ["yaml"] }
 wiremock = "0.6"
