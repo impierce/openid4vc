@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0](https://github.com/impierce/openid4vc/compare/siopv2-v0.4.0...siopv2-v0.5.0) - 2026-11-06
+
+### Other
+
+- *(deps)* [**breaking**] let application choose `jsonwebtoken` crypto backend ([#200](https://github.com/impierce/openid4vc/pull/200))
+
 ## [0.4.0](https://github.com/impierce/openid4vc/compare/siopv2-v0.3.0...siopv2-v0.4.0) - 2026-11-02
 
 ### Dependencies
