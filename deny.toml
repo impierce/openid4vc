@@ -11,7 +11,7 @@ all-features = true
 unmaintained = "all"
 yanked = "deny"
 ignore = [
-    { id = "RUSTSEC-2023-0071", reason = "rsa 0.9 via jsonwebtoken (rust_crypto backend): RSA keys are only used to verify signatures, the Marvin attack concerns private-key operations; no patched version exists" },
+    { id = "RUSTSEC-2026-0441", reason = "pin-utils 0.1 via reqwest-retry -> wasmtimer, a dependency only on wasm32: unmaintained, not vulnerable; reqwest-retry 0.9.1 and wasmtimer 0.4.3 are the latest versions" },
 ]
 
 [licenses]

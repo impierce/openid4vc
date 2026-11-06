@@ -41,7 +41,7 @@ tracing.workspace = true
 url.workspace = true
 
 [dev-dependencies]
-jsonwebtoken = { workspace = true, features = ["rust_crypto"] }
+jsonwebtoken = { workspace = true, features = ["aws_lc_rs"] }
 oid4vc-core = { workspace = true, features = ["test-utils"] }
 
 ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
