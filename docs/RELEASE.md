@@ -22,6 +22,8 @@ has its own version, its own `CHANGELOG.md` next to its `Cargo.toml`, its own ta
    [Conventional Commits](https://www.conventionalcommits.org/) on `main` that touched the crate.
 2. A maintainer reviews the versions and changelogs. To adjust them, commit to the release branch
    shortly before merging, since release-plz regenerates the pull request whenever `main` changes.
+   CI fails if a crate needs a breaking release that release-plz didn't give it
+   ([Public dependencies](#public-dependencies)).
 3. Approving and merging the release pull request publishes every crate whose version is not on
    [crates.io](https://crates.io/) yet, in dependency order (`oid4vc-core`, then `oid4vci` and
    `siopv2`, then `oid4vp`, then `oid4vc-manager`). Each published crate is tagged and gets a
@@ -43,6 +45,30 @@ release-plz also runs [`cargo-semver-checks`](https://github.com/obi1kenobi/carg
 (`semver_check` in [`release-plz.toml`](../release-plz.toml)) against each crate's last version on
 crates.io. A breaking API change it finds bumps the minor version even if the pull request title
 has no `!`, and the release pull request lists what it found.
+
+## Public dependencies
+
+A crate's public API includes the types and traits of other crates that appear in it: identity-kit's
+`Did` and `KeyStore`, `jsonwebtoken`'s `Algorithm`, `url::Url`, `utoipa`'s schema traits, and for
+the protocol crates `oid4vc-core`'s `Subject` or `Extension`. When one of those crates gets an
+incompatible update (identity-kit 0.2 → 0.3, or `oid4vc-core` 0.2 → 0.3), code that passes the old
+types to the crate no longer compiles, so the crate needs a breaking release too, even if none of
+its files changed.
+
+Neither release-plz nor `cargo-semver-checks` notices this: release-plz bumps the crates whose
+files a commit touched, and `cargo-semver-checks` sees the same API shape. The
+`Public dependency updates` job in [QA](../.github/workflows/qa.yml) does: for every crate whose
+version differs from its last tag, it collects the crates in its public API from rustdoc's JSON
+output and compares their versions in `Cargo.lock` at the tag and now. If one changed
+incompatibly, or is itself a workspace crate that needs a breaking release, while the crate's own
+version change is compatible, the job fails and names the crate. To fix it, give the crate the
+next breaking version on the release branch (step 2 of the flow): its `Cargo.toml`, its
+requirement in `[workspace.dependencies]`, `Cargo.lock` (`cargo update --workspace`) and a
+changelog entry. Locally:
+
+```sh
+python3 .github/scripts/check_public_dependency_bumps.py
+```
 
 ## Changelog
 
