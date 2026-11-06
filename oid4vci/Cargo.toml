@@ -42,7 +42,6 @@ url.workspace = true
 utoipa = { workspace = true, features = ["url"], optional = true }
 
 [dev-dependencies]
-# The application chooses the `jsonwebtoken` crypto backend; the tests use `rust_crypto`.
 jsonwebtoken = { workspace = true, features = ["rust_crypto"] }
 oid4vc-core = { workspace = true, features = ["test-utils"] }
 utoipa = { workspace = true, features = ["yaml"] }
