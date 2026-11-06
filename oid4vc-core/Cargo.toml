@@ -38,6 +38,8 @@ url.workspace = true
 utoipa = { workspace = true, optional = true }
 
 [dev-dependencies]
+# The application chooses the `jsonwebtoken` crypto backend; the tests use `rust_crypto`.
+jsonwebtoken = { workspace = true, features = ["rust_crypto"] }
 tokio.workspace = true
 
 [features]

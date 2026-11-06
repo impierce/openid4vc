@@ -13,6 +13,8 @@ cargo-fuzz = true
 async-trait = "0.1"
 futures = "0.3"
 identity-kit = { version = "0.4.0", default-features = false, features = ["did-key", "vc"] }
+# The oid4vc crates leave the `jsonwebtoken` crypto backend to the application.
+jsonwebtoken = { version = "11.1", default-features = false, features = ["rust_crypto"] }
 libfuzzer-sys = "0.4"
 oid4vc-core = { path = "../oid4vc-core" }
 oid4vci = { path = "../oid4vci" }

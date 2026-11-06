@@ -38,6 +38,8 @@ tracing.workspace = true
 url = { version = "2.3.1", features = ["serde"] }
 
 [dev-dependencies]
+# The application chooses the `jsonwebtoken` crypto backend; the tests use `rust_crypto`.
+jsonwebtoken = { workspace = true, features = ["rust_crypto"] }
 oid4vc-core = { workspace = true, features = ["test-utils"] }
 
 ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
