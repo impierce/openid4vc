@@ -314,8 +314,9 @@ Named so that work on them is deliberate, not accidental:
   responses) is the umbrella for moving to typed errors that map to the specifications' error
   responses.
 - **Validator coverage**: `VpTokenValidator` handles `jwt_vc_json`, `dc+sd-jwt` and `vc+sd-jwt`;
-  `ldp_vc` and `mso_mdoc` return `UnsupportedFormat`. `multiple` and `trusted_authorities` are
-  parsed but not enforced (TODOs in the validator).
+  `ldp_vc` and `mso_mdoc` return `UnsupportedFormat`. `trusted_authorities` are parsed but not
+  verified: presentations for a query with them are rejected unless the verifier opts into
+  `TrustedAuthoritiesPolicy::Ignore` (issue #191).
 - **Response modes**: `direct_post` only; no JARM (`direct_post.jwt`), no encrypted responses, no
   Digital Credentials API transport.
 - **SIOPv2**: the JWK thumbprint subject syntax type is parsed but no `Subject` produces it

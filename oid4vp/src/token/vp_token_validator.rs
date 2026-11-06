@@ -54,6 +54,8 @@ pub enum VpTokenValidationError {
     InvalidDecodedCredentialType,
     #[error("DCQL evaluation failed")]
     DcqlEvaluationFailed,
+    #[error("Credential query with id `{0}` has `trusted_authorities`, which cannot be verified")]
+    UnsupportedTrustedAuthorities(CredentialQueryId),
     #[error("Presentation submission validation failed: {0}")]
     PresentationSubmissionValidation(#[from] VpTokenBuilderError),
 }
@@ -70,17 +72,37 @@ pub const DEFAULT_CLOCK_SKEW_LEEWAY: Duration = Duration::from_secs(60);
 /// wallets that built presentations with `identity_credential` did too.
 const LEGACY_PRESENTATION_TYP: &str = "JWT";
 
+/// What [`VpTokenValidator`] does about a Credential Query with `trusted_authorities` (OID4VP 1.0, §6.1.1).
+///
+/// The Wallet should only return Credentials that match one of the trusted authorities, and the verifier must establish
+/// trust in the issuer on its own. None of the types OID4VP 1.0 defines can be checked yet.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum TrustedAuthoritiesPolicy {
+    /// Reject presentations for a Credential Query with `trusted_authorities`
+    /// ([`VpTokenValidationError::UnsupportedTrustedAuthorities`]), since the issuer cannot be checked against them.
+    #[default]
+    Reject,
+    /// Accept them without checking `trusted_authorities`, which are then only a hint to the Wallet. For a verifier
+    /// that establishes trust in issuers on its own, for instance with a [`KeyResolver`] that resolves keys of trusted
+    /// issuers only.
+    Ignore,
+}
+
 /// A type validating [`VpToken`]s.
 ///
 /// Keys are resolved with a [`KeyResolver`] (for instance a [`Resolver`](identity_kit::resolver::Resolver) with the DID
 /// methods the verifier accepts) and signatures verified with a [`JwsVerifier`] ([`DefaultVerifier`] unless another is
 /// given). The [`StatusCheck`] receives every `credentialStatus` entry and `status` claim of the presented credentials;
 /// `status_list::StatusListCheck` checks the Token Status List. What it does not support is skipped, unless
-/// the [`StatusPolicy`] says otherwise ([`with_status_policy`](Self::with_status_policy)).
+/// the [`StatusPolicy`] says otherwise ([`with_status_policy`](Self::with_status_policy)). Presentations for a Credential
+/// Query with `trusted_authorities` are rejected, unless the [`TrustedAuthoritiesPolicy`] says otherwise
+/// ([`with_trusted_authorities_policy`](Self::with_trusted_authorities_policy)).
 pub struct VpTokenValidator<R, V = DefaultVerifier> {
     jwt_presentation_validator: JwtPresentationValidator<Arc<R>, Arc<V>>,
     sd_jwt_credential_validator: SdJwtCredentialValidator<Arc<R>, Arc<V>>,
     status_policy: StatusPolicy,
+    trusted_authorities_policy: TrustedAuthoritiesPolicy,
     clock_skew_leeway: Duration,
 }
 
@@ -104,6 +126,7 @@ impl<R: KeyResolver + 'static, V: JwsVerifier + 'static> VpTokenValidator<R, V> 
             sd_jwt_credential_validator: SdJwtCredentialValidator::new(resolver, verifier)
                 .with_status_check(status_check),
             status_policy: StatusPolicy::SkipUnsupported,
+            trusted_authorities_policy: TrustedAuthoritiesPolicy::Reject,
             clock_skew_leeway: DEFAULT_CLOCK_SKEW_LEEWAY,
         }
     }
@@ -122,12 +145,20 @@ impl<R: KeyResolver + 'static, V: JwsVerifier + 'static> VpTokenValidator<R, V> 
         self
     }
 
+    /// Override what to do about Credential Queries with `trusted_authorities`. Defaults to
+    /// [`TrustedAuthoritiesPolicy::Reject`].
+    pub fn with_trusted_authorities_policy(mut self, trusted_authorities_policy: TrustedAuthoritiesPolicy) -> Self {
+        self.trusted_authorities_policy = trusted_authorities_policy;
+        self
+    }
+
     /// Validate the provided [`VpToken`] against the given [`DcqlQuery`].
     ///
     /// This process involves:
     /// 1. Validating the structural submission of the presentations (e.g. required sets satisfied).
     /// 2. Iterating through presentations in the `vp_token`.
-    /// 3. Matching each presentation to a `CredentialQuery` in the `dcql_query`.
+    /// 3. Matching each presentation to a `CredentialQuery` in the `dcql_query`, and rejecting it if the query has
+    ///    `trusted_authorities` under [`TrustedAuthoritiesPolicy::Reject`].
     /// 4. Validating the format-specific structure and signatures of each presentation, including the audience
     ///    (`client_id`) and the `nonce` of the presentation or key binding JWT when holder binding is required.
     /// 5. Validating the credentials, their status included, and decoding them into a common format (`JsonObject`).
@@ -155,6 +186,14 @@ impl<R: KeyResolver + 'static, V: JwsVerifier + 'static> VpTokenValidator<R, V> 
                 .iter()
                 .find(|credential_query| credential_query.id == *credential_query_id)
                 .ok_or_else(|| VpTokenValidationError::CredentialQueryNotFound(credential_query_id.clone()))?;
+
+            if credential_query.trusted_authorities.is_some()
+                && self.trusted_authorities_policy == TrustedAuthoritiesPolicy::Reject
+            {
+                return Err(VpTokenValidationError::UnsupportedTrustedAuthorities(
+                    credential_query_id.clone(),
+                ));
+            }
 
             let require_holder_binding = credential_query.require_cryptographic_holder_binding.unwrap_or(true);
 
@@ -958,6 +997,48 @@ mod tests {
                 .with_status_policy(StatusPolicy::SkipAll)
                 .validate_vp_token(
                     &dcql_query(Format::JwtVcJson, &["credentialSubject", "first_name"]),
+                    &vp_token("CredentialQuery", VALID_JWT_VC_JSON_CREDENTIAL),
+                    VERIFIER,
+                    JWT_VC_JSON_NONCE,
+                )
+                .await
+                .is_ok()
+        );
+    }
+
+    /// The DCQL query of `dcql_query` for `jwt_vc_json`, with an `aki` trusted authority.
+    fn dcql_query_with_trusted_authorities() -> DcqlQuery {
+        let mut dcql_query = dcql_query(Format::JwtVcJson, &["credentialSubject", "first_name"]);
+        dcql_query.credentials[0].trusted_authorities =
+            serde_json::from_value(json!([{ "type": "aki", "values": ["s9tIpPmhxdiuNkHMEWNpYim8S8Y"] }])).unwrap();
+        dcql_query
+    }
+
+    #[tokio::test]
+    async fn trusted_authorities_result_in_unsupported_trusted_authorities_error() {
+        let error = validator()
+            .validate_vp_token(
+                &dcql_query_with_trusted_authorities(),
+                &vp_token("CredentialQuery", VALID_JWT_VC_JSON_CREDENTIAL),
+                VERIFIER,
+                JWT_VC_JSON_NONCE,
+            )
+            .await
+            .unwrap_err();
+
+        assert!(matches!(
+            error,
+            VpTokenValidationError::UnsupportedTrustedAuthorities(id) if id.as_ref() == "CredentialQuery"
+        ));
+    }
+
+    #[tokio::test]
+    async fn trusted_authorities_are_not_checked_under_ignore() {
+        assert!(
+            validator()
+                .with_trusted_authorities_policy(TrustedAuthoritiesPolicy::Ignore)
+                .validate_vp_token(
+                    &dcql_query_with_trusted_authorities(),
                     &vp_token("CredentialQuery", VALID_JWT_VC_JSON_CREDENTIAL),
                     VERIFIER,
                     JWT_VC_JSON_NONCE,

@@ -119,8 +119,9 @@ Specification versions tracked: [OID4VCI 1.0][oid4vci] (final, 16 September 2025
 | Claims queries with path pointers and `values` matching                                       |   ✅   |               | [OID4VP, DCQL: Claims Query, Claims Path Pointer][oid4vp]        |       |
 | Structural validation rules (unique ids, claim ids with claim sets, set option references)    |   ✅   |               | [OID4VP, DCQL][oid4vp]                |       |
 | Query evaluation against a decoded VP token (sets, meta, claims)                              |   ✅   |               | [OID4VP, DCQL: Selecting Claims and Credentials][oid4vp]            |       |
-| `multiple` and `trusted_authorities` enforced during evaluation                               |   🚧   |               | [OID4VP, DCQL: Credential Query, Trusted Authorities][oid4vp]      |       |
-| Specification examples as tests (`tests/examples/query_lang/`)                                |   ✅   |               | [OID4VP, DCQL][oid4vp]                |       |
+| `multiple` enforced during evaluation; every presentation for a query must match it         |   ✅   |               | [OID4VP, DCQL: Credential Query; Response][oid4vp] | [#185](https://github.com/impierce/openid4vc/issues/185) |
+| `trusted_authorities` verified during evaluation (rejected until verification exists, `TrustedAuthoritiesPolicy`) |   🚧   |               | [OID4VP, DCQL: Trusted Authorities Query][oid4vp] | [#191](https://github.com/impierce/openid4vc/issues/191) |
+| Specification examples as tests (`tests/examples/query_lang/`, `tests/examples/trusted_authorities/`) |   ✅   |               | [OID4VP, DCQL][oid4vp]                |       |
 
 ### Response and VP Token
 
