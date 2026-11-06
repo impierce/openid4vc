@@ -31,6 +31,15 @@ For an easy-to-use library that combines all the above specifications, please ch
 
 - [OID4VC-Manager](oid4vc-manager)
 
+### JWT crypto backend
+
+The crates verify JWTs with [`jsonwebtoken`](https://crates.io/crates/jsonwebtoken) but leave its crypto backend to the application.
+Enable exactly one of its `rust_crypto` and `aws_lc_rs` features, or call `jsonwebtoken::crypto::CryptoProvider::install_default()` at startup; otherwise the first JWT verification panics:
+
+```toml
+jsonwebtoken = { version = "11.1", default-features = false, features = ["rust_crypto"] }
+```
+
 ## Development
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set up, test and submit changes.
