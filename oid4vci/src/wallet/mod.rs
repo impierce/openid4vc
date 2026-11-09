@@ -86,12 +86,14 @@ impl Wallet {
             credential_offer_host = credential_offer_uri.host_str().unwrap_or_default(),
             "Fetching credential offer"
         );
+        tracing::trace!(target: oid4vc_core::PAYLOAD_LOG_TARGET, %credential_offer_uri, "Credential offer URI");
         let response = self.client.get(credential_offer_uri).send().await?;
         let status = response.status();
         let text = response
             .text()
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read response body from credential offer endpoint: {e}"))?;
+        tracing::trace!(target: oid4vc_core::PAYLOAD_LOG_TARGET, %status, body = %text, "Credential offer response body");
 
         if !status.is_success() {
             return Err(anyhow::anyhow!(
@@ -245,6 +247,7 @@ impl Wallet {
         };
 
         let url_encoded = to_form_urlencoded_string(&authorization_request).unwrap();
+        tracing::trace!(target: oid4vc_core::PAYLOAD_LOG_TARGET, body = %url_encoded, "Pushed authorization request body");
 
         let response = self
             .client
@@ -261,6 +264,7 @@ impl Wallet {
             .text()
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read response body from PAR endpoint: {e}"))?;
+        tracing::trace!(target: oid4vc_core::PAYLOAD_LOG_TARGET, %status, body = %text, "Pushed authorization response body");
 
         if !status.is_success() {
             return Err(anyhow::anyhow!(
@@ -328,12 +332,14 @@ impl Wallet {
     #[tracing::instrument(level = "debug", err, skip(self, token_request))]
     pub async fn get_access_token(&self, token_endpoint: Url, token_request: TokenRequest) -> Result<TokenResponse> {
         tracing::info!(%token_endpoint, "Sending token request to token endpoint");
+        tracing::trace!(target: oid4vc_core::PAYLOAD_LOG_TARGET, ?token_request, "Token request");
         let response = self.client.post(token_endpoint).form(&token_request).send().await?;
         let status = response.status();
         let text = response
             .text()
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read response body from token endpoint: {e}"))?;
+        tracing::trace!(target: oid4vc_core::PAYLOAD_LOG_TARGET, %status, body = %text, "Token response body");
 
         if !status.is_success() {
             return Err(anyhow::anyhow!("Token request failed (HTTP {status}): {text}"));
@@ -463,6 +469,7 @@ impl Wallet {
             .text()
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read response body from nonce endpoint: {e}"))?;
+        tracing::trace!(target: oid4vc_core::PAYLOAD_LOG_TARGET, %status, body = %text, "Nonce response body");
 
         if !status.is_success() {
             return Err(anyhow::anyhow!("Nonce request failed (HTTP {status}): {text}"));
@@ -543,6 +550,7 @@ impl Wallet {
         };
 
         tracing::info!("Sending credential request to issuer");
+        tracing::trace!(target: oid4vc_core::PAYLOAD_LOG_TARGET, ?credential_request, "Credential request");
 
         if let Ok((kid, alg)) = oid4vc_core::jwt::extract_header(&jwt_string) {
             tracing::debug!(%kid, ?alg, "Proof JWT header parameters");
@@ -560,6 +568,7 @@ impl Wallet {
             .text()
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read response body from credential endpoint: {e}"))?;
+        tracing::trace!(target: oid4vc_core::PAYLOAD_LOG_TARGET, %status, body = %text, "Credential response body");
 
         if !status.is_success() {
             return Err(anyhow::anyhow!("Credential issuance failed (HTTP {status}): {text}"));
@@ -614,6 +623,7 @@ impl Wallet {
         };
 
         let url_encoded = to_form_urlencoded_string(&request)?;
+        tracing::trace!(target: oid4vc_core::PAYLOAD_LOG_TARGET, body = %url_encoded, "Interactive authorization request body");
 
         let response = self
             .client
@@ -629,6 +639,7 @@ impl Wallet {
         let text = response.text().await.map_err(|e| {
             anyhow::anyhow!("Failed to read response body from interactive authorization endpoint: {e}")
         })?;
+        tracing::trace!(target: oid4vc_core::PAYLOAD_LOG_TARGET, %status, body = %text, "Interactive authorization response body");
 
         if !status.is_success() {
             return Err(anyhow::anyhow!(
@@ -662,6 +673,7 @@ impl Wallet {
     ) -> Result<InteractiveAuthorizationResponse> {
         tracing::info!(%interactive_authorization_endpoint, "Sending interactive authorization follow-up");
         let url_encoded = to_form_urlencoded_string(&follow_up)?;
+        tracing::trace!(target: oid4vc_core::PAYLOAD_LOG_TARGET, body = %url_encoded, "Interactive authorization follow-up body");
 
         let response = self
             .client
@@ -677,6 +689,7 @@ impl Wallet {
         let text = response.text().await.map_err(|e| {
             anyhow::anyhow!("Failed to read response body from interactive authorization endpoint: {e}")
         })?;
+        tracing::trace!(target: oid4vc_core::PAYLOAD_LOG_TARGET, %status, body = %text, "Interactive authorization follow-up response body");
 
         if !status.is_success() {
             return Err(anyhow::anyhow!(
