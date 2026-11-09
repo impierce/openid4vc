@@ -78,9 +78,14 @@ impl Wallet {
         })
     }
 
-    #[tracing::instrument(level = "debug", err, skip(self))]
+    // Only the host of `credential_offer_uri` is logged: a plain GET on the full URI returns the Credential Offer,
+    // including any `pre-authorized_code` (OID4VCI 1.0, Section 4.1.3), so the URI is as sensitive as that code.
+    #[tracing::instrument(level = "debug", err, skip(self, credential_offer_uri))]
     pub async fn get_credential_offer(&self, credential_offer_uri: Url) -> Result<CredentialOfferParameters> {
-        tracing::info!(%credential_offer_uri, "Fetching credential offer");
+        tracing::info!(
+            credential_offer_host = credential_offer_uri.host_str().unwrap_or_default(),
+            "Fetching credential offer"
+        );
         let response = self.client.get(credential_offer_uri).send().await?;
         let status = response.status();
         let text = response
