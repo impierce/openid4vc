@@ -20,12 +20,6 @@ pub use rfc7519_claims::RFC7519Claims;
 use serde::Serialize;
 pub use subject_syntax_type::{DidMethod, SubjectSyntaxType};
 
-/// Target of the TRACE events that carry full protocol payloads: requests and responses with credentials, codes,
-/// tokens, nonces and `state` values. Other log lines in these crates contain only endpoints, IDs, types, counts and
-/// statuses. Consumers keep this target off by default and switch it on only to debug a flow, e.g. with
-/// `level_for(PAYLOAD_LOG_TARGET, LevelFilter::Trace)`.
-pub const PAYLOAD_LOG_TARGET: &str = "oid4vc::payload";
-
 pub type JsonObject = serde_json::Map<String, serde_json::Value>;
 
 #[cfg(feature = "test-utils")]
