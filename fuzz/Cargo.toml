@@ -12,7 +12,7 @@ cargo-fuzz = true
 [dependencies]
 async-trait = "0.1"
 futures = "0.3"
-identity-kit = { version = "0.4.0", default-features = false, features = ["did-key", "vc"] }
+identity-kit = { version = "0.5.0", default-features = false, features = ["did-key", "vc"] }
 jsonwebtoken = { version = "11.1", default-features = false, features = ["rust_crypto"] }
 libfuzzer-sys = "0.4"
 oid4vc-core = { path = "../oid4vc-core" }
