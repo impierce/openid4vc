@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0](https://github.com/impierce/openid4vc/compare/oid4vc-core-v0.5.0...oid4vc-core-v0.6.0) - 2026-11-11
+
+### Dependencies
+
+- *(deps)* [**breaking**] bump identity-kit to 0.5 ([#205](https://github.com/impierce/openid4vc/pull/205))
+
 ## [0.5.0](https://github.com/impierce/openid4vc/compare/oid4vc-core-v0.4.0...oid4vc-core-v0.5.0) - 2026-11-06
 
 ### Other
