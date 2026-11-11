@@ -1277,9 +1277,9 @@ checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 
 [[package]]
 name = "identity-kit"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c0177e3809029676c2ada988c33fd81392fba76bc419947c67672ddb1ebb92c"
+checksum = "af9b760d42e6b9a5f2bd26dbd38b94f637e92c71321e6ee73d489dbeafa195a9"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
