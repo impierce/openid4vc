@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1](https://github.com/impierce/openid4vc/compare/oid4vci-v0.6.0...oid4vci-v0.6.1) - 2026-11-12
+
+### Fixed
+
+- remove personal data and secrets from logs ([#208](https://github.com/impierce/openid4vc/pull/208))
+
 ## [0.6.0](https://github.com/impierce/openid4vc/compare/oid4vci-v0.5.0...oid4vci-v0.6.0) - 2026-11-11
 
 ### Dependencies
