@@ -89,7 +89,7 @@ fn evaluate_single_claim_query(claim_query: &ClaimQuery, credential_json: &Value
 }
 
 /// Processing with claims_sets as described in OID4VP Section 6.4.1 Selecting Claims:
-/// https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-selecting-claims
+/// <https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-selecting-claims>
 pub fn evaluate_credential_query(
     credential_query: &CredentialQuery,
     decoded_presentations: &DecodedPresentations,
@@ -187,7 +187,7 @@ pub fn matches_claim_values(actual_value: &Value, required_value: &ClaimValues) 
 mod tests {
     use super::*;
     use crate::{
-        dcql::claims::{validate_claims, ClaimsContext},
+        dcql::claims::{ClaimsContext, validate_claims},
         token::vp_token_validator::DecodedVpTokenBuilder,
     };
     use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathPointer, ClaimValue, ClaimValues};
@@ -305,7 +305,7 @@ mod tests {
         let claims_context = ClaimsContext {
             claim_sets: &dcql_query.claim_sets,
         };
-        validate_claims(&dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
+        validate_claims(dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
 
         assert!(evaluate_credential_query(
             dcql_query,
@@ -359,7 +359,7 @@ mod tests {
         let claims_context = ClaimsContext {
             claim_sets: &dcql_query.claim_sets,
         };
-        validate_claims(&dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
+        validate_claims(dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
 
         // Assert `false` because the credential type does not match the required type in the query.
         assert!(!evaluate_credential_query(
@@ -396,7 +396,7 @@ mod tests {
         let claims_context = ClaimsContext {
             claim_sets: &dcql_query.claim_sets,
         };
-        validate_claims(&dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
+        validate_claims(dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
 
         assert!(evaluate_credential_query(
             dcql_query,
@@ -431,7 +431,7 @@ mod tests {
         let claims_context = ClaimsContext {
             claim_sets: &dcql_query.claim_sets,
         };
-        validate_claims(&dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
+        validate_claims(dcql_query.claims.as_deref().unwrap_or(&[]), &claims_context).unwrap();
 
         // Assert `false` because the credential vct does not match the required vct_values in the query.
         assert!(!evaluate_credential_query(

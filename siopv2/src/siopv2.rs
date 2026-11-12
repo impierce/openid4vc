@@ -7,11 +7,11 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, Header};
 use oid4vc_core::client_metadata::ClientMetadataResource;
 use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};
-use oid4vc_core::{authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension, Subject};
+use oid4vc_core::{Subject, authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension};
 use oid4vc_core::{SubjectSyntaxType, Validator};
 use reqwest_middleware::ClientBuilder;
-use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
+use reqwest_retry::policies::ExponentialBackoff;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -91,7 +91,7 @@ impl Extension for SIOPv2 {
             // Fetch the client metadata from the given URI.
             ClientMetadataResource::ClientMetadataUri(client_metadata_uri) => {
                 let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
-                let client = ClientBuilder::new(reqwest::Client::new())
+                let client = ClientBuilder::new(oid4vc_core::http_client())
                     .with(RetryTransientMiddleware::new_with_policy(retry_policy))
                     .build();
                 let client_metadata: ClientMetadataResource<ClientMetadataParameters> =
@@ -102,7 +102,9 @@ impl Extension for SIOPv2 {
         };
 
         match client_metadata {
-            ClientMetadataResource::ClientMetadataUri(_) => unreachable!(),
+            ClientMetadataResource::ClientMetadataUri(_) => {
+                anyhow::bail!("The client metadata at `client_metadata_uri` is itself a `client_metadata_uri`")
+            }
             ClientMetadataResource::ClientMetadata { extension, .. } => {
                 match extension.id_token_signed_response_alg {
                     Some(alg) => Ok(vec![alg]),
@@ -120,7 +122,7 @@ impl Extension for SIOPv2 {
             // Fetch the client metadata from the given URI.
             ClientMetadataResource::ClientMetadataUri(client_metadata_uri) => {
                 let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
-                let client = ClientBuilder::new(reqwest::Client::new())
+                let client = ClientBuilder::new(oid4vc_core::http_client())
                     .with(RetryTransientMiddleware::new_with_policy(retry_policy))
                     .build();
                 let client_metadata: ClientMetadataResource<ClientMetadataParameters> =
@@ -131,7 +133,9 @@ impl Extension for SIOPv2 {
         };
 
         match client_metadata {
-            ClientMetadataResource::ClientMetadataUri(_) => unreachable!(),
+            ClientMetadataResource::ClientMetadataUri(_) => {
+                anyhow::bail!("The client metadata at `client_metadata_uri` is itself a `client_metadata_uri`")
+            }
             ClientMetadataResource::ClientMetadata {
                 extension:
                     ClientMetadataParameters {

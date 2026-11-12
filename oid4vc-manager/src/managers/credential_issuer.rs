@@ -4,8 +4,8 @@ use oid4vc_core::Subject;
 use oid4vci::credential_offer::CredentialConfigurationIds;
 use oid4vci::{
     credential_issuer::{
-        authorization_server_metadata::AuthorizationServerMetadata,
-        credential_issuer_metadata::CredentialIssuerMetadata, CredentialIssuer,
+        CredentialIssuer, authorization_server_metadata::AuthorizationServerMetadata,
+        credential_issuer_metadata::CredentialIssuerMetadata,
     },
     credential_offer::{CredentialOffer, CredentialOfferParameters, Grants},
 };

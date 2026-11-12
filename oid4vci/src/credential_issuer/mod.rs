@@ -6,7 +6,7 @@ use self::{
     authorization_server_metadata::AuthorizationServerMetadata, credential_issuer_metadata::CredentialIssuerMetadata,
 };
 use crate::{proof::ProofOfPossession, proofs::Proofs};
-use oid4vc_core::{authentication::subject::SigningSubject, Validator};
+use oid4vc_core::{Validator, authentication::subject::SigningSubject};
 
 #[derive(Clone)]
 pub struct CredentialIssuer {

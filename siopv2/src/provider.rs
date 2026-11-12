@@ -2,18 +2,18 @@ use anyhow::Result;
 use jsonwebtoken::Algorithm;
 use oid4vc_core::utils::form_urlencoded::to_form_urlencoded_string;
 use oid4vc_core::{
+    SubjectSyntaxType, Validator,
     authentication::subject::SigningSubject,
     authorization_request::{AuthorizationRequest, Body, ByReference, ByValue, Object},
     authorization_response::AuthorizationResponse,
     openid4vc_extension::{Extension, ResponseHandle},
-    SubjectSyntaxType, Validator,
 };
 use reqwest::StatusCode;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
+use reqwest_retry::{RetryTransientMiddleware, policies::ExponentialBackoff};
 use std::str::FromStr;
 
-/// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`IdToken`]'s in response to
+/// A Self-Issued OpenID Provider (SIOP), which is responsible for generating and signing [`crate::IdToken`]'s in response to
 /// [`AuthorizationRequest`]'s from [crate::relying_party::RelyingParty]'s (RPs). The [`Provider`] acts as a trusted intermediary between the RPs and
 /// the user who is trying to authenticate.
 #[derive(Debug)]
@@ -32,7 +32,7 @@ impl Provider {
         supported_signing_algorithms: Vec<Algorithm>,
     ) -> Result<Self> {
         let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
-        let client = ClientBuilder::new(reqwest::Client::new())
+        let client = ClientBuilder::new(oid4vc_core::http_client())
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
             .build();
 
@@ -68,10 +68,8 @@ impl Provider {
             let (client_id, authorization_request) =
                 if let Ok(authorization_request) = AuthorizationRequest::<ByValue>::from_str(&authorization_request) {
                     let client_id = authorization_request.body.client_id().clone();
-                    let authorization_request: AuthorizationRequest<Object> = validator
-                        .decode(authorization_request.body.request.to_owned())
-                        .await
-                        .unwrap();
+                    let authorization_request: AuthorizationRequest<Object> =
+                        validator.decode(authorization_request.body.request.to_owned()).await?;
 
                     (client_id, authorization_request)
                 } else if let Ok(authorization_request) =
@@ -130,7 +128,7 @@ impl Provider {
     }
 
     /// Generates an [`AuthorizationResponse`] in response to an [`AuthorizationRequest`] and the user's claims. The [`AuthorizationResponse`]
-    /// contains an [`IdToken`], which is signed by the [`Subject`] of the [`Provider`].
+    /// contains an [`crate::IdToken`], which is signed by the [`oid4vc_core::Subject`] of the [`Provider`].
     #[tracing::instrument(level = "debug", err, skip(self, authorization_request, input))]
     pub async fn generate_response<E: Extension>(
         &self,
@@ -218,9 +216,24 @@ mod tests {
             AuthorizationRequest::<Object<SIOPv2>>::from_generic(&authorization_request).unwrap();
 
         // Test whether the provider can generate a authorization_response for the authorization_request succesfully.
-        assert!(provider
-            .generate_response(&authorization_request, Default::default())
-            .await
-            .is_ok());
+        assert!(
+            provider
+                .generate_response(&authorization_request, Default::default())
+                .await
+                .is_ok()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_validate_request_rejects_invalid_request_object() {
+        let subject = TestSubject::new("did:test:123".to_string(), "key_id".to_string()).unwrap();
+        let provider = Provider::new(Arc::new(subject), vec!["did:test"], vec![Algorithm::EdDSA]).unwrap();
+
+        assert!(
+            provider
+                .validate_request("siopv2://idtoken?client_id=did%3Aexample%3A123&request=not-a-jwt".to_string())
+                .await
+                .is_err()
+        );
     }
 }

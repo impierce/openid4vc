@@ -1,0 +1,17 @@
+{
+  "issuer": "https://server.example.com",
+  "authorization_endpoint": "https://server.example.com/authorize",
+  "token_endpoint": "https://server.example.com/token",
+  "jwks_uri": "https://server.example.com/jwks.json",
+  "response_types_supported": [
+    "code"
+  ],
+  "grant_types_supported": [
+    "authorization_code",
+    "urn:ietf:params:oauth:grant-type:pre-authorized_code"
+  ],
+  "code_challenge_methods_supported": [
+    "S256"
+  ],
+  "pre-authorized_grant_anonymous_access_supported": true
+}

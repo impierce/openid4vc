@@ -1,24 +1,26 @@
 use anyhow::Result;
 use nutype::nutype;
 use oid4vc_core::utils::predicates::not_empty;
-use oid4vc_core::{to_query_value, JsonObject};
+use oid4vc_core::{JsonObject, to_query_value};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 
 use serde_json::Value;
 use serde_with::skip_serializing_none;
 
-/// Grant Type `authorization_code` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-5.1.1
+/// Grant Type `authorization_code` as described here: <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-5.1.1>
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct AuthorizationCode {
     pub issuer_state: Option<String>,
     pub authorization_server: Option<Url>,
 }
 
-/// Grant Type `pre-authorized_code` as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-5.2.1
+/// Grant Type `pre-authorized_code` as described here: <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-5.2.1>
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone, Default)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct PreAuthorizedCode {
     #[serde(rename = "pre-authorized_code")]
     pub pre_authorized_code: String,
@@ -63,20 +65,37 @@ pub enum InputMode {
     Text,
 }
 
-/// Credential Offer Parameters as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer-parameters
+/// Credential Offer Parameters as described here: <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer-parameters>
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct CredentialOfferParameters {
     pub credential_issuer: Url,
     pub credential_configuration_ids: CredentialConfigurationIds,
     pub grants: Option<Grants>,
 }
 
+/// A non-empty list of Credential Configuration identifiers offered by the Credential Issuer.
 #[nutype(validate(predicate = not_empty),
          derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Deref))]
 pub struct CredentialConfigurationIds(Vec<String>);
 
-/// Credential Offer as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer
+#[cfg(feature = "utoipa")]
+impl utoipa::PartialSchema for CredentialConfigurationIds {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+        utoipa::openapi::schema::Array::builder()
+            .items(utoipa::openapi::Object::with_type(
+                utoipa::openapi::schema::Type::String,
+            ))
+            .min_items(Some(1))
+            .into()
+    }
+}
+
+#[cfg(feature = "utoipa")]
+impl utoipa::ToSchema for CredentialConfigurationIds {}
+
+/// Credential Offer as described here: <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer>
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum CredentialOffer {
@@ -118,9 +137,10 @@ impl std::fmt::Display for CredentialOffer {
     }
 }
 
-/// Grants as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-2.3
+/// Grants as described here: <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#section-4.1.1-2.3>
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Default)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct Grants {
     pub authorization_code: Option<AuthorizationCode>,
     #[serde(rename = "urn:ietf:params:oauth:grant-type:pre-authorized_code")]
@@ -272,6 +292,22 @@ mod tests {
         );
     }
 
+    /// The URL form keeps the whitespace inside string values: the `tx_code.description` of the specification
+    /// example used to lose its spaces on the way through `credential_offer=`.
+    #[test]
+    fn test_credential_offer_url_round_trip_keeps_whitespace_in_strings() {
+        let offer = CredentialOffer::CredentialOffer(Box::new(
+            from_str::<CredentialOfferParameters>(include_str!(
+                "../tests/examples/credential_offer_multiple_credentials.json"
+            ))
+            .unwrap(),
+        ));
+
+        let url = offer.to_string();
+        assert!(url.starts_with("openid-credential-offer://?credential_offer="));
+        assert_eq!(url.parse::<CredentialOffer>().unwrap(), offer);
+    }
+
     #[cfg(feature = "utoipa")]
     #[test]
     fn test_tx_code_constraints_schema_inlines_input_mode_and_examples() {
@@ -296,11 +332,11 @@ mod tests {
             "input_mode": {
               "oneOf": [
                 {
-                  "type": "null"
-                },
-                {
                   "type": "string",
                   "enum": ["numeric", "text"]
+                },
+                {
+                  "type": "null"
                 }
               ],
               "default": "numeric"

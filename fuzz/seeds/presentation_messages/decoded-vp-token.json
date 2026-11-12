@@ -1,0 +1,25 @@
+{
+  "example_jwt_vc": [
+    {
+      "@context": [
+        "https://www.w3.org/2018/credentials/v1",
+        "https://www.w3.org/2018/credentials/examples/v1"
+      ],
+      "type": [
+        "VerifiableCredential",
+        "IDCredential"
+      ],
+      "credentialSubject": {
+        "given_name": "Max",
+        "family_name": "Mustermann",
+        "birthdate": "1998-01-11",
+        "address": {
+          "street_address": "Sandanger 25",
+          "locality": "Musterstadt",
+          "postal_code": "123456",
+          "country": "DE"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+# cargo-deny configuration: https://embarkstudios.github.io/cargo-deny/
+# `advisories` runs in the Audit workflow; `licenses`, `bans` and `sources` run in the License workflow.
+#
+# Every ignore and exception names the crate that needs it; remove it with that crate.
+
+[graph]
+all-features = true
+
+[advisories]
+# Also fail on unmaintained crates anywhere in the graph and on yanked versions.
+unmaintained = "all"
+yanked = "deny"
+ignore = [
+    { id = "RUSTSEC-2026-0441", reason = "pin-utils 0.1 via reqwest-retry -> wasmtimer, a dependency only on wasm32: unmaintained, not vulnerable; reqwest-retry 0.9.1 and wasmtimer 0.4.3 are the latest versions" },
+]
+
+[licenses]
+# Permissive licenses compatible with distributing these crates under Apache-2.0.
+allow = [
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    # Mozilla root store data (`webpki-roots`), a permissive data license.
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "Unicode-3.0",
+    "Zlib",
+]
+confidence-threshold = 0.8
+# Keep the list above as policy, even for licenses no dependency currently uses.
+unused-allowed-license = "allow"
+
+[bans]
+multiple-versions = "warn"
+# Published crates need a version on every dependency; `allow-wildcard-paths` exempts only the
+# unpublished packages (the facade and `fuzz/`) and dev-dependencies, which `cargo publish` strips.
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

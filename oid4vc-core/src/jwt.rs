@@ -1,10 +1,10 @@
 use crate::Sign;
-use anyhow::{anyhow, Result};
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use anyhow::{Result, anyhow};
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use getset::Getters;
 use jsonwebtoken::{Algorithm, DecodingKey, Header, Validation};
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use std::sync::Arc;
 
 #[derive(Debug, Serialize, Getters)]
@@ -96,10 +96,10 @@ where
 mod tests {
     use super::*;
     use crate::{
-        test_utils::{MockVerifier, TestSubject},
         Verify,
+        test_utils::{MockVerifier, TestSubject},
     };
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
 
     #[tokio::test]
     async fn test_encode() {

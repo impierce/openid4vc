@@ -8,41 +8,44 @@ use self::{
     sealed::FormatExtension,
     vc_jose_cose::vc_sd_jwt::VcSdJwt,
     w3c_verifiable_credentials::{
-        jwt_vc_json::JwtVcJson, jwt_vc_json_ld::JwtVcJsonLd, ldp_vc::LdpVc, CredentialSubject,
+        CredentialSubject, jwt_vc_json::JwtVcJson, jwt_vc_json_ld::JwtVcJsonLd, ldp_vc::LdpVc,
     },
 };
 use ietf_sd_jwt_vc::dc_sd_jwt::DcSdJwt;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
+/// Defines a credential format: the unit type `$name` implementing
+/// [`Format`](crate::credential_format_profiles::Format), its parameters
+/// `$parameters` (with `From` the tuple of its field types) and the credential type `$credential`.
 #[macro_export]
 macro_rules! credential_format {
-    ($format:literal, $name:ty, {$($field_name:ident: $field_type:ty),*}) => {
-        paste::paste! {
-            #[derive(Debug, Clone, Eq, PartialEq, Default)]
-            pub struct $name;
-            impl $crate::credential_format_profiles::Format for $name {
-                type Parameters = [< $name Parameters >];
-            }
+    ($format:literal, $name:ident, $parameters:ident, $credential:ident, {$($field_name:ident: $field_type:ty),*}) => {
+        #[derive(Debug, Clone, Eq, PartialEq, Default)]
+        pub struct $name;
+        impl $crate::credential_format_profiles::Format for $name {
+            type Parameters = $parameters;
+        }
 
-            #[serde_with::skip_serializing_none]
-            #[derive(Debug, serde::Serialize, serde::Deserialize, Eq, PartialEq, Clone)]
-            pub struct [< $name Parameters >] {
-                $(pub $field_name: $field_type),*
-            }
+        #[serde_with::skip_serializing_none]
+        #[doc = concat!("Parameters for the `", $format, "` credential format.")]
+        #[derive(Debug, serde::Serialize, serde::Deserialize, Eq, PartialEq, Clone)]
+        #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+        pub struct $parameters {
+            $(pub $field_name: $field_type),*
+        }
 
-            #[serde_with::skip_serializing_none]
-            #[derive(Debug, serde::Serialize, serde::Deserialize, Eq, PartialEq, Clone)]
-            pub struct [< $name Credential >] {
-                $(pub $field_name: $field_type),*
-            }
+        #[serde_with::skip_serializing_none]
+        #[derive(Debug, serde::Serialize, serde::Deserialize, Eq, PartialEq, Clone)]
+        pub struct $credential {
+            $(pub $field_name: $field_type),*
+        }
 
-            #[allow(unused_parens)]
-            impl From<($($field_type),*)> for [< $name Parameters >] {
-                fn from(($($field_name),*): ($($field_type),*)) -> Self {
-                    Self {
-                        $($field_name),*
-                    }
+        #[allow(unused_parens)]
+        impl From<($($field_type),*)> for $parameters {
+            fn from(($($field_name),*): ($($field_type),*)) -> Self {
+                Self {
+                    $($field_name),*
                 }
             }
         }
@@ -71,7 +74,11 @@ pub struct WithParameters;
 impl FormatExtension for WithParameters {
     type Container<F: Format> = Parameters<F>;
 }
+
+/// Container that flattens format-specific parameters into a Credential Format object.
 #[derive(Debug, Serialize, Clone, Eq, PartialEq, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "utoipa", schema(bound = "F::Parameters: utoipa::ToSchema"))]
 pub struct Parameters<F>
 where
     F: Format,
@@ -80,6 +87,45 @@ where
     pub parameters: F::Parameters,
 }
 
+#[cfg(feature = "utoipa")]
+#[allow(dead_code)]
+#[derive(utoipa::ToSchema)]
+#[schema(as = CredentialFormats)]
+#[serde(tag = "format")]
+pub(crate) enum CredentialFormatsWithParametersSchema {
+    #[serde(rename = "jwt_vc_json")]
+    JwtVcJson(w3c_verifiable_credentials::jwt_vc_json::JwtVcJsonParameters),
+    #[serde(rename = "jwt_vc_json-ld")]
+    JwtVcJsonLd(w3c_verifiable_credentials::jwt_vc_json_ld::JwtVcJsonLdParameters),
+    #[serde(rename = "ldp_vc")]
+    LdpVc(w3c_verifiable_credentials::ldp_vc::LdpVcParameters),
+    #[serde(rename = "mso_mdoc")]
+    MsoMdoc(iso_mdl::mso_mdoc::MsoMdocParameters),
+    #[serde(rename = "dc+sd-jwt")]
+    DcSdJwt(ietf_sd_jwt_vc::dc_sd_jwt::DcSdJwtParameters),
+    #[serde(rename = "vc+sd-jwt")]
+    VcSdJwt(vc_jose_cose::vc_sd_jwt::VcSdJwtParameters),
+}
+
+#[cfg(feature = "utoipa")]
+impl utoipa::PartialSchema for CredentialFormats<WithParameters> {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+        <CredentialFormatsWithParametersSchema as utoipa::PartialSchema>::schema()
+    }
+}
+
+#[cfg(feature = "utoipa")]
+impl utoipa::ToSchema for CredentialFormats<WithParameters> {
+    fn name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("CredentialFormats")
+    }
+
+    fn schemas(schemas: &mut Vec<(String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>) {
+        <CredentialFormatsWithParametersSchema as utoipa::ToSchema>::schemas(schemas);
+    }
+}
+
+/// Credential formats supported by OpenID4VCI, optionally including format-specific parameters.
 #[derive(Debug, Serialize, Clone, Eq, PartialEq, Deserialize, Default)]
 #[serde(tag = "format")]
 pub enum CredentialFormats<C = ()>

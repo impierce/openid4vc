@@ -1,5 +1,4 @@
 use crate::common::{get_jwt_claims, memory_storage::MemoryStorage};
-use did_key::{generate, Ed25519KeyPair};
 use jsonwebtoken::Algorithm;
 use oid4vc_core::Subject;
 use oid4vc_manager::{
@@ -9,10 +8,10 @@ use oid4vc_manager::{
 use oid4vci::authorization_request::CodeChallengeMethod;
 use oid4vci::pkce;
 use oid4vci::{
+    Wallet,
     authorization_details::{AuthorizationDetailsObject, OpenidCredential},
     credential_response::{CredentialResponse, CredentialResponseType},
     token_request::TokenRequest,
-    Wallet,
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -21,17 +20,7 @@ use uuid::Uuid;
 async fn test_authorization_code_flow() {
     // Setup the credential issuer.
     let mut credential_issuer: Server<_> = Server::setup(
-        CredentialIssuerManager::<_>::new(
-            None,
-            MemoryStorage,
-            Arc::new(KeySubject::from_keypair(
-                generate::<Ed25519KeyPair>(Some(
-                    "this-is-a-very-UNSAFE-issuer-secret-key".as_bytes().try_into().unwrap(),
-                )),
-                None,
-            )),
-        )
-        .unwrap(),
+        CredentialIssuerManager::<_>::new(None, MemoryStorage, Arc::new(KeySubject::new().await.unwrap())).unwrap(),
         None,
     )
     .unwrap()
@@ -39,7 +28,7 @@ async fn test_authorization_code_flow() {
     credential_issuer.start_server().await.unwrap();
 
     // Create a new subject.
-    let subject = KeySubject::new();
+    let subject = KeySubject::new().await.unwrap();
     let subject_did = subject.identifier("did:key", Algorithm::EdDSA).await.unwrap();
 
     // Create a new wallet.
@@ -96,8 +85,7 @@ async fn test_authorization_code_flow() {
                 credential_configuration_id: credential_configuration_id.clone(),
                 claims: None,
                 credential_identifiers: None,
-            }
-            .into()]),
+            }]),
             issuer_state,
             Some(code_challenge),
             Some(CodeChallengeMethod::S256),

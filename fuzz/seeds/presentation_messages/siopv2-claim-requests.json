@@ -1,0 +1,17 @@
+{
+  "id_token": {
+    "email": {
+      "essential": true
+    },
+    "email_verified": {
+      "value": true
+    },
+    "given_name": {
+      "values": [
+        "Max",
+        "Erika"
+      ]
+    },
+    "name": null
+  }
+}

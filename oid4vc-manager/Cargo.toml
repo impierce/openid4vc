@@ -1,50 +1,52 @@
 [package]
 name = "oid4vc-manager"
-version = "0.1.0"
-edition = "2021"
+version = "0.6.0"
+edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
+description = "Managers and an issuer server combining the OpenID4VCI, OpenID4VP and SIOPv2 implementations"
+homepage.workspace = true
+repository.workspace = true
+keywords = ["oid4vc", "openid4vc", "openid", "did", "credentials"]
+categories = ["authentication", "cryptography", "web-programming"]
+readme = "README.md"
+include = ["/src", "/README.md", "/CHANGELOG.md"]
+
+[package.metadata.docs.rs]
+all-features = true
 
 [dependencies]
-# Fix these dependencies once the crates arre automatically published to crates.io.
-oid4vc-core = { path = "../oid4vc-core" }
-siopv2 = { path = "../siopv2" }
-oid4vp = { path = "../oid4vp" }
-oid4vci = { path = "../oid4vci" }
+oid4vc-core.workspace = true
+siopv2.workspace = true
+oid4vp.workspace = true
+oid4vci.workspace = true
 
 anyhow = "1.0"
 async-trait = "0.1"
-axum = "0.6"
-axum-auth = "0.4"
+axum = "0.8"
+axum-auth = "0.8"
 chrono.workspace = true
-derivative = "2.2"
-did-key.workspace = true
-did_url = "0.1"
 futures = "0.3"
 getset.workspace = true
-identity_credential.workspace = true
+identity-kit = { workspace = true, features = ["did-key", "in-memory"] }
 jsonwebtoken.workspace = true
-lazy_static = "1.4.0"
-paste = "1.0"
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_urlencoded.workspace = true
 serde_with.workspace = true
 tokio.workspace = true
-tower-http = { version = "0.4", features = ["cors"] }
+tower-http = { version = "0.7", features = ["cors"] }
 tracing.workspace = true
 url.workspace = true
 
 [dev-dependencies]
-oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
+jsonwebtoken = { workspace = true, features = ["aws_lc_rs"] }
+oid4vc-core = { workspace = true, features = ["test-utils"] }
 
-ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
-identity_did.workspace = true
-identity_document.workspace = true
-identity_jose.workspace = true
-identity_verification.workspace = true
-lazy_static = "1.4"
-rand = "0.8"
-rstest = "0.18"
+ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
+identity-kit.workspace = true
+rand = "0.10"
+rstest = "0.28"
 uuid = { version = "1.4", features = ["v4", "fast-rng"] }
-wiremock = "0.5"
+wiremock = "0.6"

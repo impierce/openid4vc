@@ -1,5 +1,5 @@
 use super::id_token_builder::IdTokenBuilder;
-use crate::{parse_other, StandardClaimsValues};
+use crate::{StandardClaimsValues, parse_other};
 use oid4vc_core::{JsonObject, RFC7519Claims};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;

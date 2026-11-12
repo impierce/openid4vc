@@ -1,4 +1,4 @@
-use serde::{de::Error, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de::Error};
 use serde_with::SerializeDisplay;
 use std::{fmt::Display, str::FromStr};
 
@@ -97,9 +97,7 @@ impl DidMethod {
             did_scheme.next(),
             did_scheme.next(),
         ) {
-            (Some("did"), Some(method), Some(namespace), None)
-                if !method.is_empty() && !namespace.is_empty() && method.chars().all(char::is_alphanumeric) =>
-            {
+            (Some("did"), Some(method), Some(namespace), None) if is_method_name(method) && !namespace.is_empty() => {
                 Ok(DidMethod {
                     method_name: method.to_owned(),
                     namespace: Some(namespace.to_owned()),
@@ -108,6 +106,12 @@ impl DidMethod {
             _ => Err(Error::custom("Invalid DID method")),
         }
     }
+}
+
+/// A DID method name as in [DID Core](https://www.w3.org/TR/did-1.0/#did-syntax): `method-name = 1*method-char`,
+/// `method-char = %x61-7A / DIGIT`, so lowercase ASCII letters and digits only.
+fn is_method_name(method: &str) -> bool {
+    !method.is_empty() && method.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
 }
 
 impl<'de> Deserialize<'de> for DidMethod {
@@ -122,8 +126,10 @@ impl<'de> Deserialize<'de> for DidMethod {
     }
 }
 
-impl From<did_url::DID> for DidMethod {
-    fn from(did: did_url::DID) -> Self {
+/// The method of `did`, without a namespace: whether the method-specific identifier starts with one
+/// depends on the method, so `did:iota:smr:0x…` gives `did:iota`.
+impl From<identity_kit::did::Did> for DidMethod {
+    fn from(did: identity_kit::did::Did) -> Self {
         DidMethod {
             method_name: did.method().to_owned(),
             namespace: None,
@@ -138,12 +144,10 @@ impl FromStr for DidMethod {
         let mut did_scheme = s.splitn(3, ':');
 
         match (did_scheme.next(), did_scheme.next(), did_scheme.next()) {
-            (Some("did"), Some(method), None) if !method.is_empty() && method.chars().all(char::is_alphanumeric) => {
-                Ok(DidMethod {
-                    method_name: method.to_owned(),
-                    namespace: None,
-                })
-            }
+            (Some("did"), Some(method), None) if is_method_name(method) => Ok(DidMethod {
+                method_name: method.to_owned(),
+                namespace: None,
+            }),
             _ => Err(Error::custom("Invalid DID method")),
         }
     }
@@ -172,6 +176,9 @@ mod tests {
         assert!(DidMethod::from_str("did:example_").is_err());
         assert!(DidMethod::from_str("did:example").is_ok());
         assert!(DidMethod::from_str("did:example:").is_err());
+        assert!(DidMethod::from_str("did:Example").is_err());
+        assert!(DidMethod::from_str("did:ключ").is_err());
+        assert!(DidMethod::from_str_with_namespace("did:ETHR:mainnet").is_err());
 
         assert_eq!(DidMethod::from_str("did:example").unwrap().to_string(), "did:example");
         assert_eq!(
@@ -182,6 +189,22 @@ mod tests {
         );
         assert!(DidMethod::from_str_with_namespace("did:example:namespace:").is_err());
         assert!(DidMethod::from_str_with_namespace("did:example:namespace:123").is_err());
+    }
+
+    #[test]
+    fn test_did_method_from_did() {
+        use identity_kit::did::Did;
+
+        let did_method = |did: &str| DidMethod::from(Did::parse(did).unwrap());
+        assert_eq!(
+            did_method("did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK"),
+            DidMethod::from_str("did:key").unwrap()
+        );
+        // The namespace of `did:iota` is part of the method-specific identifier, which only the method can read.
+        assert_eq!(
+            did_method("did:iota:smr:0xe4edef97da1257e83cbeb49159cfdd2da6ac971ac447f233f8439cf29376ebfe"),
+            DidMethod::from_str("did:iota").unwrap()
+        );
     }
 
     #[test]

@@ -1,66 +1,66 @@
 [package]
 name = "oid4vc"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
 description = "Rust implementation of the OpenID4VC standards"
 homepage = "https://www.impierce.com/"
 keywords = ["openid4vc", "siopv2", "openid4vp", "openid4vci", "OpenID"]
 license = "Apache-2.0"
 repository = "https://github.com/impierce/openid4vc"
+rust-version.workspace = true
+# The facade is a convenience for this repository and is never released (docs/adr/0002-facade-crate.md).
+publish = false
 
 [workspace]
 members = ["oid4vc-core", "oid4vci", "oid4vp", "siopv2", "oid4vc-manager"]
+# The fuzz targets build on nightly with sanitizers and form a workspace of their own (fuzz/README.md).
+exclude = ["fuzz"]
 
 [workspace.package]
+edition = "2024"
 homepage = "https://www.impierce.com/"
 license = "Apache-2.0"
 repository = "https://github.com/impierce/openid4vc"
+# Minimum supported Rust version, checked in CI (QA / MSRV) against the committed Cargo.lock.
+rust-version = "1.95"
 
 [workspace.dependencies]
 chrono = "0.4"
-# TODO: replace did-key
-did-key = "0.2"
 getset = "0.1"
 http = "1.3.1"
-identity_did = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1" }
-identity_document = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1" }
-identity_ecdsa_verifier = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1" }
-identity_eddsa_verifier = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1" }
-identity_credential = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1", default-features = false, features = [
-    "validator",
-    "credential",
-    "presentation",
-    "sd-jwt-vc",
-] }
-identity_jose = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1" }
-identity_verification = { git = "https://github.com/iotaledger/identity", tag = "v1.9.6-beta.1" }
-is_empty = "0.2"
-jsonwebtoken = "9.3"
-monostate = "0.1"
-nutype = { version = "0.6", features = ["serde"] }
-reqwest = { version = "0.11", default-features = false, features = [
+identity-kit = { version = "0.5.0", default-features = false }
+is_empty = "0.3"
+jsonwebtoken = { version = "11.1", default-features = false }
+monostate = "1.0"
+nutype = { version = "0.8", features = ["serde"] }
+# The workspace crates, with the version `cargo publish` requires next to the path.
+oid4vc-core = { path = "oid4vc-core", version = "0.6.0" }
+oid4vc-manager = { path = "oid4vc-manager", version = "0.6.0" }
+oid4vci = { path = "oid4vci", version = "0.6.0" }
+oid4vp = { path = "oid4vp", version = "0.6.0" }
+siopv2 = { path = "siopv2", version = "0.6.0" }
+# `rustls` with `ring`, installed by `oid4vc_core::http_client`; reqwest's own `rustls` feature would pull in
+# `aws-lc-rs`.
+reqwest = { version = "0.13", default-features = false, features = [
     "json",
-    "rustls-tls",
+    "rustls-no-provider",
 ] }
-reqwest-middleware = "0.2"
-reqwest-retry = "0.3"
+reqwest-middleware = { version = "0.5", features = ["json", "form"] }
+reqwest-retry = "0.9"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
 serde_with = "3.0"
 tokio = { version = "1.46", features = ["rt", "macros", "rt-multi-thread"] }
-thiserror = "1.0"
+thiserror = "2.0"
 tracing = { version = "0.1", default-features = false, features = ["attributes", "std", "log"] }
 url = { version = "2", features = ["serde"] }
-utoipa = "5.5"
+utoipa = "6.0"
 
 [dependencies]
-oid4vc-core = { path = "oid4vc-core" }
-oid4vci = { path = "oid4vci" }
-oid4vp = { path = "oid4vp" }
-siopv2 = { path = "siopv2" }
-oid4vc-manager = { path = "oid4vc-manager" }
-
-[patch.crates-io]
-# We need this patch because it makes the `Hasher` trait `Send` and `Sync`. See: https://github.com/iotaledger/sd-jwt-payload/compare/main...impierce:sd-jwt-payload:fix/hasher-send-sync
-sd-jwt = { git = "https://github.com/impierce/sd-jwt-payload", rev = "f28789a", package = "sd-jwt-payload" }
+oid4vc-core.workspace = true
+oid4vci.workspace = true
+oid4vp.workspace = true
+siopv2.workspace = true
+oid4vc-manager.workspace = true

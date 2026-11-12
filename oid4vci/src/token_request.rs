@@ -3,9 +3,10 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use url::Url;
 
-/// Token Request as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-token-request
+/// Token Request as described here: <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-token-request>
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(tag = "grant_type")]
 pub enum TokenRequest {
     #[serde(rename = "authorization_code")]
@@ -61,6 +62,26 @@ mod tests {
                 tx_code: Some("493536".to_string()),
                 authorization_details: None,
             }
+        );
+    }
+
+    #[test]
+    fn test_token_request_form_round_trip_with_authorization_details() {
+        use oid4vc_core::utils::form_urlencoded::{from_form_urlencoded_string, to_form_urlencoded_string};
+
+        let token_request = TokenRequest::PreAuthorizedCode {
+            pre_authorized_code: "SplxlOBeZQQYbYS6WxSbIA".to_string(),
+            tx_code: Some("493536".to_string()),
+            authorization_details: Some(
+                serde_json::from_str(include_str!("../tests/examples/authorization_details.json")).unwrap(),
+            ),
+        };
+
+        let encoded = to_form_urlencoded_string(&token_request).unwrap();
+        assert!(encoded.contains("tx_code=493536"), "{encoded}");
+        assert_eq!(
+            from_form_urlencoded_string::<TokenRequest>(&encoded).unwrap(),
+            token_request
         );
     }
 }

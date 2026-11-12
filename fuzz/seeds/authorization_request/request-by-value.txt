@@ -1,0 +1,1 @@
+openid4vp://?client_id=verifier.example.org&request=eyJhbGciOiJub25lIn0.eyJjbGllbnRfaWQiOiJ2ZXJpZmllci5leGFtcGxlLm9yZyJ9.

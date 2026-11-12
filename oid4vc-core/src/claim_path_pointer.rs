@@ -3,12 +3,14 @@ use nutype::nutype;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+/// A non-empty path identifying claims in JSON-based credentials.
 #[nutype(validate(predicate = not_empty), derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, AsRef))]
 pub struct ClaimPathPointer(Vec<ClaimPathElement>);
 
 #[nutype(validate(predicate = not_empty), derive(Debug, Clone, Eq, PartialEq, Serialize, AsRef, Deserialize))]
 pub struct ClaimValues(Vec<ClaimValue>);
 
+/// A value selected by a Claim Path Pointer.
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum ClaimValue {
@@ -17,7 +19,9 @@ pub enum ClaimValue {
     Boolean(bool),
 }
 
+/// One segment of a Claim Path Pointer.
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[serde(untagged)]
 pub enum ClaimPathElement {
     /// To address a particular claim within an object, append the key (claim name) to the array.
@@ -28,9 +32,30 @@ pub enum ClaimPathElement {
     Null,
 }
 
+#[cfg(feature = "utoipa")]
+impl utoipa::PartialSchema for ClaimPathPointer {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+        utoipa::openapi::schema::Array::builder()
+            .items(ClaimPathElement::schema())
+            .min_items(Some(1))
+            .into()
+    }
+}
+
+#[cfg(feature = "utoipa")]
+impl utoipa::ToSchema for ClaimPathPointer {
+    fn schemas(schemas: &mut Vec<(String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>) {
+        schemas.push((
+            <ClaimPathElement as utoipa::ToSchema>::name().into(),
+            <ClaimPathElement as utoipa::PartialSchema>::schema(),
+        ));
+        <ClaimPathElement as utoipa::ToSchema>::schemas(schemas);
+    }
+}
+
 impl ClaimPathPointer {
     /// As described in OID4VP - Section 7.1 for JSON-based credentials:
-    /// https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-semantics-for-json-based-cr
+    /// <https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-semantics-for-json-based-cr>
     /// TODO: Add semantics for ISO Mdoc credential format.
     pub fn get_values_from_json(&self, json_data: &Value) -> Vec<Value> {
         let mut current_selections: Vec<&Value> = vec![json_data];
@@ -39,17 +64,17 @@ impl ClaimPathPointer {
             for selected_value in current_selections.drain(..) {
                 match element {
                     ClaimPathElement::String(key) => {
-                        if let Some(obj) = selected_value.as_object() {
-                            if let Some(value_found) = obj.get(key) {
-                                next_selections.push(value_found);
-                            }
+                        if let Some(obj) = selected_value.as_object()
+                            && let Some(value_found) = obj.get(key)
+                        {
+                            next_selections.push(value_found);
                         }
                     }
                     ClaimPathElement::Integer(index) => {
-                        if let Some(arr) = selected_value.as_array() {
-                            if let Some(value_found) = arr.get(*index as usize) {
-                                next_selections.push(value_found);
-                            }
+                        if let Some(arr) = selected_value.as_array()
+                            && let Some(value_found) = arr.get(*index as usize)
+                        {
+                            next_selections.push(value_found);
                         }
                     }
                     ClaimPathElement::Null => {

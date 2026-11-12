@@ -1,40 +1,56 @@
 use super::credential_configurations_supported::CredentialConfigurationsSupportedObject;
-use derivative::Derivative;
 use nutype::nutype;
 use reqwest::Url;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::HashMap;
 
+/// Algorithms and content-encryption methods supported for encrypted Credential Responses.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct CredentialResponseEncryption {
     pub alg_values_supported: Vec<String>,
     pub enc_values_supported: Vec<String>,
     pub encryption_required: bool,
 }
 
+/// Maximum batch issuance capability advertised by a Credential Issuer.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct BatchCredentialIssuance {
     pub batch_size: BatchSize,
 }
 
+/// Maximum number of Credentials that can be issued in one batch, constrained to at least two.
 #[nutype(validate(predicate = |value: &u32| *value >= 2),
          derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize))]
 pub struct BatchSize(u32);
 
+#[cfg(feature = "utoipa")]
+impl utoipa::PartialSchema for BatchSize {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+        utoipa::openapi::Object::builder()
+            .schema_type(utoipa::openapi::schema::Type::Integer)
+            .format(Some(utoipa::openapi::SchemaFormat::KnownFormat(
+                utoipa::openapi::KnownFormat::Int32,
+            )))
+            .minimum(Some(2))
+            .into()
+    }
+}
+
+#[cfg(feature = "utoipa")]
+impl utoipa::ToSchema for BatchSize {}
+
 /// Credential Issuer Metadata as described here:
-/// https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html
+/// <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html>
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Derivative)]
-#[derivative(Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct CredentialIssuerMetadata {
-    // TODO: Temporary solution
-    #[derivative(Default(value = "Url::parse(\"https://example.com\").unwrap()"))]
     pub credential_issuer: Url,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub authorization_servers: Vec<Url>,
-    // TODO: Temporary solution
-    #[derivative(Default(value = "Url::parse(\"https://example.com\").unwrap()"))]
     pub credential_endpoint: Url,
     pub nonce_endpoint: Option<Url>,
     pub deferred_credential_endpoint: Option<Url>,
@@ -46,6 +62,26 @@ pub struct CredentialIssuerMetadata {
     pub display: Option<Vec<serde_json::Value>>,
     #[serde(default, deserialize_with = "deserialize_credential_configurations_supported")]
     pub credential_configurations_supported: HashMap<String, CredentialConfigurationsSupportedObject>,
+}
+
+// TODO: Temporary solution: `credential_issuer` and `credential_endpoint` have no meaningful default.
+impl Default for CredentialIssuerMetadata {
+    fn default() -> Self {
+        Self {
+            credential_issuer: Url::parse("https://example.com").unwrap(),
+            authorization_servers: Default::default(),
+            credential_endpoint: Url::parse("https://example.com").unwrap(),
+            nonce_endpoint: Default::default(),
+            deferred_credential_endpoint: Default::default(),
+            notification_endpoint: Default::default(),
+            credential_response_encryption: Default::default(),
+            credential_identifiers_supported: Default::default(),
+            batch_credential_issuance: Default::default(),
+            signed_metadata: Default::default(),
+            display: Default::default(),
+            credential_configurations_supported: Default::default(),
+        }
+    }
 }
 
 // A custom deserialization function to filter out invalid map entries.
@@ -151,18 +187,20 @@ mod tests {
                         .into_iter()
                         .collect(),
                         credential_metadata: Some(CredentialMetadata {
-                            display: Some(vec![serde_json::from_value(json!({
-                                "name": "IdentityCredential",
-                                "locale": "en-US",
-                                "logo": {
-                                    "uri": "https://university.example.edu/public/logo_credential.png",
-                                    "alt_text": "a square logo of a university credential"
-                                },
-                                "description": "A credential that signals the membership of a university",
-                                "background_color": "#12107c",
-                                "text_color": "#FFFFFF"
-                            }))
-                            .unwrap()]),
+                            display: Some(vec![
+                                serde_json::from_value(json!({
+                                    "name": "IdentityCredential",
+                                    "locale": "en-US",
+                                    "logo": {
+                                        "uri": "https://university.example.edu/public/logo_credential.png",
+                                        "alt_text": "a square logo of a university credential"
+                                    },
+                                    "description": "A credential that signals the membership of a university",
+                                    "background_color": "#12107c",
+                                    "text_color": "#FFFFFF"
+                                }))
+                                .unwrap()
+                            ]),
                             claims: Some(vec![
                                 ClaimDescription {
                                     path: ClaimPathPointer::try_new(vec![ClaimPathElement::String(
@@ -326,13 +364,17 @@ mod tests {
         let credential_issuer_metadata: CredentialIssuerMetadata = serde_json::from_value(json_data).unwrap();
 
         // Check that only the valid entry is present in the resulting map.
-        assert!(credential_issuer_metadata
-            .credential_configurations_supported
-            .contains_key("ValidCredential"));
+        assert!(
+            credential_issuer_metadata
+                .credential_configurations_supported
+                .contains_key("ValidCredential")
+        );
 
         // Check that the invalid entry has been filtered out.
-        assert!(!credential_issuer_metadata
-            .credential_configurations_supported
-            .contains_key("InvalidCredential"));
+        assert!(
+            !credential_issuer_metadata
+                .credential_configurations_supported
+                .contains_key("InvalidCredential")
+        );
     }
 }

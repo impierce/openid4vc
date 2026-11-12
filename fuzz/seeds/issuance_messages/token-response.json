@@ -1,0 +1,15 @@
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6Ikp..sHQ",
+  "token_type": "bearer",
+  "expires_in": 86400,
+  "authorization_details": [
+    {
+      "type": "openid_credential",
+      "credential_configuration_id": "UniversityDegreeCredential",
+      "credential_identifiers": [
+        "CivilEngineeringDegree-2023",
+        "ElectricalEngineeringDegree-2023"
+      ]
+    }
+  ]
+}

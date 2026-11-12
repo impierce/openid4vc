@@ -1,0 +1,22 @@
+{
+  "path": [
+    "degrees",
+    null,
+    "type"
+  ],
+  "value": {
+    "name": "Arthur Dent",
+    "degrees": [
+      {
+        "type": "Bachelor of Science"
+      },
+      {
+        "type": "Master of Science"
+      }
+    ],
+    "nationalities": [
+      "British",
+      "Betelgeusian"
+    ]
+  }
+}

@@ -7,7 +7,9 @@ pub enum DcqlClaimsError {
     EmptyClaims,
     #[error("Claim ID is required when claim_sets is present, missing at index {0}")]
     MissingClaimId(usize),
-    #[error("Claim ID '{0}' at index {1} contains invalid characters. Only alphanumeric, underscore, and hyphen characters are allowed")]
+    #[error(
+        "Claim ID '{0}' at index {1} contains invalid characters. Only alphanumeric, underscore, and hyphen characters are allowed"
+    )]
     InvalidClaimIdFormat(String, usize),
     #[error("Claim ID cannot be empty at index {0}")]
     EmptyClaimId(usize),
@@ -109,10 +111,10 @@ fn is_valid_claim_id_format(id: &str) -> bool {
 mod tests {
     use super::*;
     use crate::dcql::dcql_query::DcqlQuery;
-    use lazy_static::lazy_static;
+    use std::sync::LazyLock;
 
-    lazy_static! {
-        pub static ref VALID_QUERY: serde_json::Value = serde_json::json!(
+    pub static VALID_QUERY: LazyLock<serde_json::Value> = LazyLock::new(|| {
+        serde_json::json!(
                   {
           "credentials": [
             {
@@ -135,8 +137,10 @@ mod tests {
             }
           ]
         }
-              );
-        pub static ref INVALID_QUERY_WITH_SETS_DUPLICATE_ID: serde_json::Value = serde_json::json!({
+              )
+    });
+    pub static INVALID_QUERY_WITH_SETS_DUPLICATE_ID: LazyLock<serde_json::Value> = LazyLock::new(|| {
+        serde_json::json!({
           "credentials": [
             {
               "id": "pid",
@@ -157,8 +161,10 @@ mod tests {
               ]
             }
           ]
-        });
-        pub static ref INVALID_QUERY_WITH_SETS_MISSING_ID: serde_json::Value = serde_json::json!({
+        })
+    });
+    pub static INVALID_QUERY_WITH_SETS_MISSING_ID: LazyLock<serde_json::Value> = LazyLock::new(|| {
+        serde_json::json!({
           "credentials": [
             {
               "id": "pid",
@@ -179,8 +185,10 @@ mod tests {
               ]
             }
           ]
-        });
-        pub static ref INVALID_QUERY_WITH_SETS_NONEXISTENT_ID: serde_json::Value = serde_json::json!({
+        })
+    });
+    pub static INVALID_QUERY_WITH_SETS_NONEXISTENT_ID: LazyLock<serde_json::Value> = LazyLock::new(|| {
+        serde_json::json!({
           "credentials": [
             {
               "id": "pid",
@@ -201,8 +209,10 @@ mod tests {
               ]
             }
           ]
-        });
-        pub static ref INVALID_QUERY_WITHOUT_SETS_INVALID_ID_FORMAT: serde_json::Value = serde_json::json!({
+        })
+    });
+    pub static INVALID_QUERY_WITHOUT_SETS_INVALID_ID_FORMAT: LazyLock<serde_json::Value> = LazyLock::new(|| {
+        serde_json::json!({
           "credentials": [
             {
               "id": "pid",
@@ -219,8 +229,8 @@ mod tests {
               ],
             }
           ]
-        });
-    }
+        })
+    });
 
     #[test]
     fn test_validate_claims_valid() {

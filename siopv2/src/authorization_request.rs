@@ -1,13 +1,13 @@
-use crate::{siopv2::SIOPv2, ClaimRequests, StandardClaimsRequests};
-use anyhow::{anyhow, Result};
+use crate::{ClaimRequests, StandardClaimsRequests, siopv2::SIOPv2};
+use anyhow::{Result, anyhow};
 use is_empty::IsEmpty;
 use jsonwebtoken::Algorithm;
 use monostate::MustBe;
 use oid4vc_core::authorization_request::{Object, RedirectOrResponseUri};
 use oid4vc_core::builder_fn;
 use oid4vc_core::{
-    authorization_request::AuthorizationRequest, client_metadata::ClientMetadataResource, scope::Scope, RFC7519Claims,
-    SubjectSyntaxType,
+    RFC7519Claims, SubjectSyntaxType, authorization_request::AuthorizationRequest,
+    client_metadata::ClientMetadataResource, scope::Scope,
 };
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -31,7 +31,7 @@ pub struct AuthorizationRequestParameters {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct ClientMetadataParameters {
     /// Represents the URI scheme identifiers of supported Subject Syntax Types.
-    /// As described here: https://openid.net/specs/openid-connect-self-issued-v2-1_0.html#section-7.5-2.1.1
+    /// As described here: <https://openid.net/specs/openid-connect-self-issued-v2-1_0.html#section-7.5-2.1.1>
     pub subject_syntax_types_supported: Vec<SubjectSyntaxType>,
     pub id_token_signed_response_alg: Option<Algorithm>,
 }
@@ -146,7 +146,7 @@ impl AuthorizationRequestBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{claims::IndividualClaimRequest, ClaimRequests, StandardClaimsRequests};
+    use crate::{ClaimRequests, StandardClaimsRequests, claims::IndividualClaimRequest};
     use std::str::FromStr;
 
     #[test]

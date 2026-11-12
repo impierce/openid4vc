@@ -3,8 +3,8 @@ use serde_with::skip_serializing_none;
 use std::collections::HashMap;
 use url::Url;
 
-/// [`ClientMetadata`] is a request parameter used by a [`crate::RelyingParty`] to communicate its capabilities to a
-/// [`crate::Provider`].
+/// [`ClientMetadataResource`] is a request parameter used by a relying party (`siopv2::RelyingParty`) to communicate
+/// its capabilities to a provider (`siopv2::Provider`).
 #[skip_serializing_none]
 #[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]

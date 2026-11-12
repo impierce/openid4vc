@@ -1,29 +1,31 @@
 [package]
 name = "oid4vp"
-version = "0.1.0"
-edition = "2021"
+version = "0.6.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
 description = "Rust implementation of the OpenID Connect OpenID for Verifiable Presentations standard"
 homepage.workspace = true
-keywords = ["oid4vc", "openid4vc", "oid4vp", "OpenID"]
-license.workspace = true
 repository.workspace = true
+keywords = ["oid4vc", "openid4vc", "oid4vp", "openid", "dcql"]
+categories = ["authentication", "cryptography", "web-programming"]
+readme = "README.md"
+include = ["/src", "/README.md", "/CHANGELOG.md"]
+
+[package.metadata.docs.rs]
+all-features = true
 
 [dependencies]
-oid4vc-core = { path = "../oid4vc-core" }
-oid4vci = { path = "../oid4vci" }
+oid4vc-core.workspace = true
+oid4vci.workspace = true
 
 anyhow = "1.0"
 chrono.workspace = true
 futures = "0.3"
 getset.workspace = true
-identity_credential.workspace = true
-identity_did.workspace = true
-identity_document.workspace = true
-identity_jose.workspace = true
-identity_verification.workspace = true
+identity-kit = { workspace = true, features = ["vc", "sd-jwt", "secp256k1"] }
 is_empty.workspace = true
 jsonwebtoken.workspace = true
-lazy_static = "1.4.0"
 monostate.workspace = true
 nutype.workspace = true
 reqwest.workspace = true
@@ -38,4 +40,8 @@ tracing.workspace = true
 url.workspace = true
 
 [dev-dependencies]
-oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
+jsonwebtoken = { workspace = true, features = ["aws_lc_rs"] }
+oid4vc-core = { workspace = true, features = ["test-utils"] }
+
+async-trait = "0.1"
+identity-kit = { workspace = true, features = ["did-key", "in-memory"] }

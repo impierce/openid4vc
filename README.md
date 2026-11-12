@@ -1,6 +1,9 @@
 # Rust library for OpenID for Verifiable Credentials
 
 [![codecov](https://codecov.io/github/impierce/openid4vc/graph/badge.svg?token=CDL92C53JL)](https://codecov.io/github/impierce/openid4vc)
+[![QA](https://github.com/impierce/openid4vc/actions/workflows/qa.yml/badge.svg)](https://github.com/impierce/openid4vc/actions/workflows/qa.yml)
+[![Audit](https://github.com/impierce/openid4vc/actions/workflows/audit.yml/badge.svg)](https://github.com/impierce/openid4vc/actions/workflows/audit.yml)
+[![Rust: 100%](https://img.shields.io/badge/Rust-100%25-CE422B?logo=rust&logoColor=white)](https://www.rust-lang.org)
 
 This is a library for the OpenID for Verifiable Credentials (OpenID4VC) specifications family developed by the [OpenID
 Digital Credentials Protocols
@@ -27,3 +30,24 @@ This workspace includes Rust implementations for the following DCP specification
 For an easy-to-use library that combines all the above specifications, please check out:
 
 - [OID4VC-Manager](oid4vc-manager)
+
+### JWT crypto backend
+
+The crates verify JWTs with [`jsonwebtoken`](https://crates.io/crates/jsonwebtoken) but leave its crypto backend to the application.
+Enable exactly one of its `rust_crypto` and `aws_lc_rs` features, or call `jsonwebtoken::crypto::CryptoProvider::install_default()` at startup; otherwise the first JWT verification panics:
+
+```toml
+jsonwebtoken = { version = "11.1", default-features = false, features = ["rust_crypto"] }
+```
+
+## Development
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set up, test and submit changes.
+The architecture is described in [`docs/DESIGN.md`](docs/DESIGN.md), the feature checklist per specification is [`docs/FEATURES.md`](docs/FEATURES.md), and design decisions are recorded in [`docs/adr/`](docs/adr/).
+Coding agents start from [`AGENTS.md`](AGENTS.md).
+To report a vulnerability, see [SECURITY.md](SECURITY.md).
+
+## Release
+
+Releases are automated with [release-plz](https://release-plz.dev/): on every push to `main` it checks which crates changed since their last release and, if any did, opens or updates a release pull request with their next versions and changelogs, derived from the [Conventional Commits](https://www.conventionalcommits.org/) since that release; merging it publishes those crates to crates.io with a tag and GitHub release each.
+[`docs/RELEASE.md`](docs/RELEASE.md) describes the process and the credential setup.

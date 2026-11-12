@@ -1,7 +1,7 @@
 name: 'Feature Request'
 description: "Request a feature or provide a suggestion"
 title: "[Request] "
-labels: ["Request"]
+labels: ["Request", "needs-triage"]
 body:
   - type: markdown
     attributes: 

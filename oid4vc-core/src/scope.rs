@@ -1,6 +1,6 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use derive_more::Display;
-use serde::{de::Deserializer, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::Deserializer};
 use std::{slice::Iter, str::FromStr};
 
 /// Set of scope values as specified in the
@@ -53,15 +53,15 @@ impl<'de> Deserialize<'de> for Scope {
 #[derive(Deserialize, Debug, PartialEq, Serialize, Clone, Display)]
 #[serde(rename_all = "lowercase")]
 pub enum ScopeValue {
-    #[display(fmt = "openid")]
+    #[display("openid")]
     OpenId,
-    #[display(fmt = "profile")]
+    #[display("profile")]
     Profile,
-    #[display(fmt = "email")]
+    #[display("email")]
     Email,
-    #[display(fmt = "address")]
+    #[display("address")]
     Address,
-    #[display(fmt = "phone")]
+    #[display("phone")]
     Phone,
 }
 

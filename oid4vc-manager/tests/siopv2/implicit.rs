@@ -1,28 +1,27 @@
 use crate::common::{MemoryStorage, Storage, TestSubject};
-use axum::async_trait;
-use did_key::{generate, Ed25519KeyPair};
+use async_trait::async_trait;
 use jsonwebtoken::Algorithm;
-use lazy_static::lazy_static;
 use oid4vc_core::{
+    DidMethod, Sign, Subject, SubjectSyntaxType, Verify,
     authentication::sign::ExternalSign,
     authorization_request::{AuthorizationRequest, ByReference, Object},
     authorization_response::AuthorizationResponse,
     client_metadata::ClientMetadataResource,
     scope::{Scope, ScopeValue},
-    DidMethod, Sign, Subject, SubjectSyntaxType, Verify,
 };
-use oid4vc_manager::{methods::key_method::KeySubject, ProviderManager, RelyingPartyManager};
+use oid4vc_manager::{ProviderManager, RelyingPartyManager, methods::key_method::KeySubject};
 use siopv2::{
+    StandardClaimsRequests, StandardClaimsValues,
     authorization_request::ClientMetadataParameters,
     claims::{Address, IndividualClaimRequest},
     siopv2::SIOPv2,
-    StandardClaimsRequests, StandardClaimsValues,
 };
+use std::sync::LazyLock;
 use std::{str::FromStr, sync::Arc};
 use wiremock::{
+    Mock, MockServer, ResponseTemplate,
     http::Method,
     matchers::{method, path},
-    Mock, MockServer, ResponseTemplate,
 };
 
 /// A Subject that can sign and verify messages with multiple different DID Methods.
@@ -77,8 +76,8 @@ impl Subject for MultiDidMethodSubject {
     }
 }
 
-lazy_static! {
-    pub static ref USER_CLAIMS: serde_json::Value = serde_json::json!(
+pub static USER_CLAIMS: LazyLock<serde_json::Value> = LazyLock::new(|| {
+    serde_json::json!(
         {
             "name": "Jane Doe",
             "given_name": "Jane",
@@ -101,8 +100,8 @@ lazy_static! {
                 "country": "US"
             }
         }
-    );
-}
+    )
+});
 
 #[rstest::rstest]
 #[case("did:key")]
@@ -120,7 +119,7 @@ async fn test_implicit_flow(#[case] did_method: &str) {
             "did:test:relying_party#key_id".to_string(),
         )
         .unwrap(),
-        key_subject: KeySubject::from_keypair(generate::<Ed25519KeyPair>(None), None),
+        key_subject: KeySubject::new().await.unwrap(),
     };
 
     let client_id = subject.identifier(did_method, Algorithm::EdDSA).await.unwrap();
@@ -183,7 +182,7 @@ async fn test_implicit_flow(#[case] did_method: &str) {
     // Create a new subject.
     let subject = MultiDidMethodSubject {
         test_subject: TestSubject::new("did:test:subject".to_string(), "did:test:subject#key_id".to_string()).unwrap(),
-        key_subject: KeySubject::from_keypair(generate::<Ed25519KeyPair>(None), None),
+        key_subject: KeySubject::new().await.unwrap(),
     };
 
     // Create a new provider manager.
@@ -226,7 +225,7 @@ async fn test_implicit_flow(#[case] did_method: &str) {
 
     // Assert that the authorization_request was successfully received by the mock server at the `request_uri` endpoint.
     let get_request = mock_server.received_requests().await.unwrap()[0].clone();
-    assert_eq!(get_request.method, Method::Get);
+    assert_eq!(get_request.method, Method::GET);
     assert_eq!(get_request.url.path(), "/request_uri");
 
     // The user can now provide the claims requested by the relying party.
@@ -244,7 +243,7 @@ async fn test_implicit_flow(#[case] did_method: &str) {
 
     // Assert that the AuthorizationResponse was successfully received by the mock server at the expected endpoint.
     let post_request = mock_server.received_requests().await.unwrap()[1].clone();
-    assert_eq!(post_request.method, Method::Post);
+    assert_eq!(post_request.method, Method::POST);
     assert_eq!(post_request.url.path(), "/redirect_uri");
     let authorization_response: AuthorizationResponse<SIOPv2> =
         serde_urlencoded::from_bytes(post_request.body.as_slice()).unwrap();

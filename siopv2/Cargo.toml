@@ -1,24 +1,29 @@
 [package]
 name = "siopv2"
-version = "0.1.0"
-edition = "2021"
+version = "0.6.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
 description = "Rust implementation of the OpenID Connect Self-Issued OpenID Provider v2 standard"
 homepage.workspace = true
-keywords = ["oid4vc", "openid4vc", "siopv2", "OpenID"]
-license.workspace = true
 repository.workspace = true
+keywords = ["oid4vc", "openid4vc", "siopv2", "openid", "did"]
+categories = ["authentication", "cryptography", "web-programming"]
+readme = "README.md"
+include = ["/src", "/README.md", "/CHANGELOG.md"]
+
+[package.metadata.docs.rs]
+all-features = true
 
 [dependencies]
-oid4vc-core = { path = "../oid4vc-core" }
+oid4vc-core.workspace = true
 
 anyhow = "1.0.70"
 async-trait = "0.1.68"
 chrono.workspace = true
-derive_more = "0.99.16"
-did_url = "0.1.0"
 futures = "0.3"
 getset.workspace = true
-is_empty = "0.2.0"
+is_empty = "0.3.0"
 jsonwebtoken.workspace = true
 monostate.workspace = true
 reqwest.workspace = true
@@ -33,10 +38,10 @@ tracing.workspace = true
 url = { version = "2.3.1", features = ["serde"] }
 
 [dev-dependencies]
-oid4vc-core = { path = "../oid4vc-core", features = ["test-utils"] }
+jsonwebtoken = { workspace = true, features = ["aws_lc_rs"] }
+oid4vc-core = { workspace = true, features = ["test-utils"] }
 
-derivative = "2.2.0"
-ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
-lazy_static = "1.4.0"
-rand = "0.8"
-wiremock = "0.5.18"
+ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
+identity-kit.workspace = true
+rand = "0.10"
+wiremock = "0.6.5"

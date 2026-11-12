@@ -1,12 +1,12 @@
 use crate::parse_other;
 use oid4vc_core::{
-    scope::{Scope, ScopeValue},
     JsonObject,
+    scope::{Scope, ScopeValue},
 };
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_with::skip_serializing_none;
 
-/// Functions as the `claims` parameter inside a [`crate::AuthorizationRequest`].
+/// Functions as the `claims` parameter inside a [`oid4vc_core::authorization_request::AuthorizationRequest`].
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ClaimRequests {
     pub user_claims: Option<StandardClaimsRequests>,
@@ -135,7 +135,7 @@ pub type StandardClaimsValues = StandardClaims<ClaimValue>;
 /// This struct represents the standard claims as defined in the
 /// [OpenID Connect Core 1.0 Specification](https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims)
 /// specification. It can be used either for requesting claims using [`IndividualClaimRequest`]'s in the `claims`
-/// parameter of a [`crate::AuthorizationRequest`], or for returning actual [`ClaimValue`]'s in an [`crate::IdToken`].
+/// parameter of a [`oid4vc_core::authorization_request::AuthorizationRequest`], or for returning actual [`ClaimValue`]'s in an [`crate::IdToken`].
 #[skip_serializing_none]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -288,7 +288,7 @@ impl From<&Scope> for StandardClaimsRequests {
                 a.merge(b);
                 a
             })
-            .unwrap()
+            .unwrap_or_default()
     }
 }
 
@@ -317,11 +317,11 @@ pub struct Address<C: sealed::Claim> {
 mod tests {
     use super::*;
     use crate::test_utils::{MemoryStorage, Storage};
-    use lazy_static::lazy_static;
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
+    use std::sync::LazyLock;
 
-    lazy_static! {
-        pub static ref USER_CLAIMS: Value = json!(
+    pub static USER_CLAIMS: LazyLock<Value> = LazyLock::new(|| {
+        json!(
             {
                 "name": "Jane Doe",
                 "given_name": "Jane",
@@ -343,8 +343,8 @@ mod tests {
                     "country": "US"
                 }
             }
-        );
-    }
+        )
+    });
 
     #[test]
     fn test_deserialize_user_claims() {

@@ -1,10 +1,10 @@
 use anyhow::Result;
 use jsonwebtoken::Algorithm;
 use oid4vc_core::{
+    Subject, SubjectSyntaxType,
     authorization_request::{AuthorizationRequest, Object},
     authorization_response::AuthorizationResponse,
     openid4vc_extension::{Extension, OpenID4VC, ResponseHandle},
-    Subject, SubjectSyntaxType,
 };
 use reqwest::StatusCode;
 use siopv2::Provider;

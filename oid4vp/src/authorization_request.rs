@@ -1,6 +1,6 @@
 use crate::dcql::dcql_query::DcqlQuery;
 use crate::oid4vp::OID4VP;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use is_empty::IsEmpty;
 use jsonwebtoken::Algorithm;
 use monostate::MustBe;
@@ -9,7 +9,7 @@ use oid4vc_core::authorization_request::{Object, RedirectOrResponseUri};
 use oid4vc_core::builder_fn;
 use oid4vc_core::utils::predicates::not_empty;
 use oid4vc_core::{
-    authorization_request::AuthorizationRequest, client_metadata::ClientMetadataResource, scope::Scope, RFC7519Claims,
+    RFC7519Claims, authorization_request::AuthorizationRequest, client_metadata::ClientMetadataResource, scope::Scope,
 };
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -23,7 +23,7 @@ pub struct ClientId {
 }
 
 /// The Client ID Scheme enables the use of different mechanisms to obtain and validate the Verifier's metadata. As
-/// described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-client-identifier-prefix-an
+/// described here: <https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-client-identifier-prefix-an>
 #[derive(Debug, PartialEq, Clone)]
 pub enum ClientIdPrefix {
     PreRegistered,
@@ -39,7 +39,7 @@ impl std::fmt::Display for ClientIdPrefix {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ClientIdPrefix::PreRegistered => write!(f, "pre-registered"),
-            ClientIdPrefix::RedirectUri => write!(f, "response_uri"),
+            ClientIdPrefix::RedirectUri => write!(f, "redirect_uri"),
             ClientIdPrefix::OpenidFederation => write!(f, "openid_federation"),
             ClientIdPrefix::DecentralizedIdentifier => write!(f, "decentralized_identifier"),
             ClientIdPrefix::VerifierAttestation => write!(f, "verifier_attestation"),
@@ -65,10 +65,12 @@ impl std::str::FromStr for ClientId {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // A pre-registered Client Identifier carries no prefix, so `pre-registered:` is an unknown prefix like any other:
+        // accepting it would print the identifier without it, and an identifier containing `:` would then re-parse under
+        // another prefix.
         if let Some((prefix_str, identifier)) = s.split_once(':') {
             let prefix = match prefix_str {
-                "pre-registered" => ClientIdPrefix::PreRegistered,
-                "response_uri" => ClientIdPrefix::RedirectUri,
+                "redirect_uri" => ClientIdPrefix::RedirectUri,
                 "openid_federation" => ClientIdPrefix::OpenidFederation,
                 "decentralized_identifier" => ClientIdPrefix::DecentralizedIdentifier,
                 "verifier_attestation" => ClientIdPrefix::VerifierAttestation,
@@ -111,7 +113,7 @@ pub enum CredentialFormatIdentifier {
     DcSdJwt,
 }
 
-/// [`AuthorizationRequest`] claims specific to [`OID4VP`] and as defined in the spec: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-authorization-request.
+/// [`AuthorizationRequest`] claims specific to [`OID4VP`] and as defined in the spec: <https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-authorization-request>.
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationRequestParameters {
@@ -175,7 +177,7 @@ pub struct EncryptedResponseEncValues(Vec<String>);
 pub struct ClientMetadataParameters {
     /// Object defining the formats and proof types of Verifiable Presentations and Verifiable Credentials that a
     /// Verifier supports.
-    /// As described here: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-additional-wallet-metadata-
+    /// As described here: <https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-additional-wallet-metadata->
     pub vp_formats_supported: VpFormatsSupported,
     /// TODO: Implement encryption response support.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -275,7 +277,7 @@ pub struct MsoMdocParameters {
     pub deviceauth_alg_values: Option<Vec<i32>>,
 }
 
-/// Builder for the Authorization Request as defined in the spec: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-authorization-request
+/// Builder for the Authorization Request as defined in the spec: <https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-authorization-request>
 /// NOTE: this Authorization Request is not to be confused with the same-named request in OpenID for Verifiable Credential Issuance.
 #[derive(Debug, Default, IsEmpty)]
 pub struct AuthorizationRequestBuilder {
@@ -381,6 +383,29 @@ mod tests {
     }
 
     #[test]
+    fn test_pre_registered_client_id_has_no_prefix() {
+        assert!("pre-registered:x509_san_dns:example.com".parse::<ClientId>().is_err());
+
+        let client_id = "x509_san_dns:example.com:8443".parse::<ClientId>().unwrap();
+        assert_eq!(client_id.to_string().parse::<ClientId>().unwrap(), client_id);
+    }
+
+    #[test]
+    fn test_redirect_uri_client_id_prefix() {
+        let client_id = "redirect_uri:https://client.example.org/cb"
+            .parse::<ClientId>()
+            .unwrap();
+        assert_eq!(client_id.prefix(), &ClientIdPrefix::RedirectUri);
+        assert_eq!(client_id.identifier(), "https://client.example.org/cb");
+        assert_eq!(client_id.to_string(), "redirect_uri:https://client.example.org/cb");
+        assert!(
+            "response_uri:https://client.example.org/cb"
+                .parse::<ClientId>()
+                .is_err()
+        );
+    }
+
+    #[test]
     fn test_redirect_client_id() {
         let test_redirect_id = "example_client".parse::<ClientId>().unwrap();
         assert_eq!(test_redirect_id.prefix(), &ClientIdPrefix::PreRegistered);
@@ -483,7 +508,6 @@ mod tests {
                                 "ecdsa-jcs-2019".to_string(),
                                 "bbs-2023".to_string(),
                             ]),
-                            ..Default::default()
                         }),
                         ..Default::default()
                     },
@@ -518,7 +542,6 @@ mod tests {
                         mso_mdoc: Some(MsoMdocParameters {
                             issuerauth_alg_values: Some(vec![-9, -50]),
                             deviceauth_alg_values: Some(vec![-9, -50]),
-                            ..Default::default()
                         }),
                         ..Default::default()
                     },
@@ -546,5 +569,47 @@ mod tests {
 
         let invalid = EncryptedResponseEncValues::try_new(vec![]);
         assert!(invalid.is_err());
+    }
+
+    /// An integer beyond `u64` passes through a `serde_json::Value` as it does through JSON text, here in a client
+    /// metadata parameter the request keeps as is, behind two `flatten`s. It did not while serde_json's
+    /// `arbitrary_precision` was on.
+    #[test]
+    fn integer_beyond_u64_passes_through_value() {
+        let request = AuthorizationRequest::<Object<OID4VP>>::builder()
+            .client_id(
+                "redirect_uri:https://client.example.org/cb"
+                    .parse::<ClientId>()
+                    .unwrap(),
+            )
+            .response_uri("https://client.example.org/post".parse::<Url>().unwrap())
+            .response_mode("direct_post".to_string())
+            .nonce("n-0S6_WzA2Mj".to_string())
+            .dcql_query(from_str::<DcqlQuery>(include_str!("../tests/examples/request/dcql_jwt_vc.json")).unwrap())
+            .client_metadata(ClientMetadataResource::ClientMetadata {
+                client_name: None,
+                logo_uri: None,
+                extension: ClientMetadataParameters::default(),
+                other: HashMap::new(),
+            })
+            .build()
+            .unwrap();
+        let mut value = serde_json::to_value(&request).unwrap();
+        value["client_metadata"]["max_age"] = from_str("18446744073709551616").unwrap();
+        let max_age = value["client_metadata"]["max_age"].clone();
+
+        let from_value: AuthorizationRequest<Object<OID4VP>> = serde_json::from_value(value.clone()).unwrap();
+        let ClientMetadataResource::ClientMetadata { other, .. } = &from_value.body.extension.client_metadata else {
+            panic!("client_metadata is passed by value");
+        };
+        assert_eq!(other.get("max_age"), Some(&max_age));
+        let from_text: AuthorizationRequest<Object<OID4VP>> = from_str(&value.to_string()).unwrap();
+        assert_eq!(from_value, from_text);
+        let generic: AuthorizationRequest<Object<oid4vc_core::openid4vc_extension::Generic>> =
+            serde_json::from_value(value).unwrap();
+        assert_eq!(
+            AuthorizationRequest::<Object<OID4VP>>::from_generic(&generic).unwrap(),
+            from_value
+        );
     }
 }

@@ -3,14 +3,14 @@ use std::time::Duration;
 use crate::{managers::credential_issuer::CredentialIssuerManager, storage::Storage};
 use anyhow::Result;
 use axum::{
-    extract::State,
-    http::{header::CONTENT_TYPE, Method, StatusCode},
+    Form, Json, Router,
+    extract::{RawForm, State},
+    http::{Method, StatusCode, header::CONTENT_TYPE},
     response::{AppendHeaders, IntoResponse},
     routing::{get, post},
-    Form, Json, Router,
 };
 use axum_auth::AuthBearer;
-use oid4vc_core::Validator;
+use oid4vc_core::{Validator, utils::form_urlencoded::from_form_urlencoded_string};
 use oid4vci::{
     credential_request::{CredentialIdentifierOrCredentialConfigurationId, CredentialRequest},
     notification_request::NotificationRequest,
@@ -56,39 +56,36 @@ impl<S: Storage + Clone + 'static> Server<S> {
         let listener = credential_issuer_manager.listener.try_clone()?;
         let extension = self.extension.take();
 
-        let server = axum::Server::from_tcp(listener)
-            .expect("Failed to start server.")
-            .serve(
-                Router::new()
-                    .route(
-                        "/.well-known/oauth-authorization-server",
-                        get(oauth_authorization_server),
-                    )
-                    .route("/.well-known/openid-credential-issuer", get(openid_credential_issuer))
-                    .route("/credential_offer", get(credential_offer))
-                    .route("/par", post(par))
-                    .route("/authorize", get(authorize))
-                    .route("/token", post(token))
-                    .route("/credential", post(credential))
-                    .route("/notification", post(notification))
-                    .merge(extension.unwrap_or_default())
-                    .layer(
-                        tower_http::cors::CorsLayer::new()
-                            .allow_methods([Method::GET, Method::POST])
-                            .allow_origin(AllowOrigin::any())
-                            .allow_headers([CONTENT_TYPE])
-                            .max_age(Duration::from_secs(3600)),
-                    )
-                    .with_state(credential_issuer_manager)
-                    .into_make_service(),
-            );
+        listener.set_nonblocking(true)?;
+        let listener = tokio::net::TcpListener::from_std(listener)?;
+
+        let app = Router::new()
+            .route(
+                "/.well-known/oauth-authorization-server",
+                get(oauth_authorization_server),
+            )
+            .route("/.well-known/openid-credential-issuer", get(openid_credential_issuer))
+            .route("/credential_offer", get(credential_offer))
+            .route("/par", post(par))
+            .route("/authorize", get(authorize))
+            .route("/token", post(token))
+            .route("/credential", post(credential))
+            .route("/notification", post(notification))
+            .merge(extension.unwrap_or_default())
+            .layer(
+                tower_http::cors::CorsLayer::new()
+                    .allow_methods([Method::GET, Method::POST])
+                    .allow_origin(AllowOrigin::any())
+                    .allow_headers([CONTENT_TYPE])
+                    .max_age(Duration::from_secs(3600)),
+            )
+            .with_state(credential_issuer_manager);
+        let server = async move { axum::serve(listener, app).await.expect("Failed to start server.") };
 
         if self.detached {
-            self.server.replace(tokio::spawn(
-                async move { server.await.expect("Failed to start server.") },
-            ));
+            self.server.replace(tokio::spawn(server));
         } else {
-            server.await.expect("Failed to start server.")
+            server.await
         }
         Ok(())
     }
@@ -161,8 +158,21 @@ async fn authorize<S: Storage>(
 
 async fn token<S: Storage>(
     State(credential_issuer_manager): State<CredentialIssuerManager<S>>,
-    Form(token_request): Form<TokenRequest>,
+    RawForm(body): RawForm,
 ) -> impl IntoResponse {
+    // Not `Form`: `serde_urlencoded` cannot decode `authorization_details`, which comes as JSON. `RawForm` still
+    // rejects a body that is not `application/x-www-form-urlencoded`.
+    let Some(token_request) = std::str::from_utf8(&body)
+        .ok()
+        .and_then(|body| from_form_urlencoded_string::<TokenRequest>(body).ok())
+    else {
+        return (
+            StatusCode::BAD_REQUEST,
+            AppendHeaders([("Cache-Control", "no-store")]),
+            Json("Invalid token request"),
+        )
+            .into_response();
+    };
     match credential_issuer_manager.storage.get_token_response(token_request) {
         Some(token_response) => (
             StatusCode::OK,
