@@ -83,15 +83,22 @@ impl Wallet {
         })
     }
 
-    #[tracing::instrument(level = "debug", err, skip(self))]
+    // Only the host of `credential_offer_uri` is logged: a plain GET on the full URI returns the Credential Offer,
+    // including any `pre-authorized_code` (OID4VCI 1.0, Section 4.1.3), so the URI is as sensitive as that code.
+    #[tracing::instrument(level = "debug", err, skip(self, credential_offer_uri))]
     pub async fn get_credential_offer(&self, credential_offer_uri: Url) -> Result<CredentialOfferParameters> {
-        tracing::info!(%credential_offer_uri, "Fetching credential offer");
+        tracing::info!(
+            credential_offer_host = credential_offer_uri.host_str().unwrap_or_default(),
+            "Fetching credential offer"
+        );
+        tracing::trace!(%credential_offer_uri, "Credential offer URI");
         let response = self.client.get(credential_offer_uri).send().await?;
         let status = response.status();
         let text = response
             .text()
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read response body from credential offer endpoint: {e}"))?;
+        tracing::trace!(%status, body = %text, "Credential offer response body");
 
         if !status.is_success() {
             return Err(anyhow::anyhow!(
@@ -100,9 +107,16 @@ impl Wallet {
         }
 
         let offer: CredentialOfferParameters = serde_json::from_str(&text).map_err(|e| {
-            anyhow::anyhow!("Failed to parse credential offer (HTTP {status}): {e}. Raw response: {text}")
+            anyhow::anyhow!(
+                "Failed to parse credential offer (HTTP {status}, {} bytes): {e}",
+                text.len()
+            )
         })?;
-        tracing::debug!(?offer, "Received credential offer parameters");
+        tracing::debug!(
+            credential_issuer = %offer.credential_issuer,
+            credential_configuration_ids = ?offer.credential_configuration_ids,
+            "Received credential offer parameters"
+        );
         Ok(offer)
     }
 
@@ -211,7 +225,7 @@ impl Wallet {
     // TODO: Move everything related to pushed authorization response to a separate module?
     // TODO: refactor to reduce the number of arguments
     #[allow(clippy::too_many_arguments)]
-    #[tracing::instrument(level = "debug", err, skip(self, authorization_details))]
+    #[tracing::instrument(level = "debug", err, skip(self, state, authorization_details, issuer_state))]
     pub async fn get_pushed_authorization_response(
         &self,
         pushed_authorization_request_endpoint: Url,
@@ -238,6 +252,7 @@ impl Wallet {
         };
 
         let url_encoded = to_form_urlencoded_string(&authorization_request).unwrap();
+        tracing::trace!(body = %url_encoded, "Pushed authorization request body");
 
         let response = self
             .client
@@ -254,6 +269,7 @@ impl Wallet {
             .text()
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read response body from PAR endpoint: {e}"))?;
+        tracing::trace!(%status, body = %text, "Pushed authorization response body");
 
         if !status.is_success() {
             return Err(anyhow::anyhow!(
@@ -263,10 +279,14 @@ impl Wallet {
 
         let par_response: PushedAuthorizationResponse = serde_json::from_str(&text).map_err(|err| {
             anyhow::anyhow!(
-                "Failed to parse pushed authorization response (HTTP {status}): {err}. Raw response: {text}"
+                "Failed to parse pushed authorization response (HTTP {status}, {} bytes): {err}",
+                text.len()
             )
         })?;
-        tracing::debug!(?par_response, "Received pushed authorization response");
+        tracing::debug!(
+            expires_in = par_response.expires_in,
+            "Received pushed authorization response"
+        );
         Ok(par_response)
     }
 
@@ -317,20 +337,24 @@ impl Wallet {
     #[tracing::instrument(level = "debug", err, skip(self, token_request))]
     pub async fn get_access_token(&self, token_endpoint: Url, token_request: TokenRequest) -> Result<TokenResponse> {
         tracing::info!(%token_endpoint, "Sending token request to token endpoint");
-        tracing::debug!(?token_request, "Token request parameters");
+        tracing::trace!(?token_request, "Token request");
         let response = self.client.post(token_endpoint).form(&token_request).send().await?;
         let status = response.status();
         let text = response
             .text()
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read response body from token endpoint: {e}"))?;
+        tracing::trace!(%status, body = %text, "Token response body");
 
         if !status.is_success() {
             return Err(anyhow::anyhow!("Token request failed (HTTP {status}): {text}"));
         }
 
         let token_response: TokenResponse = serde_json::from_str(&text).map_err(|e| {
-            anyhow::anyhow!("Failed to parse token response (HTTP {status}): {e}. Raw response: {text}")
+            anyhow::anyhow!(
+                "Failed to parse token response (HTTP {status}, {} bytes): {e}",
+                text.len()
+            )
         })?;
         tracing::debug!("Successfully received token response");
         Ok(token_response)
@@ -450,20 +474,24 @@ impl Wallet {
             .text()
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read response body from nonce endpoint: {e}"))?;
+        tracing::trace!(%status, body = %text, "Nonce response body");
 
         if !status.is_success() {
             return Err(anyhow::anyhow!("Nonce request failed (HTTP {status}): {text}"));
         }
 
         let NonceResponse { c_nonce } = serde_json::from_str(&text).map_err(|e| {
-            anyhow::anyhow!("Failed to parse nonce response (HTTP {status}): {e}. Raw response: {text}")
+            anyhow::anyhow!(
+                "Failed to parse nonce response (HTTP {status}, {} bytes): {e}",
+                text.len()
+            )
         })?;
 
         tracing::debug!("Successfully received c_nonce");
         Ok(c_nonce)
     }
 
-    #[tracing::instrument(level = "debug", err, skip(self, token_response, credential_configuration))]
+    #[tracing::instrument(level = "debug", err, skip(self, token_response, nonce, credential_configuration))]
     pub async fn get_credential(
         &self,
         credential_issuer_metadata: CredentialIssuerMetadata,
@@ -526,11 +554,11 @@ impl Wallet {
             proofs,
         };
 
-        let request_body_json = serde_json::to_string(&credential_request).unwrap_or_default();
-        tracing::info!(%request_body_json, "Sending credential request body to issuer");
+        tracing::info!("Sending credential request to issuer");
+        tracing::trace!(?credential_request, "Credential request");
 
         if let Ok((kid, alg)) = oid4vc_core::jwt::extract_header(&jwt_string) {
-            tracing::info!(%kid, ?alg, "Proof JWT header parameters");
+            tracing::debug!(%kid, ?alg, "Proof JWT header parameters");
         }
 
         let response = self
@@ -545,14 +573,18 @@ impl Wallet {
             .text()
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read response body from credential endpoint: {e}"))?;
+        tracing::trace!(%status, body = %text, "Credential response body");
 
         if !status.is_success() {
             return Err(anyhow::anyhow!("Credential issuance failed (HTTP {status}): {text}"));
         }
 
-        tracing::debug!(%status, %text, "Received raw credential response from issuer");
+        tracing::debug!(%status, "Received credential response from issuer");
         let credential_response: CredentialResponse = serde_json::from_str(&text).map_err(|e| {
-            anyhow::anyhow!("Failed to parse credential response (HTTP {status}): {e}. Raw response: {text}")
+            anyhow::anyhow!(
+                "Failed to parse credential response (HTTP {status}, {} bytes): {e}",
+                text.len()
+            )
         })?;
         tracing::info!("Successfully received credential response from issuer");
         Ok(credential_response)
@@ -563,7 +595,7 @@ impl Wallet {
     /// This is similar to a Pushed Authorization Request but adds `interaction_types_supported`
     /// and returns an `InteractiveAuthorizationResponse` indicating the next step.
     #[allow(clippy::too_many_arguments)]
-    #[tracing::instrument(level = "debug", err, skip(self, authorization_details))]
+    #[tracing::instrument(level = "debug", err, skip(self, state, authorization_details, issuer_state))]
     pub async fn send_interactive_authorization_request(
         &self,
         interactive_authorization_endpoint: Url,
@@ -596,6 +628,7 @@ impl Wallet {
         };
 
         let url_encoded = to_form_urlencoded_string(&request)?;
+        tracing::trace!(body = %url_encoded, "Interactive authorization request body");
 
         let response = self
             .client
@@ -611,6 +644,7 @@ impl Wallet {
         let text = response.text().await.map_err(|e| {
             anyhow::anyhow!("Failed to read response body from interactive authorization endpoint: {e}")
         })?;
+        tracing::trace!(%status, body = %text, "Interactive authorization response body");
 
         if !status.is_success() {
             return Err(anyhow::anyhow!(
@@ -620,10 +654,15 @@ impl Wallet {
 
         let ia_response: InteractiveAuthorizationResponse = serde_json::from_str(&text).map_err(|err| {
             anyhow::anyhow!(
-                "Failed to parse interactive authorization response (HTTP {status}): {err}. Raw response: {text}"
+                "Failed to parse interactive authorization response (HTTP {status}, {} bytes): {err}",
+                text.len()
             )
         })?;
-        tracing::debug!(?ia_response, "Received interactive authorization response");
+        tracing::debug!(
+            auth_session_present = ia_response.auth_session.is_some(),
+            openid4vp_request_present = ia_response.openid4vp_request.is_some(),
+            "Received interactive authorization response"
+        );
         Ok(ia_response)
     }
 
@@ -639,6 +678,7 @@ impl Wallet {
     ) -> Result<InteractiveAuthorizationResponse> {
         tracing::info!(%interactive_authorization_endpoint, "Sending interactive authorization follow-up");
         let url_encoded = to_form_urlencoded_string(&follow_up)?;
+        tracing::trace!(body = %url_encoded, "Interactive authorization follow-up body");
 
         let response = self
             .client
@@ -654,6 +694,7 @@ impl Wallet {
         let text = response.text().await.map_err(|e| {
             anyhow::anyhow!("Failed to read response body from interactive authorization endpoint: {e}")
         })?;
+        tracing::trace!(%status, body = %text, "Interactive authorization follow-up response body");
 
         if !status.is_success() {
             return Err(anyhow::anyhow!(
@@ -662,9 +703,16 @@ impl Wallet {
         }
 
         let ia_response: InteractiveAuthorizationResponse = serde_json::from_str(&text).map_err(|err| {
-            anyhow::anyhow!("Failed to parse interactive authorization follow-up response (HTTP {status}): {err}. Raw response: {text}")
+            anyhow::anyhow!(
+                "Failed to parse interactive authorization follow-up response (HTTP {status}, {} bytes): {err}",
+                text.len()
+            )
         })?;
-        tracing::debug!(?ia_response, "Received interactive authorization follow-up response");
+        tracing::debug!(
+            auth_session_present = ia_response.auth_session.is_some(),
+            openid4vp_request_present = ia_response.openid4vp_request.is_some(),
+            "Received interactive authorization follow-up response"
+        );
         Ok(ia_response)
     }
 
