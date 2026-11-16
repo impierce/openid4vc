@@ -1627,7 +1627,7 @@ dependencies = [
 
 [[package]]
 name = "oid4vc-manager"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1660,7 +1660,7 @@ dependencies = [
 
 [[package]]
 name = "oid4vci"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1687,7 +1687,7 @@ dependencies = [
 
 [[package]]
 name = "oid4vp"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "anyhow",
  "async-trait",
