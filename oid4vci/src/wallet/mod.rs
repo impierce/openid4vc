@@ -58,23 +58,6 @@ pub struct AuthorizationRequestByReference {
     pub request_uri: String,
 }
 
-/// The Credential Issuer Identifier as a string, for the key proof's `aud` ("the value of this claim MUST be the
-/// Credential Issuer Identifier", OpenID4VCI 1.0, Appendix F.1), which an Issuer compares as a string.
-///
-/// `url::Url` writes an identifier that is only an origin, `https://issuer.example.com`, with a trailing slash
-/// (`https://issuer.example.com/`); that slash is left out again. The two forms cannot be told apart once parsed, and
-/// identifiers are written without it (the specification's examples, Section 12.2.4). An identifier with a path is
-/// kept as it is.
-pub fn credential_issuer_identifier(credential_issuer: &Url) -> String {
-    let serialized = credential_issuer.as_str();
-    if credential_issuer.path() == "/" && credential_issuer.query().is_none() && credential_issuer.fragment().is_none()
-    {
-        serialized.strip_suffix('/').unwrap_or(serialized).to_string()
-    } else {
-        serialized.to_string()
-    }
-}
-
 impl Wallet {
     pub fn new(
         subject: SigningSubject,
@@ -554,9 +537,7 @@ impl Wallet {
         }
 
         proof_builder = proof_builder
-            .aud(credential_issuer_identifier(
-                &credential_issuer_metadata.credential_issuer,
-            ))
+            .aud(credential_issuer_metadata.credential_issuer)
             .iat(chrono::Utc::now().timestamp());
 
         if let Some(nonce) = nonce {
@@ -792,23 +773,6 @@ pub mod tests {
         Mock, MockServer, ResponseTemplate,
         matchers::{method, path},
     };
-
-    #[test]
-    fn credential_issuer_identifier_leaves_out_the_slash_url_adds_to_an_origin() {
-        // OpenID4VCI 1.0, Appendix F.1: the proof's `aud` is the Credential Issuer Identifier, compared as a string.
-        for (identifier, expected) in [
-            ("https://issuer.example.com", "https://issuer.example.com"),
-            ("http://127.0.0.1:8080", "http://127.0.0.1:8080"),
-            ("https://issuer.example.com/tenant", "https://issuer.example.com/tenant"),
-            (
-                "https://issuer.example.com/tenant/",
-                "https://issuer.example.com/tenant/",
-            ),
-        ] {
-            let parsed: Url = identifier.parse().unwrap();
-            assert_eq!(credential_issuer_identifier(&parsed), expected);
-        }
-    }
 
     #[test]
     fn select_signing_algorithm_returns_first_supported_signing_algorithm_when_no_proof_types_supported() {
