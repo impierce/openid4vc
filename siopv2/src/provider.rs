@@ -68,6 +68,7 @@ impl Provider {
             let (client_id, authorization_request) =
                 if let Ok(authorization_request) = AuthorizationRequest::<ByValue>::from_str(&authorization_request) {
                     let client_id = authorization_request.body.client_id().clone();
+                    ensure_request_object_typ(&authorization_request.body.request)?;
                     let authorization_request: AuthorizationRequest<Object> =
                         validator.decode(authorization_request.body.request.to_owned()).await?;
 
@@ -78,6 +79,7 @@ impl Provider {
                     let client_id = authorization_request.body.client_id().clone();
                     let builder = self.client.get(authorization_request.body.request_uri.clone());
                     let request_value = builder.send().await?.text().await?;
+                    ensure_request_object_typ(&request_value)?;
                     let authorization_request: AuthorizationRequest<Object> = validator.decode(request_value).await?;
 
                     (client_id, authorization_request)
@@ -180,11 +182,56 @@ impl Provider {
     }
 }
 
+/// The JOSE `typ` a Request Object must carry: "Wallets MUST NOT process Request Objects where the typ Header
+/// Parameter is not present or does not have the value oauth-authz-req+jwt" (OpenID4VP 1.0, Section 5; RFC 9101,
+/// Section 10.8). Compared as a media type (RFC 7515, Section 4.1.9): case-insensitively, `application/` optional.
+fn ensure_request_object_typ(request_object: &str) -> Result<()> {
+    let header = jsonwebtoken::decode_header(request_object)?;
+    let typ = header.typ.as_deref().map(str::to_ascii_lowercase);
+    let typ = typ
+        .as_deref()
+        .map(|typ| typ.strip_prefix("application/").unwrap_or(typ));
+    anyhow::ensure!(
+        typ == Some("oauth-authz-req+jwt"),
+        "The Request Object's typ is {:?}, not \"oauth-authz-req+jwt\"; it is not processed.",
+        header.typ
+    );
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{siopv2::SIOPv2, test_utils::TestSubject};
     use std::sync::Arc;
+
+    /// A compact JWS whose JOSE header has this `typ` (the `typ` check reads only the header).
+    fn jws_with_typ(typ: Option<&str>) -> String {
+        let mut header = jsonwebtoken::Header::new(Algorithm::HS256);
+        header.typ = typ.map(str::to_string);
+        header.kid = Some("k".to_string());
+        jsonwebtoken::encode(
+            &header,
+            &serde_json::json!({}),
+            &jsonwebtoken::EncodingKey::from_secret(b"test"),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn request_object_typ_must_be_oauth_authz_req_jwt() {
+        for typ in [
+            "oauth-authz-req+jwt",
+            "application/oauth-authz-req+jwt",
+            "OAuth-Authz-Req+JWT",
+        ] {
+            assert!(ensure_request_object_typ(&jws_with_typ(Some(typ))).is_ok(), "{typ}");
+        }
+        for typ in [None, Some("JWT"), Some("jwt")] {
+            let error = ensure_request_object_typ(&jws_with_typ(typ)).unwrap_err().to_string();
+            assert!(error.contains("not processed"), "{typ:?}: {error}");
+        }
+    }
 
     #[tokio::test]
     async fn test_provider() {
