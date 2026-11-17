@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0](https://github.com/impierce/openid4vc/compare/oid4vp-v0.6.1...oid4vp-v0.7.0) - 2026-11-17
+
+### Added
+
+- *(oid4vp)* [**breaking**] enforce DCQL `multiple` and `trusted_authorities` ([#192](https://github.com/impierce/openid4vc/pull/192))
+
+### Fixed
+
+- *(oid4vp)* ignore unsupported algorithms in `client_metadata` ([#213](https://github.com/impierce/openid4vc/pull/213))
+
+## [0.6.0](https://github.com/impierce/openid4vc/compare/oid4vp-v0.5.0...oid4vp-v0.6.0) - 2026-11-11
+
+### Dependencies
+
+- *(deps)* [**breaking**] bump identity-kit to 0.5 ([#205](https://github.com/impierce/openid4vc/pull/205))
+
+## [0.5.0](https://github.com/impierce/openid4vc/compare/oid4vp-v0.4.0...oid4vp-v0.5.0) - 2026-11-06
+
+### Other
+
+- *(deps)* [**breaking**] let application choose `jsonwebtoken` crypto backend ([#200](https://github.com/impierce/openid4vc/pull/200))
+
+## [0.4.0](https://github.com/impierce/openid4vc/compare/oid4vp-v0.3.0...oid4vp-v0.4.0) - 2026-11-02
+
+### Dependencies
+
+- *(deps)* [**breaking**] update identity-kit to 0.4.0 ([#197](https://github.com/impierce/openid4vc/pull/197))
+
+## [0.3.0](https://github.com/impierce/openid4vc/compare/oid4vp-v0.2.0...oid4vp-v0.3.0) - 2026-10-27
+
+### Dependencies
+
+- *(deps)* [**breaking**] update identity-kit to 0.3.0 ([#190](https://github.com/impierce/openid4vc/pull/190))
+
 ## [0.2.0](https://github.com/impierce/openid4vc/compare/oid4vp-v0.1.0...oid4vp-v0.2.0) - 2026-10-25
 
 ### Added
