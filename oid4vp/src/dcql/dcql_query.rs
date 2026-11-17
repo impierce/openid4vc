@@ -1,7 +1,10 @@
 use super::claims::{ClaimsContext, DcqlClaimsError, validate_claims};
 use super::meta::{MetaContext, MetaError, validate_meta};
 use nutype::nutype;
-use oid4vc_core::claim_path_pointer::{ClaimPathPointer, ClaimValues};
+use oid4vc_core::{
+    claim_path_pointer::{ClaimPathPointer, ClaimValues},
+    utils::predicates::not_empty,
+};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::HashSet;
@@ -181,14 +184,59 @@ pub struct CredentialSetQuery {
     pub required: Option<bool>,
 }
 
+/// A Trusted Authorities Query: an authority or trust framework that certifies the issuers the verifier accepts
+/// (OID4VP 1.0, §6.1.1).
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct TrustedAuthority {
     #[serde(rename = "type")]
-    // TODO: type_ should have stronger typing, see types defined by the spec:
-    // https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-trusted-authorities-query
-    pub type_: String,
-    pub values: Vec<String>,
+    pub type_: TrustedAuthorityType,
+    pub values: TrustedAuthorityValues,
 }
+
+/// The `type` of a [`TrustedAuthority`]. Strings other than the types OID4VP 1.0 defines are kept in
+/// [`Other`](Self::Other).
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(from = "String", into = "String")]
+pub enum TrustedAuthorityType {
+    /// `aki`: the KeyIdentifier of an AuthorityKeyIdentifier (RFC 5280, §4.2.1.1) of a certificate in the
+    /// credential's X.509 chain, base64url-encoded.
+    Aki,
+    /// `etsi_tl`: the identifier of an ETSI TS 119 612 Trusted List.
+    EtsiTl,
+    /// `openid_federation`: the Entity Identifier of an entity in an OpenID Federation, usually a Trust Anchor.
+    OpenidFederation,
+    /// A type OID4VP 1.0 does not define.
+    Other(String),
+}
+
+impl From<String> for TrustedAuthorityType {
+    fn from(type_: String) -> Self {
+        match type_.as_str() {
+            "aki" => Self::Aki,
+            "etsi_tl" => Self::EtsiTl,
+            "openid_federation" => Self::OpenidFederation,
+            _ => Self::Other(type_),
+        }
+    }
+}
+
+impl From<TrustedAuthorityType> for String {
+    fn from(type_: TrustedAuthorityType) -> Self {
+        match type_ {
+            TrustedAuthorityType::Aki => "aki".to_owned(),
+            TrustedAuthorityType::EtsiTl => "etsi_tl".to_owned(),
+            TrustedAuthorityType::OpenidFederation => "openid_federation".to_owned(),
+            TrustedAuthorityType::Other(type_) => type_,
+        }
+    }
+}
+
+/// The `values` of a [`TrustedAuthority`]: a non-empty list whose meaning depends on its type.
+#[nutype(
+    validate(predicate = not_empty),
+    derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, AsRef)
+)]
+pub struct TrustedAuthorityValues(Vec<String>);
 
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -1265,5 +1313,53 @@ mod tests {
             println!("Validation error: {}", err);
         }
         assert!(validation_result.is_err());
+    }
+
+    #[test]
+    fn test_oid4vp_examples_trusted_authorities() {
+        // OID4VP 1.0, §6.1.1 Trusted Authorities Query: the examples of the three types it defines.
+        for (json, type_, value) in [
+            (
+                include_str!("../../tests/examples/trusted_authorities/aki.json"),
+                TrustedAuthorityType::Aki,
+                "s9tIpPmhxdiuNkHMEWNpYim8S8Y",
+            ),
+            (
+                include_str!("../../tests/examples/trusted_authorities/etsi_tl.json"),
+                TrustedAuthorityType::EtsiTl,
+                "https://lotl.example.com",
+            ),
+            (
+                include_str!("../../tests/examples/trusted_authorities/openid_federation.json"),
+                TrustedAuthorityType::OpenidFederation,
+                "https://trustanchor.example.com",
+            ),
+        ] {
+            let trusted_authority: TrustedAuthority = from_str(json).unwrap();
+            assert_eq!(trusted_authority.type_, type_);
+            assert_eq!(trusted_authority.values.as_ref(), &[value.to_owned()]);
+
+            // Round trip: the type must not lose or invent fields.
+            let expected: serde_json::Value = from_str(json).unwrap();
+            assert_eq!(serde_json::to_value(&trusted_authority).unwrap(), expected);
+        }
+    }
+
+    #[test]
+    fn trusted_authority_of_another_type_is_kept() {
+        let json = serde_json::json!({ "type": "x509_san_dns", "values": ["issuer.example.com"] });
+        let trusted_authority: TrustedAuthority = serde_json::from_value(json.clone()).unwrap();
+        assert_eq!(
+            trusted_authority.type_,
+            TrustedAuthorityType::Other("x509_san_dns".to_owned())
+        );
+        assert_eq!(serde_json::to_value(&trusted_authority).unwrap(), json);
+    }
+
+    #[test]
+    fn trusted_authority_without_values_is_rejected() {
+        // OID4VP 1.0, §6.1.1: `values` is a non-empty array.
+        let json = serde_json::json!({ "type": "aki", "values": [] });
+        assert!(serde_json::from_value::<TrustedAuthority>(json).is_err());
     }
 }
