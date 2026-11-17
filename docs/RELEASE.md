@@ -48,23 +48,26 @@ has no `!`, and the release pull request lists what it found.
 
 ## Public dependencies
 
-A crate's public API includes the types and traits of other crates that appear in it: identity-kit's
-`Did` and `KeyStore`, `jsonwebtoken`'s `Algorithm`, `url::Url`, `utoipa`'s schema traits, and for
-the protocol crates `oid4vc-core`'s `Subject` or `Extension`. When one of those crates gets an
-incompatible update (identity-kit 0.2 → 0.3, or `oid4vc-core` 0.2 → 0.3), code that passes the old
-types to the crate no longer compiles, so the crate needs a breaking release too, even if none of
-its files changed.
+A crate's public API includes types and traits of other crates: identity-kit's `Did` and
+`KeyStore`, `jsonwebtoken`'s `Algorithm`, `url::Url`, and for the protocol crates `oid4vc-core`'s
+`Subject` or `Extension`. When one of those crates gets an incompatible update (identity-kit 0.2 →
+0.3, or `oid4vc-core` 0.2 → 0.3), code that passes the old types to the crate no longer compiles,
+so the crate needs a breaking release too, even if none of its files changed. Neither release-plz
+nor `cargo-semver-checks` notices this.
 
-Neither release-plz nor `cargo-semver-checks` notices this: release-plz bumps the crates whose
-files a commit touched, and `cargo-semver-checks` sees the same API shape. The
-`Public dependency updates` job in [QA](../.github/workflows/qa.yml) does: for every crate whose
-version differs from its last tag, it collects the crates in its public API from rustdoc's JSON
-output and compares their versions in `Cargo.lock` at the tag and now. If one changed
-incompatibly, or is itself a workspace crate that needs a breaking release, while the crate's own
-version change is compatible, the job fails and names the crate. To fix it, give the crate the
-next breaking version on the release branch (step 2 of the flow): its `Cargo.toml`, its
-requirement in `[workspace.dependencies]`, `Cargo.lock` (`cargo update --workspace`) and a
-changelog entry. Locally:
+The `Public dependency updates` job in [QA](../.github/workflows/qa.yml) does. For every crate
+whose version differs from its last tag, it compares the versions `Cargo.lock` resolves the crate's
+public dependencies to at the tag and now: its normal dependencies that are workspace crates or
+listed in `PUBLIC_DEPENDENCIES` in
+[`check_public_dependency_bumps.py`](../.github/scripts/check_public_dependency_bumps.py). If one
+changed incompatibly, or is a workspace crate that needs a breaking release itself, while the
+crate's own version change is compatible, the job fails and names the crate. A dependency the crate
+only uses internally is counted too; before 1.0 that costs no more than an unneeded minor bump.
+
+To fix a failure, give the crate the next breaking version on the release branch (step 2 of the
+flow): its `Cargo.toml`, its requirement in `[workspace.dependencies]`, `Cargo.lock`
+(`cargo update --workspace`) and a changelog entry. Add a crate to `PUBLIC_DEPENDENCIES` when its
+types first appear in a public API. Locally:
 
 ```sh
 python3 .github/scripts/check_public_dependency_bumps.py
