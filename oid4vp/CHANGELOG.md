@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0](https://github.com/impierce/openid4vc/compare/oid4vp-v0.6.1...oid4vp-v0.7.0) - 2026-11-17
+
+### Added
+
+- *(oid4vp)* [**breaking**] enforce DCQL `multiple` and `trusted_authorities` ([#192](https://github.com/impierce/openid4vc/pull/192))
+
+### Fixed
+
+- *(oid4vp)* ignore unsupported algorithms in `client_metadata` ([#213](https://github.com/impierce/openid4vc/pull/213))
+
 ## [0.6.0](https://github.com/impierce/openid4vc/compare/oid4vp-v0.5.0...oid4vp-v0.6.0) - 2026-11-11
 
 ### Dependencies
