@@ -11,6 +11,7 @@ all-features = true
 unmaintained = "all"
 yanked = "deny"
 ignore = [
+    { id = "RUSTSEC-2026-0543", reason = "chrono 0.4, used directly and via identity-kit: unmaintained, not vulnerable, no maintained release exists; replacing it with `time` is #217" },
     { id = "RUSTSEC-2026-0441", reason = "pin-utils 0.1 via reqwest-retry -> wasmtimer, a dependency only on wasm32: unmaintained, not vulnerable; reqwest-retry 0.9.1 and wasmtimer 0.4.3 are the latest versions" },
 ]
 
