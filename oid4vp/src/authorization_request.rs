@@ -213,11 +213,34 @@ pub struct VpFormatsSupported {
     pub mso_mdoc: Option<MsoMdocParameters>,
 }
 
+/// A non-empty list of the algorithms a Verifier supports for a format (`alg_values`, `sd-jwt_alg_values`,
+/// `kb-jwt_alg_values`; OpenID4VP 1.0, Appendix B.1.3.1.3 and B.3.4).
+///
+/// Deserializing keeps the values this library knows and leaves out the others: the Verifier lists what it accepts
+/// (fully-specified identifiers such as `Ed25519` or `ES256K` among them), and the Wallet chooses one it supports.
+/// Only a list with no known value is an error, since the Wallet can satisfy none of it.
 #[nutype(
     validate(predicate = not_empty),
-    derive(Debug, PartialEq, Clone, Serialize, Deserialize)
+    derive(Debug, PartialEq, Clone, Serialize)
 )]
 pub struct AlgValues(Vec<Algorithm>);
+
+impl<'de> Deserialize<'de> for AlgValues {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> std::result::Result<Self, D::Error> {
+        let values = Vec::<serde_json::Value>::deserialize(deserializer)?;
+        let known: Vec<Algorithm> = values
+            .iter()
+            .filter_map(|value| serde_json::from_value(value.clone()).ok())
+            .collect();
+        AlgValues::try_new(known).map_err(|_| {
+            serde::de::Error::custom(if values.is_empty() {
+                "the list of algorithms is empty".to_string()
+            } else {
+                format!("none of the algorithms {values:?} is one this library supports")
+            })
+        })
+    }
+}
 
 #[derive(Deserialize, Debug, PartialEq, Clone, Serialize)]
 pub struct JwtVcJsonParameters {
@@ -374,6 +397,46 @@ mod tests {
     use serde_json::from_str;
     use std::collections::HashMap;
     use std::str::FromStr;
+
+    #[test]
+    fn alg_values_leave_out_algorithms_the_library_does_not_know() {
+        // OpenID4VP 1.0, Appendix B.3.4: fully-specified identifiers such as `Ed25519`; `ES256K`, `ES512` and
+        // `Ed448` are not `jsonwebtoken` algorithms either.
+        let alg_values: AlgValues = from_str(r#"["Ed25519","ES256","ES256K","EdDSA","ES512","Ed448",-7]"#).unwrap();
+        assert_eq!(alg_values.into_inner(), vec![Algorithm::ES256, Algorithm::EdDSA]);
+    }
+
+    #[test]
+    fn alg_values_with_no_known_algorithm_or_none_at_all_are_an_error() {
+        let error = from_str::<AlgValues>(r#"["Ed25519","Ed448"]"#).unwrap_err().to_string();
+        assert!(error.contains("none of the algorithms"), "{error}");
+        assert!(from_str::<AlgValues>("[]").is_err());
+        assert!(from_str::<AlgValues>(r#""ES256""#).is_err());
+    }
+
+    #[test]
+    fn client_metadata_parses_with_a_verifier_listing_more_algorithms_than_the_library_knows() {
+        // The algorithms the OpenID Foundation conformance suite's verifier (release v5.3.4) lists.
+        let listed = r#"["RS256","RS384","RS512","PS256","PS384","PS512","ES256","ES256K","ES384","ES512","EdDSA","Ed25519","Ed448"]"#;
+        let json = format!(
+            r#"{{"vp_formats_supported":{{"dc+sd-jwt":{{"sd-jwt_alg_values":{listed},"kb-jwt_alg_values":{listed}}}}}}}"#
+        );
+        let client_metadata: ClientMetadataParameters = from_str(&json).unwrap();
+        let dc_sd_jwt = client_metadata.vp_formats_supported.dc_sd_jwt.unwrap();
+        let known = vec![
+            Algorithm::RS256,
+            Algorithm::RS384,
+            Algorithm::RS512,
+            Algorithm::PS256,
+            Algorithm::PS384,
+            Algorithm::PS512,
+            Algorithm::ES256,
+            Algorithm::ES384,
+            Algorithm::EdDSA,
+        ];
+        assert_eq!(dc_sd_jwt.sd_jwt_alg_values.unwrap().into_inner(), known);
+        assert_eq!(dc_sd_jwt.kb_jwt_alg_values.unwrap().into_inner(), known);
+    }
 
     #[test]
     fn test_new_client_id() {
