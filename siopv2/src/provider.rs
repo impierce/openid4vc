@@ -55,6 +55,10 @@ impl Provider {
     /// Takes a String and tries to parse it into an [`AuthorizationRequest<Object>`]. If the parsing fails, it tries to
     /// parse the [`AuthorizationRequest<Object>`] from the `request` parameter of the [`AuthorizationRequest<ByValue>`]
     /// or from the `request_uri` parameter of the [`AuthorizationRequest<ByReference>`].
+    ///
+    /// A Request Object is verified with the key its `kid` names. When the Client Identifier is a DID, that key has to
+    /// be one of that DID. A request with its parameters in the open is not signed at all, and a Client Identifier
+    /// that is not a DID is not authenticated here: whether to accept either is the caller's decision.
     #[tracing::instrument(level = "debug", err, skip(self, authorization_request))]
     pub async fn validate_request(&self, authorization_request: String) -> Result<AuthorizationRequest<Object>> {
         tracing::debug!("Validating SIOPv2 authorization request");
@@ -69,6 +73,7 @@ impl Provider {
                 if let Ok(authorization_request) = AuthorizationRequest::<ByValue>::from_str(&authorization_request) {
                     let client_id = authorization_request.body.client_id().clone();
                     ensure_request_object_typ(&authorization_request.body.request)?;
+                    ensure_signed_by_client(&authorization_request.body.request, &client_id)?;
                     let authorization_request: AuthorizationRequest<Object> =
                         validator.decode(authorization_request.body.request.to_owned()).await?;
 
@@ -80,6 +85,7 @@ impl Provider {
                     let builder = self.client.get(authorization_request.body.request_uri.clone());
                     let request_value = builder.send().await?.text().await?;
                     ensure_request_object_typ(&request_value)?;
+                    ensure_signed_by_client(&request_value, &client_id)?;
                     let authorization_request: AuthorizationRequest<Object> = validator.decode(request_value).await?;
 
                     (client_id, authorization_request)
@@ -199,6 +205,29 @@ fn ensure_request_object_typ(request_object: &str) -> Result<()> {
     Ok(())
 }
 
+/// Refuses a Request Object under a DID Client Identifier that a key of another DID signed. The signature is verified
+/// with the key the `kid` names, so without this check anyone could sign a request in the name of any DID. With a DID
+/// as Client Identifier, "the request MUST be signed with a private key associated with the DID" and the `kid` "MUST
+/// be a DID URL referring to a verification method in the DID Document" ([OpenID4VP 1.0, Section
+/// 5.9.3](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#section-5.9.3)); the DID may come with
+/// the `decentralized_identifier` prefix or, as in SIOPv2, without one.
+///
+/// A Client Identifier that is not a DID passes: this library cannot authenticate it.
+fn ensure_signed_by_client(request_object: &str, client_id: &str) -> Result<()> {
+    let client_did = client_id.strip_prefix("decentralized_identifier:").unwrap_or(client_id);
+    if !client_did.starts_with("did:") {
+        return Ok(());
+    }
+    let kid = jsonwebtoken::decode_header(request_object)?.kid.unwrap_or_default();
+    // The DID of a DID URL ends where its path, query or fragment starts.
+    let signer = kid.split(['/', '?', '#']).next().unwrap_or_default();
+    anyhow::ensure!(
+        signer == client_did,
+        "The Request Object is not signed with a key of its Client Identifier; it is not processed."
+    );
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -207,9 +236,14 @@ mod tests {
 
     /// A compact JWS whose JOSE header has this `typ` (the `typ` check reads only the header).
     fn jws_with_typ(typ: Option<&str>) -> String {
+        jws_with_header(typ, Some("k"))
+    }
+
+    /// A compact JWS whose JOSE header has this `typ` and `kid`.
+    fn jws_with_header(typ: Option<&str>, kid: Option<&str>) -> String {
         let mut header = jsonwebtoken::Header::new(Algorithm::HS256);
         header.typ = typ.map(str::to_string);
-        header.kid = Some("k".to_string());
+        header.kid = kid.map(str::to_string);
         jsonwebtoken::encode(
             &header,
             &serde_json::json!({}),
@@ -230,6 +264,56 @@ mod tests {
         for typ in [None, Some("JWT"), Some("jwt")] {
             let error = ensure_request_object_typ(&jws_with_typ(typ)).unwrap_err().to_string();
             assert!(error.contains("not processed"), "{typ:?}: {error}");
+        }
+    }
+
+    #[test]
+    fn request_object_under_a_did_must_be_signed_with_a_key_of_that_did() {
+        let signed_by = |kid: Option<&str>| jws_with_header(Some("oauth-authz-req+jwt"), kid);
+
+        for (client_id, kid) in [
+            ("did:example:verifier", "did:example:verifier#key-1"),
+            (
+                "decentralized_identifier:did:example:verifier",
+                "did:example:verifier#key-1",
+            ),
+            (
+                "did:web:example.com:verifier",
+                "did:web:example.com:verifier?versionId=1#key-1",
+            ),
+            ("did:example:verifier", "did:example:verifier/path#key-1"),
+        ] {
+            assert!(
+                ensure_signed_by_client(&signed_by(Some(kid)), client_id).is_ok(),
+                "{client_id} {kid}"
+            );
+        }
+
+        for (client_id, kid) in [
+            ("did:example:verifier", Some("did:example:attacker#key-1")),
+            (
+                "decentralized_identifier:did:example:verifier",
+                Some("did:example:attacker#key-1"),
+            ),
+            // Another DID that starts like the Client Identifier.
+            ("did:example:verifier", Some("did:example:verifier2#key-1")),
+            ("did:example:verifier", Some("did:example:verifier:attacker#key-1")),
+            ("did:example:verifier", Some("#key-1")),
+            ("did:example:verifier", Some("key-1")),
+            ("did:example:verifier", None),
+        ] {
+            let error = ensure_signed_by_client(&signed_by(kid), client_id)
+                .unwrap_err()
+                .to_string();
+            assert!(error.contains("not processed"), "{client_id} {kid:?}: {error}");
+        }
+
+        // Not a DID: nothing here to compare the `kid` with.
+        for client_id in ["https://client.example.org", "origin:https://client.example.org"] {
+            assert!(
+                ensure_signed_by_client(&signed_by(Some("did:example:verifier#key-1")), client_id).is_ok(),
+                "{client_id}"
+            );
         }
     }
 

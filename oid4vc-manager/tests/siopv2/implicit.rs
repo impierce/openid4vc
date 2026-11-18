@@ -4,7 +4,7 @@ use jsonwebtoken::Algorithm;
 use oid4vc_core::{
     DidMethod, Sign, Subject, SubjectSyntaxType, Verify,
     authentication::sign::ExternalSign,
-    authorization_request::{AuthorizationRequest, ByReference, Object},
+    authorization_request::{AuthorizationRequest, ByReference, ByValue, Object},
     authorization_response::AuthorizationResponse,
     client_metadata::ClientMetadataResource,
     scope::{Scope, ScopeValue},
@@ -273,5 +273,70 @@ async fn test_implicit_flow(#[case] did_method: &str) {
             }),
             ..Default::default()
         }
+    );
+}
+
+/// A Request Object is verified with the key its `kid` names, so it also has to be a key of the Client Identifier:
+/// otherwise anyone could sign a request in another verifier's name.
+#[tokio::test]
+async fn test_request_object_signed_by_another_did_is_refused() {
+    let relying_party = KeySubject::new().await.unwrap();
+    let client_id = relying_party.identifier("did:key", Algorithm::EdDSA).await.unwrap();
+    let another_party = KeySubject::new().await.unwrap();
+
+    let authorization_request: AuthorizationRequest<Object<SIOPv2>> = AuthorizationRequest::<Object<SIOPv2>>::builder()
+        .client_id(&client_id)
+        .scope(Scope::from(vec![ScopeValue::OpenId]))
+        .redirect_uri("https://client.example.org/cb".parse::<url::Url>().unwrap())
+        .response_mode("direct_post".to_string())
+        .client_metadata(ClientMetadataResource::ClientMetadata {
+            client_name: None,
+            logo_uri: None,
+            extension: ClientMetadataParameters {
+                subject_syntax_types_supported: vec![SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap())],
+                id_token_signed_response_alg: Some(Algorithm::EdDSA),
+            },
+            other: Default::default(),
+        })
+        .nonce("n-0S6_WzA2Mj".to_string())
+        .build()
+        .unwrap();
+
+    let provider_manager = ProviderManager::new(
+        Arc::new(KeySubject::new().await.unwrap()),
+        vec!["did:key"],
+        vec![Algorithm::EdDSA],
+    )
+    .unwrap();
+
+    // The request as each party signs it, passed by value under the relying party's Client Identifier.
+    let mut requests = Vec::new();
+    for signer in [relying_party, another_party] {
+        let request = RelyingPartyManager::new(Arc::new(signer), "did:key", vec![Algorithm::EdDSA])
+            .unwrap()
+            .encode(&authorization_request)
+            .await
+            .unwrap();
+        requests.push(
+            AuthorizationRequest::<ByValue> {
+                custom_url_scheme: "openid".to_string(),
+                body: ByValue {
+                    client_id: client_id.clone(),
+                    request,
+                },
+            }
+            .to_string(),
+        );
+    }
+
+    assert!(provider_manager.validate_request(requests[0].clone()).await.is_ok());
+    let error = provider_manager
+        .validate_request(requests[1].clone())
+        .await
+        .unwrap_err()
+        .to_string();
+    assert!(
+        error.contains("not signed with a key of its Client Identifier"),
+        "{error}"
     );
 }
