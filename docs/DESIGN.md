@@ -204,8 +204,9 @@ this crate; `CredentialIssuer` holds the issuer's `Subject`, `CredentialIssuerMe
   giving each its HTTP status.
 - **`Wallet`**: a `reqwest` client with retry middleware covering every endpoint above: fetch the
   offer, discover both metadata documents, PAR, authorize, token, nonce, credential (selecting the
-  proof algorithm and subject syntax type the issuer supports), interactive authorization and
-  follow-up, notification.
+  proof algorithm and subject syntax type the issuer supports, and naming the key by `jwk` for an
+  issuer that binds to a JWK and to none of the Wallet's syntax types), interactive authorization
+  and follow-up, notification.
 - **`utoipa`**: `ToSchema` on the wire types, tested against the generated OpenAPI document in
   `oid4vci/tests/openapi_schemas.rs`.
 

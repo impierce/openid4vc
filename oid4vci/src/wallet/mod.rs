@@ -16,7 +16,7 @@ use crate::interactive_authorization_request::{
 use crate::interactive_authorization_response::InteractiveAuthorizationResponse;
 use crate::nonce_response::NonceResponse;
 use crate::notification_request::{NotificationEvent, NotificationRequest};
-use crate::proof::ProofType;
+use crate::proof::{ProofKeyReference, ProofType};
 use crate::proofs::Proofs;
 use crate::{credential_response::CredentialResponse, token_request::TokenRequest, token_response::TokenResponse};
 use anyhow::{Result, anyhow};
@@ -431,6 +431,26 @@ impl Wallet {
         }
     }
 
+    /// How the key proof for `credential_configuration` names the Wallet's key. By `kid`, unless the Credential Issuer
+    /// binds credentials to none of the Wallet's subject syntax types but does bind them to a JWK
+    /// (`cryptographic_binding_methods_supported` has `jwk`): then by `jwk`, the key itself.
+    fn select_proof_key_reference(
+        &self,
+        credential_configuration: &CredentialConfigurationsSupportedObject,
+    ) -> ProofKeyReference {
+        let binding_methods = &credential_configuration.cryptographic_binding_methods_supported;
+        let binds_to_a_supported_syntax_type = binding_methods
+            .iter()
+            .filter_map(|binding_method| SubjectSyntaxType::from_str(binding_method).ok())
+            .any(|binding_method| self.supported_subject_syntax_types.contains(&binding_method));
+
+        if !binds_to_a_supported_syntax_type && binding_methods.iter().any(|binding_method| binding_method == "jwk") {
+            ProofKeyReference::Jwk
+        } else {
+            ProofKeyReference::Kid
+        }
+    }
+
     #[tracing::instrument(level = "debug", err, skip(self, credential_configuration))]
     fn select_subject_syntax_type(
         &self,
@@ -521,11 +541,18 @@ impl Wallet {
         );
         let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
         let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
-        tracing::debug!(?signing_algorithm, %subject_syntax_type, "Selected proof signing algorithm and syntax type");
+        let key_reference = self.select_proof_key_reference(credential_configuration);
+        tracing::debug!(
+            ?signing_algorithm,
+            %subject_syntax_type,
+            ?key_reference,
+            "Selected proof signing algorithm, syntax type and key reference"
+        );
 
         let mut proof_builder = Proof::builder()
             .proof_type(ProofType::Jwt)
             .algorithm(signing_algorithm)
+            .key_reference(key_reference)
             .signer(self.subject.clone());
 
         if !with_anonymous_access {
@@ -570,7 +597,10 @@ impl Wallet {
         tracing::info!("Sending credential request to issuer");
         tracing::trace!(?credential_request, "Credential request");
 
-        if let Ok((kid, alg)) = oid4vc_core::jwt::extract_header(&jwt_string) {
+        // A proof with a `jwk` header has no `kid` to read.
+        if key_reference == ProofKeyReference::Kid
+            && let Ok((kid, alg)) = oid4vc_core::jwt::extract_header(&jwt_string)
+        {
             tracing::debug!(%kid, ?alg, "Proof JWT header parameters");
         }
 
@@ -773,6 +803,35 @@ pub mod tests {
         Mock, MockServer, ResponseTemplate,
         matchers::{method, path},
     };
+
+    fn configuration_binding_to(binding_methods: &[&str]) -> CredentialConfigurationsSupportedObject {
+        CredentialConfigurationsSupportedObject {
+            cryptographic_binding_methods_supported: binding_methods.iter().map(ToString::to_string).collect(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn key_proof_names_the_key_by_jwk_only_for_an_issuer_binding_to_jwk_and_no_supported_syntax_type() {
+        let wallet: Wallet = Wallet::new(
+            Arc::new(TestSubject::default()),
+            vec!["did:test"],
+            vec![Algorithm::EdDSA],
+        )
+        .unwrap();
+        let key_reference =
+            |binding_methods: &[&str]| wallet.select_proof_key_reference(&configuration_binding_to(binding_methods));
+
+        // As before: no binding methods, one of the Wallet's, or none the Wallet knows.
+        assert_eq!(key_reference(&[]), ProofKeyReference::Kid);
+        assert_eq!(key_reference(&["did:test"]), ProofKeyReference::Kid);
+        assert_eq!(key_reference(&["cose_key"]), ProofKeyReference::Kid);
+        // An issuer that takes both gets the Wallet's own syntax type.
+        assert_eq!(key_reference(&["jwk", "did:test"]), ProofKeyReference::Kid);
+
+        assert_eq!(key_reference(&["jwk"]), ProofKeyReference::Jwk);
+        assert_eq!(key_reference(&["jwk", "cose_key", "did:other"]), ProofKeyReference::Jwk);
+    }
 
     #[test]
     fn select_signing_algorithm_returns_first_supported_signing_algorithm_when_no_proof_types_supported() {
