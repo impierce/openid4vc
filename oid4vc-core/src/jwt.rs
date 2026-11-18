@@ -78,26 +78,49 @@ where
         return Err(anyhow!("A JWT that names its key by `jwk` must not have a `kid`."));
     }
     // RFC 7515, Section 4.1.11: a JWS with a critical extension that is not understood is invalid, and none is
-    // processed here. `jsonwebtoken` reads `crit` and does not act on it.
-    if header.crit.is_some() {
+    // processed here. `jsonwebtoken` reads `crit` and does not act on it, and reads `"crit": null` as no member at
+    // all, so the member is looked for in the header as it was sent.
+    if has_header_member(jwt, "crit") {
         return Err(anyhow!(
             "A JWT with a `crit` header is not accepted: no extension is supported."
         ));
     }
     let jwk = header.jwk.ok_or_else(|| anyhow!("No `jwk` found in the header."))?;
 
+    // The key has to be one the algorithm signs with, in the one form a JWK has for it: `jsonwebtoken` joins the
+    // coordinates of a P-256 key without looking at their lengths, so a key with them split unevenly would verify
+    // and be returned as a JWK no other consumer accepts.
     let algorithm = header.alg;
-    match (algorithm, &jwk.algorithm) {
-        (Algorithm::EdDSA, AlgorithmParameters::OctetKeyPair(key)) if key.curve == EllipticCurve::Ed25519 => {}
-        (Algorithm::ES256, AlgorithmParameters::EllipticCurve(key)) if key.curve == EllipticCurve::P256 => {}
-        (Algorithm::EdDSA | Algorithm::ES256, _) => {
-            return Err(anyhow!("The `jwk` in the header is not a key {algorithm:?} signs with"));
+    let is_key_of_the_algorithm = match (algorithm, &jwk.algorithm) {
+        (Algorithm::EdDSA, AlgorithmParameters::OctetKeyPair(key)) => {
+            key.curve == EllipticCurve::Ed25519 && decodes_to_32_bytes(&key.x)
         }
+        (Algorithm::ES256, AlgorithmParameters::EllipticCurve(key)) => {
+            key.curve == EllipticCurve::P256 && decodes_to_32_bytes(&key.x) && decodes_to_32_bytes(&key.y)
+        }
+        (Algorithm::EdDSA | Algorithm::ES256, _) => false,
         _ => return Err(anyhow!("Unsupported algorithm {algorithm:?}")),
+    };
+    if !is_key_of_the_algorithm {
+        return Err(anyhow!("The `jwk` in the header is not a key {algorithm:?} signs with"));
     }
 
     let claims = verify(jwt, &DecodingKey::from_jwk(&jwk)?, algorithm)?;
     Ok((claims, jwk))
+}
+
+/// Whether the protected header of `jwt` has a member `name`, whatever its value (`null` included).
+fn has_header_member(jwt: &str, name: &str) -> bool {
+    jwt.split('.')
+        .next()
+        .and_then(|header| URL_SAFE_NO_PAD.decode(header).ok())
+        .and_then(|header| serde_json::from_slice::<serde_json::Map<String, serde_json::Value>>(&header).ok())
+        .is_some_and(|header| header.contains_key(name))
+}
+
+/// Whether `coordinate`, a base64url value of a JWK, is 32 bytes: an Ed25519 key or one coordinate of a P-256 key.
+fn decodes_to_32_bytes(coordinate: &str) -> bool {
+    URL_SAFE_NO_PAD.decode(coordinate).is_ok_and(|bytes| bytes.len() == 32)
 }
 
 fn verify<T>(jwt: &str, decoding_key: &DecodingKey, algorithm: Algorithm) -> Result<T>
@@ -318,6 +341,67 @@ mod tests {
         let error = decode_with_jwk::<Value>(&encoded).unwrap_err().to_string();
 
         assert!(error.contains("`crit`"), "{error}");
+    }
+
+    #[tokio::test]
+    async fn decode_with_jwk_refuses_a_crit_member_that_is_null() {
+        // `jsonwebtoken` cannot write `"crit": null`, so the JWT is put together and signed by hand.
+        let subject = TestSubject::new("did:test:123".to_string(), "key_id".to_string()).unwrap();
+        let jwk = public_jwk(&subject.public_key("key_id").await.unwrap(), Algorithm::EdDSA).unwrap();
+        let signed = |header: Value| {
+            let subject = &subject;
+            async move {
+                let message = [
+                    base64_url_encode(&header).unwrap(),
+                    base64_url_encode(&json!({ "iat": 1593436422 })).unwrap(),
+                ]
+                .join(".");
+                let signature = subject.sign(&message, "did:test", Algorithm::EdDSA).await.unwrap();
+                [message, URL_SAFE_NO_PAD.encode(signature)].join(".")
+            }
+        };
+
+        // The control: the same JWT without the member verifies.
+        let without_crit = signed(json!({ "typ": "JWT", "alg": "EdDSA", "jwk": jwk })).await;
+        assert!(decode_with_jwk::<Value>(&without_crit).is_ok());
+
+        let with_null_crit = signed(json!({ "typ": "JWT", "alg": "EdDSA", "jwk": jwk, "crit": null })).await;
+        assert_eq!(jsonwebtoken::decode_header(&with_null_crit).unwrap().crit, None);
+        let error = decode_with_jwk::<Value>(&with_null_crit).unwrap_err().to_string();
+        assert!(error.contains("`crit`"), "{error}");
+    }
+
+    #[test]
+    fn decode_with_jwk_refuses_a_p256_key_with_coordinates_of_another_length() {
+        // The point of RFC 7515, Appendix A.3.1, with one byte moved from `x` to `y`: the same 64 bytes when joined.
+        let x = URL_SAFE_NO_PAD
+            .decode("f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU")
+            .unwrap();
+        let y = URL_SAFE_NO_PAD
+            .decode("x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0")
+            .unwrap();
+        let (short_x, long_y) = (&x[..31], [&x[31..], &y[..]].concat());
+        let jwt_with = |x: &[u8], y: &[u8]| {
+            let header = json!({
+                "alg": "ES256",
+                "jwk": { "kty": "EC", "crv": "P-256", "x": URL_SAFE_NO_PAD.encode(x), "y": URL_SAFE_NO_PAD.encode(y) }
+            });
+            [
+                base64_url_encode(&header).unwrap(),
+                base64_url_encode(&json!({})).unwrap(),
+                URL_SAFE_NO_PAD.encode([0u8; 64]),
+            ]
+            .join(".")
+        };
+
+        // The well-formed key gets as far as the signature, which is not one of this key.
+        let error = decode_with_jwk::<Value>(&jwt_with(&x, &y)).unwrap_err().to_string();
+        assert!(!error.contains("is not a key"), "{error}");
+
+        let error = decode_with_jwk::<Value>(&jwt_with(short_x, &long_y))
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("is not a key ES256 signs with"), "{error}");
     }
 
     #[tokio::test]

@@ -198,7 +198,11 @@ async fn credential<S: Storage>(
     // TODO: The bunch of unwrap's here should be replaced with error responses as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-error-response
     let credential_configuration_id = match credential_request.credential_identifier_or_credential_configuration_id {
         CredentialIdentifierOrCredentialConfigurationId::CredentialIdentifier(_) => {
-            unimplemented!();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json("Credential identifiers are not supported"),
+            )
+                .into_response();
         }
         CredentialIdentifierOrCredentialConfigurationId::CredentialConfigurationId(credential_configuration_id) => {
             credential_configuration_id
