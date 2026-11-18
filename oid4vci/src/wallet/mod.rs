@@ -25,7 +25,7 @@ use oid4vc_core::SubjectSyntaxType;
 use oid4vc_core::authentication::subject::SigningSubject;
 use oid4vc_core::utils::form_urlencoded::to_form_urlencoded_string;
 use reqwest::Url;
-use reqwest::header::{CONTENT_TYPE, HeaderValue};
+use reqwest::header::{CONTENT_LENGTH, CONTENT_TYPE, HeaderValue};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::RetryTransientMiddleware;
 use reqwest_retry::policies::ExponentialBackoff;
@@ -505,7 +505,14 @@ impl Wallet {
     #[tracing::instrument(level = "debug", err, skip(self))]
     pub async fn get_nonce(&self, nonce_endpoint: Url) -> Result<String> {
         tracing::debug!(%nonce_endpoint, "Requesting c_nonce from issuer");
-        let response = self.client.post(nonce_endpoint).send().await?;
+        // The request has no content. Its length is still sent, as for any POST (RFC 9110, Section 8.6): the HTTP
+        // client leaves the header out of a request without a body, and some servers then answer 411 Length Required.
+        let response = self
+            .client
+            .post(nonce_endpoint)
+            .header(CONTENT_LENGTH, HeaderValue::from_static("0"))
+            .send()
+            .await?;
         let status = response.status();
         let text = response
             .text()
@@ -805,7 +812,7 @@ pub mod tests {
     use std::{collections::HashMap, sync::Arc};
     use wiremock::{
         Mock, MockServer, ResponseTemplate,
-        matchers::{method, path},
+        matchers::{header, method, path},
     };
 
     fn configuration_binding_to(binding_methods: &[&str]) -> CredentialConfigurationsSupportedObject {
@@ -835,6 +842,35 @@ pub mod tests {
 
         assert_eq!(key_reference(&["jwk"]), ProofKeyReference::Jwk);
         assert_eq!(key_reference(&["jwk", "cose_key", "did:other"]), ProofKeyReference::Jwk);
+    }
+
+    #[tokio::test]
+    async fn nonce_request_has_a_content_length_of_zero() {
+        let wallet: Wallet = Wallet::new(
+            Arc::new(TestSubject::default()),
+            vec!["did:test"],
+            vec![Algorithm::EdDSA],
+        )
+        .unwrap();
+
+        let mock_server = MockServer::start().await;
+
+        // A server that insists on the length of the content, as some do for every POST.
+        Mock::given(method("POST"))
+            .and(path("/nonce"))
+            .and(header("content-length", "0"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({ "c_nonce": "n-0S6_WzA2Mj" })))
+            .mount(&mock_server)
+            .await;
+        Mock::given(method("POST"))
+            .and(path("/nonce"))
+            .respond_with(ResponseTemplate::new(411))
+            .with_priority(10)
+            .mount(&mock_server)
+            .await;
+
+        let nonce_endpoint = format!("{}/nonce", mock_server.uri()).parse().unwrap();
+        assert_eq!(wallet.get_nonce(nonce_endpoint).await.unwrap(), "n-0S6_WzA2Mj");
     }
 
     #[test]
