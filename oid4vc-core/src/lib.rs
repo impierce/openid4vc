@@ -47,8 +47,10 @@ pub fn to_query_value<T: Serialize>(value: &T) -> anyhow::Result<String> {
     serde_json::to_string(value).map_err(Into::into)
 }
 
-/// A `reqwest` client over `rustls` with the `ring` provider, which is made the process default when nothing chose
-/// a provider yet; a provider the application installed is kept.
+/// The default client of the `Wallet` and the SIOPv2 `Provider`: a `reqwest` client over `rustls` with the `ring`
+/// provider, which is made the process default when nothing chose a provider yet (a provider the application
+/// installed is kept), trusting the platform's certificate verifier. An application with a TLS policy of its own
+/// gives each of them its client with `with_http_client`.
 pub fn http_client() -> reqwest::Client {
     let _ = rustls::crypto::ring::default_provider().install_default();
     reqwest::Client::new()

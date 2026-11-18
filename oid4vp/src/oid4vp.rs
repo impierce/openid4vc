@@ -61,13 +61,14 @@ impl Extension for OID4VP {
 
     // TODO: combine this function with `get_relying_party_supported_syntax_types`.
     async fn get_relying_party_supported_algorithms(
+        client: &reqwest::Client,
         authorization_request: &<Self::RequestHandle as RequestHandle>::Parameters,
     ) -> anyhow::Result<Vec<Algorithm>> {
         let client_metadata = match &authorization_request.client_metadata {
             // Fetch the client metadata from the given URI.
             ClientMetadataResource::ClientMetadataUri(client_metadata_uri) => {
                 let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
-                let client = ClientBuilder::new(oid4vc_core::http_client())
+                let client = ClientBuilder::new(client.clone())
                     .with(RetryTransientMiddleware::new_with_policy(retry_policy))
                     .build();
                 let client_metadata: ClientMetadataResource<ClientMetadataParameters> =
@@ -108,12 +109,13 @@ impl Extension for OID4VP {
     }
 
     async fn get_relying_party_supported_syntax_types(
+        client: &reqwest::Client,
         authorization_request: &<Self::RequestHandle as RequestHandle>::Parameters,
     ) -> anyhow::Result<Vec<SubjectSyntaxType>> {
         let client_metadata = match &authorization_request.client_metadata {
             ClientMetadataResource::ClientMetadataUri(client_metadata_uri) => {
                 let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
-                let client = ClientBuilder::new(oid4vc_core::http_client())
+                let client = ClientBuilder::new(client.clone())
                     .with(RetryTransientMiddleware::new_with_policy(retry_policy))
                     .build();
                 let client_metadata: ClientMetadataResource<ClientMetadataParameters> =
@@ -189,7 +191,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            OID4VP::get_relying_party_supported_syntax_types(&parameters)
+            OID4VP::get_relying_party_supported_syntax_types(&oid4vc_core::http_client(), &parameters)
                 .await
                 .unwrap(),
             vec![SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap())]
