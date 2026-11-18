@@ -64,7 +64,7 @@ impl Wallet {
         supported_subject_syntax_types: Vec<impl TryInto<SubjectSyntaxType>>,
         proof_signing_alg_values_supported: Vec<Algorithm>,
     ) -> anyhow::Result<Self> {
-        let client = with_retries(oid4vc_core::http_client());
+        let client = with_retries(ClientBuilder::new(oid4vc_core::http_client()).with(oid4vc_core::PublicHosts));
         Ok(Self {
             subject,
             supported_subject_syntax_types: supported_subject_syntax_types
@@ -82,8 +82,9 @@ impl Wallet {
 
     /// Sends this wallet's requests with `client` instead of [`oid4vc_core::http_client`], wrapped in the same retry
     /// middleware. For an application with a TLS policy of its own, such as pinned roots or a test CA in a debug build.
+    /// The checks of the default client ([`oid4vc_core::http`]) are then the application's.
     pub fn with_http_client(mut self, client: reqwest::Client) -> Self {
-        self.client = with_retries(client);
+        self.client = with_retries(ClientBuilder::new(client));
         self
     }
 
@@ -98,8 +99,7 @@ impl Wallet {
         tracing::trace!(%credential_offer_uri, "Credential offer URI");
         let response = self.client.get(credential_offer_uri).send().await?;
         let status = response.status();
-        let text = response
-            .text()
+        let text = oid4vc_core::read_text(response)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read response body from credential offer endpoint: {e}"))?;
         tracing::trace!(%status, body = %text, "Credential offer response body");
@@ -153,7 +153,7 @@ impl Wallet {
             let status = response.status();
             // If the request to the `oauth-authorization-server` endpoint is successful, return the metadata.
             if status.is_success() {
-                let text = response.text().await.map_err(|e| {
+                let text = oid4vc_core::read_text(response).await.map_err(|e| {
                     anyhow::anyhow!("Failed to read response body from OAuth authorization server endpoint: {e}")
                 })?;
                 let metadata = serde_json::from_str::<AuthorizationServerMetadata>(&text).map_err(|e| {
@@ -180,8 +180,7 @@ impl Wallet {
         tracing::debug!(%openid_configuration_endpoint, "Trying fallback OpenID configuration endpoint");
         let response = self.client.get(openid_configuration_endpoint).send().await?;
         let status = response.status();
-        let text = response
-            .text()
+        let text = oid4vc_core::read_text(response)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read response body from OpenID configuration endpoint: {e}"))?;
 
@@ -208,8 +207,7 @@ impl Wallet {
         tracing::debug!(%openid_credential_issuer_endpoint, "Requesting OpenID credential issuer metadata");
         let response = self.client.get(openid_credential_issuer_endpoint).send().await?;
         let status = response.status();
-        let text = response
-            .text()
+        let text = oid4vc_core::read_text(response)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read response body from credential issuer endpoint: {e}"))?;
 
@@ -269,8 +267,7 @@ impl Wallet {
             .send()
             .await?;
         let status = response.status();
-        let text = response
-            .text()
+        let text = oid4vc_core::read_text(response)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read response body from PAR endpoint: {e}"))?;
         tracing::trace!(%status, body = %text, "Pushed authorization response body");
@@ -322,14 +319,13 @@ impl Wallet {
                 request_uri: pushed_response.request_uri,
             };
 
-            return Ok(self
+            let response = self
                 .client
                 .get(authorization_endpoint)
                 .form(&authorization_request)
                 .send()
-                .await?
-                .json::<AuthorizationResponse>()
-                .await?);
+                .await?;
+            return oid4vc_core::read_json::<AuthorizationResponse>(response).await;
         }
 
         // TODO: Support regular authorization request without pushed authorization request.
@@ -355,8 +351,7 @@ impl Wallet {
             .send()
             .await?;
         let status = response.status();
-        let text = response
-            .text()
+        let text = oid4vc_core::read_text(response)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read response body from token endpoint: {e}"))?;
         tracing::trace!(%status, body = %text, "Token response body");
@@ -494,8 +489,7 @@ impl Wallet {
             .send()
             .await?;
         let status = response.status();
-        let text = response
-            .text()
+        let text = oid4vc_core::read_text(response)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read response body from nonce endpoint: {e}"))?;
         tracing::trace!(%status, body = %text, "Nonce response body");
@@ -593,8 +587,7 @@ impl Wallet {
             .send()
             .await?;
         let status = response.status();
-        let text = response
-            .text()
+        let text = oid4vc_core::read_text(response)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to read response body from credential endpoint: {e}"))?;
         tracing::trace!(%status, body = %text, "Credential response body");
@@ -665,7 +658,7 @@ impl Wallet {
             .send()
             .await?;
         let status = response.status();
-        let text = response.text().await.map_err(|e| {
+        let text = oid4vc_core::read_text(response).await.map_err(|e| {
             anyhow::anyhow!("Failed to read response body from interactive authorization endpoint: {e}")
         })?;
         tracing::trace!(%status, body = %text, "Interactive authorization response body");
@@ -715,7 +708,7 @@ impl Wallet {
             .send()
             .await?;
         let status = response.status();
-        let text = response.text().await.map_err(|e| {
+        let text = oid4vc_core::read_text(response).await.map_err(|e| {
             anyhow::anyhow!("Failed to read response body from interactive authorization endpoint: {e}")
         })?;
         tracing::trace!(%status, body = %text, "Interactive authorization follow-up response body");
@@ -768,16 +761,16 @@ impl Wallet {
             tracing::debug!(%status, "Notification request acknowledged");
             Ok(())
         } else {
-            let text = response.text().await.unwrap_or_default();
+            let text = oid4vc_core::read_text(response).await.unwrap_or_default();
             Err(anyhow!("Failed to send notification (HTTP {status}): {text}"))
         }
     }
 }
 
 /// `client` with the retries every request of the wallet gets.
-fn with_retries(client: reqwest::Client) -> ClientWithMiddleware {
+fn with_retries(client: ClientBuilder) -> ClientWithMiddleware {
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(2);
-    ClientBuilder::new(client)
+    client
         .with(RetryTransientMiddleware::new_with_policy(retry_policy))
         .build()
 }
@@ -793,6 +786,13 @@ pub mod tests {
         matchers::{header, method, path},
     };
 
+    /// A client for the mock servers, which run on 127.0.0.1 over plain `http`: the default client refuses both.
+    fn local_http_client() -> reqwest::Client {
+        // Installs the `ring` provider that `reqwest::Client::new` needs.
+        let _ = oid4vc_core::http_client();
+        reqwest::Client::new()
+    }
+
     #[tokio::test]
     async fn nonce_request_has_a_content_length_of_zero() {
         let wallet: Wallet = Wallet::new(
@@ -800,7 +800,8 @@ pub mod tests {
             vec!["did:test"],
             vec![Algorithm::EdDSA],
         )
-        .unwrap();
+        .unwrap()
+        .with_http_client(local_http_client());
 
         let mock_server = MockServer::start().await;
 
@@ -820,6 +821,22 @@ pub mod tests {
 
         let nonce_endpoint = format!("{}/nonce", mock_server.uri()).parse().unwrap();
         assert_eq!(wallet.get_nonce(nonce_endpoint).await.unwrap(), "n-0S6_WzA2Mj");
+    }
+
+    #[tokio::test]
+    async fn the_default_client_refuses_a_non_public_address() {
+        let wallet = Wallet::new(
+            Arc::new(TestSubject::default()),
+            vec!["did:test"],
+            vec![Algorithm::EdDSA],
+        )
+        .unwrap();
+
+        let error = wallet
+            .get_nonce("https://10.0.0.1/nonce".parse().unwrap())
+            .await
+            .unwrap_err();
+        assert!(format!("{error:#}").contains("is not a public address"), "{error:#}");
     }
 
     #[tokio::test]
@@ -928,7 +945,8 @@ pub mod tests {
             vec!["did:test"],
             vec![Algorithm::EdDSA],
         )
-        .unwrap();
+        .unwrap()
+        .with_http_client(local_http_client());
 
         let mock_server = MockServer::start().await;
 
@@ -964,7 +982,8 @@ pub mod tests {
             vec!["did:test"],
             vec![Algorithm::EdDSA],
         )
-        .unwrap();
+        .unwrap()
+        .with_http_client(local_http_client());
 
         let mock_server = MockServer::start().await;
 
@@ -1000,7 +1019,8 @@ pub mod tests {
             vec!["did:test"],
             vec![Algorithm::EdDSA],
         )
-        .unwrap();
+        .unwrap()
+        .with_http_client(local_http_client());
 
         let mock_server = MockServer::start().await;
 

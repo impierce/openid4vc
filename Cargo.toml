@@ -39,15 +39,14 @@ oid4vc-manager = { path = "oid4vc-manager", version = "0.6.2" }
 oid4vci = { path = "oid4vci", version = "0.6.1" }
 oid4vp = { path = "oid4vp", version = "0.7.0" }
 siopv2 = { path = "siopv2", version = "0.6.1" }
-# `rustls` with `ring`, installed by `oid4vc_core::http_client`; reqwest's own `rustls` feature would pull in
-# `aws-lc-rs`.
+# `rustls` with `ring`, which identity-kit's client (`oid4vc_core::http_client`) installs; reqwest's own `rustls`
+# feature would pull in `aws-lc-rs`.
 reqwest = { version = "0.13", default-features = false, features = [
     "json",
     "rustls-no-provider",
 ] }
 reqwest-middleware = { version = "0.5", features = ["json", "form"] }
 reqwest-retry = "0.9"
-rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
