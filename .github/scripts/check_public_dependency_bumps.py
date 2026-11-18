@@ -21,8 +21,24 @@ import sys
 import tomllib
 from pathlib import Path
 
-# External crates whose types or traits appear in the public API of the workspace crates.
-PUBLIC_DEPENDENCIES = {"identity-kit", "jsonwebtoken", "url", "reqwest", "http", "axum", "utoipa", "monostate"}
+# External crates whose types or traits appear in the public API of the workspace crates (taken once from rustdoc's
+# JSON output, plus `serde` for the `Serialize` bounds).
+PUBLIC_DEPENDENCIES = {
+    "anyhow",
+    "axum",
+    "ed25519-dalek",
+    "http",
+    "identity-kit",
+    "jsonwebtoken",
+    "monostate",
+    "reqwest",
+    "reqwest-middleware",
+    "serde",
+    "serde_json",
+    "tokio",
+    "url",
+    "utoipa",
+}
 
 
 def run(*args: str) -> str:
