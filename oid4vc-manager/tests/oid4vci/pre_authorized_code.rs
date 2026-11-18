@@ -290,3 +290,81 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         );
     }
 }
+
+/// A Credential Issuer that binds its credentials to a JWK, and to none of the Wallet's subject syntax types, is sent a
+/// key proof that names the Wallet's key by `jwk`, and accepts it.
+#[tokio::test]
+async fn test_pre_authorized_code_flow_with_a_credential_issuer_binding_to_jwk() {
+    let mut credential_issuer_manager =
+        CredentialIssuerManager::new(None, MemoryStorage, Arc::new(KeySubject::new().await.unwrap())).unwrap();
+    for credential_configuration in credential_issuer_manager
+        .credential_issuer
+        .metadata
+        .credential_configurations_supported
+        .values_mut()
+    {
+        credential_configuration.cryptographic_binding_methods_supported = vec!["jwk".to_string()];
+    }
+    let mut credential_issuer = Server::<_>::setup(credential_issuer_manager, None)
+        .unwrap()
+        .detached(true);
+    credential_issuer.start_server().await.unwrap();
+
+    let wallet: Wallet = Wallet::new(
+        Arc::new(KeySubject::new().await.unwrap()),
+        vec!["did:key"],
+        vec![Algorithm::EdDSA],
+    )
+    .unwrap();
+
+    let credential_offer = credential_issuer.credential_issuer_manager.credential_offer().unwrap();
+    let credential_issuer_url = credential_offer.credential_issuer;
+    let authorization_server_metadata = wallet
+        .get_authorization_server_metadata(credential_issuer_url.clone())
+        .await
+        .unwrap();
+    let credential_issuer_metadata = wallet
+        .get_credential_issuer_metadata(credential_issuer_url)
+        .await
+        .unwrap();
+
+    let token_request = TokenRequest::PreAuthorizedCode {
+        pre_authorized_code: credential_offer
+            .grants
+            .unwrap()
+            .pre_authorized_code
+            .unwrap()
+            .pre_authorized_code,
+        tx_code: Some("493536".to_string()),
+        authorization_details: None,
+    };
+    let token_response = wallet
+        .get_access_token(authorization_server_metadata.token_endpoint.unwrap(), token_request)
+        .await
+        .unwrap();
+
+    let credential_configuration_id = "DriverLicense_JWT".to_string();
+    let credential_configuration =
+        credential_issuer_metadata.credential_configurations_supported[&credential_configuration_id].clone();
+    assert_eq!(
+        credential_configuration.cryptographic_binding_methods_supported,
+        ["jwk"]
+    );
+
+    let credential_response = wallet
+        .get_credential(
+            credential_issuer_metadata,
+            &token_response,
+            None,
+            credential_configuration_id,
+            &credential_configuration,
+            true,
+        )
+        .await
+        .unwrap();
+
+    assert!(matches!(
+        credential_response.credential,
+        CredentialResponseType::Immediate { credentials, .. } if credentials.len() == 1
+    ));
+}

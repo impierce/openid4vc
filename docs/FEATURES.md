@@ -68,7 +68,8 @@ Specification versions tracked: [OID4VCI 1.0][oid4vci] (final, 16 September 2025
 | Credential Request by `credential_identifier` or `credential_configuration_id`          |   ✅   |               | [OID4VCI, Credential Request][oid4vci]                        |       |
 | `jwt` key proof: build, sign, validate (`CredentialIssuer::validate_proofs`)            |   ✅   |               | [OID4VCI, Key Proof Types: `jwt`][oid4vci]                    |       |
 | `jwt` key proof with a `jwk` header: built by the Wallet for an issuer binding to `jwk`  |   ✅   |               | [OID4VCI, Key Proof Types: `jwt`][oid4vci]                    |       |
-| `jwt` key proof with a `jwk` or `x5c` header: validated by `CredentialIssuer`            |   ⬜   |               | [OID4VCI, Key Proof Types: `jwt`][oid4vci]                    |       |
+| `jwt` key proof with a `jwk` header: validated by a `CredentialIssuer` binding to `jwk`  |   ✅   |               | [OID4VCI, Key Proof Types: `jwt`][oid4vci]                    |       |
+| `jwt` key proof with an `x5c` header                                                     |   ⬜   |               | [OID4VCI, Key Proof Types: `jwt`][oid4vci]                    |       |
 | Batch issuance: multiple proofs, `batch_credential_issuance` metadata                   |   ✅   |               | [OID4VCI, Credential Request; Credential Issuer Metadata][oid4vci]               |       |
 | `di_vp` and `attestation` key proof types, key attestations                             |   ⬜   |               | [OID4VCI, Key Proof Types][oid4vci]                      |       |
 | Credential Response: immediate `credentials[]`, `notification_id`, deferred `transaction_id` |   ✅   |               | [OID4VCI, Credential Response][oid4vci]                        |       |

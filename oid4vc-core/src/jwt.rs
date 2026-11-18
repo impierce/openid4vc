@@ -57,11 +57,51 @@ where
         _ => return Err(anyhow!("Unsupported algorithm {algorithm:?}")),
     };
 
+    verify(jwt, &decoding_key, algorithm)
+}
+
+/// The algorithms whose public keys [`public_jwk`] writes as a JWK and [`decode_with_jwk`] verifies with.
+pub const JWK_ALGORITHMS: [Algorithm; 2] = [Algorithm::EdDSA, Algorithm::ES256];
+
+/// Verifies a JWT whose header names its key by value (`jwk`, and no `kid`) with that key, and returns the claims
+/// together with the key.
+///
+/// The signature shows that the sender holds the key, not whose key it is. That is what an OpenID4VCI key proof is
+/// for; never use this for a JWT whose signer has to be identified.
+#[tracing::instrument(level = "debug", err, skip(jwt))]
+pub fn decode_with_jwk<T>(jwt: &str) -> Result<(T, Jwk)>
+where
+    T: DeserializeOwned,
+{
+    let header = jsonwebtoken::decode_header(jwt)?;
+    if header.kid.is_some() {
+        return Err(anyhow!("A JWT that names its key by `jwk` must not have a `kid`."));
+    }
+    let jwk = header.jwk.ok_or_else(|| anyhow!("No `jwk` found in the header."))?;
+
+    let algorithm = header.alg;
+    match (algorithm, &jwk.algorithm) {
+        (Algorithm::EdDSA, AlgorithmParameters::OctetKeyPair(key)) if key.curve == EllipticCurve::Ed25519 => {}
+        (Algorithm::ES256, AlgorithmParameters::EllipticCurve(key)) if key.curve == EllipticCurve::P256 => {}
+        (Algorithm::EdDSA | Algorithm::ES256, _) => {
+            return Err(anyhow!("The `jwk` in the header is not a key {algorithm:?} signs with"));
+        }
+        _ => return Err(anyhow!("Unsupported algorithm {algorithm:?}")),
+    }
+
+    let claims = verify(jwt, &DecodingKey::from_jwk(&jwk)?, algorithm)?;
+    Ok((claims, jwk))
+}
+
+fn verify<T>(jwt: &str, decoding_key: &DecodingKey, algorithm: Algorithm) -> Result<T>
+where
+    T: DeserializeOwned,
+{
     let mut validation = Validation::new(algorithm);
     validation.validate_exp = false;
     validation.validate_aud = false;
     validation.required_spec_claims.clear();
-    Ok(jsonwebtoken::decode::<T>(jwt, &decoding_key, &validation)?.claims)
+    Ok(jsonwebtoken::decode::<T>(jwt, decoding_key, &validation)?.claims)
 }
 
 /// Encodes and signs a JWT whose header names the signer's key by `kid`: the key identifier of `signer` for
@@ -235,6 +275,69 @@ mod tests {
         let from_header = URL_SAFE_NO_PAD.decode(jwk["x"].as_str().unwrap()).unwrap();
         let decoded: Value = decode(&encoded, from_header, Algorithm::EdDSA).unwrap();
         assert_eq!(decoded, claims);
+    }
+
+    async fn jwt_naming_its_key_by_jwk(claims: Value) -> String {
+        let subject = TestSubject::new("did:test:123".to_string(), "key_id".to_string()).unwrap();
+        encode_with_jwk(Arc::new(subject), Header::new(Algorithm::EdDSA), claims, "did:test")
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn decode_with_jwk_verifies_with_the_key_in_the_header() {
+        let claims = json!({ "aud": "https://issuer.example", "iat": 1593436422 });
+        let encoded = jwt_naming_its_key_by_jwk(claims.clone()).await;
+
+        let (decoded, jwk): (Value, Jwk) = decode_with_jwk(&encoded).unwrap();
+
+        assert_eq!(decoded, claims);
+        assert_eq!(jwk, jsonwebtoken::decode_header(&encoded).unwrap().jwk.unwrap());
+    }
+
+    #[tokio::test]
+    async fn decode_with_jwk_refuses_a_jwt_that_another_key_signed() {
+        let encoded = jwt_naming_its_key_by_jwk(json!({ "aud": "https://issuer.example" })).await;
+        let (header, rest) = encoded.split_once('.').unwrap();
+
+        // The same JWT, with another Ed25519 key in its header.
+        let mut header: Value = serde_json::from_slice(&URL_SAFE_NO_PAD.decode(header).unwrap()).unwrap();
+        header["jwk"]["x"] = json!(URL_SAFE_NO_PAD.encode([7u8; 32]));
+        let forged = [base64_url_encode(&header).unwrap().as_str(), rest].join(".");
+
+        assert!(decode_with_jwk::<Value>(&forged).is_err());
+    }
+
+    #[tokio::test]
+    async fn decode_with_jwk_refuses_a_header_that_does_not_name_one_fitting_key() {
+        let encoded = jwt_naming_its_key_by_jwk(json!({ "aud": "https://issuer.example" })).await;
+        let (header, rest) = encoded.split_once('.').unwrap();
+        let header: Value = serde_json::from_slice(&URL_SAFE_NO_PAD.decode(header).unwrap()).unwrap();
+        let with_header = |change: fn(&mut Value)| {
+            let mut header = header.clone();
+            change(&mut header);
+            [base64_url_encode(&header).unwrap().as_str(), rest].join(".")
+        };
+
+        // "jwk: ... It MUST NOT be present if kid is present" (OpenID4VCI 1.0, Appendix F.1).
+        let with_kid = with_header(|header| header["kid"] = json!("did:test:123#key_id"));
+        assert!(decode_with_jwk::<Value>(&with_kid).is_err());
+
+        let without_jwk = with_header(|header| {
+            header.as_object_mut().unwrap().remove("jwk");
+        });
+        assert!(decode_with_jwk::<Value>(&without_jwk).is_err());
+
+        // An Ed25519 key cannot have made an ES256 signature.
+        let other_algorithm = with_header(|header| header["alg"] = json!("ES256"));
+        assert!(decode_with_jwk::<Value>(&other_algorithm).is_err());
+
+        // A key of an algorithm outside `JWK_ALGORITHMS`.
+        let unsupported = with_header(|header| {
+            header["alg"] = json!("HS256");
+            header["jwk"] = json!({ "kty": "oct", "k": "c2VjcmV0" });
+        });
+        assert!(decode_with_jwk::<Value>(&unsupported).is_err());
     }
 
     #[test]

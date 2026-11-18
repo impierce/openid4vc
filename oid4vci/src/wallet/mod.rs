@@ -380,14 +380,20 @@ impl Wallet {
     fn select_signing_algorithm(
         &self,
         credential_configuration: &CredentialConfigurationsSupportedObject,
+        key_reference: ProofKeyReference,
     ) -> Result<Algorithm> {
         let proof_types_supported = &credential_configuration.proof_types_supported;
 
+        // A proof that names its key by `jwk` carries the key itself, and only the keys of some algorithms can be
+        // written as one: the Wallet's other algorithms are left out, in the Wallet's order of preference.
+        let mut wallet_algorithms = self.proof_signing_alg_values_supported.iter().filter(|algorithm| {
+            key_reference == ProofKeyReference::Kid || oid4vc_core::jwt::JWK_ALGORITHMS.contains(algorithm)
+        });
+
         // If the Credential Issuer does not define any supported Proof Types, then the Wallet will use its own default signing algorithm.
         if proof_types_supported.is_empty() {
-            let default_alg = self
-                .proof_signing_alg_values_supported
-                .first()
+            let default_alg = wallet_algorithms
+                .next()
                 .ok_or(anyhow::anyhow!("Wallet does not support any signing algorithms"))
                 .cloned()?;
             tracing::debug!(
@@ -411,9 +417,7 @@ impl Wallet {
         );
 
         // Return the first signing algorithm that matches any of the Credential Issuer's supported signing algorithms.
-        let selected = self
-            .proof_signing_alg_values_supported
-            .iter()
+        let selected = wallet_algorithms
             .find(|supported_algorithm| {
                 // Since `Algorithm` does not implement `Display`, we need to use `Debug` in order to convert it to a `String`.
                 let supported_algorithm_str = format!("{supported_algorithm:?}");
@@ -539,9 +543,9 @@ impl Wallet {
             %credential_configuration_id,
             "Requesting credential issuance from issuer"
         );
-        let signing_algorithm = self.select_signing_algorithm(credential_configuration)?;
-        let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
         let key_reference = self.select_proof_key_reference(credential_configuration);
+        let signing_algorithm = self.select_signing_algorithm(credential_configuration, key_reference)?;
+        let subject_syntax_type = self.select_subject_syntax_type(credential_configuration)?;
         tracing::debug!(
             ?signing_algorithm,
             %subject_syntax_type,
@@ -846,7 +850,10 @@ pub mod tests {
         let signing_algorithm = wallet
             // The Credential Issuer does not supply the `proof_types_supported` parameter, so the Wallet will use its own
             // preferred signing algorithm
-            .select_signing_algorithm(&CredentialConfigurationsSupportedObject::default())
+            .select_signing_algorithm(
+                &CredentialConfigurationsSupportedObject::default(),
+                ProofKeyReference::Kid,
+            )
             .unwrap();
 
         assert_eq!(signing_algorithm, Algorithm::EdDSA);
@@ -863,16 +870,19 @@ pub mod tests {
         .unwrap();
 
         let error = wallet
-            .select_signing_algorithm(&CredentialConfigurationsSupportedObject {
-                proof_types_supported: HashMap::from_iter(vec![(
-                    ProofType::Jwt,
-                    KeyProofMetadata {
-                        // This proof signing algorithm will not match any of the Wallet's supported signing algorithms.
-                        proof_signing_alg_values_supported: vec![AlgIdentifier::String("RS256".to_string())],
-                    },
-                )]),
-                ..Default::default()
-            })
+            .select_signing_algorithm(
+                &CredentialConfigurationsSupportedObject {
+                    proof_types_supported: HashMap::from_iter(vec![(
+                        ProofType::Jwt,
+                        KeyProofMetadata {
+                            // This proof signing algorithm will not match any of the Wallet's supported signing algorithms.
+                            proof_signing_alg_values_supported: vec![AlgIdentifier::String("RS256".to_string())],
+                        },
+                    )]),
+                    ..Default::default()
+                },
+                ProofKeyReference::Kid,
+            )
             .unwrap_err()
             .to_string();
 
@@ -890,20 +900,62 @@ pub mod tests {
         .unwrap();
 
         let signing_algorithm = wallet
-            .select_signing_algorithm(&CredentialConfigurationsSupportedObject {
-                proof_types_supported: HashMap::from_iter(vec![(
-                    // This Proof Type is supported by the Wallet
-                    ProofType::Jwt,
-                    KeyProofMetadata {
-                        // This proof signing algorithm will match the Wallet's supported signing algorithms.
-                        proof_signing_alg_values_supported: vec![AlgIdentifier::String("EdDSA".to_string())],
-                    },
-                )]),
-                ..Default::default()
-            })
+            .select_signing_algorithm(
+                &CredentialConfigurationsSupportedObject {
+                    proof_types_supported: HashMap::from_iter(vec![(
+                        // This Proof Type is supported by the Wallet
+                        ProofType::Jwt,
+                        KeyProofMetadata {
+                            // This proof signing algorithm will match the Wallet's supported signing algorithms.
+                            proof_signing_alg_values_supported: vec![AlgIdentifier::String("EdDSA".to_string())],
+                        },
+                    )]),
+                    ..Default::default()
+                },
+                ProofKeyReference::Kid,
+            )
             .unwrap();
 
         assert_eq!(signing_algorithm, Algorithm::EdDSA);
+    }
+
+    #[test]
+    fn select_signing_algorithm_for_a_jwk_proof_skips_algorithms_whose_keys_have_no_jwk_form() {
+        // A Wallet that prefers an algorithm whose key cannot be sent as a `jwk`.
+        let wallet: Wallet = Wallet::new(
+            Arc::new(TestSubject::default()),
+            vec!["did:test"],
+            vec![Algorithm::RS256, Algorithm::ES256],
+        )
+        .unwrap();
+        let taking = |algorithms: &[&str]| CredentialConfigurationsSupportedObject {
+            proof_types_supported: HashMap::from_iter(vec![(
+                ProofType::Jwt,
+                KeyProofMetadata {
+                    proof_signing_alg_values_supported: algorithms
+                        .iter()
+                        .map(|algorithm| AlgIdentifier::String(algorithm.to_string()))
+                        .collect(),
+                },
+            )]),
+            ..Default::default()
+        };
+        let select = |credential_configuration: &CredentialConfigurationsSupportedObject, key_reference| {
+            wallet.select_signing_algorithm(credential_configuration, key_reference)
+        };
+
+        // A `kid` proof keeps the Wallet's order of preference.
+        let both = taking(&["RS256", "ES256"]);
+        assert_eq!(select(&both, ProofKeyReference::Kid).unwrap(), Algorithm::RS256);
+        assert_eq!(select(&both, ProofKeyReference::Jwk).unwrap(), Algorithm::ES256);
+
+        // Also when the Credential Issuer names no algorithms.
+        let any = CredentialConfigurationsSupportedObject::default();
+        assert_eq!(select(&any, ProofKeyReference::Kid).unwrap(), Algorithm::RS256);
+        assert_eq!(select(&any, ProofKeyReference::Jwk).unwrap(), Algorithm::ES256);
+
+        // An issuer taking only the other algorithm gets no `jwk` proof.
+        assert!(select(&taking(&["RS256"]), ProofKeyReference::Jwk).is_err());
     }
 
     #[tokio::test]
