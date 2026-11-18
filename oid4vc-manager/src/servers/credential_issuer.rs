@@ -196,19 +196,6 @@ async fn credential<S: Storage>(
     Json(credential_request): Json<CredentialRequest>,
 ) -> impl IntoResponse {
     // TODO: The bunch of unwrap's here should be replaced with error responses as described here: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-error-response
-    let validated_proofs = match credential_issuer_manager
-        .credential_issuer
-        .validate_proofs(
-            credential_request.proofs.unwrap(),
-            Validator::Subject(credential_issuer_manager.credential_issuer.subject.clone()),
-        )
-        .await
-    {
-        Ok(proofs) if !proofs.is_empty() => proofs,
-        Ok(_) => return (StatusCode::BAD_REQUEST, Json("No valid proofs provided")).into_response(),
-        Err(_) => return (StatusCode::BAD_REQUEST, Json("Invalid proofs")).into_response(),
-    };
-
     let credential_configuration_id = match credential_request.credential_identifier_or_credential_configuration_id {
         CredentialIdentifierOrCredentialConfigurationId::CredentialIdentifier(_) => {
             unimplemented!();
@@ -216,6 +203,22 @@ async fn credential<S: Storage>(
         CredentialIdentifierOrCredentialConfigurationId::CredentialConfigurationId(credential_configuration_id) => {
             credential_configuration_id
         }
+    };
+
+    // The proofs are validated for the Credential Configuration asked for: one that binds to a JWK takes a proof
+    // that names its key by `jwk`.
+    let validated_proofs = match credential_issuer_manager
+        .credential_issuer
+        .validate_proofs_for_configuration(
+            credential_request.proofs.unwrap(),
+            Validator::Subject(credential_issuer_manager.credential_issuer.subject.clone()),
+            &credential_configuration_id,
+        )
+        .await
+    {
+        Ok(proofs) if !proofs.is_empty() => proofs,
+        Ok(_) => return (StatusCode::BAD_REQUEST, Json("No valid proofs provided")).into_response(),
+        Err(_) => return (StatusCode::BAD_REQUEST, Json("Invalid proofs")).into_response(),
     };
 
     (
@@ -228,6 +231,7 @@ async fn credential<S: Storage>(
                     access_token,
                     credential_configuration_id,
                     validated_proofs[0]
+                        .proof_of_possession
                         .rfc7519_claims
                         .iss()
                         .clone()

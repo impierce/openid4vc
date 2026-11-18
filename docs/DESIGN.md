@@ -171,9 +171,10 @@ list implementation.
 
 Everything in OID4VCI 1.0 as data, plus the wallet side as a client. There is no issuer server in
 this crate; `CredentialIssuer` holds the issuer's `Subject`, `CredentialIssuerMetadata` and
-`AuthorizationServerMetadata` and validates proofs of possession: by the key their `kid` names,
-or, for an issuer whose metadata binds a credential to `jwk`, by the `jwk` in their header. The
-server is in `oid4vc-manager`.
+`AuthorizationServerMetadata` and validates proofs of possession: `validate_proofs` by the key
+their `kid` names; `validate_proofs_for_configuration` also by the `jwk` in their header, when the
+Credential Configuration asked for binds to `jwk`, and it returns the key each proof was verified
+with. The server is in `oid4vc-manager`.
 
 - **Credential Offer**: `CredentialOffer` (by value or `credential_offer_uri`), rendered to and
   parsed from the `openid-credential-offer://` URL; `Grants` with `authorization_code`

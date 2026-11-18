@@ -77,6 +77,13 @@ where
     if header.kid.is_some() {
         return Err(anyhow!("A JWT that names its key by `jwk` must not have a `kid`."));
     }
+    // RFC 7515, Section 4.1.11: a JWS with a critical extension that is not understood is invalid, and none is
+    // processed here. `jsonwebtoken` reads `crit` and does not act on it.
+    if header.crit.is_some() {
+        return Err(anyhow!(
+            "A JWT with a `crit` header is not accepted: no extension is supported."
+        ));
+    }
     let jwk = header.jwk.ok_or_else(|| anyhow!("No `jwk` found in the header."))?;
 
     let algorithm = header.alg;
@@ -293,6 +300,24 @@ mod tests {
 
         assert_eq!(decoded, claims);
         assert_eq!(jwk, jsonwebtoken::decode_header(&encoded).unwrap().jwk.unwrap());
+    }
+
+    #[tokio::test]
+    async fn decode_with_jwk_refuses_a_critical_extension() {
+        // Signed correctly, with an extension the sender marks as one that must be understood.
+        let subject = TestSubject::new("did:test:123".to_string(), "key_id".to_string()).unwrap();
+        let header = Header {
+            crit: Some(vec!["unsupported-extension".to_string()]),
+            ..Header::new(Algorithm::EdDSA)
+        };
+        let encoded = encode_with_jwk(Arc::new(subject), header, json!({ "iat": 1593436422 }), "did:test")
+            .await
+            .unwrap();
+        assert!(jsonwebtoken::decode_header(&encoded).unwrap().crit.is_some());
+
+        let error = decode_with_jwk::<Value>(&encoded).unwrap_err().to_string();
+
+        assert!(error.contains("`crit`"), "{error}");
     }
 
     #[tokio::test]
