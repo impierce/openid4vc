@@ -443,10 +443,21 @@ impl Wallet {
         credential_configuration: &CredentialConfigurationsSupportedObject,
     ) -> ProofKeyReference {
         let binding_methods = &credential_configuration.cryptographic_binding_methods_supported;
+        // A DID method is compared by its name: an issuer binding to `did:web` binds to the Wallet's
+        // `did:web:example`, and the other way round.
         let binds_to_a_supported_syntax_type = binding_methods
             .iter()
             .filter_map(|binding_method| SubjectSyntaxType::from_str(binding_method).ok())
-            .any(|binding_method| self.supported_subject_syntax_types.contains(&binding_method));
+            .any(|binding_method| {
+                self.supported_subject_syntax_types
+                    .iter()
+                    .any(|supported| match (supported, &binding_method) {
+                        (SubjectSyntaxType::Did(supported), SubjectSyntaxType::Did(binding_method)) => {
+                            supported.method_name() == binding_method.method_name()
+                        }
+                        (supported, binding_method) => supported == binding_method,
+                    })
+            });
 
         if !binds_to_a_supported_syntax_type && binding_methods.iter().any(|binding_method| binding_method == "jwk") {
             ProofKeyReference::Jwk
@@ -842,6 +853,23 @@ pub mod tests {
 
         assert_eq!(key_reference(&["jwk"]), ProofKeyReference::Jwk);
         assert_eq!(key_reference(&["jwk", "cose_key", "did:other"]), ProofKeyReference::Jwk);
+
+        // A DID method matches by its name, with or without a namespace on either side.
+        assert_eq!(key_reference(&["jwk", "did:test:namespace"]), ProofKeyReference::Kid);
+        let wallet: Wallet = Wallet::new(
+            Arc::new(TestSubject::default()),
+            vec!["did:test:namespace"],
+            vec![Algorithm::EdDSA],
+        )
+        .unwrap();
+        assert_eq!(
+            wallet.select_proof_key_reference(&configuration_binding_to(&["jwk", "did:test"])),
+            ProofKeyReference::Kid
+        );
+        assert_eq!(
+            wallet.select_proof_key_reference(&configuration_binding_to(&["jwk", "did:other"])),
+            ProofKeyReference::Jwk
+        );
     }
 
     #[tokio::test]

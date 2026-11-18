@@ -200,7 +200,7 @@ async fn credential<S: Storage>(
         CredentialIdentifierOrCredentialConfigurationId::CredentialIdentifier(_) => {
             return (
                 StatusCode::BAD_REQUEST,
-                Json("Credential identifiers are not supported"),
+                Json(serde_json::json!({ "error": "invalid_credential_request" })),
             )
                 .into_response();
         }

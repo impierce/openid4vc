@@ -84,6 +84,11 @@ pub struct DidMethod {
 }
 
 impl DidMethod {
+    /// The method name, without a namespace: `iota` for both `did:iota` and `did:iota:rms`.
+    pub fn method_name(&self) -> &str {
+        &self.method_name
+    }
+
     // TODO(selv): SIOPv2 has a (probably unintended) restriction on how to communicate support for DID Methods in a
     // Providers Metadata where namespaces are not allowed. So strictly speaking namespaces should not be allowed. An
     // issue has been opened to address this problem. For more information, see:

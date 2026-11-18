@@ -67,9 +67,16 @@ impl CredentialIssuer {
     ///   `cryptographic_binding_methods_supported` of this Credential Configuration has `jwk`. For any other
     ///   configuration it is refused, also when another configuration of this Credential Issuer binds to `jwk`.
     ///
-    /// Either kind has to be a key proof as OpenID4VCI 1.0, Appendix F.1 defines it: its `typ` is
-    /// `openid4vci-proof+jwt`, it has an `iat`, and it is signed with one of the algorithms the Credential
-    /// Configuration lists for `jwt` proofs, when it lists any. The `nonce` and the `aud` are not checked here.
+    /// Either kind has to be a key proof as OpenID4VCI 1.0, Appendix F.1 defines it:
+    /// - its `typ` is `openid4vci-proof+jwt`, and it has no `crit` header;
+    /// - it names its key in one of `kid`, `jwk` and `x5c` only;
+    /// - it is signed with one of the algorithms the Credential Configuration lists for `jwt` proofs, when it lists
+    ///   any;
+    /// - it has an `iat`;
+    /// - its `aud` is this Credential Issuer's identifier. The two are compared as URLs, as the identifier in the
+    ///   metadata is one: `https://issuer.example` and `https://issuer.example/` are the same.
+    ///
+    /// The `nonce` is not checked here.
     ///
     /// The signature of a `jwk` proof shows possession of the key and nothing about who holds it: bind the credential
     /// to the returned [`ProofKey`], not to a claim of the proof.
@@ -102,6 +109,13 @@ impl CredentialIssuer {
         for jwt in &proofs.jwt {
             let header = jsonwebtoken::decode_header(jwt)?;
             ensure_key_proof_typ(header.typ.as_deref())?;
+            jwt::ensure_no_critical_extension(jwt)?;
+            // "jwk: ... It MUST NOT be present if kid is present", and the same for `x5c` (Appendix F.1).
+            let key_references = [header.kid.is_some(), header.jwk.is_some(), header.x5c.is_some()];
+            anyhow::ensure!(
+                key_references.into_iter().filter(|is_present| *is_present).count() <= 1,
+                "A key proof has to name its key in one of `kid`, `jwk` and `x5c` only"
+            );
             if let Some(proof_algorithms) = proof_algorithms {
                 // `Algorithm` has no `Display`: its `Debug` form is the JWS name.
                 let algorithm = format!("{:?}", header.alg);
@@ -130,9 +144,16 @@ impl CredentialIssuer {
                     key: ProofKey::Kid(kid),
                 }
             };
+            let claims = &validated_proof.proof_of_possession.rfc7519_claims;
+            anyhow::ensure!(claims.iat.is_some(), "A key proof has to have an `iat`");
+            let is_for_this_issuer = claims
+                .aud
+                .as_deref()
+                .and_then(|aud| url::Url::parse(aud).ok())
+                .is_some_and(|aud| aud == self.metadata.credential_issuer);
             anyhow::ensure!(
-                validated_proof.proof_of_possession.rfc7519_claims.iat.is_some(),
-                "A key proof has to have an `iat`"
+                is_for_this_issuer,
+                "The `aud` of a key proof has to be the Credential Issuer Identifier"
             );
             validated_proofs.push(validated_proof);
         }
@@ -155,8 +176,7 @@ fn ensure_key_proof_typ(typ: Option<&str>) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// "jwk: ... It MUST NOT be present if kid is present" (OpenID4VCI 1.0, Appendix F.1): a proof with both is left to
-/// its `kid`.
+/// Whether the proof carries its key in a `jwk` header.
 fn names_its_key_by_jwk(jwt: &str) -> bool {
     jsonwebtoken::decode_header(jwt).is_ok_and(|header| header.kid.is_none() && header.jwk.is_some())
 }
@@ -177,6 +197,7 @@ mod tests {
         CredentialIssuer {
             subject: Arc::new(TestSubject::default()),
             metadata: CredentialIssuerMetadata {
+                credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
                 credential_configurations_supported: configurations
                     .iter()
                     .map(|(id, binding_methods)| {
@@ -320,6 +341,104 @@ mod tests {
             .unwrap_err();
 
         assert_eq!(error.to_string(), "A key proof has to have an `iat`");
+    }
+
+    #[tokio::test]
+    async fn a_proof_has_to_be_for_this_credential_issuer() {
+        let credential_issuer = mixed_credential_issuer();
+        let validate = |aud: Option<&str>| {
+            let mut claims = serde_json::json!({ "iat": 1_701_960_444 });
+            if let Some(aud) = aud {
+                claims["aud"] = aud.into();
+            }
+            let credential_issuer = &credential_issuer;
+            async move {
+                credential_issuer
+                    .validate_proofs_for_configuration(
+                        jwk_jwt("openid4vci-proof+jwt", claims).await,
+                        validator(),
+                        "BoundToJwk",
+                    )
+                    .await
+            }
+        };
+
+        // The identifier is a URL here, so the two spellings of its root are the same.
+        for aud in [
+            "https://credential-issuer.example.com",
+            "https://credential-issuer.example.com/",
+        ] {
+            assert!(validate(Some(aud)).await.is_ok(), "{aud}");
+        }
+
+        for aud in [
+            Some("https://another-issuer.example.com"),
+            Some("https://credential-issuer.example.com/tenant"),
+            Some("not a URL"),
+            None,
+        ] {
+            let error = validate(aud).await.unwrap_err();
+            assert_eq!(
+                error.to_string(),
+                "The `aud` of a key proof has to be the Credential Issuer Identifier",
+                "{aud:?}"
+            );
+        }
+    }
+
+    /// A `kid` proof with this header on top of what a proof has, signed as a proof is.
+    async fn kid_proof_with(change: impl FnOnce(&mut jsonwebtoken::Header)) -> Proofs {
+        let subject = TestSubject::new("did:test:123".to_string(), "did:test:123#key-1".to_string()).unwrap();
+        let mut header = jsonwebtoken::Header {
+            typ: Some("openid4vci-proof+jwt".to_string()),
+            ..jsonwebtoken::Header::new(Algorithm::EdDSA)
+        };
+        change(&mut header);
+        let claims = serde_json::json!({ "aud": "https://credential-issuer.example.com", "iat": 1_701_960_444 });
+        let jwt = jwt::encode(Arc::new(subject), header, claims, "did:test")
+            .await
+            .unwrap();
+        Proofs { jwt: vec![jwt] }
+    }
+
+    #[tokio::test]
+    async fn a_proof_names_its_key_in_one_header_only() {
+        use oid4vc_core::Verify as _;
+
+        let credential_issuer = mixed_credential_issuer();
+        let key = MockVerifier::new().public_key("did:test:123#key-1").await.unwrap();
+        let jwk = jwt::public_jwk(&key, Algorithm::EdDSA).unwrap();
+
+        // The control: the same proof with a `kid` only is valid.
+        let validated = credential_issuer
+            .validate_proofs_for_configuration(kid_proof_with(|_| {}).await, validator(), "BoundToJwk")
+            .await;
+        assert!(validated.is_ok());
+
+        let with_kid_and_jwk = kid_proof_with(|header| header.jwk = Some(jwk)).await;
+        let with_kid_and_x5c = kid_proof_with(|header| header.x5c = Some(vec!["MIIB".to_string()])).await;
+        for proofs in [with_kid_and_jwk, with_kid_and_x5c] {
+            let error = credential_issuer
+                .validate_proofs_for_configuration(proofs, validator(), "BoundToJwk")
+                .await
+                .unwrap_err();
+            assert!(
+                error.to_string().contains("in one of `kid`, `jwk` and `x5c` only"),
+                "{error}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn a_kid_proof_with_a_critical_extension_is_refused() {
+        let proofs = kid_proof_with(|header| header.crit = Some(vec!["unsupported-extension".to_string()])).await;
+
+        let error = mixed_credential_issuer()
+            .validate_proofs_for_configuration(proofs, validator(), "BoundToDid")
+            .await
+            .unwrap_err();
+
+        assert!(error.to_string().contains("`crit`"), "{error}");
     }
 
     /// The test signer signs with EdDSA only, so the algorithm that is taken is EdDSA.

@@ -77,14 +77,7 @@ where
     if header.kid.is_some() {
         return Err(anyhow!("A JWT that names its key by `jwk` must not have a `kid`."));
     }
-    // RFC 7515, Section 4.1.11: a JWS with a critical extension that is not understood is invalid, and none is
-    // processed here. `jsonwebtoken` reads `crit` and does not act on it, and reads `"crit": null` as no member at
-    // all, so the member is looked for in the header as it was sent.
-    if has_header_member(jwt, "crit") {
-        return Err(anyhow!(
-            "A JWT with a `crit` header is not accepted: no extension is supported."
-        ));
-    }
+    ensure_no_critical_extension(jwt)?;
     let jwk = header.jwk.ok_or_else(|| anyhow!("No `jwk` found in the header."))?;
 
     // The key has to be one the algorithm signs with, in the one form a JWK has for it: `jsonwebtoken` joins the
@@ -107,6 +100,18 @@ where
 
     let claims = verify(jwt, &DecodingKey::from_jwk(&jwk)?, algorithm)?;
     Ok((claims, jwk))
+}
+
+/// Refuses a JWT whose protected header has a `crit` member, whatever its value. RFC 7515, Section 4.1.11: a JWS with
+/// a critical extension that is not understood is invalid, and these crates process none. `jsonwebtoken` reads `crit`
+/// without acting on it, and reads `"crit": null` as no member at all, so the header is looked at as it was sent.
+pub fn ensure_no_critical_extension(jwt: &str) -> Result<()> {
+    if has_header_member(jwt, "crit") {
+        return Err(anyhow!(
+            "A JWT with a `crit` header is not accepted: no extension is supported."
+        ));
+    }
+    Ok(())
 }
 
 /// Whether the protected header of `jwt` has a member `name`, whatever its value (`null` included).
