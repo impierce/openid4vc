@@ -443,20 +443,13 @@ impl Wallet {
         credential_configuration: &CredentialConfigurationsSupportedObject,
     ) -> ProofKeyReference {
         let binding_methods = &credential_configuration.cryptographic_binding_methods_supported;
-        // A DID method is compared by its name: an issuer binding to `did:web` binds to the Wallet's
-        // `did:web:example`, and the other way round.
         let binds_to_a_supported_syntax_type = binding_methods
             .iter()
             .filter_map(|binding_method| SubjectSyntaxType::from_str(binding_method).ok())
             .any(|binding_method| {
                 self.supported_subject_syntax_types
                     .iter()
-                    .any(|supported| match (supported, &binding_method) {
-                        (SubjectSyntaxType::Did(supported), SubjectSyntaxType::Did(binding_method)) => {
-                            supported.method_name() == binding_method.method_name()
-                        }
-                        (supported, binding_method) => supported == binding_method,
-                    })
+                    .any(|supported| is_bound_to(supported, &binding_method))
             });
 
         if !binds_to_a_supported_syntax_type && binding_methods.iter().any(|binding_method| binding_method == "jwk") {
@@ -494,11 +487,21 @@ impl Wallet {
             "Negotiating subject syntax type"
         );
 
+        let binding_methods = &credential_issuer_cryptographic_binding_methods_supported;
         let selected = self
             .supported_subject_syntax_types
             .iter()
-            .find(|supported_syntax_type| {
-                credential_issuer_cryptographic_binding_methods_supported.contains(supported_syntax_type)
+            .find(|supported_syntax_type| binding_methods.contains(supported_syntax_type))
+            // Then one the issuer binds to by the name of its DID method, as `select_proof_key_reference` counts
+            // it: the key proof is then signed under a method the issuer binds to.
+            .or_else(|| {
+                self.supported_subject_syntax_types
+                    .iter()
+                    .find(|supported_syntax_type| {
+                        binding_methods
+                            .iter()
+                            .any(|binding_method| is_bound_to(supported_syntax_type, binding_method))
+                    })
             })
             // If no match is found, use the first supported syntax type as a fallback.
             .or_else(|| self.supported_subject_syntax_types.first())
@@ -815,6 +818,18 @@ impl Wallet {
     }
 }
 
+/// Whether an issuer that binds credentials to `binding_method` binds them to the Wallet's `supported` syntax type. A
+/// DID method is compared by its name: an issuer binding to `did:web` binds to the Wallet's `did:web:example`, and
+/// the other way round.
+fn is_bound_to(supported: &SubjectSyntaxType, binding_method: &SubjectSyntaxType) -> bool {
+    match (supported, binding_method) {
+        (SubjectSyntaxType::Did(supported), SubjectSyntaxType::Did(binding_method)) => {
+            supported.method_name() == binding_method.method_name()
+        }
+        (supported, binding_method) => supported == binding_method,
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
@@ -869,6 +884,54 @@ pub mod tests {
         assert_eq!(
             wallet.select_proof_key_reference(&configuration_binding_to(&["jwk", "did:other"])),
             ProofKeyReference::Jwk
+        );
+    }
+
+    #[test]
+    fn subject_syntax_type_is_one_the_issuer_binds_to_whenever_the_key_is_named_by_kid_for_it() {
+        let wallet_with = |syntax_types: Vec<&str>| -> Wallet {
+            Wallet::new(Arc::new(TestSubject::default()), syntax_types, vec![Algorithm::EdDSA]).unwrap()
+        };
+        let selected = |wallet: &Wallet, binding_methods: &[&str]| {
+            let configuration = CredentialConfigurationsSupportedObject {
+                proof_types_supported: HashMap::from_iter(vec![(
+                    ProofType::Jwt,
+                    KeyProofMetadata {
+                        proof_signing_alg_values_supported: vec![AlgIdentifier::String("EdDSA".to_string())],
+                    },
+                )]),
+                ..configuration_binding_to(binding_methods)
+            };
+            (
+                wallet.select_proof_key_reference(&configuration),
+                wallet.select_subject_syntax_type(&configuration).unwrap().to_string(),
+            )
+        };
+
+        // The issuer binds to the Wallet's second syntax type by the name of its DID method: the proof is a `kid`
+        // proof, and under that syntax type, not under the Wallet's first one.
+        let wallet = wallet_with(vec!["did:other", "did:test:namespace"]);
+        assert_eq!(
+            selected(&wallet, &["jwk", "did:test"]),
+            (ProofKeyReference::Kid, "did:test:namespace".to_string())
+        );
+
+        // An exact match goes first, whatever the order of the Wallet's syntax types.
+        let wallet = wallet_with(vec!["did:test:namespace", "did:test"]);
+        assert_eq!(
+            selected(&wallet, &["did:test"]),
+            (ProofKeyReference::Kid, "did:test".to_string())
+        );
+
+        // As before: with nothing the issuer binds to, the Wallet's first syntax type.
+        let wallet = wallet_with(vec!["did:other", "did:test"]);
+        assert_eq!(
+            selected(&wallet, &["cose_key"]),
+            (ProofKeyReference::Kid, "did:other".to_string())
+        );
+        assert_eq!(
+            selected(&wallet, &["jwk"]),
+            (ProofKeyReference::Jwk, "did:other".to_string())
         );
     }
 
