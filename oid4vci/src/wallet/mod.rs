@@ -871,7 +871,8 @@ pub mod tests {
             vec!["did:test"],
             vec![Algorithm::EdDSA],
         )
-        .unwrap();
+        .unwrap()
+        .with_http_client(local_http_client());
         let metadata: CredentialIssuerMetadata = serde_json::from_value(serde_json::json!({
             "credential_issuer": credential_issuer,
             "credential_endpoint": credential_endpoint,
