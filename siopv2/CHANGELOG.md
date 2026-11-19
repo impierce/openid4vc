@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0](https://github.com/impierce/openid4vc/compare/siopv2-v0.6.1...siopv2-v0.7.0) - 2026-11-19
+
+### Added
+
+- [**breaking**] add `with_http_client` to `Wallet` and `Provider` ([#225](https://github.com/impierce/openid4vc/pull/225))
+
 ## [0.6.1](https://github.com/impierce/openid4vc/compare/siopv2-v0.6.0...siopv2-v0.6.1) - 2026-11-17
 
 ### Fixed

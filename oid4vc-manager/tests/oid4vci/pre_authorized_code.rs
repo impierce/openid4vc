@@ -54,7 +54,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         }
     };
     // The credential offer contains a credential issuer url.
-    let credential_issuer_url = credential_offer.credential_issuer;
+    let credential_issuer_url = credential_offer.credential_issuer.url();
 
     // Get the authorization server metadata.
     let authorization_server_metadata = wallet
@@ -318,7 +318,7 @@ async fn test_pre_authorized_code_flow_with_a_credential_issuer_binding_to_jwk()
     .unwrap();
 
     let credential_offer = credential_issuer.credential_issuer_manager.credential_offer().unwrap();
-    let credential_issuer_url = credential_offer.credential_issuer;
+    let credential_issuer_url = credential_offer.credential_issuer.url();
     let authorization_server_metadata = wallet
         .get_authorization_server_metadata(credential_issuer_url.clone())
         .await

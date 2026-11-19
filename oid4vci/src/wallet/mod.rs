@@ -64,10 +64,7 @@ impl Wallet {
         supported_subject_syntax_types: Vec<impl TryInto<SubjectSyntaxType>>,
         proof_signing_alg_values_supported: Vec<Algorithm>,
     ) -> anyhow::Result<Self> {
-        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(2);
-        let client = ClientBuilder::new(oid4vc_core::http_client())
-            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-            .build();
+        let client = with_retries(oid4vc_core::http_client());
         Ok(Self {
             subject,
             supported_subject_syntax_types: supported_subject_syntax_types
@@ -81,6 +78,13 @@ impl Wallet {
             client,
             proof_signing_alg_values_supported,
         })
+    }
+
+    /// Sends this wallet's requests with `client` instead of [`oid4vc_core::http_client`], wrapped in the same retry
+    /// middleware. For an application with a TLS policy of its own, such as pinned roots or a test CA in a debug build.
+    pub fn with_http_client(mut self, client: reqwest::Client) -> Self {
+        self.client = with_retries(client);
+        self
     }
 
     // Only the host of `credential_offer_uri` is logged: a plain GET on the full URI returns the Credential Offer,
@@ -830,6 +834,14 @@ fn is_bound_to(supported: &SubjectSyntaxType, binding_method: &SubjectSyntaxType
     }
 }
 
+/// `client` with the retries every request of the wallet gets.
+fn with_retries(client: reqwest::Client) -> ClientWithMiddleware {
+    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(2);
+    ClientBuilder::new(client)
+        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .build()
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
@@ -962,6 +974,98 @@ pub mod tests {
 
         let nonce_endpoint = format!("{}/nonce", mock_server.uri()).parse().unwrap();
         assert_eq!(wallet.get_nonce(nonce_endpoint).await.unwrap(), "n-0S6_WzA2Mj");
+    }
+
+    #[tokio::test]
+    async fn requests_go_through_the_client_given_with_with_http_client() {
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert("x-wallet-client", reqwest::header::HeaderValue::from_static("yes"));
+        let wallet = Wallet::new(
+            Arc::new(TestSubject::default()),
+            vec!["did:test"],
+            vec![Algorithm::EdDSA],
+        )
+        .unwrap()
+        .with_http_client(reqwest::Client::builder().default_headers(headers).build().unwrap());
+
+        let mock_server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/nonce"))
+            .and(header("x-wallet-client", "yes"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({ "c_nonce": "n-0S6_WzA2Mj" })))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let nonce_endpoint = format!("{}/nonce", mock_server.uri()).parse().unwrap();
+        assert_eq!(wallet.get_nonce(nonce_endpoint).await.unwrap(), "n-0S6_WzA2Mj");
+    }
+
+    /// The `aud` of the key proof the wallet sends for an issuer whose metadata names it `credential_issuer`.
+    async fn proof_audience_for(credential_issuer: &str, credential_endpoint: &str) -> serde_json::Value {
+        let wallet: Wallet = Wallet::new(
+            Arc::new(TestSubject::default()),
+            vec!["did:test"],
+            vec![Algorithm::EdDSA],
+        )
+        .unwrap();
+        let metadata: CredentialIssuerMetadata = serde_json::from_value(serde_json::json!({
+            "credential_issuer": credential_issuer,
+            "credential_endpoint": credential_endpoint,
+        }))
+        .unwrap();
+        let token_response = TokenResponse {
+            access_token: "access-token".to_string(),
+            token_type: "bearer".to_string(),
+            expires_in: None,
+            refresh_token: None,
+            scope: None,
+            authorization_details: None,
+        };
+
+        let mock_server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/credential"))
+            .respond_with(ResponseTemplate::new(400))
+            .mount(&mock_server)
+            .await;
+        let metadata = CredentialIssuerMetadata {
+            credential_endpoint: format!("{}/credential", mock_server.uri()).parse().unwrap(),
+            ..metadata
+        };
+
+        // The issuer's answer does not matter here, only what the wallet sent.
+        let _ = wallet
+            .get_credential(
+                metadata,
+                &token_response,
+                None,
+                "configuration".to_string(),
+                &CredentialConfigurationsSupportedObject::default(),
+                false,
+            )
+            .await;
+
+        let requests = mock_server.received_requests().await.unwrap();
+        let request: serde_json::Value = serde_json::from_slice(&requests[0].body).unwrap();
+        let proof = request["proofs"]["jwt"][0].as_str().unwrap();
+        let claims: serde_json::Value = jsonwebtoken::dangerous::insecure_decode_claims(proof).unwrap();
+        claims["aud"].clone()
+    }
+
+    #[tokio::test]
+    async fn proof_audience_is_the_credential_issuer_identifier_as_the_metadata_has_it() {
+        // "aud: REQUIRED (string). The value of this claim MUST be the Credential Issuer Identifier." (Appendix F.1)
+        for identifier in [
+            "https://credential-issuer.example.com",
+            "https://credential-issuer.example.com/",
+            "https://credential-issuer.example.com/tenant",
+        ] {
+            assert_eq!(
+                proof_audience_for(identifier, "https://credential-issuer.example.com/credential").await,
+                serde_json::json!(identifier)
+            );
+        }
     }
 
     #[test]

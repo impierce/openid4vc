@@ -246,7 +246,7 @@ async fn credential<S: Storage>(
                         .credential_issuer
                         .metadata
                         .credential_issuer
-                        .clone(),
+                        .url(),
                     credential_issuer_manager.credential_issuer.subject.clone(),
                 )
                 .unwrap(),

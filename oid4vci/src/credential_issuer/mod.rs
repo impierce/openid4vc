@@ -1,5 +1,6 @@
 pub mod authorization_server_metadata;
 pub mod credential_configurations_supported;
+pub mod credential_issuer_identifier;
 pub mod credential_issuer_metadata;
 
 use self::{
@@ -150,7 +151,7 @@ impl CredentialIssuer {
                 .aud
                 .as_deref()
                 .and_then(|aud| url::Url::parse(aud).ok())
-                .is_some_and(|aud| aud == self.metadata.credential_issuer);
+                .is_some_and(|aud| aud == self.metadata.credential_issuer.url());
             anyhow::ensure!(
                 is_for_this_issuer,
                 "The `aud` of a key proof has to be the Credential Issuer Identifier"
