@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0](https://github.com/impierce/openid4vc/compare/oid4vc-core-v0.7.0...oid4vc-core-v0.8.0) - 2026-11-19
+
+### Added
+
+- *(oid4vci)* send `jwk` key proofs to issuers binding to JWK ([#221](https://github.com/impierce/openid4vc/pull/221))
+
+### Fixed
+
+- read `client_metadata_uri` response as metadata object ([#228](https://github.com/impierce/openid4vc/pull/228))
+- [**breaking**] harden default HTTP client ([#227](https://github.com/impierce/openid4vc/pull/227))
+
 ## [0.7.0](https://github.com/impierce/openid4vc/compare/oid4vc-core-v0.6.0...oid4vc-core-v0.7.0) - 2026-11-19
 
 ### Added

@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0](https://github.com/impierce/openid4vc/compare/oid4vc-manager-v0.7.0...oid4vc-manager-v0.8.0) - 2026-11-19
+
+### Added
+
+- *(oid4vci)* send `jwk` key proofs to issuers binding to JWK ([#221](https://github.com/impierce/openid4vc/pull/221))
+
+### Dependencies
+
+- *(deps)* [**breaking**] bump identity-kit to 0.6 ([#234](https://github.com/impierce/openid4vc/pull/234))
+
+### Fixed
+
+- *(siopv2)* refuse Request Object signed by another DID ([#223](https://github.com/impierce/openid4vc/pull/223))
+- [**breaking**] harden default HTTP client ([#227](https://github.com/impierce/openid4vc/pull/227))
+- *(oid4vci)* [**breaking**] keep Credential Issuer Identifier as received ([#233](https://github.com/impierce/openid4vc/pull/233))
+
+### Other
+
+- *(oid4vc-manager)* add `oid4vp` to dev-dependencies ([#219](https://github.com/impierce/openid4vc/pull/219))
+
 ## [0.7.0](https://github.com/impierce/openid4vc/compare/oid4vc-manager-v0.6.2...oid4vc-manager-v0.7.0) - 2026-11-19
 
 ### Added

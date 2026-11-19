@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0](https://github.com/impierce/openid4vc/compare/oid4vp-v0.8.0...oid4vp-v0.9.0) - 2026-11-19
+
+### Dependencies
+
+- *(deps)* [**breaking**] bump identity-kit to 0.6 ([#234](https://github.com/impierce/openid4vc/pull/234))
+
+### Fixed
+
+- read `client_metadata_uri` response as metadata object ([#228](https://github.com/impierce/openid4vc/pull/228))
+- [**breaking**] harden default HTTP client ([#227](https://github.com/impierce/openid4vc/pull/227))
+
 ## [0.8.0](https://github.com/impierce/openid4vc/compare/oid4vp-v0.7.0...oid4vp-v0.8.0) - 2026-11-19
 
 ### Added
