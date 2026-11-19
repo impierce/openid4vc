@@ -1,5 +1,6 @@
 pub mod authorization_server_metadata;
 pub mod credential_configurations_supported;
+pub mod credential_issuer_identifier;
 pub mod credential_issuer_metadata;
 
 use self::{

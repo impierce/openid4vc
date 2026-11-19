@@ -1,3 +1,4 @@
+use crate::credential_issuer::credential_issuer_identifier::CredentialIssuerIdentifier;
 use anyhow::Result;
 use nutype::nutype;
 use oid4vc_core::utils::predicates::not_empty;
@@ -70,7 +71,8 @@ pub enum InputMode {
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct CredentialOfferParameters {
-    pub credential_issuer: Url,
+    /// Kept as received, see [`CredentialIssuerIdentifier`].
+    pub credential_issuer: CredentialIssuerIdentifier,
     pub credential_configuration_ids: CredentialConfigurationIds,
     pub grants: Option<Grants>,
 }
@@ -185,7 +187,7 @@ mod tests {
         assert_eq!(
             credential_offer,
             CredentialOfferParameters {
-                credential_issuer: "https://credential-issuer.example.com".parse().unwrap(),
+                credential_issuer: "https://credential-issuer.example.com/".parse().unwrap(),
                 credential_configuration_ids: CredentialConfigurationIds::try_new(vec![
                     "UniversityDegree_JWT".to_string(),
                 ])
