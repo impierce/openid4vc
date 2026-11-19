@@ -1,14 +1,15 @@
 //! Compact JWTs and SD-JWTs as they reach the validators before any signature check (RFC 7515
 //! "JWS Compact Serialization", SD-JWT "`<Issuer-signed JWT>~<Disclosure>~...`"), and the Subject
 //! Syntax Types of SIOPv2 ("Subject Syntax Types", `did:<method>` and the JWK Thumbprint URN).
-//! Nothing panics; the `kid` returned is the header's, completed with `iss` only when relative; a
-//! parsed Subject Syntax Type prints to a string, and serializes to JSON, that parse to the same value.
+//! Nothing panics, also not when a JWT that names its key by `jwk` is verified with that key; the
+//! `kid` returned is the header's, completed with `iss` only when relative; a parsed Subject Syntax
+//! Type prints to a string, and serializes to JSON, that parse to the same value.
 #![no_main]
 
 use std::str::FromStr as _;
 
 use libfuzzer_sys::fuzz_target;
-use oid4vc_core::jwt::extract_header;
+use oid4vc_core::jwt::{decode_with_jwk, extract_header};
 use oid4vc_core::utils::did::extract_normalized_did_kid_from_jwt;
 use oid4vc_core::utils::jwt::{get_unverified_jwt_claims, sd_jwt_to_jwt};
 use oid4vc_core::{DidMethod, SubjectSyntaxType};
@@ -22,6 +23,7 @@ fuzz_target!(|data: &[u8]| {
     assert!(input.starts_with(jwt), "the JWT of an SD-JWT is its prefix");
     let _ = get_unverified_jwt_claims(&serde_json::Value::String(input.to_owned()));
     let _ = extract_header(input);
+    let _ = decode_with_jwk::<serde_json::Value>(input);
     if let Ok(kid) = extract_normalized_did_kid_from_jwt(input) {
         let (header_kid, _) = extract_header(jwt).expect("a normalized kid comes from a decodable header");
         assert!(
