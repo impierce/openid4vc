@@ -1,6 +1,6 @@
 [package]
 name = "oid4vc-manager"
-version = "0.6.2"
+version = "0.7.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -18,7 +18,6 @@ all-features = true
 [dependencies]
 oid4vc-core.workspace = true
 siopv2.workspace = true
-oid4vp.workspace = true
 oid4vci.workspace = true
 
 anyhow = "1.0"
@@ -41,6 +40,7 @@ tracing.workspace = true
 url.workspace = true
 
 [dev-dependencies]
+oid4vp.workspace = true
 jsonwebtoken = { workspace = true, features = ["aws_lc_rs"] }
 oid4vc-core = { workspace = true, features = ["test-utils"] }
 

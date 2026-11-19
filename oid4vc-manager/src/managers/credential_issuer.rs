@@ -29,7 +29,7 @@ impl<S: Storage> CredentialIssuerManager<S> {
             credential_issuer: CredentialIssuer {
                 subject: subject.clone(),
                 metadata: CredentialIssuerMetadata {
-                    credential_issuer: issuer_url.clone(),
+                    credential_issuer: issuer_url.clone().into(),
                     authorization_servers: vec![],
                     nonce_endpoint: None,
                     credential_endpoint: issuer_url.join("/credential")?,
@@ -58,7 +58,7 @@ impl<S: Storage> CredentialIssuerManager<S> {
     }
 
     pub fn credential_issuer_url(&self) -> Result<Url> {
-        Ok(self.credential_issuer.metadata.credential_issuer.clone())
+        Ok(self.credential_issuer.metadata.credential_issuer.url())
     }
 
     pub fn credential_offer(&self) -> Result<CredentialOfferParameters> {
@@ -80,7 +80,7 @@ impl<S: Storage> CredentialIssuerManager<S> {
     }
 
     pub fn credential_offer_uri(&self) -> Result<Url> {
-        let issuer_url = self.credential_issuer.metadata.credential_issuer.clone();
+        let issuer_url = self.credential_issuer.metadata.credential_issuer.url();
         Ok(issuer_url.join("/credential_offer")?)
     }
 

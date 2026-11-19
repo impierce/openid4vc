@@ -27,6 +27,12 @@ impl ProviderManager {
         })
     }
 
+    /// Sends the provider's requests with `client`; see [`Provider::with_http_client`].
+    pub fn with_http_client(mut self, client: reqwest::Client) -> Self {
+        self.provider = self.provider.with_http_client(client);
+        self
+    }
+
     pub async fn validate_request(&self, authorization_request: String) -> Result<AuthorizationRequest<Object>> {
         tracing::debug!("ProviderManager: validating request");
         self.provider.validate_request(authorization_request).await

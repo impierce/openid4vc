@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0](https://github.com/impierce/openid4vc/compare/oid4vci-v0.6.1...oid4vci-v0.7.0) - 2026-11-19
+
+### Added
+
+- [**breaking**] add `with_http_client` to `Wallet` and `Provider` ([#225](https://github.com/impierce/openid4vc/pull/225))
+
+### Fixed
+
+- *(oid4vci)* send `Content-Length` with nonce request ([#220](https://github.com/impierce/openid4vc/pull/220))
+
 ## [0.6.1](https://github.com/impierce/openid4vc/compare/oid4vci-v0.6.0...oid4vci-v0.6.1) - 2026-11-12
 
 ### Fixed
