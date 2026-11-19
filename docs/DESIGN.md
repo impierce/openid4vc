@@ -296,8 +296,12 @@ Thin, opinionated wrappers plus the only server in the workspace:
   extension (`other: JsonObject`) and otherwise ignored, serde's default; only `siopv2`'s standard
   claims use `deny_unknown_fields`.
 - **Async**: `tokio`, `async-trait` on the object-safe traits, `impl Future` on `Extension`.
-- **HTTP**: `reqwest` with `rustls` and the `ring` provider (`oid4vc_core::http_client`, as in
-  identity-kit), `reqwest-middleware` + `reqwest-retry` (exponential backoff, five retries) on every client.
+- **HTTP**: `reqwest` with `rustls` and the `ring` provider (`oid4vc_core::http_client`),
+  `reqwest-middleware` + `reqwest-retry` (exponential backoff, five retries) on every client.
+  The client is per instance, with no process-wide state: an application with a TLS
+  policy of its own (pinned roots, a test CA in a debug build) gives its `reqwest::Client` to
+  `Wallet::with_http_client` and `Provider::with_http_client` (or `ProviderManager::with_http_client`).
+  The `Provider` hands its client to the `Extension` functions that fetch `client_metadata_uri`.
 - **Errors**: `thiserror` enums where the type is new (`VpTokenValidationError`,
   `DcqlQueryError`, `OID4VCError<T>`); `anyhow::Result` on most older APIs (see Known gaps).
 - **Tracing**: `tracing` spans and events on the public entry points (`#[tracing::instrument]`).
