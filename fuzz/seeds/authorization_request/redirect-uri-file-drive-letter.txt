@@ -1,0 +1,1 @@
+openid4vp://?client_id=x&redirect_uri=file://o//o:
