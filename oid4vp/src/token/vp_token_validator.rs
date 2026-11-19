@@ -1,3 +1,5 @@
+// `jwt_vc_json` is the VCDM 1.1 JWT format (OID4VP 1.0, Appendix B.1), so this module keeps its VCDM 1.1 types.
+#![allow(deprecated)]
 use crate::{
     VpToken,
     dcql::dcql_query::{CredentialQueryId, DcqlQuery, Format},
