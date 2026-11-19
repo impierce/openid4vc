@@ -864,6 +864,73 @@ pub mod tests {
         assert_eq!(wallet.get_nonce(nonce_endpoint).await.unwrap(), "n-0S6_WzA2Mj");
     }
 
+    /// The `aud` of the key proof the wallet sends for an issuer whose metadata names it `credential_issuer`.
+    async fn proof_audience_for(credential_issuer: &str, credential_endpoint: &str) -> serde_json::Value {
+        let wallet: Wallet = Wallet::new(
+            Arc::new(TestSubject::default()),
+            vec!["did:test"],
+            vec![Algorithm::EdDSA],
+        )
+        .unwrap();
+        let metadata: CredentialIssuerMetadata = serde_json::from_value(serde_json::json!({
+            "credential_issuer": credential_issuer,
+            "credential_endpoint": credential_endpoint,
+        }))
+        .unwrap();
+        let token_response = TokenResponse {
+            access_token: "access-token".to_string(),
+            token_type: "bearer".to_string(),
+            expires_in: None,
+            refresh_token: None,
+            scope: None,
+            authorization_details: None,
+        };
+
+        let mock_server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/credential"))
+            .respond_with(ResponseTemplate::new(400))
+            .mount(&mock_server)
+            .await;
+        let metadata = CredentialIssuerMetadata {
+            credential_endpoint: format!("{}/credential", mock_server.uri()).parse().unwrap(),
+            ..metadata
+        };
+
+        // The issuer's answer does not matter here, only what the wallet sent.
+        let _ = wallet
+            .get_credential(
+                metadata,
+                &token_response,
+                None,
+                "configuration".to_string(),
+                &CredentialConfigurationsSupportedObject::default(),
+                false,
+            )
+            .await;
+
+        let requests = mock_server.received_requests().await.unwrap();
+        let request: serde_json::Value = serde_json::from_slice(&requests[0].body).unwrap();
+        let proof = request["proofs"]["jwt"][0].as_str().unwrap();
+        let claims: serde_json::Value = jsonwebtoken::dangerous::insecure_decode_claims(proof).unwrap();
+        claims["aud"].clone()
+    }
+
+    #[tokio::test]
+    async fn proof_audience_is_the_credential_issuer_identifier_as_the_metadata_has_it() {
+        // "aud: REQUIRED (string). The value of this claim MUST be the Credential Issuer Identifier." (Appendix F.1)
+        for identifier in [
+            "https://credential-issuer.example.com",
+            "https://credential-issuer.example.com/",
+            "https://credential-issuer.example.com/tenant",
+        ] {
+            assert_eq!(
+                proof_audience_for(identifier, "https://credential-issuer.example.com/credential").await,
+                serde_json::json!(identifier)
+            );
+        }
+    }
+
     #[test]
     fn select_signing_algorithm_returns_first_supported_signing_algorithm_when_no_proof_types_supported() {
         // Create a new Wallet.

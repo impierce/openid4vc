@@ -56,7 +56,7 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
         }
     };
     // The credential offer contains a credential issuer url.
-    let credential_issuer_url = credential_offer.credential_issuer;
+    let credential_issuer_url = credential_offer.credential_issuer.url();
 
     // Get the authorization server metadata.
     let authorization_server_metadata = wallet
