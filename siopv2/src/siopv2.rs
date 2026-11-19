@@ -192,7 +192,7 @@ mod tests {
             .and(path("/client_metadata"))
             .respond_with(ResponseTemplate::new(200).set_body_json(json!({
                 "subject_syntax_types_supported": ["did:key"],
-                "id_token_signed_response_alg": "EdDSA"
+                "id_token_signed_response_alg": "ES256"
             })))
             .mount(&server)
             .await;
@@ -208,7 +208,7 @@ mod tests {
             SIOPv2::get_relying_party_supported_algorithms(&local_client(), &parameters)
                 .await
                 .unwrap(),
-            vec![Algorithm::EdDSA]
+            vec![Algorithm::ES256]
         );
         assert_eq!(
             SIOPv2::get_relying_party_supported_syntax_types(&local_client(), &parameters)
