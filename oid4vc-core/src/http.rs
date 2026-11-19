@@ -12,8 +12,7 @@ use std::net::IpAddr;
 use anyhow::anyhow;
 use reqwest_middleware::{Middleware, Next};
 
-/// The default client of the `Wallet` and the SIOPv2 `Provider`: identity-kit's
-/// [`ReqwestClient`](identity_kit::methods::web::ReqwestClient), which
+/// The default client of the `Wallet` and the SIOPv2 `Provider`. It
 ///
 /// - speaks HTTPS only, trusting the platform's certificate verifier, over `rustls` with the `ring` provider (made
 ///   the process default when nothing chose a provider yet; a provider the application installed is kept);
