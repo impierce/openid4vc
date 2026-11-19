@@ -22,13 +22,15 @@ base64 = "0.23"
 derive_more = { version = "2.1.1", features = ["display"] }
 ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
 getset = "0.1.2"
-identity-kit.workspace = true
+http.workspace = true
+# `reqwest`: the hardened default HTTP client (`http_client`).
+identity-kit = { workspace = true, features = ["reqwest"] }
 is_empty = "0.3.0"
 jsonwebtoken.workspace = true
 nutype.workspace = true
 rand = "0.10"
 reqwest.workspace = true
-rustls.workspace = true
+reqwest-middleware.workspace = true
 serde.workspace = true
 serde_json = "1.0"
 serde_urlencoded.workspace = true
@@ -38,6 +40,7 @@ url.workspace = true
 utoipa = { workspace = true, optional = true }
 
 [dev-dependencies]
+wiremock = "0.6"
 jsonwebtoken = { workspace = true, features = ["aws_lc_rs"] }
 tokio.workspace = true
 

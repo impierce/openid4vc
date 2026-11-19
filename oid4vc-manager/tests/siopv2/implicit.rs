@@ -1,4 +1,4 @@
-use crate::common::{MemoryStorage, Storage, TestSubject};
+use crate::common::{MemoryStorage, Storage, TestSubject, local_http_client};
 use async_trait::async_trait;
 use jsonwebtoken::Algorithm;
 use oid4vc_core::{
@@ -186,7 +186,9 @@ async fn test_implicit_flow(#[case] did_method: &str) {
     };
 
     // Create a new provider manager.
-    let provider_manager = ProviderManager::new(Arc::new(subject), vec![did_method], vec![Algorithm::EdDSA]).unwrap();
+    let provider_manager = ProviderManager::new(Arc::new(subject), vec![did_method], vec![Algorithm::EdDSA])
+        .unwrap()
+        .with_http_client(local_http_client());
 
     // Create a new RequestUrl which includes a `request_uri` pointing to the mock server's `request_uri` endpoint.
     let authorization_request = AuthorizationRequest::<ByReference> {
