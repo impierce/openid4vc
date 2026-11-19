@@ -178,7 +178,9 @@ mod tests {
 
     #[tokio::test]
     async fn public_hosts_refuses_non_public_ip_literals_before_sending() {
-        let client = reqwest_middleware::ClientBuilder::new(reqwest::Client::new())
+        // IP literals never reach the resolver, so only `PublicHosts` can refuse them. `http_client()` also installs the
+        // TLS provider that building a plain `reqwest::Client` would need.
+        let client = reqwest_middleware::ClientBuilder::new(http_client())
             .with(PublicHosts)
             .build();
         for url in [
