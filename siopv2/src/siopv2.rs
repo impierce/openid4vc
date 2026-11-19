@@ -94,9 +94,8 @@ impl Extension for SIOPv2 {
                 let client = ClientBuilder::new(oid4vc_core::http_client())
                     .with(RetryTransientMiddleware::new_with_policy(retry_policy))
                     .build();
-                let client_metadata: ClientMetadataResource<ClientMetadataParameters> =
-                    client.get(client_metadata_uri).send().await?.json().await?;
-                client_metadata
+                let metadata: serde_json::Value = client.get(client_metadata_uri).send().await?.json().await?;
+                ClientMetadataResource::from_metadata(metadata)?
             }
             client_metadata => client_metadata.clone(),
         };
@@ -125,9 +124,8 @@ impl Extension for SIOPv2 {
                 let client = ClientBuilder::new(oid4vc_core::http_client())
                     .with(RetryTransientMiddleware::new_with_policy(retry_policy))
                     .build();
-                let client_metadata: ClientMetadataResource<ClientMetadataParameters> =
-                    client.get(client_metadata_uri).send().await?.json().await?;
-                client_metadata
+                let metadata: serde_json::Value = client.get(client_metadata_uri).send().await?.json().await?;
+                ClientMetadataResource::from_metadata(metadata)?
             }
             client_metadata => client_metadata.clone(),
         };
@@ -176,4 +174,47 @@ impl Extension for SIOPv2 {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationResponseParameters {
     pub id_token: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    /// A `client_metadata_uri` returns the RP metadata object itself (SIOPv2 Section 7.5), as `client_metadata`
+    /// holds it inline.
+    #[tokio::test]
+    async fn client_metadata_uri_returns_the_metadata_object() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/client_metadata"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "subject_syntax_types_supported": ["did:key"],
+                "id_token_signed_response_alg": "EdDSA"
+            })))
+            .mount(&server)
+            .await;
+        let parameters: AuthorizationRequestParameters = serde_json::from_value(json!({
+            "response_type": "id_token",
+            "scope": "openid",
+            "nonce": "n-0S6_WzA2Mj",
+            "client_metadata_uri": format!("{}/client_metadata", server.uri())
+        }))
+        .unwrap();
+
+        assert_eq!(
+            SIOPv2::get_relying_party_supported_algorithms(&parameters)
+                .await
+                .unwrap(),
+            vec![Algorithm::EdDSA]
+        );
+        assert_eq!(
+            SIOPv2::get_relying_party_supported_syntax_types(&parameters)
+                .await
+                .unwrap(),
+            vec!["did:key".parse::<SubjectSyntaxType>().unwrap()]
+        );
+    }
 }

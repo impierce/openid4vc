@@ -45,3 +45,4 @@ oid4vc-core = { workspace = true, features = ["test-utils"] }
 
 async-trait = "0.1"
 identity-kit = { workspace = true, features = ["did-key", "in-memory"] }
+wiremock = "0.6.5"
