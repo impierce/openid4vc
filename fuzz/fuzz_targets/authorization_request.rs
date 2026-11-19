@@ -19,7 +19,22 @@ use siopv2::siopv2::SIOPv2;
 fn round_trip<B: Body + DeserializeOwned + PartialEq + Debug>(input: &str) -> Option<AuthorizationRequest<B>> {
     let request = AuthorizationRequest::<B>::from_str(input).ok()?;
     let printed = request.to_string();
+    let lowercase = printed.to_ascii_lowercase();
+    let has_file_url = lowercase.contains("file:") || lowercase.contains("file%3a");
     match AuthorizationRequest::<B>::from_str(&printed) {
+        Ok(again) if again == request => {}
+        // WHATWG URL parsing (`url`) is not idempotent for some `file:` URLs: a Windows drive letter as the first path
+        // segment drops the host, so `file://o//o:` (host `o`, path `/o:`) prints as `file://o/o:`, which parses
+        // without a host. Such a URL may change once; its printed form must then stay as it is.
+        Ok(again) if has_file_url => {
+            let reprinted = again.to_string();
+            let third = AuthorizationRequest::<B>::from_str(&reprinted)
+                .unwrap_or_else(|error| panic!("a reprinted request parses: {reprinted}: {error}"));
+            assert_eq!(
+                third, again,
+                "a reprinted request parses to the same request: {reprinted}"
+            );
+        }
         Ok(again) => assert_eq!(
             again, request,
             "a printed request parses to the same request: {printed}"
