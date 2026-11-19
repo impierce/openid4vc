@@ -329,11 +329,17 @@ mod tests {
 
         // The mock verifies on drop that both requests carried the header of the given client.
         assert_eq!(
-            provider.get_matching_signing_algorithm(&authorization_request).await.unwrap(),
+            provider
+                .get_matching_signing_algorithm(&authorization_request)
+                .await
+                .unwrap(),
             Algorithm::EdDSA
         );
         assert_eq!(
-            provider.get_matching_subject_syntax_type(&authorization_request).await.unwrap(),
+            provider
+                .get_matching_subject_syntax_type(&authorization_request)
+                .await
+                .unwrap(),
             "did:test".parse::<SubjectSyntaxType>().unwrap()
         );
     }
