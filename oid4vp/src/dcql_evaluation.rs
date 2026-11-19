@@ -595,6 +595,27 @@ mod tests {
         assert!(!evaluate_credential_query(&query, &presentations(&[json!({})])));
     }
 
+    /// The query of #195: a whole OpenBadge, no claims, and a credential of another type must not match it.
+    #[test]
+    fn type_values_are_checked_without_claims() {
+        let query: CredentialQuery = serde_json::from_value(json!({
+            "id": "badge",
+            "format": "vc+sd-jwt",
+            "meta": { "type_values": [["VerifiableCredential", "OpenBadgeCredential"]] }
+        }))
+        .unwrap();
+
+        assert!(evaluate_credential_query(
+            &query,
+            &presentations(&[json!({ "type": ["VerifiableCredential", "OpenBadgeCredential"] })])
+        ));
+        assert!(!evaluate_credential_query(
+            &query,
+            &presentations(&[json!({ "type": ["VerifiableCredential"] })])
+        ));
+        assert!(!evaluate_credential_query(&query, &presentations(&[json!({})])));
+    }
+
     #[test]
     fn presentation_for_an_optional_credential_set_must_match() {
         let dcql_query: DcqlQuery = serde_json::from_str(TESTCREDENTIALQUERY_WITH_SETS).unwrap();

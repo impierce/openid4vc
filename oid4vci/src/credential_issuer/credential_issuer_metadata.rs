@@ -1,4 +1,5 @@
 use super::credential_configurations_supported::CredentialConfigurationsSupportedObject;
+use super::credential_issuer_identifier::CredentialIssuerIdentifier;
 use nutype::nutype;
 use reqwest::Url;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -48,7 +49,8 @@ impl utoipa::ToSchema for BatchSize {}
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct CredentialIssuerMetadata {
-    pub credential_issuer: Url,
+    /// Kept as received, see [`CredentialIssuerIdentifier`].
+    pub credential_issuer: CredentialIssuerIdentifier,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub authorization_servers: Vec<Url>,
     pub credential_endpoint: Url,
@@ -68,7 +70,7 @@ pub struct CredentialIssuerMetadata {
 impl Default for CredentialIssuerMetadata {
     fn default() -> Self {
         Self {
-            credential_issuer: Url::parse("https://example.com").unwrap(),
+            credential_issuer: "https://example.com".parse().unwrap(),
             authorization_servers: Default::default(),
             credential_endpoint: Url::parse("https://example.com").unwrap(),
             nonce_endpoint: Default::default(),
