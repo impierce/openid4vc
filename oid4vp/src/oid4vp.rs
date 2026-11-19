@@ -221,13 +221,13 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            OID4VP::get_relying_party_supported_algorithms(&parameters)
+            OID4VP::get_relying_party_supported_algorithms(&oid4vc_core::http_client(), &parameters)
                 .await
                 .unwrap(),
             vec![Algorithm::ES256, Algorithm::ES384]
         );
         assert_eq!(
-            OID4VP::get_relying_party_supported_syntax_types(&parameters)
+            OID4VP::get_relying_party_supported_syntax_types(&oid4vc_core::http_client(), &parameters)
                 .await
                 .unwrap(),
             vec![SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap())]

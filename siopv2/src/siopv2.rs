@@ -207,13 +207,13 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            SIOPv2::get_relying_party_supported_algorithms(&parameters)
+            SIOPv2::get_relying_party_supported_algorithms(&oid4vc_core::http_client(), &parameters)
                 .await
                 .unwrap(),
             vec![Algorithm::EdDSA]
         );
         assert_eq!(
-            SIOPv2::get_relying_party_supported_syntax_types(&parameters)
+            SIOPv2::get_relying_party_supported_syntax_types(&oid4vc_core::http_client(), &parameters)
                 .await
                 .unwrap(),
             vec!["did:key".parse::<SubjectSyntaxType>().unwrap()]
