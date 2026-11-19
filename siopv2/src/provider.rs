@@ -322,10 +322,21 @@ mod tests {
         let authorization_request =
             AuthorizationRequest::<Object<SIOPv2>>::from_generic(&authorization_request).unwrap();
 
-        // Only which client fetched `client_metadata_uri` is checked here; the mock verifies on drop that both
-        // requests carried the header of the given client.
-        let _ = provider.get_matching_signing_algorithm(&authorization_request).await;
-        let _ = provider.get_matching_subject_syntax_type(&authorization_request).await;
+        // The mock verifies on drop that both requests carried the header of the given client.
+        assert_eq!(
+            provider
+                .get_matching_signing_algorithm(&authorization_request)
+                .await
+                .unwrap(),
+            Algorithm::EdDSA
+        );
+        assert_eq!(
+            provider
+                .get_matching_subject_syntax_type(&authorization_request)
+                .await
+                .unwrap(),
+            "did:test".parse::<SubjectSyntaxType>().unwrap()
+        );
     }
 
     #[tokio::test]

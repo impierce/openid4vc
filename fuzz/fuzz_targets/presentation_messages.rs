@@ -14,7 +14,9 @@ use oid4vp::oid4vp::AuthorizationResponseParameters;
 use oid4vp::token::vp_token_validator::DecodedVpToken;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
-use siopv2::authorization_request::AuthorizationRequestParameters as SiopRequestParameters;
+use siopv2::authorization_request::{
+    AuthorizationRequestParameters as SiopRequestParameters, ClientMetadataParameters as SiopClientMetadataParameters,
+};
 use siopv2::siopv2::AuthorizationResponseParameters as SiopResponseParameters;
 use siopv2::{ClaimRequests, StandardClaimsRequests, StandardClaimsValues};
 
@@ -27,12 +29,28 @@ fn round_trip<T: Serialize + DeserializeOwned + PartialEq + Debug>(data: &[u8]) 
     Some(parsed)
 }
 
+/// A metadata object as a `client_metadata_uri` returns it reads as inline client metadata, which round-trips as a
+/// `client_metadata` member.
+fn metadata_round_trip<T: Serialize + DeserializeOwned + PartialEq + Debug>(data: &[u8]) {
+    let Ok(metadata) = serde_json::from_slice::<serde_json::Value>(data) else {
+        return;
+    };
+    let Ok(parsed) = ClientMetadataResource::<T>::from_metadata(metadata) else {
+        return;
+    };
+    let json = serde_json::to_vec(&parsed).expect("parsed client metadata serializes");
+    let again: ClientMetadataResource<T> = serde_json::from_slice(&json).expect("serialized client metadata parses");
+    assert_eq!(again, parsed);
+}
+
 fuzz_target!(|data: &[u8]| {
     if let Some(parameters) = round_trip::<AuthorizationRequestParameters>(data) {
         let _ = parameters.dcql_query.validate_all();
     }
     round_trip::<ClientMetadataParameters>(data);
     round_trip::<ClientMetadataResource<ClientMetadataParameters>>(data);
+    metadata_round_trip::<ClientMetadataParameters>(data);
+    metadata_round_trip::<SiopClientMetadataParameters>(data);
     if let Some(token) = round_trip::<VpToken>(data) {
         for presentations in token.presentations().values() {
             for presentation in presentations.iter() {

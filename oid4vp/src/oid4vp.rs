@@ -1,6 +1,4 @@
-use crate::authorization_request::{
-    AuthorizationRequestBuilder, AuthorizationRequestParameters, ClientMetadataParameters,
-};
+use crate::authorization_request::{AuthorizationRequestBuilder, AuthorizationRequestParameters};
 use crate::token::vp_token::VpToken;
 use crate::token::vp_token_validator::DecodedVpToken;
 use anyhow::anyhow;
@@ -64,9 +62,9 @@ impl Extension for OID4VP {
         let client_metadata = match &authorization_request.client_metadata {
             // Fetch the client metadata from the given URI.
             ClientMetadataResource::ClientMetadataUri(client_metadata_uri) => {
-                let client_metadata: ClientMetadataResource<ClientMetadataParameters> =
+                let metadata: serde_json::Value =
                     oid4vc_core::read_json(client.get(client_metadata_uri).send().await?).await?;
-                client_metadata
+                ClientMetadataResource::from_metadata(metadata)?
             }
             client_metadata => client_metadata.clone(),
         };
@@ -107,9 +105,9 @@ impl Extension for OID4VP {
     ) -> anyhow::Result<Vec<SubjectSyntaxType>> {
         let client_metadata = match &authorization_request.client_metadata {
             ClientMetadataResource::ClientMetadataUri(client_metadata_uri) => {
-                let client_metadata: ClientMetadataResource<ClientMetadataParameters> =
+                let metadata: serde_json::Value =
                     oid4vc_core::read_json(client.get(client_metadata_uri).send().await?).await?;
-                client_metadata
+                ClientMetadataResource::from_metadata(metadata)?
             }
             client_metadata => client_metadata.clone(),
         };
@@ -181,6 +179,53 @@ mod tests {
 
         assert_eq!(
             OID4VP::get_relying_party_supported_syntax_types(&oid4vc_core::http_client().into(), &parameters)
+                .await
+                .unwrap(),
+            vec![SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap())]
+        );
+    }
+
+    /// A client for the plain `http` mock server on loopback, which the default client refuses. Building the default
+    /// client first installs the TLS provider a plain `reqwest::Client` needs.
+    fn local_client() -> reqwest_middleware::ClientWithMiddleware {
+        let _ = oid4vc_core::http_client();
+        reqwest::Client::new().into()
+    }
+
+    /// A `client_metadata_uri` returns the metadata object itself, here the Verifier metadata example of OID4VP 1.0.
+    #[tokio::test]
+    async fn client_metadata_uri_returns_the_metadata_object() {
+        use wiremock::matchers::{method, path};
+        use wiremock::{Mock, MockServer, ResponseTemplate};
+
+        let mut metadata: serde_json::Value = serde_json::from_str(include_str!(
+            "../tests/examples/client_metadata/examples/client_metadata/w3c_jwt_verifier_metadata.json"
+        ))
+        .unwrap();
+        metadata["subject_syntax_types_supported"] = json!(["did:key"]);
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/client_metadata"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(metadata))
+            .mount(&server)
+            .await;
+        let parameters: AuthorizationRequestParameters = serde_json::from_value(json!({
+            "response_type": "vp_token",
+            "dcql_query": serde_json::from_str::<serde_json::Value>(include_str!("../tests/examples/request/dcql_jwt_vc.json")).unwrap(),
+            "response_mode": "direct_post",
+            "nonce": "n-0S6_WzA2Mj",
+            "client_metadata_uri": format!("{}/client_metadata", server.uri())
+        }))
+        .unwrap();
+
+        assert_eq!(
+            OID4VP::get_relying_party_supported_algorithms(&local_client(), &parameters)
+                .await
+                .unwrap(),
+            vec![Algorithm::ES256, Algorithm::ES384]
+        );
+        assert_eq!(
+            OID4VP::get_relying_party_supported_syntax_types(&local_client(), &parameters)
                 .await
                 .unwrap(),
             vec![SubjectSyntaxType::Did(DidMethod::from_str("did:key").unwrap())]

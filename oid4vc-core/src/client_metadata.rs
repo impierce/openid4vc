@@ -22,3 +22,30 @@ pub enum ClientMetadataResource<T = ()> {
     },
     ClientMetadataUri(String),
 }
+
+impl<T: serde::de::DeserializeOwned> ClientMetadataResource<T> {
+    /// The client metadata a `client_metadata_uri` returns: the metadata object itself, as `client_metadata` holds it
+    /// inline, not wrapped in a `client_metadata` member.
+    pub fn from_metadata(metadata: serde_json::Value) -> serde_json::Result<Self> {
+        serde_json::from_value(serde_json::json!({ "client_metadata": metadata }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn from_metadata_reads_the_metadata_object_itself() {
+        let resource = ClientMetadataResource::<()>::from_metadata(
+            json!({ "client_name": "Verifier", "jwks_uri": "https://example.com/jwks" }),
+        )
+        .unwrap();
+        let ClientMetadataResource::ClientMetadata { client_name, other, .. } = resource else {
+            panic!("expected inline metadata");
+        };
+        assert_eq!(client_name.as_deref(), Some("Verifier"));
+        assert_eq!(other["jwks_uri"], "https://example.com/jwks");
+    }
+}

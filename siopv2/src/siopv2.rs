@@ -88,9 +88,9 @@ impl Extension for SIOPv2 {
         let client_metadata = match &authorization_request.client_metadata {
             // Fetch the client metadata from the given URI.
             ClientMetadataResource::ClientMetadataUri(client_metadata_uri) => {
-                let client_metadata: ClientMetadataResource<ClientMetadataParameters> =
+                let metadata: serde_json::Value =
                     oid4vc_core::read_json(client.get(client_metadata_uri).send().await?).await?;
-                client_metadata
+                ClientMetadataResource::from_metadata(metadata)?
             }
             client_metadata => client_metadata.clone(),
         };
@@ -116,9 +116,9 @@ impl Extension for SIOPv2 {
         let client_metadata = match &authorization_request.client_metadata {
             // Fetch the client metadata from the given URI.
             ClientMetadataResource::ClientMetadataUri(client_metadata_uri) => {
-                let client_metadata: ClientMetadataResource<ClientMetadataParameters> =
+                let metadata: serde_json::Value =
                     oid4vc_core::read_json(client.get(client_metadata_uri).send().await?).await?;
-                client_metadata
+                ClientMetadataResource::from_metadata(metadata)?
             }
             client_metadata => client_metadata.clone(),
         };
@@ -167,4 +167,54 @@ impl Extension for SIOPv2 {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AuthorizationResponseParameters {
     pub id_token: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    /// A client for the plain `http` mock server on loopback, which the default client refuses. Building the default
+    /// client first installs the TLS provider a plain `reqwest::Client` needs.
+    fn local_client() -> reqwest_middleware::ClientWithMiddleware {
+        let _ = oid4vc_core::http_client();
+        reqwest::Client::new().into()
+    }
+
+    /// A `client_metadata_uri` returns the RP metadata object itself (SIOPv2 Section 7.5), as `client_metadata`
+    /// holds it inline.
+    #[tokio::test]
+    async fn client_metadata_uri_returns_the_metadata_object() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/client_metadata"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "subject_syntax_types_supported": ["did:key"],
+                "id_token_signed_response_alg": "ES256"
+            })))
+            .mount(&server)
+            .await;
+        let parameters: AuthorizationRequestParameters = serde_json::from_value(json!({
+            "response_type": "id_token",
+            "scope": "openid",
+            "nonce": "n-0S6_WzA2Mj",
+            "client_metadata_uri": format!("{}/client_metadata", server.uri())
+        }))
+        .unwrap();
+
+        assert_eq!(
+            SIOPv2::get_relying_party_supported_algorithms(&local_client(), &parameters)
+                .await
+                .unwrap(),
+            vec![Algorithm::ES256]
+        );
+        assert_eq!(
+            SIOPv2::get_relying_party_supported_syntax_types(&local_client(), &parameters)
+                .await
+                .unwrap(),
+            vec!["did:key".parse::<SubjectSyntaxType>().unwrap()]
+        );
+    }
 }
