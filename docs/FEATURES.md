@@ -31,6 +31,7 @@ Specification versions tracked: [OID4VCI 1.0][oid4vci] (final, 16 September 2025
 | Form-urlencoded helpers (nested objects as JSON strings)                                  |   ✅   |               |                                             |       |
 | `test-utils`: test subjects                                                              |   ✅   | `test-utils`  |                                             |       |
 | OpenAPI schemas for the shared types                                                     |   ✅   | `utoipa`      |                                             | [#132](https://github.com/impierce/openid4vc/pull/132) |
+| HTTP client per instance: `with_http_client` on `Wallet`, `Provider`, `ProviderManager`; handed to the `Extension` for `client_metadata_uri` |   ✅   |               |                                             | [#211](https://github.com/impierce/openid4vc/issues/211) |
 | Typed errors instead of `anyhow` on the public API                                       |   📋   |               |                                             | [#78](https://github.com/impierce/openid4vc/issues/78) |
 | `const` strings for the supported specification versions                                 |   📋   |               |                                             | [#77](https://github.com/impierce/openid4vc/issues/77) |
 

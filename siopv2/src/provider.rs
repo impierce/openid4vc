@@ -21,6 +21,9 @@ pub struct Provider {
     pub subject: SigningSubject,
     pub supported_subject_syntax_types: Vec<SubjectSyntaxType>,
     pub supported_signing_algorithms: Vec<Algorithm>,
+    /// The client requests are sent with, also handed to the [`Extension`] to fetch `client_metadata_uri`.
+    http_client: reqwest::Client,
+    /// `http_client` with retries.
     client: ClientWithMiddleware,
 }
 
@@ -31,14 +34,12 @@ impl Provider {
         supported_subject_syntax_types: Vec<impl TryInto<SubjectSyntaxType>>,
         supported_signing_algorithms: Vec<Algorithm>,
     ) -> Result<Self> {
-        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
-        let client = ClientBuilder::new(oid4vc_core::http_client())
-            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-            .build();
+        let http_client = oid4vc_core::http_client();
 
         Ok(Provider {
             subject,
-            client,
+            client: with_retries(http_client.clone()),
+            http_client,
             supported_subject_syntax_types: supported_subject_syntax_types
                 .into_iter()
                 .map(|subject_syntax_type| {
@@ -49,6 +50,15 @@ impl Provider {
                 .collect::<Result<_>>()?,
             supported_signing_algorithms,
         })
+    }
+
+    /// Sends this provider's requests with `client` instead of [`oid4vc_core::http_client`], wrapped in the same retry
+    /// middleware: fetching `request_uri` and `client_metadata_uri`, and sending the response. For an application with
+    /// a TLS policy of its own, such as pinned roots or a test CA in a debug build.
+    pub fn with_http_client(mut self, client: reqwest::Client) -> Self {
+        self.client = with_retries(client.clone());
+        self.http_client = client;
+        self
     }
 
     /// TODO: Add more validation rules.
@@ -103,7 +113,7 @@ impl Provider {
         authorization_request: &AuthorizationRequest<Object<E>>,
     ) -> Result<Algorithm> {
         let relying_party_supported_algorithms =
-            E::get_relying_party_supported_algorithms(&authorization_request.body.extension).await?;
+            E::get_relying_party_supported_algorithms(&self.http_client, &authorization_request.body.extension).await?;
 
         self.supported_signing_algorithms
             .iter()
@@ -118,7 +128,8 @@ impl Provider {
         authorization_request: &AuthorizationRequest<Object<E>>,
     ) -> Result<SubjectSyntaxType> {
         let relying_party_supported_syntax_types =
-            E::get_relying_party_supported_syntax_types(&authorization_request.body.extension).await?;
+            E::get_relying_party_supported_syntax_types(&self.http_client, &authorization_request.body.extension)
+                .await?;
 
         self.supported_subject_syntax_types
             .iter()
@@ -199,6 +210,14 @@ fn ensure_request_object_typ(request_object: &str) -> Result<()> {
     Ok(())
 }
 
+/// `client` with the retries every request of the provider gets.
+fn with_retries(client: reqwest::Client) -> ClientWithMiddleware {
+    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
+    ClientBuilder::new(client)
+        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .build()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -269,6 +288,49 @@ mod tests {
                 .await
                 .is_ok()
         );
+    }
+
+    #[tokio::test]
+    async fn client_metadata_uri_is_fetched_with_the_client_given_with_with_http_client() {
+        use wiremock::{
+            Mock, MockServer, ResponseTemplate,
+            matchers::{header, method, path},
+        };
+
+        let mock_server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/client_metadata"))
+            .and(header("x-provider-client", "yes"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "subject_syntax_types_supported": ["did:test"],
+                "id_token_signed_response_alg": "EdDSA"
+            })))
+            .expect(2)
+            .mount(&mock_server)
+            .await;
+
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert("x-provider-client", reqwest::header::HeaderValue::from_static("yes"));
+        let subject = TestSubject::new("did:test:123".to_string(), "key_id".to_string()).unwrap();
+        let provider = Provider::new(Arc::new(subject), vec!["did:test"], vec![Algorithm::EdDSA])
+            .unwrap()
+            .with_http_client(reqwest::Client::builder().default_headers(headers).build().unwrap());
+
+        let client_metadata_uri = format!("{}/client_metadata", mock_server.uri());
+        let request_url = format!(
+            "siopv2://idtoken?scope=openid&response_type=id_token&client_id=did%3Aexample%3A123\
+            &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb&response_mode=direct_post\
+            &client_metadata_uri={}&nonce=n-0S6_WzA2Mj",
+            url::form_urlencoded::byte_serialize(client_metadata_uri.as_bytes()).collect::<String>()
+        );
+        let authorization_request = provider.validate_request(request_url).await.unwrap();
+        let authorization_request =
+            AuthorizationRequest::<Object<SIOPv2>>::from_generic(&authorization_request).unwrap();
+
+        // Only which client fetched `client_metadata_uri` is checked here; the mock verifies on drop that both
+        // requests carried the header of the given client.
+        let _ = provider.get_matching_signing_algorithm(&authorization_request).await;
+        let _ = provider.get_matching_subject_syntax_type(&authorization_request).await;
     }
 
     #[tokio::test]
