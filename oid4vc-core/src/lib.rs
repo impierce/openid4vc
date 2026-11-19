@@ -3,6 +3,7 @@ pub mod authorization_request;
 pub mod authorization_response;
 pub mod claim_path_pointer;
 pub mod client_metadata;
+pub mod http;
 pub mod jwt;
 pub mod openid4vc_extension;
 pub mod rfc7519_claims;
@@ -12,6 +13,7 @@ pub mod types;
 pub mod utils;
 
 pub use authentication::{sign::Sign, subject::Subject, validator::Validator, verify::Verify};
+pub use http::{MAX_RESPONSE_BODY, PublicHosts, http_client, read_body, read_json, read_text};
 use rand::{RngExt, distr::Alphanumeric};
 pub use rfc7519_claims::RFC7519Claims;
 use serde::Serialize;
@@ -45,15 +47,6 @@ macro_rules! builder_fn {
 /// String values keep their whitespace; only the JSON between tokens is compact.
 pub fn to_query_value<T: Serialize>(value: &T) -> anyhow::Result<String> {
     serde_json::to_string(value).map_err(Into::into)
-}
-
-/// The default client of the `Wallet` and the SIOPv2 `Provider`: a `reqwest` client over `rustls` with the `ring`
-/// provider, which is made the process default when nothing chose a provider yet (a provider the application
-/// installed is kept), trusting the platform's certificate verifier. An application with a TLS policy of its own
-/// gives each of them its client with `with_http_client`.
-pub fn http_client() -> reqwest::Client {
-    let _ = rustls::crypto::ring::default_provider().install_default();
-    reqwest::Client::new()
 }
 
 pub fn generate_authorization_code(length: usize) -> String {

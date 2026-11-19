@@ -36,18 +36,20 @@ pub trait Extension: Serialize + PartialEq + Sized + std::fmt::Debug + Clone + S
         async { Err(anyhow::anyhow!("Not implemented.")) }
     }
 
-    /// `client` is the HTTP client of the caller (the `Provider`), for fetching `client_metadata_uri`.
+    /// `client` is the HTTP client of the caller (the `Provider`), with its retries and checks, for fetching
+    /// `client_metadata_uri`.
     fn get_relying_party_supported_algorithms(
-        _client: &reqwest::Client,
+        _client: &reqwest_middleware::ClientWithMiddleware,
         _authorization_request: &<Self::RequestHandle as RequestHandle>::Parameters,
     ) -> impl Future<Output = anyhow::Result<Vec<Algorithm>>> {
         // Will be overwritten by the extension.
         async { Err(anyhow::anyhow!("Not implemented.")) }
     }
 
-    /// `client` is the HTTP client of the caller (the `Provider`), for fetching `client_metadata_uri`.
+    /// `client` is the HTTP client of the caller (the `Provider`), with its retries and checks, for fetching
+    /// `client_metadata_uri`.
     fn get_relying_party_supported_syntax_types(
-        _client: &reqwest::Client,
+        _client: &reqwest_middleware::ClientWithMiddleware,
         _authorization_request: &<Self::RequestHandle as RequestHandle>::Parameters,
     ) -> impl Future<Output = anyhow::Result<Vec<SubjectSyntaxType>>> {
         // Will be overwritten by the extension.

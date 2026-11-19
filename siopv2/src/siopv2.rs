@@ -9,9 +9,6 @@ use oid4vc_core::client_metadata::ClientMetadataResource;
 use oid4vc_core::openid4vc_extension::{OpenID4VC, RequestHandle, ResponseHandle};
 use oid4vc_core::{Subject, authorization_response::AuthorizationResponse, jwt, openid4vc_extension::Extension};
 use oid4vc_core::{SubjectSyntaxType, Validator};
-use reqwest_middleware::ClientBuilder;
-use reqwest_retry::RetryTransientMiddleware;
-use reqwest_retry::policies::ExponentialBackoff;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -85,18 +82,14 @@ impl Extension for SIOPv2 {
 
     // TODO: combine this function with `get_relying_party_supported_syntax_types`.
     async fn get_relying_party_supported_algorithms(
-        client: &reqwest::Client,
+        client: &reqwest_middleware::ClientWithMiddleware,
         authorization_request: &<Self::RequestHandle as RequestHandle>::Parameters,
     ) -> anyhow::Result<Vec<Algorithm>> {
         let client_metadata = match &authorization_request.client_metadata {
             // Fetch the client metadata from the given URI.
             ClientMetadataResource::ClientMetadataUri(client_metadata_uri) => {
-                let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
-                let client = ClientBuilder::new(client.clone())
-                    .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-                    .build();
                 let client_metadata: ClientMetadataResource<ClientMetadataParameters> =
-                    client.get(client_metadata_uri).send().await?.json().await?;
+                    oid4vc_core::read_json(client.get(client_metadata_uri).send().await?).await?;
                 client_metadata
             }
             client_metadata => client_metadata.clone(),
@@ -117,18 +110,14 @@ impl Extension for SIOPv2 {
     }
 
     async fn get_relying_party_supported_syntax_types(
-        client: &reqwest::Client,
+        client: &reqwest_middleware::ClientWithMiddleware,
         authorization_request: &<Self::RequestHandle as RequestHandle>::Parameters,
     ) -> anyhow::Result<Vec<SubjectSyntaxType>> {
         let client_metadata = match &authorization_request.client_metadata {
             // Fetch the client metadata from the given URI.
             ClientMetadataResource::ClientMetadataUri(client_metadata_uri) => {
-                let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
-                let client = ClientBuilder::new(client.clone())
-                    .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-                    .build();
                 let client_metadata: ClientMetadataResource<ClientMetadataParameters> =
-                    client.get(client_metadata_uri).send().await?.json().await?;
+                    oid4vc_core::read_json(client.get(client_metadata_uri).send().await?).await?;
                 client_metadata
             }
             client_metadata => client_metadata.clone(),

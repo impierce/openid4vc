@@ -21,9 +21,8 @@ pub struct Provider {
     pub subject: SigningSubject,
     pub supported_subject_syntax_types: Vec<SubjectSyntaxType>,
     pub supported_signing_algorithms: Vec<Algorithm>,
-    /// The client requests are sent with, also handed to the [`Extension`] to fetch `client_metadata_uri`.
-    http_client: reqwest::Client,
-    /// `http_client` with retries.
+    /// The client requests are sent with, with retries; also handed to the [`Extension`] to fetch
+    /// `client_metadata_uri`.
     client: ClientWithMiddleware,
 }
 
@@ -34,12 +33,9 @@ impl Provider {
         supported_subject_syntax_types: Vec<impl TryInto<SubjectSyntaxType>>,
         supported_signing_algorithms: Vec<Algorithm>,
     ) -> Result<Self> {
-        let http_client = oid4vc_core::http_client();
-
         Ok(Provider {
             subject,
-            client: with_retries(http_client.clone()),
-            http_client,
+            client: with_retries(ClientBuilder::new(oid4vc_core::http_client()).with(oid4vc_core::PublicHosts)),
             supported_subject_syntax_types: supported_subject_syntax_types
                 .into_iter()
                 .map(|subject_syntax_type| {
@@ -54,10 +50,10 @@ impl Provider {
 
     /// Sends this provider's requests with `client` instead of [`oid4vc_core::http_client`], wrapped in the same retry
     /// middleware: fetching `request_uri` and `client_metadata_uri`, and sending the response. For an application with
-    /// a TLS policy of its own, such as pinned roots or a test CA in a debug build.
+    /// a TLS policy of its own, such as pinned roots or a test CA in a debug build. The checks of the default client
+    /// ([`oid4vc_core::http`]) are then the application's.
     pub fn with_http_client(mut self, client: reqwest::Client) -> Self {
-        self.client = with_retries(client.clone());
-        self.http_client = client;
+        self.client = with_retries(ClientBuilder::new(client));
         self
     }
 
@@ -93,7 +89,7 @@ impl Provider {
                 {
                     let client_id = authorization_request.body.client_id().clone();
                     let builder = self.client.get(authorization_request.body.request_uri.clone());
-                    let request_value = builder.send().await?.text().await?;
+                    let request_value = oid4vc_core::read_text(builder.send().await?).await?;
                     ensure_request_object_typ(&request_value)?;
                     ensure_signed_by_client(&request_value, &client_id)?;
                     let authorization_request: AuthorizationRequest<Object> = validator.decode(request_value).await?;
@@ -119,7 +115,7 @@ impl Provider {
         authorization_request: &AuthorizationRequest<Object<E>>,
     ) -> Result<Algorithm> {
         let relying_party_supported_algorithms =
-            E::get_relying_party_supported_algorithms(&self.http_client, &authorization_request.body.extension).await?;
+            E::get_relying_party_supported_algorithms(&self.client, &authorization_request.body.extension).await?;
 
         self.supported_signing_algorithms
             .iter()
@@ -134,8 +130,7 @@ impl Provider {
         authorization_request: &AuthorizationRequest<Object<E>>,
     ) -> Result<SubjectSyntaxType> {
         let relying_party_supported_syntax_types =
-            E::get_relying_party_supported_syntax_types(&self.http_client, &authorization_request.body.extension)
-                .await?;
+            E::get_relying_party_supported_syntax_types(&self.client, &authorization_request.body.extension).await?;
 
         self.supported_subject_syntax_types
             .iter()
@@ -240,9 +235,9 @@ fn ensure_signed_by_client(request_object: &str, client_id: &str) -> Result<()> 
 }
 
 /// `client` with the retries every request of the provider gets.
-fn with_retries(client: reqwest::Client) -> ClientWithMiddleware {
+fn with_retries(client: ClientBuilder) -> ClientWithMiddleware {
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
-    ClientBuilder::new(client)
+    client
         .with(RetryTransientMiddleware::new_with_policy(retry_policy))
         .build()
 }
@@ -415,6 +410,20 @@ mod tests {
         // requests carried the header of the given client.
         let _ = provider.get_matching_signing_algorithm(&authorization_request).await;
         let _ = provider.get_matching_subject_syntax_type(&authorization_request).await;
+    }
+
+    #[tokio::test]
+    async fn the_default_client_refuses_a_request_uri_on_a_non_public_address() {
+        let subject = TestSubject::new("did:test:123".to_string(), "key_id".to_string()).unwrap();
+        let provider = Provider::new(Arc::new(subject), vec!["did:test"], vec![Algorithm::EdDSA]).unwrap();
+
+        let error = provider
+            .validate_request(
+                "openid://?client_id=did%3Aexample%3A123&request_uri=https%3A%2F%2F127.0.0.1%2Frequest".to_string(),
+            )
+            .await
+            .unwrap_err();
+        assert!(format!("{error:#}").contains("is not a public address"), "{error:#}");
     }
 
     #[tokio::test]

@@ -22,6 +22,8 @@ has its own version, its own `CHANGELOG.md` next to its `Cargo.toml`, its own ta
    [Conventional Commits](https://www.conventionalcommits.org/) on `main` that touched the crate.
 2. A maintainer reviews the versions and changelogs. To adjust them, commit to the release branch
    shortly before merging, since release-plz regenerates the pull request whenever `main` changes.
+   CI fails if a crate needs a breaking release that release-plz didn't give it
+   ([Public dependencies](#public-dependencies)).
 3. Approving and merging the release pull request publishes every crate whose version is not on
    [crates.io](https://crates.io/) yet, in dependency order (`oid4vc-core`, then `oid4vci` and
    `siopv2`, then `oid4vp`, then `oid4vc-manager`). Each published crate is tagged and gets a
@@ -43,6 +45,33 @@ release-plz also runs [`cargo-semver-checks`](https://github.com/obi1kenobi/carg
 (`semver_check` in [`release-plz.toml`](../release-plz.toml)) against each crate's last version on
 crates.io. A breaking API change it finds bumps the minor version even if the pull request title
 has no `!`, and the release pull request lists what it found.
+
+## Public dependencies
+
+A crate's public API includes types and traits of other crates: identity-kit's `Did` and
+`KeyStore`, `jsonwebtoken`'s `Algorithm`, `url::Url`, and for the protocol crates `oid4vc-core`'s
+`Subject` or `Extension`. When one of those crates gets an incompatible update (identity-kit 0.2 →
+0.3, or `oid4vc-core` 0.2 → 0.3), code that passes the old types to the crate no longer compiles,
+so the crate needs a breaking release too, even if none of its files changed. Neither release-plz
+nor `cargo-semver-checks` notices this.
+
+The `Public dependency updates` job in [QA](../.github/workflows/qa.yml) does. For every crate
+whose version differs from its last tag, it compares the versions `Cargo.lock` resolves the crate's
+public dependencies to at the tag and now: its normal dependencies that are workspace crates or
+listed in `PUBLIC_DEPENDENCIES` in
+[`check_public_dependency_bumps.py`](../.github/scripts/check_public_dependency_bumps.py). If one
+changed incompatibly, or is a workspace crate that needs a breaking release itself, while the
+crate's own version change is compatible, the job fails and names the crate. A dependency the crate
+only uses internally is counted too; before 1.0 that costs no more than an unneeded minor bump.
+
+To fix a failure, give the crate the next breaking version on the release branch (step 2 of the
+flow): its `Cargo.toml`, its requirement in `[workspace.dependencies]`, `Cargo.lock`
+(`cargo update --workspace`) and a changelog entry. Add a crate to `PUBLIC_DEPENDENCIES` when its
+types first appear in a public API. Locally:
+
+```sh
+python3 .github/scripts/check_public_dependency_bumps.py
+```
 
 ## Changelog
 

@@ -11,6 +11,14 @@ use oid4vc_core::{Sign, Subject, Verify, authentication::sign::ExternalSign};
 use siopv2::{StandardClaimsRequests, StandardClaimsValues};
 use std::sync::LazyLock;
 
+/// A client for the servers of these tests, which run on 127.0.0.1 over plain `http`: the default client
+/// (`oid4vc_core::http_client`) refuses both.
+pub fn local_http_client() -> reqwest::Client {
+    // Installs the `ring` provider that `reqwest::Client::new` needs.
+    let _ = oid4vc_core::http_client();
+    reqwest::Client::new()
+}
+
 // SigningKey for mocking purposes.
 pub static TEST_KEYPAIR: LazyLock<SigningKey> = LazyLock::new(|| SigningKey::generate(&mut rand::rng()));
 
