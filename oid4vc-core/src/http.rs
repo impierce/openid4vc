@@ -56,9 +56,8 @@ impl Middleware for PublicHosts {
     }
 }
 
-/// Whether `ip` is a public unicast address, as identity-kit decides for its resolver: not unspecified, loopback,
-/// private, link-local, shared (RFC 6598), documentation, benchmarking, multicast, reserved, unique local or in the
-/// NAT64 well-known prefix. An IPv4-mapped IPv6 address is judged as its IPv4 address.
+/// Whether `ip` is a public unicast address: not unspecified, loopback, private, link-local, shared (RFC 6598),
+/// documentation, benchmarking, multicast, reserved, unique local or in the NAT64 well-known prefix. An IPv4-mapped IPv6 address is judged as its IPv4 address.
 fn is_public(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(v4) => {
@@ -86,7 +85,9 @@ fn is_public(ip: IpAddr) -> bool {
                 || v6.is_multicast()
                 || v6.is_unique_local()
                 || v6.is_unicast_link_local()
-                || segments[0] == 0x2001 && segments[1] == 0x0db8 // documentation
+                || segments[0] == 0x2001 && segments[1] == 0x0db8 // documentation, RFC 3849
+                || segments[0] == 0x3fff && segments[1] < 0x1000 // documentation, RFC 9637
+                || segments[0] == 0x2001 && segments[1] == 0x0002 && segments[2] == 0 // benchmarking, RFC 5180
                 || segments[0] == 0x0064 && segments[1] == 0xff9b) // NAT64 well-known prefix
         }
     }
@@ -146,6 +147,7 @@ mod tests {
         for ip in [
             "93.184.215.14",
             "2606:2800:21f:cb07:6820:80da:af6b:8b2c",
+            "2001:4860:4860::8888",
             "::ffff:93.184.215.14",
         ] {
             assert!(is_public(ip.parse().unwrap()), "{ip}");
@@ -165,6 +167,11 @@ mod tests {
             "fe80::1",
             "::ffff:127.0.0.1",
             "64:ff9b::a00:1",
+            "2001:db8::1",
+            "3fff::1",
+            "3fff:fff:ffff::1",
+            "2001:2::1",
+            "2001:2:0:ffff::1",
         ] {
             assert!(!is_public(ip.parse().unwrap()), "{ip}");
         }
