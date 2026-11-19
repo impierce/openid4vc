@@ -1,4 +1,4 @@
-use crate::common::{get_jwt_claims, memory_storage::MemoryStorage};
+use crate::common::{get_jwt_claims, local_http_client, memory_storage::MemoryStorage};
 use jsonwebtoken::Algorithm;
 use oid4vc_manager::{
     managers::credential_issuer::CredentialIssuerManager, methods::key_method::KeySubject,
@@ -38,7 +38,9 @@ async fn test_pre_authorized_code_flow(#[case] batch: bool, #[case] by_reference
     // let subject_did = subject.identifier("did:key", Algorithm::EdDSA).await.unwrap();
 
     // Create a new wallet.
-    let wallet: Wallet = Wallet::new(Arc::new(subject), vec!["did:key"], vec![Algorithm::EdDSA]).unwrap();
+    let wallet: Wallet = Wallet::new(Arc::new(subject), vec!["did:key"], vec![Algorithm::EdDSA])
+        .unwrap()
+        .with_http_client(local_http_client());
 
     // Get the credential offer url.
     let credential_offer_query = credential_issuer
@@ -315,7 +317,8 @@ async fn test_pre_authorized_code_flow_with_a_credential_issuer_binding_to_jwk()
         vec!["did:key"],
         vec![Algorithm::EdDSA],
     )
-    .unwrap();
+    .unwrap()
+    .with_http_client(local_http_client());
 
     let credential_offer = credential_issuer.credential_issuer_manager.credential_offer().unwrap();
     let credential_issuer_url = credential_offer.credential_issuer.url();
