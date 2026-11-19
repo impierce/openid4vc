@@ -1,3 +1,6 @@
+// The flow presents a `jwt_vc_json` credential, the VCDM 1.1 JWT format (OID4VP 1.0, Appendix B.1).
+#![allow(deprecated)]
+
 use chrono::{Duration, Utc};
 use identity_kit::{
     did::Did,
