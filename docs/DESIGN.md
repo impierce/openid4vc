@@ -198,6 +198,15 @@ those, and returns the key each proof was verified with. The server is in `oid4v
   `credential_configurations_supported`, display, batch issuance, response encryption, signed
   metadata) and `AuthorizationServerMetadata` (`/.well-known/oauth-authorization-server`, with the
   PAR and interactive authorization extensions).
+- **Claims descriptions**: a claim's display objects (`ClaimDescriptionDisplay`) have `name` and
+  `locale`, both optional (Appendix B.2), and keep every other parameter in
+  `additional_parameters`, which is serialized next to them. The crates do not interpret those
+  parameters; that is left to the application. `CredentialConfigurationsSupportedObject::check_claims_descriptions`
+  checks the claims of one configuration against Appendix B.3 (no claim described twice, no
+  contradicting descriptions) with `oid4vc_core::claim_path_pointer::check_claims_description_paths`;
+  for `mso_mdoc` a non-negative integer in a path may be a map key (Appendix C.2). Nothing in the
+  crates calls it: issuers run it before publishing, Wallets before using `claims`. Its time grows
+  with the total length of the paths, so it can run on metadata from any Credential Issuer.
 - **Credential format profiles**: a macro generates, per format, a marker type, a `Parameters`
   type (what issuer metadata and authorization details carry) and a `Credential` type (the issued
   credential); `CredentialFormats<C>` is the enum over `jwt_vc_json`, `jwt_vc_json-ld`, `ldp_vc`,

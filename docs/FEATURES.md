@@ -85,6 +85,7 @@ Specification versions tracked: [OID4VCI 1.0][oid4vci] (final, 16 September 2025
 | Feature                                                                                       | Status | Cargo feature | Specification                              | Issue |
 | --------------------------------------------------------------------------------------------- | :----: | ------------- | ------------------------------------------ | ----- |
 | Credential Issuer Metadata (`/.well-known/openid-credential-issuer`), `credential_configurations_supported`, display, claims descriptions |   ✅   |               | [OID4VCI, Credential Issuer Metadata][oid4vci]                   |       |
+| Claims descriptions: additional parameters of display objects, optional `name`, check of the Appendix B.3 processing rules on issuer metadata |   ✅   |               | [OID4VCI, Claims Description][oid4vci]                   | [#235](https://github.com/impierce/openid4vc/issues/235) |
 | `signed_metadata` verification                                                                |   🚧   |               | [OID4VCI, Signed Metadata][oid4vci]                 |       |
 | Authorization Server Metadata (`/.well-known/oauth-authorization-server`), PAR and interactive authorization extensions |   ✅   |               | [OID4VCI, Authorization Server Metadata][oid4vci], [RFC 8414][rfc8414] |       |
 | Wallet / client metadata                                                                      |   ⬜   |               | [OID4VCI, Client Metadata][oid4vci]                   |       |
