@@ -4,7 +4,9 @@ use crate::{
     credential_format_profiles::{CredentialFormats, WithParameters},
     proof::{KeyProofMetadata, ProofType},
 };
-use oid4vc_core::claim_path_pointer::ClaimPathPointer;
+use oid4vc_core::claim_path_pointer::{
+    ClaimPathPointer, ClaimPathSemantics, ClaimsDescriptionError, check_claims_description_paths,
+};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use url::Url;
@@ -52,6 +54,30 @@ pub enum AlgIdentifier {
     Integer(i32),
 }
 
+impl CredentialConfigurationsSupportedObject {
+    /// Checks the claims descriptions in `credential_metadata` against OpenID4VCI 1.0, Appendix B.3: no claim is
+    /// described twice, and no two descriptions contradict each other. See
+    /// [`check_claims_description_paths`] for the rules. For `mso_mdoc`, a non-negative integer in a path can be a
+    /// map key (Appendix C.2); for every other format it is an array index (Appendix C.1).
+    ///
+    /// Nothing in this crate calls it: an issuer can run it before publishing its metadata, and a Wallet before it
+    /// uses `claims`.
+    pub fn check_claims_descriptions(&self) -> Result<(), ClaimsDescriptionError> {
+        let Some(claims) = self
+            .credential_metadata
+            .as_ref()
+            .and_then(|credential_metadata| credential_metadata.claims.as_ref())
+        else {
+            return Ok(());
+        };
+        let semantics = match self.credential_format {
+            CredentialFormats::MsoMdoc(_) => ClaimPathSemantics::Mdoc,
+            _ => ClaimPathSemantics::Json,
+        };
+        check_claims_description_paths(claims.iter().map(|claim| &claim.path), semantics)
+    }
+}
+
 /// Metadata describing a claim addressable through a Claim Path Pointer.
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
@@ -63,13 +89,21 @@ pub struct ClaimDescription {
     pub display: Vec<ClaimDescriptionDisplay>,
 }
 
-/// Localized display metadata for a claim.
+/// Display properties of a claim for one language, as OpenID4VCI 1.0, Appendix B.2 defines them in `display`.
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct ClaimDescriptionDisplay {
-    pub name: String,
+    /// The display name of the claim.
+    pub name: Option<String>,
+    /// The language of this object, a BCP47 language tag.
     pub locale: Option<String>,
+    /// The other parameters of the object: Appendix B.2 lists `name` and `locale` as "a non-exhaustive list of valid
+    /// parameters". They are kept as received and serialized next to `name` and `locale`; this crate does not
+    /// interpret them. Do not put `name` or `locale` here: they have their own fields.
+    #[serde(flatten)]
+    #[cfg_attr(feature = "utoipa", schema(additional_properties))]
+    pub additional_parameters: serde_json::Map<String, serde_json::Value>,
 }
 
 /// Logo metadata associated with a supported Credential Configuration.
@@ -622,5 +656,156 @@ mod tests {
             },
             from_str::<TestWrapper>(include_str!("../../tests/examples/credential_metadata_sd_jwt_vc.json")).unwrap()
         );
+    }
+
+    #[test]
+    fn a_claim_display_object_keeps_its_additional_parameters() {
+        let json = json!({ "name": "Nationality", "locale": "en", "format": "country", "x-order": 3 });
+        let display: ClaimDescriptionDisplay = serde_json::from_value(json.clone()).unwrap();
+
+        assert_eq!(display.name.as_deref(), Some("Nationality"));
+        assert_eq!(display.locale.as_deref(), Some("en"));
+        // `name` and `locale` are in their own fields, not in the map.
+        assert_eq!(
+            display.additional_parameters,
+            json!({ "format": "country", "x-order": 3 })
+                .as_object()
+                .unwrap()
+                .clone()
+        );
+        assert_eq!(serde_json::to_value(&display).unwrap(), json);
+    }
+
+    /// Appendix B.2: `name` is OPTIONAL.
+    #[test]
+    fn a_claim_display_object_without_name_parses() {
+        for json in [json!({ "locale": "en" }), json!({ "format": "uri" }), json!({})] {
+            let display: ClaimDescriptionDisplay = serde_json::from_value(json.clone()).unwrap();
+            assert_eq!(display.name, None);
+            assert_eq!(serde_json::to_value(&display).unwrap(), json);
+        }
+    }
+
+    /// The display objects of the claims in the specification examples have no additional parameters, and serialize
+    /// to exactly the JSON they were read from.
+    #[test]
+    fn claim_display_objects_without_additional_parameters_serialize_as_before() {
+        for example in [
+            include_str!("../../tests/examples/credential_metadata_jwt_vc_json.json"),
+            include_str!("../../tests/examples/credential_metadata_ldp_vc.json"),
+            include_str!("../../tests/examples/credential_metadata_mso_mdoc.json"),
+            include_str!("../../tests/examples/credential_metadata_sd_jwt_vc.json"),
+        ] {
+            let json: serde_json::Value = from_str(example).unwrap();
+            let parsed: TestWrapper = from_str(example).unwrap();
+            for (id, configuration) in &parsed.credential_configurations_supported {
+                let claims = configuration
+                    .credential_metadata
+                    .as_ref()
+                    .and_then(|credential_metadata| credential_metadata.claims.as_ref())
+                    .unwrap();
+                let claims_json = json["credential_configurations_supported"][id]["credential_metadata"]["claims"]
+                    .as_array()
+                    .unwrap();
+                assert_eq!(claims.len(), claims_json.len());
+                for (claim, claim_json) in claims.iter().zip(claims_json) {
+                    let display_json = claim_json.get("display").cloned().unwrap_or(json!([]));
+                    for display in &claim.display {
+                        assert!(display.additional_parameters.is_empty(), "{id}: {display:?}");
+                    }
+                    assert_eq!(serde_json::to_value(&claim.display).unwrap(), display_json, "{id}");
+                }
+                assert_eq!(configuration.check_claims_descriptions(), Ok(()), "{id}");
+            }
+        }
+    }
+
+    /// The training record example of impierce/openid4vc#235.
+    #[test]
+    fn the_training_record_of_the_issue_keeps_its_display_formats_and_passes_appendix_b3() {
+        let json = json!({
+            "format": "vc+sd-jwt",
+            "credential_definition": { "type": ["VerifiableCredential", "TrainingRecord"] },
+            "credential_metadata": {
+                "display": [{ "name": "Training Record" }],
+                "claims": [
+                    { "path": ["credentialSubject", "Trainee"], "mandatory": true, "display": [{ "name": "Trainee" }] },
+                    { "path": ["credentialSubject", "Trainee", "Full name"], "mandatory": true, "display": [{ "name": "Full name" }] },
+                    { "path": ["credentialSubject", "Trainee", "Nationality"], "mandatory": false, "display": [{ "name": "Nationality", "format": "country" }] },
+                    { "path": ["credentialSubject", "Skills"], "mandatory": false, "display": [{ "name": "Skills" }] },
+                    { "path": ["credentialSubject", "Websites"], "mandatory": false, "display": [{ "name": "Websites" }] },
+                    { "path": ["credentialSubject", "Websites", null], "mandatory": false, "display": [{ "format": "uri" }] },
+                    { "path": ["credentialSubject", "Courses"], "mandatory": true, "display": [{ "name": "Courses", "format": "table" }] },
+                    { "path": ["credentialSubject", "Courses", null, "Code"], "mandatory": true, "display": [{ "name": "Code" }] },
+                    { "path": ["credentialSubject", "Courses", null, "Country"], "mandatory": false, "display": [{ "name": "Country", "format": "country" }] }
+                ]
+            }
+        });
+        let configuration: CredentialConfigurationsSupportedObject = serde_json::from_value(json.clone()).unwrap();
+        let claims = configuration
+            .credential_metadata
+            .as_ref()
+            .unwrap()
+            .claims
+            .as_ref()
+            .unwrap();
+
+        let websites_items = &claims[5].display[0];
+        assert_eq!(websites_items.name, None);
+        assert_eq!(websites_items.additional_parameters["format"], json!("uri"));
+        assert_eq!(claims[6].display[0].additional_parameters["format"], json!("table"));
+        assert_eq!(configuration.check_claims_descriptions(), Ok(()));
+        // An issuer serializes the same metadata.
+        assert_eq!(serde_json::to_value(&configuration).unwrap(), json);
+    }
+
+    fn configuration_with_claims(
+        format: serde_json::Value,
+        paths: serde_json::Value,
+    ) -> CredentialConfigurationsSupportedObject {
+        let mut json = format;
+        json["credential_metadata"] = json!({
+            "claims": paths.as_array().unwrap().iter().map(|path| json!({ "path": path })).collect::<Vec<_>>()
+        });
+        serde_json::from_value(json).unwrap()
+    }
+
+    #[test]
+    fn check_claims_descriptions_applies_appendix_b3_with_the_semantics_of_the_format() {
+        let paths = json!([
+            ["org.iso.18013.5.1", "driving_privileges", 1],
+            ["org.iso.18013.5.1", "driving_privileges", "codes"]
+        ]);
+
+        // For mso_mdoc, an integer can be a map key (Appendix C.2).
+        let mdoc = configuration_with_claims(
+            json!({ "format": "mso_mdoc", "doctype": "org.iso.18013.5.1.mDL" }),
+            paths.clone(),
+        );
+        assert_eq!(mdoc.check_claims_descriptions(), Ok(()));
+
+        // For every other format it is an array index (Appendix C.1).
+        let sd_jwt = configuration_with_claims(
+            json!({ "format": "dc+sd-jwt", "vct": "https://example.org/mDL" }),
+            paths,
+        );
+        assert!(matches!(
+            sd_jwt.check_claims_descriptions(),
+            Err(ClaimsDescriptionError::ArrayAndObject { .. })
+        ));
+
+        let repeated = configuration_with_claims(
+            json!({ "format": "dc+sd-jwt", "vct": "https://example.org/mDL" }),
+            json!([["given_name"], ["given_name"]]),
+        );
+        assert!(matches!(
+            repeated.check_claims_descriptions(),
+            Err(ClaimsDescriptionError::RepeatedClaim { .. })
+        ));
+
+        // Without claims there is nothing to check.
+        let without_claims: CredentialConfigurationsSupportedObject =
+            serde_json::from_value(json!({ "format": "dc+sd-jwt", "vct": "https://example.org/mDL" })).unwrap();
+        assert_eq!(without_claims.check_claims_descriptions(), Ok(()));
     }
 }
