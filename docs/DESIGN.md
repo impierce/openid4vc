@@ -204,7 +204,11 @@ those, and returns the key each proof was verified with. The server is in `oid4v
   parameters; that is left to the application. `CredentialConfigurationsSupportedObject::check_claims_descriptions`
   checks the claims of one configuration against Appendix B.3 (no claim described twice, no
   contradicting descriptions) with `oid4vc_core::claim_path_pointer::check_claims_description_paths`;
-  for `mso_mdoc` a non-negative integer in a path may be a map key (Appendix C.2). Nothing in the
+  for `mso_mdoc` a non-negative integer in a path may be a map key (Appendix C.2). Each path must
+  also be able to address a claim (`ClaimPathPointer::check_shape`): for `mso_mdoc` it starts with
+  two strings, the namespace and the data element identifier (Appendix C.2); for the JSON-based
+  formats with a string, a key of the top-level object (Appendix C.1.1). For a format the crates do
+  not know, B.3 is applied as it reads and nothing is assumed about where a path starts. Nothing in the
   crates calls it: issuers run it before publishing, Wallets before using `claims`. Its time grows
   with the total length of the paths, so it can run on metadata from any Credential Issuer.
 - **Credential format profiles**: a macro generates, per format, a marker type, a `Parameters`
