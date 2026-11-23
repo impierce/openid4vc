@@ -168,42 +168,41 @@ pub fn check_claims_description_paths<'a>(
                 // One path is a prefix of the other.
                 continue;
             };
-            let (first, second) = ((*first).clone(), (*second).clone());
             match (a, b) {
                 (Null, Integer(_)) => {
                     return Err(ClaimsDescriptionError::AllAndIndexInSameArray {
-                        all: first,
-                        index: second,
+                        all: (*first).clone(),
+                        index: (*second).clone(),
                     });
                 }
                 (Integer(_), Null) => {
                     return Err(ClaimsDescriptionError::AllAndIndexInSameArray {
-                        all: second,
-                        index: first,
+                        all: (*second).clone(),
+                        index: (*first).clone(),
                     });
                 }
                 (Null, String(_)) => {
                     return Err(ClaimsDescriptionError::ArrayAndObject {
-                        array: first,
-                        object: second,
+                        array: (*first).clone(),
+                        object: (*second).clone(),
                     });
                 }
                 (String(_), Null) => {
                     return Err(ClaimsDescriptionError::ArrayAndObject {
-                        array: second,
-                        object: first,
+                        array: (*second).clone(),
+                        object: (*first).clone(),
                     });
                 }
                 (Integer(_), String(_)) if semantics == ClaimPathSemantics::Json => {
                     return Err(ClaimsDescriptionError::ArrayAndObject {
-                        array: first,
-                        object: second,
+                        array: (*first).clone(),
+                        object: (*second).clone(),
                     });
                 }
                 (String(_), Integer(_)) if semantics == ClaimPathSemantics::Json => {
                     return Err(ClaimsDescriptionError::ArrayAndObject {
-                        array: second,
-                        object: first,
+                        array: (*second).clone(),
+                        object: (*first).clone(),
                     });
                 }
                 // Different keys or indexes, or with mdoc a string and an integer key of the same map.
