@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1](https://github.com/impierce/openid4vc/compare/oid4vc-core-v0.8.0...oid4vc-core-v0.8.1) - 2026-11-23
+
+### Added
+
+- keep extra claim display parameters, check OID4VCI Appendix B.3 ([#236](https://github.com/impierce/openid4vc/pull/236))
+
 ## [0.8.0](https://github.com/impierce/openid4vc/compare/oid4vc-core-v0.7.0...oid4vc-core-v0.8.0) - 2026-11-19
 
 ### Added
