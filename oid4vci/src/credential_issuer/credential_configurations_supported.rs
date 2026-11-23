@@ -720,9 +720,9 @@ mod tests {
         }
     }
 
-    /// The training record example of impierce/openid4vc#235.
+    /// The training record example of impierce/openid4vc#235, verbatim.
     #[test]
-    fn the_training_record_of_the_issue_keeps_its_display_formats_and_passes_appendix_b3() {
+    fn the_training_record_of_the_issue_keeps_its_display_objects_and_passes_appendix_b3() {
         let json = json!({
             "format": "vc+sd-jwt",
             "credential_definition": { "type": ["VerifiableCredential", "TrainingRecord"] },
@@ -731,13 +731,13 @@ mod tests {
                 "claims": [
                     { "path": ["credentialSubject", "Trainee"], "mandatory": true, "display": [{ "name": "Trainee" }] },
                     { "path": ["credentialSubject", "Trainee", "Full name"], "mandatory": true, "display": [{ "name": "Full name" }] },
-                    { "path": ["credentialSubject", "Trainee", "Nationality"], "mandatory": false, "display": [{ "name": "Nationality", "format": "country" }] },
-                    { "path": ["credentialSubject", "Skills"], "mandatory": false, "display": [{ "name": "Skills" }] },
-                    { "path": ["credentialSubject", "Websites"], "mandatory": false, "display": [{ "name": "Websites" }] },
-                    { "path": ["credentialSubject", "Websites", null], "mandatory": false, "display": [{ "format": "uri" }] },
+                    { "path": ["credentialSubject", "Trainee", "Nationality"], "display": [{ "name": "Nationality", "format": "country" }] },
+                    { "path": ["credentialSubject", "Skills"], "display": [{ "name": "Skills" }] },
+                    { "path": ["credentialSubject", "Websites"], "display": [{ "name": "Websites" }] },
+                    { "path": ["credentialSubject", "Websites", null], "display": [{ "format": "uri" }] },
                     { "path": ["credentialSubject", "Courses"], "mandatory": true, "display": [{ "name": "Courses", "format": "table" }] },
                     { "path": ["credentialSubject", "Courses", null, "Code"], "mandatory": true, "display": [{ "name": "Code" }] },
-                    { "path": ["credentialSubject", "Courses", null, "Country"], "mandatory": false, "display": [{ "name": "Country", "format": "country" }] }
+                    { "path": ["credentialSubject", "Courses", null, "Country"], "display": [{ "name": "Country", "format": "country" }] }
                 ]
             }
         });
@@ -755,8 +755,23 @@ mod tests {
         assert_eq!(websites_items.additional_parameters["format"], json!("uri"));
         assert_eq!(claims[6].display[0].additional_parameters["format"], json!("table"));
         assert_eq!(configuration.check_claims_descriptions(), Ok(()));
-        // An issuer serializes the same metadata.
-        assert_eq!(serde_json::to_value(&configuration).unwrap(), json);
+
+        // An issuer serializes the same display objects.
+        let claims_json = json["credential_metadata"]["claims"].as_array().unwrap();
+        for (claim, claim_json) in claims.iter().zip(claims_json) {
+            assert_eq!(serde_json::to_value(&claim.display).unwrap(), claim_json["display"]);
+        }
+        // The rest of the metadata is the same too, except that `mandatory` is always written: the five claims
+        // that leave it out get its default, `false`.
+        let mut expected = json.clone();
+        for claim in expected["credential_metadata"]["claims"].as_array_mut().unwrap() {
+            claim
+                .as_object_mut()
+                .unwrap()
+                .entry("mandatory")
+                .or_insert(json!(false));
+        }
+        assert_eq!(serde_json::to_value(&configuration).unwrap(), expected);
     }
 
     fn configuration_with_claims(

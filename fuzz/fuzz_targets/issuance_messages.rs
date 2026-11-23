@@ -36,10 +36,13 @@ fuzz_target!(|data: &[u8]| {
     if let Some(metadata) = round_trip::<CredentialIssuerMetadata>(data) {
         for configuration in metadata.credential_configurations_supported.values() {
             let _ = configuration.credential_format.format();
+            let _ = configuration.check_claims_descriptions();
         }
     }
     round_trip::<AuthorizationServerMetadata>(data);
-    round_trip::<CredentialConfigurationsSupportedObject>(data);
+    if let Some(configuration) = round_trip::<CredentialConfigurationsSupportedObject>(data) {
+        let _ = configuration.check_claims_descriptions();
+    }
     round_trip::<CredentialFormats>(data);
     round_trip::<Vec<AuthorizationDetailsObject>>(data);
     round_trip::<AuthorizationDetailsObject>(data);

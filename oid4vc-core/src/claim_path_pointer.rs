@@ -2,6 +2,7 @@ use crate::utils::predicates::not_empty;
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 
 /// A non-empty path identifying claims in JSON-based credentials.
 #[nutype(validate(predicate = not_empty), derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, AsRef))]
@@ -98,17 +99,24 @@ impl ClaimPathPointer {
 /// How the components of a claims path pointer address a credential: OpenID4VCI 1.0, Appendix C.1 for JSON-based
 /// credentials, C.2 for ISO mdoc.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ClaimPathSemantics {
     /// A non-negative integer is an array index (Appendix C.1).
     Json,
     /// A non-negative integer is a map key or an array index, depending on the data (Appendix C.2). Only `null`
     /// implies that a claim is an array.
+    ///
+    /// Appendix B.3 says a claim is an array if a path has "`null` or a non-negative integer" at it, with no
+    /// exception for ISO mdoc. Taken literally, that would refuse `["ns", "element", 1]` next to
+    /// `["ns", "element", "key"]`, which Appendix C.2 allows: both are keys of the same map. For ISO mdoc this
+    /// follows C.2, which says what an integer means in an ISO mdoc path.
     Mdoc,
 }
 
 /// A claims description that OpenID4VCI 1.0, Appendix B.3 rules out: "When a repeated or contradictory claim
 /// description is provided, the processing MUST be aborted."
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[non_exhaustive]
 pub enum ClaimsDescriptionError {
     /// "the same claim is addressed by two or more claims description objects in the `claims` array"
     #[error("Two or more claims descriptions address the same claim {path:?} (OpenID4VCI 1.0, Appendix B.3)")]
@@ -141,8 +149,8 @@ pub enum ClaimsDescriptionError {
 }
 
 /// Checks the paths of the claims descriptions of one `claims` array against OpenID4VCI 1.0, Appendix B.3, and
-/// returns the first rule broken. Each pair of paths is compared component by component; where they first differ,
-/// the components before address the same claim:
+/// returns a rule broken. Two paths are compared where they first differ; the components before address the same
+/// claim:
 ///
 /// - two equal paths address the same claim twice;
 /// - `null` in one and a non-negative integer in the other address the same array both as a whole and by index;
@@ -152,65 +160,117 @@ pub enum ClaimsDescriptionError {
 ///
 /// Any other difference addresses different claims. A path that is a prefix of another addresses a claim that
 /// contains the other's, as `["address"]` and `["address", "street_address"]` in Section 12.2.4.
+///
+/// The paths are put in a tree of the claims they address, so the time taken grows with the total length of the
+/// paths, not with the square of their number: a Wallet can run this on the metadata of any Credential Issuer.
 pub fn check_claims_description_paths<'a>(
     paths: impl IntoIterator<Item = &'a ClaimPathPointer>,
     semantics: ClaimPathSemantics,
 ) -> Result<(), ClaimsDescriptionError> {
-    use ClaimPathElement::{Integer, Null, String};
-
-    let paths: Vec<&ClaimPathPointer> = paths.into_iter().collect();
-    for (position, first) in paths.iter().enumerate() {
-        for second in &paths[position + 1..] {
-            if first == second {
-                return Err(ClaimsDescriptionError::RepeatedClaim { path: (*first).clone() });
+    let mut root = AddressedClaim::default();
+    for path in paths {
+        let mut claim = &mut root;
+        for component in path.as_ref() {
+            let key = ComponentKey::from(component);
+            if !claim.contents.contains_key(&key) {
+                claim.check_new_component(component, path, semantics)?;
             }
-            let Some((a, b)) = first.as_ref().iter().zip(second.as_ref()).find(|(a, b)| a != b) else {
-                // One path is a prefix of the other.
-                continue;
-            };
-            match (a, b) {
-                (Null, Integer(_)) => {
-                    return Err(ClaimsDescriptionError::AllAndIndexInSameArray {
-                        all: (*first).clone(),
-                        index: (*second).clone(),
-                    });
-                }
-                (Integer(_), Null) => {
-                    return Err(ClaimsDescriptionError::AllAndIndexInSameArray {
-                        all: (*second).clone(),
-                        index: (*first).clone(),
-                    });
-                }
-                (Null, String(_)) => {
-                    return Err(ClaimsDescriptionError::ArrayAndObject {
-                        array: (*first).clone(),
-                        object: (*second).clone(),
-                    });
-                }
-                (String(_), Null) => {
-                    return Err(ClaimsDescriptionError::ArrayAndObject {
-                        array: (*second).clone(),
-                        object: (*first).clone(),
-                    });
-                }
-                (Integer(_), String(_)) if semantics == ClaimPathSemantics::Json => {
-                    return Err(ClaimsDescriptionError::ArrayAndObject {
-                        array: (*first).clone(),
-                        object: (*second).clone(),
-                    });
-                }
-                (String(_), Integer(_)) if semantics == ClaimPathSemantics::Json => {
-                    return Err(ClaimsDescriptionError::ArrayAndObject {
-                        array: (*second).clone(),
-                        object: (*first).clone(),
-                    });
-                }
-                // Different keys or indexes, or with mdoc a string and an integer key of the same map.
-                _ => {}
-            }
+            claim = claim.contents.entry(key).or_default();
         }
+        if claim.addressed {
+            return Err(ClaimsDescriptionError::RepeatedClaim { path: path.clone() });
+        }
+        claim.addressed = true;
     }
     Ok(())
+}
+
+/// A claim that one or more of the paths checked by [`check_claims_description_paths`] address or pass through.
+#[derive(Default)]
+struct AddressedClaim<'a> {
+    /// A path ends at this claim.
+    addressed: bool,
+    /// The first path with `null` at this claim.
+    first_null: Option<&'a ClaimPathPointer>,
+    /// The first path with a non-negative integer at this claim.
+    first_integer: Option<&'a ClaimPathPointer>,
+    /// The first path with a string at this claim.
+    first_string: Option<&'a ClaimPathPointer>,
+    /// The claims the paths go on to, by the component that selects them.
+    contents: HashMap<ComponentKey<'a>, AddressedClaim<'a>>,
+}
+
+impl<'a> AddressedClaim<'a> {
+    /// Checks a component that no earlier path has at this claim against those that earlier paths have, then
+    /// records it. Two paths that first differ here contradict each other if their components do.
+    fn check_new_component(
+        &mut self,
+        component: &ClaimPathElement,
+        path: &'a ClaimPathPointer,
+        semantics: ClaimPathSemantics,
+    ) -> Result<(), ClaimsDescriptionError> {
+        let json = semantics == ClaimPathSemantics::Json;
+        match component {
+            ClaimPathElement::Null => {
+                if let Some(index) = self.first_integer {
+                    return Err(ClaimsDescriptionError::AllAndIndexInSameArray {
+                        all: path.clone(),
+                        index: index.clone(),
+                    });
+                }
+                if let Some(object) = self.first_string {
+                    return Err(ClaimsDescriptionError::ArrayAndObject {
+                        array: path.clone(),
+                        object: object.clone(),
+                    });
+                }
+                self.first_null.get_or_insert(path);
+            }
+            ClaimPathElement::Integer(_) => {
+                if let Some(all) = self.first_null {
+                    return Err(ClaimsDescriptionError::AllAndIndexInSameArray {
+                        all: all.clone(),
+                        index: path.clone(),
+                    });
+                }
+                if let Some(object) = self.first_string.filter(|_| json) {
+                    return Err(ClaimsDescriptionError::ArrayAndObject {
+                        array: path.clone(),
+                        object: object.clone(),
+                    });
+                }
+                self.first_integer.get_or_insert(path);
+            }
+            ClaimPathElement::String(_) => {
+                if let Some(array) = self.first_null.or(self.first_integer.filter(|_| json)) {
+                    return Err(ClaimsDescriptionError::ArrayAndObject {
+                        array: array.clone(),
+                        object: path.clone(),
+                    });
+                }
+                self.first_string.get_or_insert(path);
+            }
+        }
+        Ok(())
+    }
+}
+
+/// A component of a path as the key of the claim it selects.
+#[derive(PartialEq, Eq, Hash)]
+enum ComponentKey<'a> {
+    Null,
+    Integer(u64),
+    String(&'a str),
+}
+
+impl<'a> From<&'a ClaimPathElement> for ComponentKey<'a> {
+    fn from(component: &'a ClaimPathElement) -> Self {
+        match component {
+            ClaimPathElement::Null => ComponentKey::Null,
+            ClaimPathElement::Integer(index) => ComponentKey::Integer(*index),
+            ClaimPathElement::String(key) => ComponentKey::String(key),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -421,5 +481,29 @@ mod tests {
             check(&paths, ClaimPathSemantics::Json),
             Err(ClaimsDescriptionError::ArrayAndObject { .. })
         ));
+    }
+
+    #[test]
+    fn many_claims_descriptions_are_checked_without_comparing_every_pair() {
+        // Comparing every pair took about 30 seconds in a debug build for 20,000 paths.
+        let mut paths: Vec<ClaimPathPointer> = (0..100_000)
+            .map(|index| path(json!(["credentialSubject", format!("claim_{index}"), "value"])))
+            .collect();
+        let started = std::time::Instant::now();
+        assert_eq!(check(&paths, ClaimPathSemantics::Json), Ok(()));
+
+        paths.push(path(json!(["credentialSubject", "claim_0", null])));
+        assert_eq!(
+            check(&paths, ClaimPathSemantics::Json),
+            Err(ClaimsDescriptionError::ArrayAndObject {
+                array: path(json!(["credentialSubject", "claim_0", null])),
+                object: path(json!(["credentialSubject", "claim_0", "value"])),
+            })
+        );
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(10),
+            "{:?}",
+            started.elapsed()
+        );
     }
 }
