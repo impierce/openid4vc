@@ -3,6 +3,7 @@ use nutype::nutype;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 
 /// A non-empty path identifying claims in JSON-based credentials.
 #[nutype(validate(predicate = not_empty), derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, AsRef))]
@@ -167,20 +168,27 @@ pub fn check_claims_description_paths<'a>(
     paths: impl IntoIterator<Item = &'a ClaimPathPointer>,
     semantics: ClaimPathSemantics,
 ) -> Result<(), ClaimsDescriptionError> {
-    let mut root = AddressedClaim::default();
+    // The claims the paths address or pass through, the root first, and the claim each component selects, by the
+    // index of the claim it is applied to. Flat rather than nested, so that neither building nor dropping the tree
+    // recurses: a path can have any number of components.
+    let mut claims = vec![AddressedClaim::default()];
+    let mut contents: HashMap<(usize, ComponentKey<'a>), usize> = HashMap::new();
     for path in paths {
-        let mut claim = &mut root;
+        let mut claim = 0;
         for component in path.as_ref() {
-            let key = ComponentKey::from(component);
-            if !claim.contents.contains_key(&key) {
-                claim.check_new_component(component, path, semantics)?;
-            }
-            claim = claim.contents.entry(key).or_default();
+            claim = match contents.entry((claim, ComponentKey::from(component))) {
+                Entry::Occupied(entry) => *entry.get(),
+                Entry::Vacant(entry) => {
+                    claims[claim].check_new_component(component, path, semantics)?;
+                    claims.push(AddressedClaim::default());
+                    *entry.insert(claims.len() - 1)
+                }
+            };
         }
-        if claim.addressed {
+        if claims[claim].addressed {
             return Err(ClaimsDescriptionError::RepeatedClaim { path: path.clone() });
         }
-        claim.addressed = true;
+        claims[claim].addressed = true;
     }
     Ok(())
 }
@@ -196,8 +204,6 @@ struct AddressedClaim<'a> {
     first_integer: Option<&'a ClaimPathPointer>,
     /// The first path with a string at this claim.
     first_string: Option<&'a ClaimPathPointer>,
-    /// The claims the paths go on to, by the component that selects them.
-    contents: HashMap<ComponentKey<'a>, AddressedClaim<'a>>,
 }
 
 impl<'a> AddressedClaim<'a> {
@@ -505,5 +511,27 @@ mod tests {
             "{:?}",
             started.elapsed()
         );
+    }
+
+    #[test]
+    fn a_long_path_does_not_overflow_the_stack() {
+        // A path is a flat JSON array, so its length is not limited by serde_json's nesting limit.
+        let long = path(serde_json::Value::Array(vec![json!("a"); 100_000]));
+        let mut longer = long.as_ref().clone();
+        longer.push(ClaimPathElement::Null);
+        let longer = ClaimPathPointer::try_new(longer).unwrap();
+        std::thread::Builder::new()
+            .stack_size(128 * 1024)
+            .spawn(move || {
+                assert_eq!(check(std::slice::from_ref(&long), ClaimPathSemantics::Json), Ok(()));
+                assert_eq!(check(&[long.clone(), longer.clone()], ClaimPathSemantics::Json), Ok(()));
+                assert_eq!(
+                    check(&[long.clone(), long.clone()], ClaimPathSemantics::Json),
+                    Err(ClaimsDescriptionError::RepeatedClaim { path: long })
+                );
+            })
+            .unwrap()
+            .join()
+            .unwrap();
     }
 }
