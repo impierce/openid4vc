@@ -56,9 +56,15 @@ pub enum AlgIdentifier {
 
 impl CredentialConfigurationsSupportedObject {
     /// Checks the claims descriptions in `credential_metadata` against OpenID4VCI 1.0, Appendix B.3: no claim is
-    /// described twice, and no two descriptions contradict each other. See
-    /// [`check_claims_description_paths`] for the rules. For `mso_mdoc`, a non-negative integer in a path can be a
-    /// map key (Appendix C.2); for every other format it is an array index (Appendix C.1).
+    /// described twice, and no two descriptions contradict each other. Each path must also be able to address a
+    /// claim in a credential of the format (Appendix C). See [`check_claims_description_paths`] for the rules.
+    ///
+    /// - `mso_mdoc` (Appendix C.2): a path starts with the namespace and the data element identifier, and a
+    ///   non-negative integer can be a map key.
+    /// - `jwt_vc_json`, `jwt_vc_json-ld`, `ldp_vc`, `dc+sd-jwt` and `vc+sd-jwt` (Appendix C.1): a path starts with
+    ///   a key of the top-level object, and a non-negative integer is an array index.
+    /// - A format this crate does not know: a non-negative integer implies an array, as Appendix B.3 reads, and
+    ///   nothing is assumed about where a path starts.
     ///
     /// Nothing in this crate calls it: an issuer can run it before publishing its metadata, and a Wallet before it
     /// uses `claims`.
@@ -72,7 +78,12 @@ impl CredentialConfigurationsSupportedObject {
         };
         let semantics = match self.credential_format {
             CredentialFormats::MsoMdoc(_) => ClaimPathSemantics::Mdoc,
-            _ => ClaimPathSemantics::Json,
+            CredentialFormats::JwtVcJson(_)
+            | CredentialFormats::JwtVcJsonLd(_)
+            | CredentialFormats::LdpVc(_)
+            | CredentialFormats::DcSdJwt(_)
+            | CredentialFormats::VcSdJwt(_) => ClaimPathSemantics::Json,
+            CredentialFormats::Unknown => ClaimPathSemantics::Unknown,
         };
         check_claims_description_paths(claims.iter().map(|claim| &claim.path), semantics)
     }
@@ -146,7 +157,7 @@ mod tests {
         CredentialFormats, Parameters,
         w3c_verifiable_credentials::{jwt_vc_json, ldp_vc},
     };
-    use oid4vc_core::claim_path_pointer::ClaimPathElement;
+    use oid4vc_core::claim_path_pointer::{ClaimPathElement, ClaimPathError};
     use serde_json::{from_str, json};
     use std::collections::HashMap;
 
@@ -822,5 +833,51 @@ mod tests {
         let without_claims: CredentialConfigurationsSupportedObject =
             serde_json::from_value(json!({ "format": "dc+sd-jwt", "vct": "https://example.org/mDL" })).unwrap();
         assert_eq!(without_claims.check_claims_descriptions(), Ok(()));
+    }
+
+    #[test]
+    fn check_claims_descriptions_refuses_paths_that_cannot_address_a_claim_of_the_format() {
+        // An ISO mdoc path starts with the namespace and the data element identifier (Appendix C.2).
+        let mdoc = configuration_with_claims(
+            json!({ "format": "mso_mdoc", "doctype": "org.iso.18013.5.1.mDL" }),
+            json!([["org.iso.18013.5.1", "given_name"], ["org.iso.18013.5.1"]]),
+        );
+        assert_eq!(
+            mdoc.check_claims_descriptions(),
+            Err(ClaimsDescriptionError::InvalidPath(
+                ClaimPathError::NoMdocNamespaceAndDataElement {
+                    path: serde_json::from_value(json!(["org.iso.18013.5.1"])).unwrap()
+                }
+            ))
+        );
+
+        // A path into a JSON-based credential starts with a key of the top-level object (Appendix C.1.1).
+        for format in [
+            json!({ "format": "dc+sd-jwt", "vct": "https://example.org/mDL" }),
+            json!({ "format": "jwt_vc_json", "credential_definition": { "type": ["VerifiableCredential"] } }),
+        ] {
+            let json_based = configuration_with_claims(format, json!([["given_name"], [null, "given_name"]]));
+            assert_eq!(
+                json_based.check_claims_descriptions(),
+                Err(ClaimsDescriptionError::InvalidPath(ClaimPathError::JsonRootAsArray {
+                    path: serde_json::from_value(json!([null, "given_name"])).unwrap()
+                }))
+            );
+        }
+
+        // For a format this crate does not know, nothing is assumed about where a path starts, and Appendix B.3 is
+        // applied as it reads.
+        let unknown =
+            configuration_with_claims(json!({ "format": "example_format" }), json!([[0, "type"], [0, "name"]]));
+        assert_eq!(unknown.credential_format, CredentialFormats::Unknown);
+        assert_eq!(unknown.check_claims_descriptions(), Ok(()));
+        let unknown = configuration_with_claims(
+            json!({ "format": "example_format" }),
+            json!([["degrees", 0], ["degrees", "type"]]),
+        );
+        assert!(matches!(
+            unknown.check_claims_descriptions(),
+            Err(ClaimsDescriptionError::ArrayAndObject { .. })
+        ));
     }
 }

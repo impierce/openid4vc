@@ -56,6 +56,28 @@ impl utoipa::ToSchema for ClaimPathPointer {
 }
 
 impl ClaimPathPointer {
+    /// Checks that this path can address a claim in a credential with these semantics, before any credential is
+    /// at hand:
+    ///
+    /// - [`ClaimPathSemantics::Json`]: it starts with a string, a key of the top-level object (Appendix C.1.1);
+    /// - [`ClaimPathSemantics::Mdoc`]: it starts with two strings, the namespace and the data element identifier
+    ///   (Appendix C.2);
+    /// - [`ClaimPathSemantics::Unknown`]: nothing is checked.
+    pub fn check_shape(&self, semantics: ClaimPathSemantics) -> Result<(), ClaimPathError> {
+        let components = self.as_ref();
+        match semantics {
+            ClaimPathSemantics::Json => match components.first() {
+                Some(ClaimPathElement::String(_)) => Ok(()),
+                _ => Err(ClaimPathError::JsonRootAsArray { path: self.clone() }),
+            },
+            ClaimPathSemantics::Mdoc => match components.as_slice() {
+                [ClaimPathElement::String(_), ClaimPathElement::String(_), ..] => Ok(()),
+                _ => Err(ClaimPathError::NoMdocNamespaceAndDataElement { path: self.clone() }),
+            },
+            ClaimPathSemantics::Unknown => Ok(()),
+        }
+    }
+
     /// As described in OID4VP - Section 7.1 for JSON-based credentials:
     /// <https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-semantics-for-json-based-cr>
     /// TODO: Add semantics for ISO Mdoc credential format.
@@ -98,11 +120,12 @@ impl ClaimPathPointer {
 }
 
 /// How the components of a claims path pointer address a credential: OpenID4VCI 1.0, Appendix C.1 for JSON-based
-/// credentials, C.2 for ISO mdoc.
+/// credentials, C.2 for ISO mdoc, neither for a format whose data model is not known.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum ClaimPathSemantics {
-    /// A non-negative integer is an array index (Appendix C.1).
+    /// A non-negative integer is an array index, and a path starts at the top-level object of the credential, so
+    /// with a string (Appendix C.1).
     Json,
     /// A non-negative integer is a map key or an array index, depending on the data (Appendix C.2). Only `null`
     /// implies that a claim is an array.
@@ -111,11 +134,39 @@ pub enum ClaimPathSemantics {
     /// exception for ISO mdoc. Taken literally, that would refuse `["ns", "element", 1]` next to
     /// `["ns", "element", "key"]`, which Appendix C.2 allows: both are keys of the same map. For ISO mdoc this
     /// follows C.2, which says what an integer means in an ISO mdoc path.
+    ///
+    /// A path starts with the namespace and the data element identifier, both strings (Appendix C.2).
     Mdoc,
+    /// The data model of the format is not known. Appendix B.3 is applied as it reads: `null` or a non-negative
+    /// integer implies an array. Nothing is assumed about where a path starts.
+    Unknown,
+}
+
+/// A claims path pointer that cannot address a claim in a credential (OpenID4VCI 1.0, Appendix C), whatever the
+/// credential contains.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[non_exhaustive]
+pub enum ClaimPathError {
+    /// "A claims path pointer into an ISO mdoc always contains at least two path components of type string", the
+    /// namespace and the data element identifier (Appendix C.2).
+    #[error(
+        "The claims path pointer {path:?} does not start with an ISO mdoc namespace and data element identifier, \
+         both strings (OpenID4VCI 1.0, Appendix C.2)"
+    )]
+    NoMdocNamespaceAndDataElement { path: ClaimPathPointer },
+    /// Processing starts at "the top-level object of the JSON structure representing the claims in the
+    /// Credential", and `null` or a non-negative integer on an element that is not an array aborts it
+    /// (Appendix C.1.1).
+    #[error(
+        "The claims path pointer {path:?} addresses the top-level object of a JSON-based credential as an array \
+         (OpenID4VCI 1.0, Appendix C.1.1)"
+    )]
+    JsonRootAsArray { path: ClaimPathPointer },
 }
 
 /// A claims description that OpenID4VCI 1.0, Appendix B.3 rules out: "When a repeated or contradictory claim
-/// description is provided, the processing MUST be aborted."
+/// description is provided, the processing MUST be aborted." Or a path that cannot address a claim at all
+/// (Appendix C).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
 pub enum ClaimsDescriptionError {
@@ -147,17 +198,20 @@ pub enum ClaimsDescriptionError {
         /// The path with a string at the same claim.
         object: ClaimPathPointer,
     },
+    /// A path that cannot address a claim at all ([`ClaimPathPointer::check_shape`]).
+    #[error(transparent)]
+    InvalidPath(#[from] ClaimPathError),
 }
 
 /// Checks the paths of the claims descriptions of one `claims` array against OpenID4VCI 1.0, Appendix B.3, and
-/// returns a rule broken. Two paths are compared where they first differ; the components before address the same
-/// claim:
+/// returns a rule broken. Each path is first checked on its own with [`ClaimPathPointer::check_shape`]. Two paths
+/// are compared where they first differ; the components before address the same claim:
 ///
 /// - two equal paths address the same claim twice;
 /// - `null` in one and a non-negative integer in the other address the same array both as a whole and by index;
 /// - a string in one and `null` in the other make the same claim an object and an array. With
-///   [`ClaimPathSemantics::Json`], so does a string next to a non-negative integer; with
-///   [`ClaimPathSemantics::Mdoc`], both are map keys (Appendix C.2) and address different claims.
+///   [`ClaimPathSemantics::Json`] and [`ClaimPathSemantics::Unknown`], so does a string next to a non-negative
+///   integer; with [`ClaimPathSemantics::Mdoc`], both are map keys (Appendix C.2) and address different claims.
 ///
 /// Any other difference addresses different claims. A path that is a prefix of another addresses a claim that
 /// contains the other's, as `["address"]` and `["address", "street_address"]` in Section 12.2.4.
@@ -174,6 +228,7 @@ pub fn check_claims_description_paths<'a>(
     let mut claims = vec![AddressedClaim::default()];
     let mut contents: HashMap<(usize, ComponentKey<'a>), usize> = HashMap::new();
     for path in paths {
+        path.check_shape(semantics)?;
         let mut claim = 0;
         for component in path.as_ref() {
             claim = match contents.entry((claim, ComponentKey::from(component))) {
@@ -215,7 +270,8 @@ impl<'a> AddressedClaim<'a> {
         path: &'a ClaimPathPointer,
         semantics: ClaimPathSemantics,
     ) -> Result<(), ClaimsDescriptionError> {
-        let json = semantics == ClaimPathSemantics::Json;
+        // Only with ISO mdoc can a non-negative integer be a map key (Appendix C.2).
+        let integer_is_index = semantics != ClaimPathSemantics::Mdoc;
         match component {
             ClaimPathElement::Null => {
                 if let Some(index) = self.first_integer {
@@ -239,7 +295,7 @@ impl<'a> AddressedClaim<'a> {
                         index: path.clone(),
                     });
                 }
-                if let Some(object) = self.first_string.filter(|_| json) {
+                if let Some(object) = self.first_string.filter(|_| integer_is_index) {
                     return Err(ClaimsDescriptionError::ArrayAndObject {
                         array: path.clone(),
                         object: object.clone(),
@@ -248,7 +304,7 @@ impl<'a> AddressedClaim<'a> {
                 self.first_integer.get_or_insert(path);
             }
             ClaimPathElement::String(_) => {
-                if let Some(array) = self.first_null.or(self.first_integer.filter(|_| json)) {
+                if let Some(array) = self.first_null.or(self.first_integer.filter(|_| integer_is_index)) {
                     return Err(ClaimsDescriptionError::ArrayAndObject {
                         array: array.clone(),
                         object: path.clone(),
@@ -357,26 +413,44 @@ mod tests {
         check_claims_description_paths(paths, semantics)
     }
 
+    /// A path for these semantics: with ISO mdoc, the components follow a namespace (Appendix C.2).
+    fn path_for(semantics: ClaimPathSemantics, components: serde_json::Value) -> ClaimPathPointer {
+        match semantics {
+            ClaimPathSemantics::Mdoc => {
+                let mut with_namespace = vec![json!("org.iso.18013.5.1")];
+                with_namespace.extend(components.as_array().unwrap().iter().cloned());
+                path(serde_json::Value::Array(with_namespace))
+            }
+            _ => path(components),
+        }
+    }
+
     #[test]
     fn claims_descriptions_of_objects_and_arrays_next_to_their_contents_are_valid() {
-        let paths = [
-            // Section 12.2.4: an object next to a claim in it.
-            path(json!(["address"])),
-            path(json!(["address", "street_address"])),
-            // An array next to `null` paths into its items.
-            path(json!(["Courses"])),
-            path(json!(["Courses", null, "Code"])),
-            path(json!(["Courses", null, "Country"])),
-            path(json!(["Websites"])),
-            path(json!(["Websites", null])),
-            // Different elements of one array, and different keys of one object.
-            path(json!(["nationalities", 0])),
-            path(json!(["nationalities", 1])),
-            path(json!(["degrees", 0, "type"])),
-            path(json!(["degrees", 0, "university"])),
-        ];
-        assert_eq!(check(&paths, ClaimPathSemantics::Json), Ok(()));
-        assert_eq!(check(&paths, ClaimPathSemantics::Mdoc), Ok(()));
+        for semantics in [
+            ClaimPathSemantics::Json,
+            ClaimPathSemantics::Mdoc,
+            ClaimPathSemantics::Unknown,
+        ] {
+            let paths = [
+                // Section 12.2.4: an object next to a claim in it.
+                json!(["address"]),
+                json!(["address", "street_address"]),
+                // An array next to `null` paths into its items.
+                json!(["Courses"]),
+                json!(["Courses", null, "Code"]),
+                json!(["Courses", null, "Country"]),
+                json!(["Websites"]),
+                json!(["Websites", null]),
+                // Different elements of one array, and different keys of one object.
+                json!(["nationalities", 0]),
+                json!(["nationalities", 1]),
+                json!(["degrees", 0, "type"]),
+                json!(["degrees", 0, "university"]),
+            ]
+            .map(|components| path_for(semantics, components));
+            assert_eq!(check(&paths, semantics), Ok(()), "{semantics:?}");
+        }
     }
 
     /// The claims of the training record example in impierce/openid4vc#235.
@@ -420,8 +494,13 @@ mod tests {
             (json!(["nationalities", 0]), json!(["nationalities", null])),
             (json!(["degrees", null, "type"]), json!(["degrees", 0, "university"])),
         ] {
-            for semantics in [ClaimPathSemantics::Json, ClaimPathSemantics::Mdoc] {
-                let error = check(&[path(first.clone()), path(second.clone())], semantics).unwrap_err();
+            for semantics in [
+                ClaimPathSemantics::Json,
+                ClaimPathSemantics::Mdoc,
+                ClaimPathSemantics::Unknown,
+            ] {
+                let paths = [path_for(semantics, first.clone()), path_for(semantics, second.clone())];
+                let error = check(&paths, semantics).unwrap_err();
                 assert!(
                     matches!(error, ClaimsDescriptionError::AllAndIndexInSameArray { .. }),
                     "{first} and {second}: {error}"
@@ -443,35 +522,156 @@ mod tests {
     #[test]
     fn a_claim_that_is_an_array_in_one_description_and_an_object_in_another_is_refused() {
         // `null` implies an array for every format.
-        for semantics in [ClaimPathSemantics::Json, ClaimPathSemantics::Mdoc] {
+        for semantics in [
+            ClaimPathSemantics::Json,
+            ClaimPathSemantics::Mdoc,
+            ClaimPathSemantics::Unknown,
+        ] {
+            let object = path_for(semantics, json!(["address", "street_address"]));
+            let array = path_for(semantics, json!(["address", null]));
             assert_eq!(
-                check(
-                    &[
-                        path(json!(["address", "street_address"])),
-                        path(json!(["address", null]))
-                    ],
-                    semantics
-                ),
-                Err(ClaimsDescriptionError::ArrayAndObject {
-                    array: path(json!(["address", null])),
-                    object: path(json!(["address", "street_address"])),
-                })
+                check(&[object.clone(), array.clone()], semantics),
+                Err(ClaimsDescriptionError::ArrayAndObject { array, object }),
+                "{semantics:?}"
             );
         }
-        // For JSON-based credentials, an integer is an array index (Appendix C.1).
-        let error = check(
-            &[path(json!(["degrees", 0])), path(json!(["degrees", "type"]))],
-            ClaimPathSemantics::Json,
-        )
-        .unwrap_err();
+        // For JSON-based credentials, an integer is an array index (Appendix C.1). For a format whose data model is
+        // not known, B.3 is applied as it reads: an integer implies an array.
+        for semantics in [ClaimPathSemantics::Json, ClaimPathSemantics::Unknown] {
+            let error = check(
+                &[path(json!(["degrees", 0])), path(json!(["degrees", "type"]))],
+                semantics,
+            )
+            .unwrap_err();
+            assert_eq!(
+                error,
+                ClaimsDescriptionError::ArrayAndObject {
+                    array: path(json!(["degrees", 0])),
+                    object: path(json!(["degrees", "type"])),
+                }
+            );
+            assert!(error.to_string().contains("is an array"), "{error}");
+        }
+    }
+
+    /// The claims path pointers of Appendix C.3, and one of the W3C VC examples of Appendix A.1.1.2.
+    fn json_example_paths() -> Vec<ClaimPathPointer> {
+        [
+            json!(["name"]),
+            json!(["address"]),
+            json!(["address", "street_address"]),
+            json!(["degrees", null, "type"]),
+            json!(["nationalities", 1]),
+            json!(["credentialSubject", "given_name"]),
+        ]
+        .into_iter()
+        .map(path)
+        .collect()
+    }
+
+    /// The ISO mdoc claims path pointers of Appendix A.2.2.
+    fn mdoc_example_paths() -> Vec<ClaimPathPointer> {
+        [
+            json!(["org.iso.18013.5.1", "given_name"]),
+            json!(["org.iso.18013.5.1", "family_name"]),
+            json!(["org.iso.18013.5.1", "birth_date"]),
+            json!(["org.iso.18013.5.1.aamva", "organ_donor"]),
+        ]
+        .into_iter()
+        .map(path)
+        .collect()
+    }
+
+    /// Paths that start with `null` or a non-negative integer.
+    fn paths_into_a_root_array() -> Vec<ClaimPathPointer> {
+        [json!([null]), json!([0]), json!([null, "type"]), json!([0, "type"])]
+            .into_iter()
+            .map(path)
+            .collect()
+    }
+
+    /// Paths without two leading strings: fewer than two components, or `null` or an integer among the first two.
+    fn paths_without_mdoc_namespace_and_data_element() -> Vec<ClaimPathPointer> {
+        [
+            json!(["org.iso.18013.5.1"]),
+            json!(["org.iso.18013.5.1", null]),
+            json!(["org.iso.18013.5.1", 0]),
+            json!([0, "given_name"]),
+            json!([null, "given_name", "x"]),
+        ]
+        .into_iter()
+        .map(path)
+        .collect()
+    }
+
+    #[test]
+    fn a_json_path_starts_with_a_key_of_the_top_level_object() {
+        for example in json_example_paths() {
+            assert_eq!(example.check_shape(ClaimPathSemantics::Json), Ok(()), "{example:?}");
+        }
+        for path in paths_into_a_root_array() {
+            assert_eq!(
+                path.check_shape(ClaimPathSemantics::Json),
+                Err(ClaimPathError::JsonRootAsArray { path: path.clone() })
+            );
+        }
+    }
+
+    #[test]
+    fn an_mdoc_path_starts_with_a_namespace_and_a_data_element() {
+        for example in mdoc_example_paths() {
+            assert_eq!(example.check_shape(ClaimPathSemantics::Mdoc), Ok(()), "{example:?}");
+        }
+        // After the data element, a component can be a map key, an array index or `null`.
+        for longer in [
+            json!(["org.iso.18013.5.1", "driving_privileges", null, "codes", 0]),
+            json!(["org.iso.18013.5.1", "driving_privileges", 1]),
+        ] {
+            assert_eq!(path(longer).check_shape(ClaimPathSemantics::Mdoc), Ok(()));
+        }
+        for path in paths_without_mdoc_namespace_and_data_element() {
+            assert_eq!(
+                path.check_shape(ClaimPathSemantics::Mdoc),
+                Err(ClaimPathError::NoMdocNamespaceAndDataElement { path: path.clone() })
+            );
+        }
+    }
+
+    #[test]
+    fn with_an_unknown_data_model_no_shape_is_assumed() {
+        for path in paths_into_a_root_array()
+            .into_iter()
+            .chain(paths_without_mdoc_namespace_and_data_element())
+        {
+            assert_eq!(path.check_shape(ClaimPathSemantics::Unknown), Ok(()), "{path:?}");
+        }
+    }
+
+    #[test]
+    fn the_claims_description_check_refuses_a_path_that_cannot_address_a_claim() {
+        let mut json_paths = json_example_paths();
+        assert_eq!(check(&json_paths, ClaimPathSemantics::Json), Ok(()));
+        json_paths.push(path(json!([null, "type"])));
+        let error = check(&json_paths, ClaimPathSemantics::Json).unwrap_err();
         assert_eq!(
             error,
-            ClaimsDescriptionError::ArrayAndObject {
-                array: path(json!(["degrees", 0])),
-                object: path(json!(["degrees", "type"])),
-            }
+            ClaimsDescriptionError::InvalidPath(ClaimPathError::JsonRootAsArray {
+                path: path(json!([null, "type"]))
+            })
         );
-        assert!(error.to_string().contains("is an array"), "{error}");
+        assert!(error.to_string().contains("Appendix C.1.1"), "{error}");
+
+        let mut mdoc_paths = mdoc_example_paths();
+        assert_eq!(check(&mdoc_paths, ClaimPathSemantics::Mdoc), Ok(()));
+        mdoc_paths.push(path(json!(["org.iso.18013.5.1"])));
+        let error = check(&mdoc_paths, ClaimPathSemantics::Mdoc).unwrap_err();
+        assert_eq!(
+            error,
+            ClaimsDescriptionError::InvalidPath(ClaimPathError::NoMdocNamespaceAndDataElement {
+                path: path(json!(["org.iso.18013.5.1"]))
+            })
+        );
+        assert!(error.to_string().contains("Appendix C.2"), "{error}");
     }
 
     /// In an ISO mdoc, a non-negative integer can be a map key (Appendix C.2), so it implies no array next to a
