@@ -78,44 +78,61 @@ impl ClaimPathPointer {
         }
     }
 
-    /// As described in OID4VP - Section 7.1 for JSON-based credentials:
-    /// <https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-semantics-for-json-based-cr>
+    /// Processes this path on a JSON-based credential and returns the selected claims (OID4VP 1.0, Section 7.1.1;
+    /// OpenID4VCI 1.0, Appendix C.1.1). Processing starts at `json_data`, the top-level object of the credential.
+    ///
+    /// A key that an object does not have, or an index past the end of an array, removes that element from the
+    /// selection. Processing is aborted with an error when:
+    ///
+    /// - a string is applied to an element that is not an object ([`ClaimPathProcessingError::NotAnObject`]);
+    /// - `null` or a non-negative integer is applied to an element that is not an array
+    ///   ([`ClaimPathProcessingError::NotAnArray`]);
+    /// - nothing is left selected ([`ClaimPathProcessingError::NothingSelected`]), so the claim is not in the
+    ///   credential.
+    ///
     /// TODO: Add semantics for ISO Mdoc credential format.
-    pub fn get_values_from_json(&self, json_data: &Value) -> Vec<Value> {
-        let mut current_selections: Vec<&Value> = vec![json_data];
-        for element in self.as_ref().iter() {
-            let mut next_selections: Vec<&Value> = Vec::new();
-            for selected_value in current_selections.drain(..) {
-                match element {
+    pub fn get_values_from_json(&self, json_data: &Value) -> Result<Vec<Value>, ClaimPathProcessingError> {
+        let mut selection: Vec<&Value> = vec![json_data];
+        for (index, component) in self.as_ref().iter().enumerate() {
+            let mut next_selection: Vec<&Value> = Vec::new();
+            for selected in selection {
+                match component {
                     ClaimPathElement::String(key) => {
-                        if let Some(obj) = selected_value.as_object()
-                            && let Some(value_found) = obj.get(key)
-                        {
-                            next_selections.push(value_found);
-                        }
+                        let object = selected
+                            .as_object()
+                            .ok_or_else(|| ClaimPathProcessingError::NotAnObject {
+                                path: self.clone(),
+                                index,
+                            })?;
+                        next_selection.extend(object.get(key));
                     }
-                    ClaimPathElement::Integer(index) => {
-                        if let Some(arr) = selected_value.as_array()
-                            && let Some(value_found) = arr.get(*index as usize)
-                        {
-                            next_selections.push(value_found);
-                        }
+                    ClaimPathElement::Integer(array_index) => {
+                        let array = selected
+                            .as_array()
+                            .ok_or_else(|| ClaimPathProcessingError::NotAnArray {
+                                path: self.clone(),
+                                index,
+                            })?;
+                        next_selection.extend(usize::try_from(*array_index).ok().and_then(|i| array.get(i)));
                     }
                     ClaimPathElement::Null => {
-                        if let Some(arr) = selected_value.as_array() {
-                            for value_in_array in arr {
-                                next_selections.push(value_in_array);
-                            }
-                        }
+                        let array = selected
+                            .as_array()
+                            .ok_or_else(|| ClaimPathProcessingError::NotAnArray {
+                                path: self.clone(),
+                                index,
+                            })?;
+                        next_selection.extend(array);
                     }
                 }
             }
-            current_selections = next_selections;
-            if current_selections.is_empty() {
-                break;
+            selection = next_selection;
+            // Nothing that follows can select anything again.
+            if selection.is_empty() {
+                return Err(ClaimPathProcessingError::NothingSelected { path: self.clone() });
             }
         }
-        current_selections.into_iter().cloned().collect()
+        Ok(selection.into_iter().cloned().collect())
     }
 }
 
@@ -162,6 +179,31 @@ pub enum ClaimPathError {
          (OpenID4VCI 1.0, Appendix C.1.1)"
     )]
     JsonRootAsArray { path: ClaimPathPointer },
+}
+
+/// Why processing a claims path pointer on a JSON-based credential was aborted (OID4VP 1.0, Section 7.1.1;
+/// OpenID4VCI 1.0, Appendix C.1.1). `index` is the position of the component that aborted it, from 0.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[non_exhaustive]
+pub enum ClaimPathProcessingError {
+    /// "If the component is a string, [...] If any of the currently selected element(s) is not an object, abort
+    /// processing and return an error."
+    #[error(
+        "Component {index} of the claims path pointer {path:?} is a key, but a selected element is not an object \
+         (OID4VP 1.0, Section 7.1.1)"
+    )]
+    NotAnObject { path: ClaimPathPointer, index: usize },
+    /// "If the component is null, [...] If any of the currently selected element(s) is not an array, abort
+    /// processing and return an error.", and the same for a non-negative integer.
+    #[error(
+        "Component {index} of the claims path pointer {path:?} is `null` or an index, but a selected element is \
+         not an array (OID4VP 1.0, Section 7.1.1)"
+    )]
+    NotAnArray { path: ClaimPathPointer, index: usize },
+    /// "If the set of elements currently selected is empty, abort processing and return an error." The claim is
+    /// not in the credential.
+    #[error("The claims path pointer {path:?} selects nothing (OID4VP 1.0, Section 7.1.1)")]
+    NothingSelected { path: ClaimPathPointer },
 }
 
 /// A claims description that OpenID4VCI 1.0, Appendix B.3 rules out: "When a repeated or contradictory claim
@@ -398,10 +440,116 @@ mod tests {
 
         let selected_values: Vec<Vec<Value>> = claim_path_pointers
             .into_iter()
-            .map(|claim_path_pointer| claim_path_pointer.get_values_from_json(&example))
+            .map(|claim_path_pointer| claim_path_pointer.get_values_from_json(&example).unwrap())
             .collect();
 
         assert_eq!(selected_values, expected_values);
+    }
+
+    /// The credential of OID4VP 1.0, Section 7.3 (OpenID4VCI 1.0, Appendix C.3).
+    fn arthur_dent() -> Value {
+        json!({
+            "name": "Arthur Dent",
+            "address": {
+                "street_address": "42 Market Street",
+                "locality": "Milliways",
+                "postal_code": "12345"
+            },
+            "degrees": [
+                { "type": "Bachelor of Science", "university": "University of Betelgeuse" },
+                { "type": "Master of Science", "university": "University of Betelgeuse" }
+            ],
+            "nationalities": ["British", "Betelgeusian"]
+        })
+    }
+
+    #[test]
+    fn a_missing_key_or_index_only_removes_that_element_from_the_selection() {
+        let mut credential = arthur_dent();
+        credential["degrees"][1].as_object_mut().unwrap().remove("university");
+        assert_eq!(
+            path(json!(["degrees", null, "university"])).get_values_from_json(&credential),
+            Ok(vec![json!("University of Betelgeuse")])
+        );
+        // An index past the end of one array, but not of another.
+        let credential = json!({ "lists": [["a"], ["b", "c"]] });
+        assert_eq!(
+            path(json!(["lists", null, 1])).get_values_from_json(&credential),
+            Ok(vec![json!("c")])
+        );
+    }
+
+    #[test]
+    fn a_claim_that_is_not_in_the_credential_selects_nothing() {
+        for components in [
+            json!(["birthdate"]),
+            json!(["address", "country"]),
+            json!(["nationalities", 2]),
+            json!(["degrees", null, "grade"]),
+        ] {
+            let path = path(components);
+            assert_eq!(
+                path.get_values_from_json(&arthur_dent()),
+                Err(ClaimPathProcessingError::NothingSelected { path: path.clone() })
+            );
+        }
+        // `null` on an empty array selects nothing either.
+        let path = path(json!(["degrees", null]));
+        assert_eq!(
+            path.get_values_from_json(&json!({ "degrees": [] })),
+            Err(ClaimPathProcessingError::NothingSelected { path: path.clone() })
+        );
+    }
+
+    #[test]
+    fn a_key_on_an_element_that_is_not_an_object_aborts_processing() {
+        for (components, index) in [
+            (json!(["name", "first"]), 1),
+            (json!(["nationalities", null, "code"]), 2),
+            (json!(["degrees", "type"]), 1),
+        ] {
+            let path = path(components);
+            assert_eq!(
+                path.get_values_from_json(&arthur_dent()),
+                Err(ClaimPathProcessingError::NotAnObject {
+                    path: path.clone(),
+                    index
+                })
+            );
+        }
+        // One element that is not an object is enough, even if another has the key.
+        let path = path(json!(["degrees", null, "type"]));
+        let error = path
+            .get_values_from_json(&json!({ "degrees": [{ "type": "BSc" }, "MSc"] }))
+            .unwrap_err();
+        assert_eq!(
+            error,
+            ClaimPathProcessingError::NotAnObject {
+                path: path.clone(),
+                index: 2
+            }
+        );
+        assert!(error.to_string().contains("Section 7.1.1"), "{error}");
+    }
+
+    #[test]
+    fn null_or_an_index_on_an_element_that_is_not_an_array_aborts_processing() {
+        for (components, index) in [
+            (json!([null]), 0),
+            (json!([0]), 0),
+            (json!(["address", null]), 1),
+            (json!(["name", 0]), 1),
+            (json!(["degrees", null, null]), 2),
+        ] {
+            let path = path(components);
+            assert_eq!(
+                path.get_values_from_json(&arthur_dent()),
+                Err(ClaimPathProcessingError::NotAnArray {
+                    path: path.clone(),
+                    index
+                })
+            );
+        }
     }
 
     /// A claims path pointer from JSON: strings, `null`s and non-negative integers.
