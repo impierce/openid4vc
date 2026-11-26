@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0](https://github.com/impierce/openid4vc/compare/oid4vci-v0.9.0...oid4vci-v0.10.0) - 2026-11-26
+
+### Added
+
+- *(oid4vc-core)* check the shape of claims path pointers (OID4VCI Appendix C) ([#241](https://github.com/impierce/openid4vc/pull/241))
+
+### Fixed
+
+- *(oid4vci)* [**breaking**] keep authorization details `locations` as provided ([#245](https://github.com/impierce/openid4vc/pull/245))
+
 ## [0.9.0](https://github.com/impierce/openid4vc/compare/oid4vci-v0.8.0...oid4vci-v0.9.0) - 2026-11-23
 
 ### Added
