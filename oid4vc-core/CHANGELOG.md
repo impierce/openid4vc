@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0](https://github.com/impierce/openid4vc/compare/oid4vc-core-v0.8.1...oid4vc-core-v0.9.0) - 2026-11-26
+
+### Added
+
+- *(oid4vc-core)* check the shape of claims path pointers (OID4VCI Appendix C) ([#241](https://github.com/impierce/openid4vc/pull/241))
+
+### Fixed
+
+- [**breaking**] abort claims path processing (according to OID4VP 1.0 Section 7.1.1) ([#244](https://github.com/impierce/openid4vc/pull/244))
+
 ## [0.8.1](https://github.com/impierce/openid4vc/compare/oid4vc-core-v0.8.0...oid4vc-core-v0.8.1) - 2026-11-23
 
 ### Added
