@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0](https://github.com/impierce/openid4vc/compare/oid4vc-manager-v0.9.0...oid4vc-manager-v0.10.0) - 2026-11-26
+
+### Dependencies
+
+- *(deps)* [**breaking**] update `oid4vc-core` to 0.9.0, `oid4vci` to 0.10.0 and `siopv2` to 0.9.0
+
 ## [0.9.0](https://github.com/impierce/openid4vc/compare/oid4vc-manager-v0.8.0...oid4vc-manager-v0.9.0) - 2026-11-23
 
 ### Dependencies
