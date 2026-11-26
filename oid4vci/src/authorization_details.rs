@@ -1,6 +1,7 @@
-use crate::credential_issuer::credential_configurations_supported::ClaimDescription;
+use crate::credential_issuer::{
+    credential_configurations_supported::ClaimDescription, credential_issuer_identifier::CredentialIssuerIdentifier,
+};
 use oid4vc_core::claim_path_pointer::ClaimPathPointer;
-use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -21,7 +22,11 @@ pub enum OpenidCredential {
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct AuthorizationDetailsObject {
     pub r#type: OpenidCredential,
-    pub locations: Option<Vec<Url>>,
+    /// The Credential Issuer Identifiers the authorization is for, as written (OpenID4VCI 1.0, Section 5.1.1: "If
+    /// the Credential Issuer metadata contains an authorization_servers parameter, the authorization detail's
+    /// locations common data field MUST be set to the Credential Issuer Identifier value"). Not a `Url`, which would
+    /// write `https://issuer.example` as `https://issuer.example/`; see [`CredentialIssuerIdentifier`].
+    pub locations: Option<Vec<CredentialIssuerIdentifier>>,
     pub credential_configuration_id: String,
     pub claims: Option<Vec<AuthorizationDetailsClaim>>,
     // Credential Identifiers should only be included in the TokenResponse as per the spec. In requests, this
@@ -282,5 +287,29 @@ mod tests {
             from_str::<Vec<AuthorizationDetailsObject>>(include_str!("../tests/examples/authorization_details.json"))
                 .unwrap()
         );
+    }
+
+    #[test]
+    fn locations_keep_the_credential_issuer_identifier_as_written() {
+        // The example of OpenID4VCI 1.0, Section 5.1.1: an identifier without a path, and so without a slash.
+        let example: serde_json::Value =
+            from_str(include_str!("../tests/examples/authorization_details_with_as.json")).unwrap();
+        let parsed: Vec<AuthorizationDetailsObject> = serde_json::from_value(example.clone()).unwrap();
+        assert_eq!(serde_json::to_value(&parsed).unwrap(), example);
+
+        for identifier in [
+            "https://issuer.example",
+            "https://issuer.example/",
+            "https://issuer.example/tenant",
+        ] {
+            let detail = AuthorizationDetailsObject {
+                r#type: OpenidCredential::Type,
+                locations: Some(vec![identifier.parse().unwrap()]),
+                credential_configuration_id: "UniversityDegreeCredential".to_string(),
+                claims: None,
+                credential_identifiers: None,
+            };
+            assert_eq!(serde_json::to_value(&detail).unwrap()["locations"], json!([identifier]));
+        }
     }
 }
