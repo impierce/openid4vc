@@ -1,12 +1,27 @@
 use crate::{
-    dcql::dcql_query::{ClaimQuery, CredentialQuery, CredentialSetQuery, DcqlQuery, MetaTypes},
+    dcql::dcql_query::{ClaimQuery, CredentialQuery, CredentialQueryId, CredentialSetQuery, DcqlQuery, MetaTypes},
     token::vp_token_validator::{DecodedPresentations, DecodedVpToken},
 };
 use oid4vc_core::{
     JsonObject,
-    claim_path_pointer::{ClaimValue, ClaimValues},
+    claim_path_pointer::{ClaimPathProcessingError, ClaimValue, ClaimValues},
 };
 use serde_json::Value;
+
+/// Why a DCQL query could not be evaluated against a VP token.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[non_exhaustive]
+pub enum DcqlEvaluationError {
+    /// The path of a claims query does not fit a presentation for its credential query: a key on an element that
+    /// is not an object, or `null` or an index on an element that is not an array (OID4VP 1.0, Section 7.1.1). A
+    /// claim that is not in the presentation is no error: the claims query is not satisfied.
+    #[error("A claims query of credential query `{credential_query_id}` does not fit its presentation: {source}")]
+    ClaimPath {
+        credential_query_id: CredentialQueryId,
+        #[source]
+        source: ClaimPathProcessingError,
+    },
+}
 
 /// Processing a dcql_query with credential sets as described in OID4VP - Section 6.4.2 Selecting Credentials:
 /// https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-selecting-credentials
@@ -14,7 +29,15 @@ fn set_is_required(credential_set: &CredentialSetQuery) -> bool {
     credential_set.required.unwrap_or(true)
 }
 
-pub fn evaluate_dcql_query(dcql_query: &DcqlQuery, decoded_vp_token: &DecodedVpToken) -> bool {
+/// Whether `decoded_vp_token` answers `dcql_query` (OID4VP 1.0, Section 6.4.2 and 8.1).
+///
+/// Every presentation is evaluated against its credential query, so whether there is an error does not depend on
+/// the order of evaluation: there is one if any claims query does not fit a presentation for its credential query
+/// ([`DcqlEvaluationError::ClaimPath`]).
+pub fn evaluate_dcql_query(
+    dcql_query: &DcqlQuery,
+    decoded_vp_token: &DecodedVpToken,
+) -> Result<bool, DcqlEvaluationError> {
     tracing::debug!(
         credentials_count = dcql_query.credentials.len(),
         has_sets = dcql_query.credential_sets.is_some(),
@@ -23,38 +46,38 @@ pub fn evaluate_dcql_query(dcql_query: &DcqlQuery, decoded_vp_token: &DecodedVpT
 
     // Every Presentation in the VP Token MUST match its Credential Query (OID4VP 1.0, §8.1), also when no required
     // credential set asks for it.
-    let presentations_match =
-        decoded_vp_token
-            .decoded_presentations()
+    let mut presentations_match = true;
+    for (credential_query_id, decoded_presentations) in decoded_vp_token.decoded_presentations() {
+        let matches = match dcql_query
+            .credentials
             .iter()
-            .all(|(credential_query_id, decoded_presentations)| {
-                dcql_query
-                    .credentials
-                    .iter()
-                    .find(|credential_query| credential_query.id == *credential_query_id)
-                    .is_some_and(|credential_query| evaluate_credential_query(credential_query, decoded_presentations))
-            });
+            .find(|credential_query| credential_query.id == *credential_query_id)
+        {
+            Some(credential_query) => evaluate_credential_query(credential_query, decoded_presentations)?,
+            None => false,
+        };
+        presentations_match &= matches;
+    }
     if !presentations_match {
         tracing::debug!("Presentation does not match its credential query");
-        return false;
+        return Ok(false);
     }
 
     // If there are credential sets, check if all required sets can be satisfied.
     if let Some(credential_sets) = &dcql_query.credential_sets {
         // All of the Credential Set Queries in the credential_sets array where
         // the required attribute is true or omitted must be satisfied
-        let required_sets_satisfied = credential_sets.iter().all(|credential_set| {
-            let is_required_set = set_is_required(credential_set);
-            if !is_required_set {
-                return true;
-            }
-
+        let mut required_sets_satisfied = true;
+        for credential_set in credential_sets {
             // Check if the required set has at least one satisfiable option.
-            evaluate_credential_set(credential_set, &dcql_query.credentials, decoded_vp_token)
-        });
+            if set_is_required(credential_set) {
+                required_sets_satisfied &=
+                    evaluate_credential_set(credential_set, &dcql_query.credentials, decoded_vp_token)?;
+            }
+        }
 
         tracing::debug!(required_sets_satisfied, "DCQL credential sets evaluation result");
-        return required_sets_satisfied;
+        return Ok(required_sets_satisfied);
     }
 
     // If credential_sets is not provided, the Verifier requests presentations for all Credentials in credentials to be returned.
@@ -68,65 +91,84 @@ pub fn evaluate_dcql_query(dcql_query: &DcqlQuery, decoded_vp_token: &DecodedVpT
         present
     });
     tracing::debug!(result, "DCQL query evaluation result");
-    result
+    Ok(result)
 }
 
 // To satisfy a Credential Set Query, the Wallet MUST return presentations of a set of Credentials that
 // match to one of the options inside the Credential Set Query.
+//
+// Every credential query of every option that has presentations is evaluated, so whether there is an error does
+// not depend on the order of the options.
 pub fn evaluate_credential_set(
     credential_set: &CredentialSetQuery,
     all_credentials: &[CredentialQuery],
     available_credentials: &DecodedVpToken,
-) -> bool {
-    credential_set.options.iter().any(|option| {
-        option.iter().all(|credential_query_id| {
-            if let Some(credential_query) = all_credentials.iter().find(|cq| cq.id == *credential_query_id) {
-                if let Some(credential_json) = available_credentials.decoded_presentations().get(credential_query_id) {
-                    evaluate_credential_query(credential_query, credential_json)
-                } else {
-                    false
+) -> Result<bool, DcqlEvaluationError> {
+    let mut any_option_satisfied = false;
+    for option in &credential_set.options {
+        let mut option_satisfied = true;
+        for credential_query_id in option {
+            let credential_query = all_credentials.iter().find(|cq| cq.id == *credential_query_id);
+            let presentations = available_credentials.decoded_presentations().get(credential_query_id);
+            option_satisfied &= match (credential_query, presentations) {
+                (Some(credential_query), Some(presentations)) => {
+                    evaluate_credential_query(credential_query, presentations)?
                 }
-            } else {
-                false
-            }
-        })
-    })
+                _ => false,
+            };
+        }
+        any_option_satisfied |= option_satisfied;
+    }
+    Ok(any_option_satisfied)
 }
 
-fn evaluate_single_claim_query(claim_query: &ClaimQuery, credential_json: &Value) -> bool {
-    let extracted_values = claim_query.path.get_values_from_json(credential_json);
-    if extracted_values.is_empty() {
-        return false;
-    }
-    if let Some(required_claim_values) = &claim_query.values {
-        let any_extracted_value_match = extracted_values
+/// Whether `credential_json` has the claim `claim_query` asks for, with one of its `values` if it has any. A claim
+/// that is not in the credential does not satisfy the claims query; a path that does not fit the credential is an
+/// error (OID4VP 1.0, Section 7.1.1).
+fn evaluate_single_claim_query(
+    claim_query: &ClaimQuery,
+    credential_json: &Value,
+) -> Result<bool, ClaimPathProcessingError> {
+    let extracted_values = match claim_query.path.get_values_from_json(credential_json) {
+        Ok(extracted_values) => extracted_values,
+        Err(ClaimPathProcessingError::NothingSelected { .. }) => return Ok(false),
+        Err(error) => return Err(error),
+    };
+    Ok(match &claim_query.values {
+        Some(required_claim_values) => extracted_values
             .iter()
-            .any(|extracted_val| matches_claim_values(extracted_val, required_claim_values));
-
-        if !any_extracted_value_match {
-            return false;
-        }
-    }
-    true
+            .any(|extracted_val| matches_claim_values(extracted_val, required_claim_values)),
+        None => true,
+    })
 }
 
 /// Whether `decoded_presentations` answer `credential_query`: at most one presentation unless `multiple` is `true`, and
 /// each with the type `meta` asks for and the claims of `claims` and `claim_sets` (OID4VP 1.0, §6.1, §6.4.1 and §8.1).
+///
+/// The claims queries are evaluated against every presentation, so whether there is an error does not depend on
+/// the order of the presentations or of the claims queries.
 pub fn evaluate_credential_query(
     credential_query: &CredentialQuery,
     decoded_presentations: &DecodedPresentations,
-) -> bool {
+) -> Result<bool, DcqlEvaluationError> {
     // If `multiple` is omitted or `false`, the array MUST contain exactly one Presentation (OID4VP 1.0, §8.1).
     if !credential_query.multiple.unwrap_or_default() && decoded_presentations.len() > 1 {
-        return false;
+        return Ok(false);
     }
 
     // Each Presentation in the array MUST match the Credential Query (OID4VP 1.0, §8.1).
-    decoded_presentations.iter().all(|decoded_presentation| {
+    let mut all_match = true;
+    for decoded_presentation in decoded_presentations.iter() {
         // TODO: Check `require_cryptographic_holder_binding`
-        matches_meta(&credential_query.meta, decoded_presentation)
-            && matches_claims(credential_query, decoded_presentation)
-    })
+        let claims_match = matches_claims(credential_query, decoded_presentation).map_err(|source| {
+            DcqlEvaluationError::ClaimPath {
+                credential_query_id: credential_query.id.clone(),
+                source,
+            }
+        })?;
+        all_match &= matches_meta(&credential_query.meta, decoded_presentation) && claims_match;
+    }
+    Ok(all_match)
 }
 
 /// Whether `decoded_presentation` has the type `meta` asks for.
@@ -159,22 +201,28 @@ fn matches_meta(meta: &MetaTypes, decoded_presentation: &JsonObject) -> bool {
     }
 }
 
-/// Whether `decoded_presentation` has the claims `claims` and `claim_sets` ask for.
-fn matches_claims(credential_query: &CredentialQuery, decoded_presentation: &JsonObject) -> bool {
+/// Whether `decoded_presentation` has the claims `claims` and `claim_sets` ask for. Every claims query in `claims`
+/// is evaluated first, so a path that does not fit the presentation is an error whichever option it is in.
+fn matches_claims(
+    credential_query: &CredentialQuery,
+    decoded_presentation: &JsonObject,
+) -> Result<bool, ClaimPathProcessingError> {
     // If claims is absent, the Verifier is requesting no claims that are selectively disclosable;
     // the Wallet MUST return only the claims that are mandatory to present (e.g., SD-JWT and Key Binding JWT for a Credential of format IETF SD-JWT VC).
     let claims = credential_query.claims.as_deref().unwrap_or(&[]);
     if claims.is_empty() {
-        return true;
+        return Ok(true);
     }
 
     let presentation_value = serde_json::Value::Object(decoded_presentation.clone());
+    let satisfied = claims
+        .iter()
+        .map(|claim| evaluate_single_claim_query(claim, &presentation_value))
+        .collect::<Result<Vec<bool>, _>>()?;
 
     // If claims is present, but claim_sets is absent, the Verifier requests all claims listed in claims.
-    match &credential_query.claim_sets {
-        None => claims
-            .iter()
-            .all(|claim| evaluate_single_claim_query(claim, &presentation_value)),
+    Ok(match &credential_query.claim_sets {
+        None => satisfied.iter().all(|satisfied| *satisfied),
 
         // If both claims and claim_sets are present, the Verifier requests one combination of the claims listed in claim_sets. The order of the options conveyed in the claim_sets array expresses the Verifier's preference for what is returned;
         // the Wallet SHOULD return the first option that it can satisfy. If the Wallet cannot satisfy any of the options, it MUST NOT return any claims.
@@ -182,11 +230,12 @@ fn matches_claims(credential_query: &CredentialQuery, decoded_presentation: &Jso
             claim_set.iter().all(|claim_id| {
                 claims
                     .iter()
-                    .find(|claim| claim.id.as_ref() == Some(claim_id))
-                    .is_some_and(|claim| evaluate_single_claim_query(claim, &presentation_value))
+                    .zip(&satisfied)
+                    .find(|(claim, _)| claim.id.as_ref() == Some(claim_id))
+                    .is_some_and(|(_, satisfied)| *satisfied)
             })
         }),
-    }
+    })
 }
 
 pub fn matches_claim_values(actual_value: &Value, required_value: &ClaimValues) -> bool {
@@ -212,6 +261,23 @@ mod tests {
     const TESTCREDENTIALQUERY_WITH_SETS: &str =
         include_str!("../tests/examples/query_lang/credentials_alternatives.json");
 
+    // The tests below that only look at the verdict use these. They shadow the functions of `super`, and fail the
+    // test on an evaluation error.
+    fn evaluate_dcql_query(dcql_query: &DcqlQuery, decoded_vp_token: &DecodedVpToken) -> bool {
+        super::evaluate_dcql_query(dcql_query, decoded_vp_token).unwrap()
+    }
+
+    fn evaluate_credential_query(
+        credential_query: &CredentialQuery,
+        decoded_presentations: &DecodedPresentations,
+    ) -> bool {
+        super::evaluate_credential_query(credential_query, decoded_presentations).unwrap()
+    }
+
+    fn evaluate_single_claim_query(claim_query: &ClaimQuery, credential_json: &Value) -> bool {
+        super::evaluate_single_claim_query(claim_query, credential_json).unwrap()
+    }
+
     #[test]
     fn test_get_value_from_json() {
         let testing_credential: Value = serde_json::from_str(TESTCREDENTIAL).unwrap();
@@ -221,7 +287,7 @@ mod tests {
         ])
         .unwrap();
         let values = path.get_values_from_json(&testing_credential["vc"]);
-        assert_eq!(values, vec![json!("Max")]);
+        assert_eq!(values, Ok(vec![json!("Max")]));
     }
 
     #[test]
@@ -539,6 +605,112 @@ mod tests {
                 .collect(),
         )
         .unwrap()
+    }
+
+    fn identity_presentation() -> Value {
+        json!({
+            "vct": "https://credentials.example.com/identity_credential",
+            "given_name": "John",
+            "nationalities": ["DE", "NL"],
+            "address": { "street_address": "123 Main St" }
+        })
+    }
+
+    #[test]
+    fn a_claim_that_is_not_in_the_presentation_does_not_satisfy_the_claims_query() {
+        for path in [
+            json!(["birthdate"]),
+            json!(["address", "locality"]),
+            json!(["nationalities", 2]),
+        ] {
+            let query = identity_credential_query(None, Some(json!([{ "path": path }])));
+            assert_eq!(
+                super::evaluate_credential_query(&query, &presentations(&[identity_presentation()])),
+                Ok(false),
+                "{path}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_path_that_does_not_fit_the_presentation_is_an_error() {
+        for (path, source) in [
+            (
+                json!(["address", null]),
+                ClaimPathProcessingError::NotAnArray {
+                    path: serde_json::from_value(json!(["address", null])).unwrap(),
+                    index: 1,
+                },
+            ),
+            (
+                json!(["nationalities", "first"]),
+                ClaimPathProcessingError::NotAnObject {
+                    path: serde_json::from_value(json!(["nationalities", "first"])).unwrap(),
+                    index: 1,
+                },
+            ),
+        ] {
+            let query = identity_credential_query(None, Some(json!([{ "path": path }])));
+            let expected = DcqlEvaluationError::ClaimPath {
+                credential_query_id: "identity".parse().unwrap(),
+                source,
+            };
+            assert_eq!(
+                super::evaluate_credential_query(&query, &presentations(&[identity_presentation()])),
+                Err(expected.clone())
+            );
+
+            let dcql_query: DcqlQuery = serde_json::from_value(json!({ "credentials": [query] })).unwrap();
+            let decoded_vp_token = DecodedVpTokenBuilder::new()
+                .insert(
+                    "identity".parse().unwrap(),
+                    vec![identity_presentation().as_object().unwrap().clone()],
+                )
+                .unwrap()
+                .build();
+            let error = super::evaluate_dcql_query(&dcql_query, &decoded_vp_token).unwrap_err();
+            assert_eq!(error, expected);
+            assert!(error.to_string().contains("`identity`"), "{error}");
+        }
+    }
+
+    #[test]
+    fn claim_sets_fall_back_to_the_next_option_when_a_claim_is_missing() {
+        let query = identity_credential_query(
+            None,
+            Some(json!([
+                { "id": "birthdate", "path": ["birthdate"] },
+                { "id": "given_name", "path": ["given_name"] }
+            ])),
+        );
+        let mut query = serde_json::to_value(query).unwrap();
+        query["claim_sets"] = json!([["birthdate"], ["given_name"]]);
+        let query: CredentialQuery = serde_json::from_value(query).unwrap();
+        assert_eq!(
+            super::evaluate_credential_query(&query, &presentations(&[identity_presentation()])),
+            Ok(true)
+        );
+    }
+
+    #[test]
+    fn a_path_that_does_not_fit_is_an_error_even_in_an_option_after_a_satisfied_one() {
+        let query = identity_credential_query(
+            None,
+            Some(json!([
+                { "id": "given_name", "path": ["given_name"] },
+                { "id": "street", "path": ["address", 0] }
+            ])),
+        );
+        let mut query = serde_json::to_value(query).unwrap();
+        query["claim_sets"] = json!([["given_name"], ["street"]]);
+        let query: CredentialQuery = serde_json::from_value(query).unwrap();
+        assert!(matches!(
+            super::evaluate_credential_query(&query, &presentations(&[identity_presentation()])),
+            Err(DcqlEvaluationError::ClaimPath {
+                source: ClaimPathProcessingError::NotAnArray { index: 1, .. },
+                ..
+            })
+        ));
     }
 
     #[test]

@@ -43,7 +43,10 @@ fn evaluate(query: &DcqlQuery, presentations: &Map<String, Value>) {
         for claim in credential_query.claims.iter().flatten() {
             for presentations in token.decoded_presentations().values() {
                 for credential in presentations.iter() {
-                    let found = claim.path.get_values_from_json(&Value::Object(credential.clone()));
+                    let found = claim
+                        .path
+                        .get_values_from_json(&Value::Object(credential.clone()))
+                        .unwrap_or_default();
                     if let Some(values) = &claim.values {
                         for value in &found {
                             let _ = matches_claim_values(value, values);

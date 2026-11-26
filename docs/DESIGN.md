@@ -152,7 +152,9 @@ collecting unknown fields.
 
 `Scope`/`ScopeValue` (OpenID Connect scopes), `RFC7519Claims` (`iss`, `sub`, `aud`, `exp`, `nbf`,
 `iat`, `jti`), `ClaimPathPointer` (the JSON claims path of OID4VCI and DCQL, with
-`get_values_from_json`), `StringOrObject`, `JsonObject`, the `builder_fn!` macro for builder
+`get_values_from_json`, which follows the processing rules of OID4VP 1.0, Section 7.1.1: a key or index
+that is not there drops the element, a component that does not fit the data or an empty selection is a
+`ClaimPathProcessingError`), `StringOrObject`, `JsonObject`, the `builder_fn!` macro for builder
 setters, `jwt::{encode, decode, extract_header}` over `jsonwebtoken`, and form-urlencoded helpers
 that serialize nested objects as JSON strings the way the specs expect.
 
@@ -248,7 +250,10 @@ OID4VP 1.0 with DCQL. Presentation Exchange is gone, as in the specification.
   (`vct_values`) and mdoc (`doctype_value`) shapes, validated against the format. `validate_all`
   enforces the specification's structural rules (unique ids, claim ids required when claim sets
   exist, set options referencing known queries). `dcql_evaluation` decides whether a decoded VP
-  token satisfies a query: credential sets, per-query `meta` and claims, value matching.
+  token satisfies a query: credential sets, per-query `meta` and claims, value matching. A claim
+  that is not in a presentation leaves its claims query unsatisfied, so claim sets and credential
+  sets fall back to their next option. A claims query whose path does not fit a presentation is a
+  `DcqlEvaluationError`; every claims query is evaluated, so whether there is an error does not depend on order.
 - **VP token** (`token/`): `VpToken` is the map from credential query id to presentations
   (`StringOrObject`). `VpTokenBuilder` checks a submission against the query before building
   (required sets, unrequested ids). `VerifiablePresentationJwt` and its builder wrap a W3C

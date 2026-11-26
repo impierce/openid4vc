@@ -27,7 +27,7 @@ Specification versions tracked: [OID4VCI 1.0][oid4vci] (final, 16 September 2025
 | `Extension` / `RequestHandle` / `ResponseHandle` plug-in mechanism, `Generic` fallback   |   ✅   |               |                                             |       |
 | `AuthorizationResponse<E>`, `ClientMetadataResource<T>` (by value or URI)                |   ✅   |               |                                             |       |
 | `Scope`, `RFC7519Claims`, `StringOrObject`, `builder_fn!`                                |   ✅   |               | [RFC 7519][rfc7519]                         |       |
-| `ClaimPathPointer` with `get_values_from_json` (arrays, nulls)                           |   ✅   |               | [OID4VP 1.0, Claims Path Pointer][oid4vp]   |       |
+| `ClaimPathPointer` with `get_values_from_json` (arrays, nulls), aborting as Section 7.1.1 says  |   ✅   |               | [OID4VP 1.0, Claims Path Pointer][oid4vp]   | [#240](https://github.com/impierce/openid4vc/issues/240) |
 | Form-urlencoded helpers (nested objects as JSON strings)                                  |   ✅   |               |                                             |       |
 | `test-utils`: test subjects                                                              |   ✅   | `test-utils`  |                                             |       |
 | OpenAPI schemas for the shared types                                                     |   ✅   | `utoipa`      |                                             | [#132](https://github.com/impierce/openid4vc/pull/132) |

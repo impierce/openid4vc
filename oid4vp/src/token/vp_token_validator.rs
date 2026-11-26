@@ -3,7 +3,7 @@
 use crate::{
     VpToken,
     dcql::dcql_query::{CredentialQueryId, DcqlQuery, Format},
-    dcql_evaluation::evaluate_dcql_query,
+    dcql_evaluation::{DcqlEvaluationError, evaluate_dcql_query},
     token::vp_token_builder::{VpTokenBuilderError, validate_presentation_submission},
 };
 use getset::Getters;
@@ -56,6 +56,8 @@ pub enum VpTokenValidationError {
     InvalidDecodedCredentialType,
     #[error("DCQL evaluation failed")]
     DcqlEvaluationFailed,
+    #[error("DCQL query could not be evaluated: {0}")]
+    DcqlEvaluation(#[from] DcqlEvaluationError),
     #[error("Credential query with id `{0}` has `trusted_authorities`, which cannot be verified")]
     UnsupportedTrustedAuthorities(CredentialQueryId),
     #[error("Presentation submission validation failed: {0}")]
@@ -244,7 +246,7 @@ impl<R: KeyResolver + 'static, V: JwsVerifier + 'static> VpTokenValidator<R, V> 
         let decoded_vp_token = builder.build();
 
         // Perform semantic validation of the claims requested in the DCQL query
-        if !evaluate_dcql_query(dcql_query, &decoded_vp_token) {
+        if !evaluate_dcql_query(dcql_query, &decoded_vp_token)? {
             return Err(VpTokenValidationError::DcqlEvaluationFailed);
         }
 
